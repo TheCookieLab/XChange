@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.MathContext;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -120,9 +120,9 @@ public final class BitfinexAdapters {
 
   public static String adaptBitfinexCurrency(String bitfinexSymbol) {
     String result = bitfinexSymbol.toUpperCase();
-    if (USDT_SYMBOL_BITFINEX.equals(result)) {
-      result = USDT_SYMBOL_XCHANGE;
-    }
+//    if (USDT_SYMBOL_BITFINEX.equals(result)) {
+//      result = USDT_SYMBOL_XCHANGE;
+//    }
     return result;
   }
 
@@ -935,8 +935,8 @@ public final class BitfinexAdapters {
     BigDecimal high = bitfinexTicker.getHigh();
     BigDecimal low = bitfinexTicker.getLow();
     BigDecimal volume = bitfinexTicker.getVolume();
-    BigDecimal percentageChange =
-        bitfinexTicker.getDailyChangePerc().multiply(new BigDecimal("100"), new MathContext(8));
+    BigDecimal percentageChange = bitfinexTicker.getDailyChangePerc() != null ?
+        bitfinexTicker.getDailyChangePerc().scaleByPowerOfTen(2) : null;
 
     CurrencyPair currencyPair =
         CurrencyPairDeserializer.getCurrencyPairFromString(bitfinexTicker.getSymbol().substring(1));
@@ -1011,4 +1011,45 @@ public final class BitfinexAdapters {
             })
         .toArray(org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTicker[]::new);
   }
+
+
+  public static Order toOrder(BitfinexOrderStatusResponse gateioOrder) {
+    Order.Builder order;
+    Instrument instrument = adaptCurrencyPair(gateioOrder.getSymbol());
+
+    OrderType orderType;
+    switch (gateioOrder.getSide()) {
+      case "sell":
+        orderType = OrderType.ASK;
+        break;
+      case "buy":
+        orderType = OrderType.BID;
+        break;
+      default:
+        throw new IllegalArgumentException(gateioOrder.getSide());
+    }
+
+    switch (gateioOrder.getType()) {
+      case "exchange market":
+        order = new MarketOrder.Builder(orderType, instrument);
+        break;
+//      case "limit":
+//        order = new LimitOrder.Builder(orderType, instrument)
+//            .limitPrice(gateioOrder.getPrice());
+//        break;
+      default:
+        throw new IllegalArgumentException("Can't map " + gateioOrder.getType());
+    }
+
+    return order
+        .id(String.valueOf(gateioOrder.getId()))
+        .originalAmount(gateioOrder.getOriginalAmount())
+        .timestamp(Date.from(Instant.ofEpochSecond(gateioOrder.getTimestamp().longValue())))
+        .orderStatus(adaptOrderStatus(gateioOrder))
+        .cumulativeAmount(gateioOrder.getExecutedAmount())
+        .averagePrice(gateioOrder.getAvgExecutionPrice())
+        .build();
+  }
+
+
 }

@@ -1,0 +1,7 @@
+### Market information for each trading pair
+GET https://api-pub.bitfinex.com/v2/conf/pub:info:pair
+
+
+### Fetch a list of valid exchange trading pairs
+GET https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange
+

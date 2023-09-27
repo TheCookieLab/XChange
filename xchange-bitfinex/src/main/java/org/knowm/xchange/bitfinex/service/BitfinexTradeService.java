@@ -244,12 +244,13 @@ public class BitfinexTradeService extends BitfinexTradeServiceRaw implements Tra
 
       for (OrderQueryParams orderParam : orderQueryParams) {
         BitfinexOrderStatusResponse orderStatus = getBitfinexOrderStatus(orderParam.getOrderId());
-        BitfinexOrderStatusResponse[] orderStatuses = new BitfinexOrderStatusResponse[1];
-        if (orderStatus != null) {
-          orderStatuses[0] = orderStatus;
-          OpenOrders orders = BitfinexAdapters.adaptOrders(orderStatuses);
-          openOrders.add(orders.getOpenOrders().get(0));
-        }
+        openOrders.add(BitfinexAdapters.toOrder(orderStatus));
+//        BitfinexOrderStatusResponse[] orderStatuses = new BitfinexOrderStatusResponse[1];
+//        if (orderStatus != null) {
+//          orderStatuses[0] = orderStatus;
+//          OpenOrders orders = BitfinexAdapters.adaptOrders(orderStatuses);
+//          openOrders.add(orders.getOpenOrders().get(0));
+//        }
       }
       return openOrders;
     } catch (BitfinexException e) {

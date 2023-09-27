@@ -13,6 +13,7 @@ import org.knowm.xchange.bitfinex.v1.dto.marketdata.BitfinexDepth;
 import org.knowm.xchange.bitfinex.v1.dto.marketdata.BitfinexLendDepth;
 import org.knowm.xchange.bitfinex.v1.dto.marketdata.BitfinexTrade;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTicker;
+import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTickerTraidingPair;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.LoanOrderBook;
@@ -243,6 +244,7 @@ public class BitfinexMarketDataService extends BitfinexMarketDataServiceRaw
               : getBitfinexTickers(null);
 
       return Arrays.stream(bitfinexTickers)
+          .filter(bitfinexTicker -> bitfinexTicker instanceof BitfinexTickerTraidingPair)
           .map(BitfinexAdapters::adaptTicker)
           .collect(Collectors.toList());
     } catch (BitfinexException e) {
