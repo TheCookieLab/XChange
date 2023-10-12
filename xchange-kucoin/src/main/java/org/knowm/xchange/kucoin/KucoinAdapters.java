@@ -376,9 +376,21 @@ public class KucoinAdapters {
   }
 
   public static OrderCreateApiRequest adaptMarketOrder(MarketOrder marketOrder) {
-    return ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(marketOrder))
-        .type("market")
-        .build();
+    OrderCreateApiRequest.OrderCreateApiRequestBuilder builder = ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(marketOrder))
+        .type("market");
+
+    // on buy order amount corresponds to counter currency
+    if (marketOrder.getType() == BID) {
+      builder.size(null);
+      builder.funds(marketOrder.getOriginalAmount());
+    }
+    // on sell order amount corresponds to base currency
+    else if (marketOrder.getType() == ASK) {
+      builder.size(marketOrder.getOriginalAmount());
+      builder.funds(null);
+    }
+
+    return builder.build();
   }
 
   /**
@@ -396,6 +408,12 @@ public class KucoinAdapters {
         request.timeInForce(((TimeInForce) flag).name());
       }
     }
+
+    if (order.getUserReference() != null) {
+      request.clientOid(order.getUserReference());
+      hasClientId = true;
+    }
+
     if (!hasClientId) {
       request.clientOid(UUID.randomUUID().toString());
     }
