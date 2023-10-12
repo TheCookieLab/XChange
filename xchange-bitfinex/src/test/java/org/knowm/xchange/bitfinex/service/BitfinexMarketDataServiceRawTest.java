@@ -3,12 +3,16 @@ package org.knowm.xchange.bitfinex.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitfinex.BitfinexExchangeWiremock;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexCurrencyChain;
+import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexCurrencyPairInfo;
+import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexCurrencyPairInfo.Info;
 import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.currency.CurrencyPair;
 
 class BitfinexMarketDataServiceRawTest extends BitfinexExchangeWiremock {
 
@@ -31,5 +35,33 @@ class BitfinexMarketDataServiceRawTest extends BitfinexExchangeWiremock {
 
     assertThat(actual).usingRecursiveComparison().isEqualTo(expected);
   }
+
+
+  @Test
+  void allCurrencyPairInfos() throws IOException {
+    List<BitfinexCurrencyPairInfo> expected = Arrays.asList(
+        BitfinexCurrencyPairInfo.builder()
+            .currencyPair(new CurrencyPair("1INCH/USD"))
+            .info(Info.builder()
+                .minOrderSize(new BigDecimal("2.0"))
+                .maxOrderSize(new BigDecimal("100000.0"))
+                .build())
+            .build(),
+        BitfinexCurrencyPairInfo.builder()
+            .currencyPair(new CurrencyPair("ADA/USD"))
+            .info(Info.builder()
+                .minOrderSize(new BigDecimal("4.0"))
+                .maxOrderSize(new BigDecimal("250000.0"))
+                .initialMargin(new BigDecimal("0.3"))
+                .minMargin(new BigDecimal("0.15"))
+                .build())
+            .build()
+    );
+    List<BitfinexCurrencyPairInfo> actual = bitfinexMarketDataServiceRaw.allCurrencyPairInfos();
+
+    assertThat(actual).usingRecursiveComparison().isEqualTo(expected);
+  }
+
+
 
 }
