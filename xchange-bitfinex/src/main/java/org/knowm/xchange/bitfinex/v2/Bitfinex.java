@@ -117,6 +117,10 @@ public interface Bitfinex {
       throws IOException, BitfinexExceptionV2;
 
   @GET
+  @Path("conf/pub:list:pair:exchange")
+  List<List<String>> allCurrencyPairs() throws IOException, BitfinexExceptionV2;
+
+  @GET
   @Path("conf/pub:info:pair")
   List<List<BitfinexCurrencyPairInfo>> allCurrencyPairInfos() throws IOException, BitfinexExceptionV2;
 

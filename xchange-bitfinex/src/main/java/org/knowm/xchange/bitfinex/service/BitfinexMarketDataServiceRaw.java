@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.knowm.xchange.bitfinex.BitfinexExchange;
 import org.knowm.xchange.bitfinex.dto.BitfinexException;
 import org.knowm.xchange.bitfinex.v1.dto.marketdata.BitfinexDepth;
@@ -361,6 +362,23 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
         .call();
 
     return list.isEmpty() ? Collections.emptyList() : list.get(0);
+  }
+
+
+  public List<CurrencyPair> allCurrencyPairs() throws IOException {
+    List<List<String>> list =
+        decorateApiCall(bitfinexV2::allCurrencyPairs)
+        .withRetry(retry("market-allCurrencyPairInfos"))
+        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
+        .call();
+
+    if (list.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    return list.get(0).stream()
+        .map(BitfinexAdapters::adaptCurrencyPair)
+        .collect(Collectors.toList());
   }
 
 

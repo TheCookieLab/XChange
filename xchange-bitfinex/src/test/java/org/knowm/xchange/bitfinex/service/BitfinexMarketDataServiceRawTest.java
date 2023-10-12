@@ -63,5 +63,14 @@ class BitfinexMarketDataServiceRawTest extends BitfinexExchangeWiremock {
   }
 
 
+  @Test
+  void allCurrencyPairs() throws IOException {
+    List<CurrencyPair> expected = Arrays.asList(new CurrencyPair("1INCH/USD"), CurrencyPair.BTC_USD);
+    List<CurrencyPair> actual = bitfinexMarketDataServiceRaw.allCurrencyPairs();
+
+    assertThat(actual).isEqualTo(expected);
+  }
+
+
 
 }
