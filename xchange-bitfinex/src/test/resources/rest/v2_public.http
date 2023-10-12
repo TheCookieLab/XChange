@@ -1,7 +1,28 @@
 ### Market information for each trading pair
 GET https://api-pub.bitfinex.com/v2/conf/pub:info:pair
 
-
 ### Fetch a list of valid exchange trading pairs
 GET https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange
+
+
+### Fetch a list of valid exchange trading pairs
+GET https://api-pub.bitfinex.com/v2/conf/pub:list:currency
+
+###
+GET https://api-pub.bitfinex.com/v2/conf/pub:map:currency:label
+
+###
+GET https://api-pub.bitfinex.com/v2/conf/pub:map:currency:sym
+
+### Symbols to the underlying network/protocol they operate on (e.g. BAT -> ETH)
+GET https://api-pub.bitfinex.com/v2/conf/pub:map:currency:pool
+
+### Wallet status for each currency
+GET https://api-pub.bitfinex.com/v2/conf/pub:info:tx:status
+
+###
+GET https://api-pub.bitfinex.com/v2/conf/pub:map:tx:method
+
+###
+GET https://api-pub.bitfinex.com/v2/conf/pub:map:currency:tx:fee
 

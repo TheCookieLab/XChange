@@ -29,9 +29,9 @@ public class BitfinexCurrencyPairInfo {
     String placeholder2;
     String placeholder3;
 
-    BigDecimal minOrderSize;
+    BigDecimal minAssetAmount;
 
-    BigDecimal maxOrderSize;
+    BigDecimal maxAssetAmount;
 
     String placeholder4;
     String placeholder5;

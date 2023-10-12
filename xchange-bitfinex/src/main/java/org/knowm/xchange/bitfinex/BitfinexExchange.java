@@ -1,26 +1,25 @@
 package org.knowm.xchange.bitfinex;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bitfinex.config.Config;
 import org.knowm.xchange.bitfinex.dto.BitfinexException;
 import org.knowm.xchange.bitfinex.service.BitfinexAccountService;
-import org.knowm.xchange.bitfinex.service.BitfinexAdapters;
 import org.knowm.xchange.bitfinex.service.BitfinexMarketDataService;
 import org.knowm.xchange.bitfinex.service.BitfinexMarketDataServiceRaw;
 import org.knowm.xchange.bitfinex.service.BitfinexTradeService;
-import org.knowm.xchange.bitfinex.v1.dto.account.BitfinexAccountFeesResponse;
-import org.knowm.xchange.bitfinex.v1.dto.marketdata.BitfinexSymbolDetail;
-import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexAccountInfosResponse;
+import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexCurrencyPairInfo;
 import org.knowm.xchange.client.ResilienceRegistries;
-import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.dto.meta.CurrencyMetaData;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.instrument.Instrument;
 import si.mazi.rescu.SynchronizedValueFactory;
 
 public class BitfinexExchange extends BaseExchange {
@@ -69,46 +68,30 @@ public class BitfinexExchange extends BaseExchange {
   public void remoteInit() throws IOException, ExchangeException {
 
     try {
-      BitfinexMarketDataServiceRaw dataService =
-          (BitfinexMarketDataServiceRaw) this.marketDataService;
-      List<CurrencyPair> currencyPairs = dataService.getExchangeSymbols();
-      exchangeMetaData = BitfinexAdapters.adaptMetaData(currencyPairs, exchangeMetaData);
+      BitfinexMarketDataServiceRaw dataService = (BitfinexMarketDataServiceRaw) marketDataService;
+      List<BitfinexCurrencyPairInfo> currencyPairInfos = dataService.allCurrencyPairInfos();
 
-      // Get the last-price of each pair. It is needed to infer XChange's priceScale out of
-      // Bitfinex's pricePercision
+      Map<Instrument, InstrumentMetaData> instruments = new HashMap<>();
+      Map<Currency, CurrencyMetaData> currencies = new HashMap<>();
 
-      Map<CurrencyPair, BigDecimal> lastPrices =
-          Arrays.stream(dataService.getBitfinexTickers(null))
-              .map(BitfinexAdapters::adaptTicker)
-              .collect(Collectors.toMap(t -> t.getCurrencyPair(), t -> t.getLast()));
+      currencyPairInfos.forEach(bitfinexCurrencyPairInfo -> {
+        instruments.put(bitfinexCurrencyPairInfo.getCurrencyPair(),
+            new InstrumentMetaData.Builder()
+                .minimumAmount(bitfinexCurrencyPairInfo.getInfo().getMinAssetAmount())
+                .maximumAmount(bitfinexCurrencyPairInfo.getInfo().getMaxAssetAmount())
+                .priceScale(8)
+                .volumeScale(8)
+                .marketOrderEnabled(true)
+                .build());
 
-      final List<BitfinexSymbolDetail> symbolDetails = dataService.getSymbolDetails();
-      exchangeMetaData =
-          BitfinexAdapters.adaptMetaData(exchangeMetaData, symbolDetails, lastPrices);
+        currencies.put(bitfinexCurrencyPairInfo.getCurrencyPair().getBase(),
+            new CurrencyMetaData(8, null));
+        currencies.put(bitfinexCurrencyPairInfo.getCurrencyPair().getCounter(),
+            new CurrencyMetaData(8, null));
+      });
 
-      if (exchangeSpecification.getApiKey() != null
-          && exchangeSpecification.getSecretKey() != null) {
-        // Bitfinex does not provide any specific wallet health info
-        // So instead of wallet status, fetch platform status to get wallet health
-        Integer bitfinexPlatformStatusData = dataService.getBitfinexPlatformStatus()[0];
-        boolean bitfinexPlatformStatusPresent = bitfinexPlatformStatusData != null;
-        int bitfinexPlatformStatus = bitfinexPlatformStatusPresent ? bitfinexPlatformStatusData : 0;
-        // Additional remoteInit configuration for authenticated instances
-        BitfinexAccountService accountService = (BitfinexAccountService) this.accountService;
-        final BitfinexAccountFeesResponse accountFees = accountService.getAccountFees();
-        exchangeMetaData =
-            BitfinexAdapters.adaptMetaData(
-                accountFees,
-                bitfinexPlatformStatus,
-                bitfinexPlatformStatusPresent,
-                exchangeMetaData);
+      exchangeMetaData = new ExchangeMetaData(instruments, currencies, null, null, null);
 
-        BitfinexTradeService tradeService = (BitfinexTradeService) this.tradeService;
-        final BitfinexAccountInfosResponse[] bitfinexAccountInfos =
-            tradeService.getBitfinexAccountInfos();
-
-        exchangeMetaData = BitfinexAdapters.adaptMetaData(bitfinexAccountInfos, exchangeMetaData);
-      }
     } catch (BitfinexException e) {
       throw BitfinexErrorAdapter.adapt(e);
     }
