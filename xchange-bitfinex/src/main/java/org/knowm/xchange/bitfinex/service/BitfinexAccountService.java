@@ -44,8 +44,11 @@ public class BitfinexAccountService extends BitfinexAccountServiceRaw implements
 
   @Override
   public AccountInfo getAccountInfo() throws IOException {
-
-    return new AccountInfo(BitfinexAdapters.adaptWallets(getBitfinexAccountInfo()));
+    try {
+      return BitfinexAdapters.toAccountInfo(getWallets());
+    } catch (BitfinexException e) {
+      throw BitfinexErrorAdapter.adapt(e);
+    }
   }
 
   /**

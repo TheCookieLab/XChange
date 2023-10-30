@@ -36,6 +36,7 @@ import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexAccountInfosResponse;
 import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexOrderFlags;
 import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexOrderStatusResponse;
 import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexTradeResponse;
+import org.knowm.xchange.bitfinex.v2.dto.account.BitfinexWallet;
 import org.knowm.xchange.bitfinex.v2.dto.account.Movement;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexPublicTrade;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTickerFundingCurrency;
@@ -45,6 +46,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.FundingRecord;
@@ -1048,6 +1050,32 @@ public final class BitfinexAdapters {
         .orderStatus(adaptOrderStatus(gateioOrder))
         .cumulativeAmount(gateioOrder.getExecutedAmount())
         .averagePrice(gateioOrder.getAvgExecutionPrice())
+        .build();
+  }
+
+
+  public static AccountInfo toAccountInfo(List<BitfinexWallet> bitfinexWallet) {
+    Map<String, List<Balance>> balancesByWalletType = bitfinexWallet.stream()
+        .collect(Collectors.groupingBy(
+            BitfinexWallet::getWalletType,
+            Collectors.mapping(BitfinexAdapters::toBalance, Collectors.toList())));
+
+    List<Wallet> wallets = new ArrayList<>();
+    balancesByWalletType.forEach((key, value) -> wallets.add(Wallet.Builder
+        .from(value)
+        .id(key)
+        .build())
+    );
+
+    return new AccountInfo(wallets);
+  }
+
+
+  public static Balance toBalance(BitfinexWallet bitfinexWallet) {
+    return new Balance.Builder()
+        .currency(bitfinexWallet.getCurrency())
+        .available(bitfinexWallet.getAvailableBalance())
+        .total(bitfinexWallet.getBalance())
         .build();
   }
 

@@ -1,0 +1,51 @@
+### Wallets
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign("POST", request);
+%}
+
+POST {{api_v2}}/auth/r/wallets
+accept: application/json
+bfx-nonce: {{nonce}}
+bfx-apikey: {{api_key}}
+bfx-signature: {{signature}}
+Content-Type: application/json
+
+{}
+
+
+### Retrieve Orders
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign("POST", request);
+%}
+
+POST {{api_v2}}/auth/r/orders
+accept: application/json
+bfx-nonce: {{nonce}}
+bfx-apikey: {{api_key}}
+bfx-signature: {{signature}}
+Content-Type: application/json
+
+{}
+
+
+### Orders History
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign("POST", request);
+%}
+
+POST {{api_v2}}/auth/r/orders/hist
+accept: application/json
+bfx-nonce: {{nonce}}
+bfx-apikey: {{api_key}}
+bfx-signature: {{signature}}
+Content-Type: application/json
+
+{
+  "id": [128936062156],
+  "limit": "2"
+}
+
+

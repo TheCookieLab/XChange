@@ -1,7 +1,5 @@
 package org.knowm.xchange.bitfinex.v2;
 
-import java.io.IOException;
-import java.util.List;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
@@ -10,15 +8,17 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import java.io.IOException;
+import java.util.List;
 import org.knowm.xchange.bitfinex.v2.dto.BitfinexExceptionV2;
 import org.knowm.xchange.bitfinex.v2.dto.EmptyRequest;
+import org.knowm.xchange.bitfinex.v2.dto.account.BitfinexWallet;
 import org.knowm.xchange.bitfinex.v2.dto.account.LedgerEntry;
 import org.knowm.xchange.bitfinex.v2.dto.account.LedgerRequest;
 import org.knowm.xchange.bitfinex.v2.dto.account.Movement;
 import org.knowm.xchange.bitfinex.v2.dto.account.TransferBetweenWalletsRequest;
 import org.knowm.xchange.bitfinex.v2.dto.account.TransferBetweenWalletsResponse;
 import org.knowm.xchange.bitfinex.v2.dto.account.UpdateCollateralDerivativePositionRequest;
-import org.knowm.xchange.bitfinex.v2.dto.account.Wallet;
 import org.knowm.xchange.bitfinex.v2.dto.trade.ActiveOrder;
 import org.knowm.xchange.bitfinex.v2.dto.trade.OrderTrade;
 import org.knowm.xchange.bitfinex.v2.dto.trade.Position;
@@ -48,7 +48,7 @@ public interface BitfinexAuthenticated extends Bitfinex {
   /** https://docs.bitfinex.com/reference#rest-auth-wallets */
   @POST
   @Path("auth/r/wallets")
-  List<Wallet> getWallets(
+  List<BitfinexWallet> getWallets(
       @HeaderParam(BFX_NONCE) SynchronizedValueFactory<Long> nonce,
       @HeaderParam(BFX_APIKEY) String apiKey,
       @HeaderParam(BFX_SIGNATURE) ParamsDigest signature,

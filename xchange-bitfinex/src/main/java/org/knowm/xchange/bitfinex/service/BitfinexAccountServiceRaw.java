@@ -26,13 +26,13 @@ import org.knowm.xchange.bitfinex.v1.dto.account.BitfinexWithdrawalRequest;
 import org.knowm.xchange.bitfinex.v1.dto.account.BitfinexWithdrawalResponse;
 import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexNonceOnlyRequest;
 import org.knowm.xchange.bitfinex.v2.dto.EmptyRequest;
+import org.knowm.xchange.bitfinex.v2.dto.account.BitfinexWallet;
 import org.knowm.xchange.bitfinex.v2.dto.account.LedgerEntry;
 import org.knowm.xchange.bitfinex.v2.dto.account.LedgerRequest;
 import org.knowm.xchange.bitfinex.v2.dto.account.Movement;
 import org.knowm.xchange.bitfinex.v2.dto.account.TransferBetweenWalletsRequest;
 import org.knowm.xchange.bitfinex.v2.dto.account.TransferBetweenWalletsResponse;
 import org.knowm.xchange.bitfinex.v2.dto.account.UpdateCollateralDerivativePositionRequest;
-import org.knowm.xchange.bitfinex.v2.dto.account.Wallet;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.exceptions.ExchangeException;
 
@@ -313,7 +313,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
         .call();
   }
 
-  public List<Wallet> getWallets() throws IOException {
+  public List<BitfinexWallet> getWallets() throws IOException {
     return decorateApiCall(
             () ->
                 bitfinexV2.getWallets(
