@@ -30,7 +30,7 @@ public class BitfinexAdaptersTest {
   @Test
   public void adaptCurrencyPair() {
     final List<String> currencyPairStrings =
-        Arrays.asList("tBTCUSD", "tETHUSD", "tETHBTC", "tDUSK:USD", "tTKN:USD");
+        Arrays.asList("tBTCUSD", "tETHUSD", "tETHBTC", "tDUSK:USD", "tTKN:USD", "tUSTUSD");
     final List<CurrencyPair> currencyPairs =
         currencyPairStrings.stream()
             .map(BitfinexAdapters::adaptCurrencyPair)
@@ -41,7 +41,8 @@ public class BitfinexAdaptersTest {
             CurrencyPair.ETH_USD,
             CurrencyPair.ETH_BTC,
             new CurrencyPair("DUSK/USD"),
-            new CurrencyPair("TKN/USD")),
+            new CurrencyPair("TKN/USD"),
+            new CurrencyPair("USDT/USD")),
         currencyPairs);
   }
 

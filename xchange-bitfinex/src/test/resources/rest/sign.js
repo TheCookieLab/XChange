@@ -1,11 +1,11 @@
-export function gen_sign(method, request) {
+export function gen_sign(request) {
   const pattern = RegExp("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
   const url = request.url.tryGetSubstituted();
   const matches =  url.match(pattern);
 
   const path = "/api" + matches[5];
   const body = request.body.tryGetSubstituted() || '';
-  const timestamp = (Date.now() * 1000).toString();
+  const timestamp = Date.now().toString();
 
   const payloadToSign = `${path}${timestamp}${body}`;
 

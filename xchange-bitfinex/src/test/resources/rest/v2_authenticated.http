@@ -1,7 +1,7 @@
 ### Wallets
 < {%
   import {gen_sign} from 'sign.js'
-  gen_sign("POST", request);
+  gen_sign(request);
 %}
 
 POST {{api_v2}}/auth/r/wallets
@@ -14,10 +14,10 @@ Content-Type: application/json
 {}
 
 
-### Retrieve Orders
+### Retrieve Active Orders
 < {%
   import {gen_sign} from 'sign.js'
-  gen_sign("POST", request);
+  gen_sign(request);
 %}
 
 POST {{api_v2}}/auth/r/orders
@@ -30,10 +30,28 @@ Content-Type: application/json
 {}
 
 
+### Retrieve Active Orders (by symbol)
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+
+POST {{api_v2}}/auth/r/orders/tBTCUSD
+accept: application/json
+bfx-nonce: {{nonce}}
+bfx-apikey: {{api_key}}
+bfx-signature: {{signature}}
+Content-Type: application/json
+
+{
+  "id": [129136592506]
+}
+
+
 ### Orders History
 < {%
   import {gen_sign} from 'sign.js'
-  gen_sign("POST", request);
+  gen_sign(request);
 %}
 
 POST {{api_v2}}/auth/r/orders/hist
@@ -44,7 +62,26 @@ bfx-signature: {{signature}}
 Content-Type: application/json
 
 {
-  "id": [128936062156],
+  "id": null,
+  "limit": "2"
+}
+
+
+### Orders History (by symbol)
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+
+POST {{api_v2}}/auth/r/orders/tPOLC:USD/hist
+accept: application/json
+bfx-nonce: {{nonce}}
+bfx-apikey: {{api_key}}
+bfx-signature: {{signature}}
+Content-Type: application/json
+
+{
+  "id": null,
   "limit": "2"
 }
 
