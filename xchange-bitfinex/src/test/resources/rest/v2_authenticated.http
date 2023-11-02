@@ -86,3 +86,22 @@ Content-Type: application/json
 }
 
 
+### Submit Order
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+
+POST {{api_v2}}/auth/w/order/submit
+accept: application/json
+bfx-nonce: {{nonce}}
+bfx-apikey: {{api_key}}
+bfx-signature: {{signature}}
+Content-Type: application/json
+
+{
+  "type": "EXCHANGE MARKET",
+  "symbol": "tPOLC:USD",
+  "amount": "100"
+}
+
