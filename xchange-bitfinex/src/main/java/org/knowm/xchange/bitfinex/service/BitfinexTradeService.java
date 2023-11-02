@@ -250,7 +250,6 @@ public class BitfinexTradeService extends BitfinexTradeServiceRaw implements Tra
   @Override
   public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {
     // parse parameters
-    List<Long> ids = new ArrayList<>();
     CurrencyPair currencyPair = null;
     Instant from = null;
     Instant to = null;
@@ -261,13 +260,12 @@ public class BitfinexTradeService extends BitfinexTradeServiceRaw implements Tra
       from = bitfinexOrderQueryParams.getFrom();
       to = bitfinexOrderQueryParams.getTo();
       limit = bitfinexOrderQueryParams.getLimit();
-
-      ids = Arrays.stream(orderQueryParams)
-          .map(BitfinexOrderQueryParams.class::cast)
-          .map(BitfinexOrderQueryParams::getOrderId)
-          .map(Long::parseLong)
-          .collect(Collectors.toList());
     }
+
+    List<Long> ids = Arrays.stream(orderQueryParams)
+        .map(OrderQueryParams::getOrderId)
+        .map(Long::parseLong)
+        .collect(Collectors.toList());
 
     try {
       List<BitfinexOrderDetails> inactiveOrderDetails = getBitfinexOrdersHistory(currencyPair, ids, from, to, limit);
