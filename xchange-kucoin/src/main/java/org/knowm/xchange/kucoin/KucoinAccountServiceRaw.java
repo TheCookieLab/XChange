@@ -5,7 +5,6 @@ import static org.knowm.xchange.kucoin.KucoinResilience.PRIVATE_REST_ENDPOINT_RA
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.kucoin.dto.request.ApplyWithdrawApiRequest;
 import org.knowm.xchange.kucoin.dto.request.CreateAccountRequest;
@@ -27,13 +26,17 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
     super(exchange, resilienceRegistries);
   }
 
-  public List<AccountBalancesResponse> getKucoinAccounts(String currency, String accountType) throws IOException {
-    return decorateApiCall(() ->
-        accountApi.getAccountList(apiKey, digest, nonceFactory, passphrase, currency, accountType))
-        .withRetry(retry("accountList"))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
-        .call()
-        .getData();
+  public List<AccountBalancesResponse> getKucoinAccounts() throws IOException {
+    checkAuthenticated();
+    return classifyingExceptions(
+        () ->
+            decorateApiCall(
+                    () ->
+                        accountApi.getAccountList(
+                            apiKey, digest, nonceFactory, passphrase, null, null))
+                .withRetry(retry("accountList"))
+                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call());
   }
 
   public Void createKucoinAccount(String currency, String type) throws IOException {
@@ -53,17 +56,24 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
   }
 
   public ApplyWithdrawResponse applyWithdraw(ApplyWithdrawApiRequest req) throws IOException {
-    return  decorateApiCall(() ->
+    checkAuthenticated();
+    return classifyingExceptions(
+        () ->
+            decorateApiCall(
+                    () ->
                         withdrawalAPI.applyWithdraw(apiKey, digest, nonceFactory, passphrase, req))
                 .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
-                .call().getData();
+                .call());
   }
 
   public InternalTransferResponse innerTransfer(InnerTransferRequest req) throws IOException {
-    return decorateApiCall(() ->
-        accountApi.innerTransfer(apiKey, digest, nonceFactory, passphrase, req))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
-        .call().getData();
+    checkAuthenticated();
+    return classifyingExceptions(
+        () ->
+            decorateApiCall(
+                    () -> accountApi.innerTransfer(apiKey, digest, nonceFactory, passphrase, req))
+                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call());
   }
 
   @Deprecated
@@ -119,14 +129,32 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                 .call());
   }
 
-  public Pagination<WithdrawalResponse> getWithdrawalsList(String currency, String status,
-      Long startAt, Long endAt, Integer pageSize, Integer currentPage) throws IOException
-  {
+  public Pagination<WithdrawalResponse> getWithdrawalsList(
+      String currency,
+      String status,
+      Long startAt,
+      Long endAt,
+      Integer pageSize,
+      Integer currentPage)
+      throws IOException {
     checkAuthenticated();
-    return classifyingExceptions(() -> decorateApiCall(
-        () -> withdrawalAPI.getWithdrawalsList(apiKey, digest, nonceFactory, passphrase, currency,
-            status, startAt, endAt, pageSize, currentPage)).withRateLimiter(
-        rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER)).call());
+    return classifyingExceptions(
+        () ->
+            decorateApiCall(
+                    () ->
+                        withdrawalAPI.getWithdrawalsList(
+                            apiKey,
+                            digest,
+                            nonceFactory,
+                            passphrase,
+                            currency,
+                            status,
+                            startAt,
+                            endAt,
+                            pageSize,
+                            currentPage))
+                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call());
   }
 
   public Pagination<DepositResponse> getDepositList(
@@ -165,23 +193,28 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
         .getData();
   }
 
-  public DepositAddressResponse getDepositAddress(String currency, String chain) throws IOException {
-
-    // kucoin expects currency to be uppercase
-    String currencyAdapted = currency.toUpperCase(Locale.ROOT);
-
-    return decorateApiCall(() ->
-        depositAPI.getDepositAddress(apiKey, digest, nonceFactory, passphrase, currencyAdapted, chain))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
-        .call()
-        .getData();
+  public DepositAddressResponse getDepositAddress(String currency, String chain)
+      throws IOException {
+    checkAuthenticated();
+    return classifyingExceptions(
+        () ->
+            decorateApiCall(
+                    () ->
+                        depositAPI.getDepositAddress(
+                            apiKey, digest, nonceFactory, passphrase, currency, chain))
+                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call());
   }
 
   public List<DepositAddressResponse> getDepositAddresses(String currency) throws IOException {
-    return decorateApiCall(() ->
-        depositAPI.getDepositAddresses(apiKey, digest, nonceFactory, passphrase,currency))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
-        .call()
-        .getData();
+    checkAuthenticated();
+    return classifyingExceptions(
+        () ->
+            decorateApiCall(
+                    () ->
+                        depositAPI.getDepositAddresses(
+                            apiKey, digest, nonceFactory, passphrase, currency))
+                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call());
   }
 }

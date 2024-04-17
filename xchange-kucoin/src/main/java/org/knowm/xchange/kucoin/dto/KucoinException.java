@@ -10,10 +10,10 @@ import lombok.extern.jackson.Jacksonized;
 @Builder
 public class KucoinException extends RuntimeException {
 
-  @JsonProperty("label")
-  String label;
+  @JsonProperty("code")
+  String code;
 
-  @JsonProperty("message")
+  @JsonProperty("msg")
   String message;
 
 }
