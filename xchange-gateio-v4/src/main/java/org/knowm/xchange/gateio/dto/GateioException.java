@@ -1,4 +1,4 @@
-package org.knowm.xchange.kucoin.dto;
+package org.knowm.xchange.gateio.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
@@ -8,7 +8,7 @@ import lombok.extern.jackson.Jacksonized;
 @Value
 @Jacksonized
 @Builder
-public class KucoinException extends RuntimeException {
+public class GateioException extends RuntimeException {
 
   @JsonProperty("label")
   String label;
