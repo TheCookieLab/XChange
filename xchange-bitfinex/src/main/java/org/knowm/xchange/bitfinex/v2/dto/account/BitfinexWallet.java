@@ -21,7 +21,6 @@ public class BitfinexWallet {
   /** Currency (e.g. USD, ...) */
   @JsonDeserialize(converter = StringToCurrencyConverter.class)
   private Currency currency;
-
   /** Wallet balance */
   private BigDecimal balance;
 
