@@ -80,6 +80,12 @@ public class BitfinexAdapters {
   private final String USDT_SYMBOL_BITFINEX = "UST";
   private final String USDT_SYMBOL_XCHANGE = "USDT";
 
+  private final Map<String, Currency> STRING_TO_CURRENCY = new HashMap<>();
+
+  static {
+    STRING_TO_CURRENCY.put("UST", Currency.USDT);
+  }
+
   /**
    * Each element in the response array contains a set of currencies that are at a given fee tier.
    * The API returns the fee per currency in each tier and does not make any promises that they are
@@ -119,6 +125,11 @@ public class BitfinexAdapters {
       result = USDT_SYMBOL_XCHANGE;
     }
     return result;
+  }
+
+
+  public CurrencyPair toXChangeCurrencyPair(CurrencyPair currencyPair) {
+    return new CurrencyPair(toCurrency(currencyPair.getBase().getCurrencyCode()), toCurrency(currencyPair.getCounter().getCurrencyCode()));
   }
 
   public String adaptOrderType(OrderType type) {
@@ -830,8 +841,10 @@ public class BitfinexAdapters {
     CurrencyPair currencyPair =
         CurrencyPairDeserializer.getCurrencyPairFromString(bitfinexTicker.getSymbol().substring(1));
 
+    CurrencyPair adoptedCurrencyPair = toXChangeCurrencyPair(currencyPair);
+
     return new Ticker.Builder()
-        .currencyPair(currencyPair)
+        .instrument(adoptedCurrencyPair)
         .last(last)
         .bid(bid)
         .ask(ask)
@@ -918,6 +931,10 @@ public class BitfinexAdapters {
     return new AccountInfo(wallets);
   }
 
+
+  public Currency toCurrency(String bitfinexCurrency) {
+    return STRING_TO_CURRENCY.getOrDefault(bitfinexCurrency, Currency.getInstance(bitfinexCurrency));
+  }
 
   public Balance toBalance(BitfinexWallet bitfinexWallet) {
     return new Balance.Builder()
