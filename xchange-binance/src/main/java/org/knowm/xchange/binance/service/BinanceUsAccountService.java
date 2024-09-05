@@ -27,8 +27,7 @@ public class BinanceUsAccountService extends BinanceAccountService {
   protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
   public BinanceUsAccountService(
-      BinanceExchange exchange,
-      ResilienceRegistries resilienceRegistries) {
+      BinanceExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
   }
 
@@ -89,6 +88,6 @@ public class BinanceUsAccountService extends BinanceAccountService {
   @Override
   public BinanceSystemStatus getSystemStatus() {
     LOG.warn("getSystemStatus: {}", NOT_SUPPORTED);
-    return new BinanceSystemStatus();
+    return BinanceSystemStatus.builder().build();
   }
 }

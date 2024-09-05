@@ -6,14 +6,14 @@ import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.ftx.dto.FtxWebsocketCredential;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel;
-import io.reactivex.Completable;
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.ftx.FtxExchange;
 
 public class FtxStreamingExchange extends FtxExchange implements StreamingExchange {
 
-  private final static String API_URI = "wss://ftx.com/ws/";
+  private static final String API_URI = "wss://ftx.com/ws/";
 
   private FtxStreamingService ftxStreamingService;
   private FtxStreamingMarketDataService ftxStreamingMarketDataService;
@@ -23,12 +23,15 @@ public class FtxStreamingExchange extends FtxExchange implements StreamingExchan
   protected void initServices() {
     super.initServices();
 
-    String apiUri = exchangeSpecification.getOverrideWebsocketApiUri() != null ? exchangeSpecification.getOverrideWebsocketApiUri() : API_URI;
+    String apiUri =
+        exchangeSpecification.getOverrideWebsocketApiUri() != null
+            ? exchangeSpecification.getOverrideWebsocketApiUri()
+            : API_URI;
 
     if (exchangeSpecification.getApiKey() != null) {
       this.ftxStreamingService =
           new FtxStreamingService(
-                  apiUri,
+              apiUri,
               () ->
                   new FtxWebsocketCredential(
                       exchangeSpecification.getApiKey(),

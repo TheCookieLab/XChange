@@ -9,7 +9,7 @@ import info.bitrich.xchangestream.dydx.dto.v3.dydxInitialOrderBookMessage;
 import info.bitrich.xchangestream.dydx.dto.v3.dydxUpdateOrderBookMessage;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -110,12 +110,10 @@ public class dydxStreamingService extends JsonNettyStreamingService {
       switch (msg.get("type").asText()) {
         case SUBSCRIBED:
           return mapper.treeToValue(
-              msg,
-              info.bitrich.xchangestream.dydx.dto.v1.dydxInitialOrderBookMessage.class);
+              msg, info.bitrich.xchangestream.dydx.dto.v1.dydxInitialOrderBookMessage.class);
         case CHANNEL_DATA:
           return mapper.treeToValue(
-              msg,
-              info.bitrich.xchangestream.dydx.dto.v1.dydxUpdateOrderBookMessage.class);
+              msg, info.bitrich.xchangestream.dydx.dto.v1.dydxUpdateOrderBookMessage.class);
       }
     }
     return mapper.treeToValue(msg, dydxWebSocketTransaction.class);

@@ -6,7 +6,7 @@ import info.bitrich.xchangestream.kraken.dto.KrakenOpenOrder;
 import info.bitrich.xchangestream.kraken.dto.KrakenOwnTrade;
 import info.bitrich.xchangestream.kraken.dto.enums.KrakenSubscriptionName;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Observable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -41,12 +41,15 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
     this.streamingService = streamingService;
 
     if (streamingService != null) {
-      streamingService.subscribeDisconnect().subscribe(o -> {
-        synchronized (this) {
-          ownTradesObservableSet = false;
-          userTradeObservableSet = false;
-        }
-      });
+      streamingService
+          .subscribeDisconnect()
+          .subscribe(
+              o -> {
+                synchronized (this) {
+                  ownTradesObservableSet = false;
+                  userTradeObservableSet = false;
+                }
+              });
     }
   }
 
@@ -206,7 +209,7 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
 
         CurrencyPair currencyPair = new CurrencyPair(dto.pair);
         result.add(
-            new UserTrade.Builder()
+            UserTrade.builder()
                 .id(tradeId) // The tradeId should be the key of the map, postxid can be null and is
                 // not unique as required for a tradeId
                 .orderId(dto.ordertxid)

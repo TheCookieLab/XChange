@@ -1,16 +1,16 @@
 package info.bitrich.xchangestream.kucoin;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import info.bitrich.xchangestream.kucoin.dto.KucoinWebSocketUnsubscribeMessage;
 import info.bitrich.xchangestream.kucoin.dto.KucoinWebSocketSubscribeMessage;
+import info.bitrich.xchangestream.kucoin.dto.KucoinWebSocketUnsubscribeMessage;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
-import io.reactivex.Completable;
-import io.reactivex.CompletableSource;
-import io.reactivex.Observable;
-import io.reactivex.disposables.Disposable;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.CompletableSource;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.disposables.Disposable;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -35,18 +35,24 @@ class KucoinStreamingService extends JsonNettyStreamingService {
     Completable conn = super.connect();
 
     return conn.andThen(
-            (CompletableSource)
-                    (completable) -> {
-                      try {
-                        if (pingPongSubscription != null && !pingPongSubscription.isDisposed()) {
-                          pingPongSubscription.dispose();
-                        }
-                        pingPongSubscription = pingPongSrc.subscribe(o -> this.sendMessage("{\"type\":\"ping\", \"id\": \"" + refCount.incrementAndGet() + "\"}"));
-                        completable.onComplete();
-                      } catch (Exception e) {
-                        completable.onError(e);
-                      }
-                    });
+        (CompletableSource)
+            (completable) -> {
+              try {
+                if (pingPongSubscription != null && !pingPongSubscription.isDisposed()) {
+                  pingPongSubscription.dispose();
+                }
+                pingPongSubscription =
+                    pingPongSrc.subscribe(
+                        o ->
+                            this.sendMessage(
+                                "{\"type\":\"ping\", \"id\": \""
+                                    + refCount.incrementAndGet()
+                                    + "\"}"));
+                completable.onComplete();
+              } catch (Exception e) {
+                completable.onError(e);
+              }
+            });
   }
 
   @Override
@@ -57,13 +63,16 @@ class KucoinStreamingService extends JsonNettyStreamingService {
 
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
-    KucoinWebSocketSubscribeMessage message = new KucoinWebSocketSubscribeMessage(channelName, refCount.incrementAndGet(), privateChannel);
+    KucoinWebSocketSubscribeMessage message =
+        new KucoinWebSocketSubscribeMessage(
+            channelName, refCount.incrementAndGet(), privateChannel);
     return objectMapper.writeValueAsString(message);
   }
 
   @Override
   public String getUnsubscribeMessage(String channelName, Object... args) throws IOException {
-    KucoinWebSocketUnsubscribeMessage message = new KucoinWebSocketUnsubscribeMessage(channelName, refCount.incrementAndGet());
+    KucoinWebSocketUnsubscribeMessage message =
+        new KucoinWebSocketUnsubscribeMessage(channelName, refCount.incrementAndGet());
     return objectMapper.writeValueAsString(message);
   }
 
@@ -72,20 +81,22 @@ class KucoinStreamingService extends JsonNettyStreamingService {
     JsonNode typeNode = message.get("type");
     if (typeNode != null) {
       String type = typeNode.asText();
-      if ("message".equals(type))
-        super.handleMessage(message);
+      if ("message".equals(type)) super.handleMessage(message);
       else if ("error".equals(type))
         super.handleError(message, new Exception(message.get("data").asText()));
     }
   }
 
   @Override
-  protected WebSocketClientHandler getWebSocketClientHandler(WebSocketClientHandshaker handshaker, WebSocketClientHandler.WebSocketMessageHandler handler) {
+  protected WebSocketClientHandler getWebSocketClientHandler(
+      WebSocketClientHandshaker handshaker,
+      WebSocketClientHandler.WebSocketMessageHandler handler) {
     return new KucoinNettyWebSocketClientHandler(handshaker, handler);
   }
 
   private class KucoinNettyWebSocketClientHandler extends NettyWebSocketClientHandler {
-    public KucoinNettyWebSocketClientHandler(WebSocketClientHandshaker handshaker, WebSocketMessageHandler handler) {
+    public KucoinNettyWebSocketClientHandler(
+        WebSocketClientHandshaker handshaker, WebSocketMessageHandler handler) {
       super(handshaker, handler);
     }
 

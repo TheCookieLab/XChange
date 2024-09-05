@@ -19,6 +19,7 @@ import org.knowm.xchange.bitstamp.dto.account.BitstampDepositAddress;
 import org.knowm.xchange.bitstamp.dto.account.BitstampRippleDepositAddress;
 import org.knowm.xchange.bitstamp.dto.account.BitstampWithdrawal;
 import org.knowm.xchange.bitstamp.dto.account.DepositTransaction;
+import org.knowm.xchange.bitstamp.dto.account.WithdrawalFee;
 import org.knowm.xchange.bitstamp.dto.account.WithdrawalRequest;
 import org.knowm.xchange.bitstamp.dto.trade.BitstampUserTransaction;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
@@ -29,7 +30,9 @@ import org.knowm.xchange.exceptions.FundsExceededException;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 
-/** @author gnandiga */
+/**
+ * @author gnandiga
+ */
 public class BitstampAccountServiceRaw extends BitstampBaseService {
 
   private static final String API_VERSION = "v2";
@@ -111,7 +114,21 @@ public class BitstampAccountServiceRaw extends BitstampBaseService {
     } else if (currency.equals(Currency.XLM)) {
       response = withdrawXLM(amount, address, tag);
     } else {
-      response = withdrawAddrAmount(currency, amount, address);
+      response = checkAndReturnWithdrawal(bitstampAuthenticatedV2.withdrawCrypto(apiKeyForV2Requests,
+          signatureCreatorV2,
+          uuidNonceFactory,
+          timestampFactory,
+          API_VERSION,
+          currency.getCurrencyCode().toLowerCase(),
+          address,
+          amount,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null));
     }
 
     if (response.error != null) {
@@ -123,42 +140,6 @@ public class BitstampAccountServiceRaw extends BitstampBaseService {
     }
 
     return response;
-  }
-
-  /** To prevent code repetition we try to resolve client method */
-  public BitstampWithdrawal withdrawAddrAmount(
-      Currency currency, BigDecimal amount, String address) {
-    try {
-      Class<? extends BitstampAuthenticatedV2> clientClass = bitstampAuthenticatedV2.getClass();
-      Method withdrawMethod =
-          clientClass.getMethod(
-              "withdraw" + currency.getCurrencyCode(),
-              String.class,
-              ParamsDigest.class,
-              SynchronizedValueFactory.class,
-              SynchronizedValueFactory.class,
-              String.class,
-              BigDecimal.class,
-              String.class);
-
-      BitstampWithdrawal response =
-          (BitstampWithdrawal)
-              withdrawMethod.invoke(
-                  bitstampAuthenticatedV2,
-                  apiKeyForV2Requests,
-                  signatureCreatorV2,
-                  uuidNonceFactory,
-                  timestampFactory,
-                  API_VERSION,
-                  amount,
-                  address);
-      return checkAndReturnWithdrawal(response);
-    } catch (BitstampException e) {
-      throw handleError(e);
-    } catch (Exception e) {
-      throw new RuntimeException(
-          "Failed to call bitstamp withdraw method on authenticated client", e);
-    }
   }
 
   public BitstampWithdrawal withdrawRippleFunds(
@@ -369,16 +350,27 @@ public class BitstampAccountServiceRaw extends BitstampBaseService {
   public List<WithdrawalRequest> getWithdrawalRequests(Long timeDelta) throws IOException {
 
     try {
-      final List<WithdrawalRequest> response =
-          Arrays.asList(
-              bitstampAuthenticatedV2.getWithdrawalRequests(
+      return bitstampAuthenticatedV2.getWithdrawalRequests(
                   apiKeyForV2Requests,
                   signatureCreatorV2,
                   uuidNonceFactory,
                   timestampFactory,
                   API_VERSION,
-                  timeDelta));
-      return response;
+                  timeDelta);
+    } catch (BitstampException e) {
+      throw handleError(e);
+    }
+  }
+
+  public List<WithdrawalFee> getWithdrawalFees() throws IOException {
+
+    try {
+      return bitstampAuthenticatedV2.getWithdrawalFees(
+                  apiKeyForV2Requests,
+                  signatureCreatorV2,
+                  uuidNonceFactory,
+                  timestampFactory,
+                  API_VERSION);
     } catch (BitstampException e) {
       throw handleError(e);
     }
