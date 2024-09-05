@@ -4,7 +4,7 @@ import static org.knowm.xchange.coinbasepro.CoinbaseProAdapters.adaptTradeHistor
 
 import info.bitrich.xchangestream.coinbasepro.dto.CoinbaseProWebSocketTransaction;
 import info.bitrich.xchangestream.core.StreamingTradeService;
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Observable;
 import java.util.Collections;
 import java.util.List;
 import org.knowm.xchange.coinbasepro.dto.trade.CoinbaseProFill;
@@ -57,6 +57,7 @@ public class CoinbaseProStreamingTradeService implements StreamingTradeService {
   }
 
   private boolean orderChangesWarningLogged;
+
   /**
    * <strong>Warning:</strong> the order change stream is not yet fully implemented for Coinbase
    * Pro. Orders are not fully populated, containing only the values changed since the last update.

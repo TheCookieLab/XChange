@@ -1,15 +1,14 @@
 package org.knowm.xchange.binance.service;
 
-import static org.knowm.xchange.binance.BinanceResilience.REQUEST_WEIGHT_RATE_LIMITER;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 
 import java.io.IOException;
-
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.BinanceAuthenticated;
 import org.knowm.xchange.binance.BinanceExchange;
 import org.knowm.xchange.binance.BinanceFuturesAuthenticated;
+import org.knowm.xchange.binance.dto.ExchangeType;
 import org.knowm.xchange.binance.dto.meta.BinanceSystemStatus;
-import org.knowm.xchange.binance.dto.meta.exchangeinfo.BinanceExchangeInfo;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.service.BaseResilientExchangeService;
@@ -24,22 +23,46 @@ public class BinanceBaseService extends BaseResilientExchangeService<BinanceExch
 
   protected final String apiKey;
   protected final BinanceAuthenticated binance;
-  protected final BinanceFuturesAuthenticated binanceFutures;
+  protected BinanceFuturesAuthenticated binanceFutures;
+  protected BinanceFuturesAuthenticated inverseBinanceFutures;
   protected final ParamsDigest signatureCreator;
 
   protected BinanceBaseService(
-      BinanceExchange exchange,
-      ResilienceRegistries resilienceRegistries) {
+      BinanceExchange exchange, ResilienceRegistries resilienceRegistries) {
 
     super(exchange, resilienceRegistries);
-    this.binance = ExchangeRestProxyBuilder.forInterface(
-                            BinanceAuthenticated.class, exchange.getExchangeSpecification())
+    this.binance =
+        ExchangeRestProxyBuilder.forInterface(
+                BinanceAuthenticated.class, exchange.getExchangeSpecification())
             .build();
-    ExchangeSpecification futuresSpec = exchange.getDefaultExchangeSpecification();
-    futuresSpec.setSslUri((exchange.usingSandbox()) ? BinanceExchange.SANDBOX_FUTURES_URL: BinanceExchange.FUTURES_URL);
-    this.binanceFutures = ExchangeRestProxyBuilder.forInterface(
-                    BinanceFuturesAuthenticated.class, futuresSpec)
-            .build();
+    ExchangeSpecification futuresSpec;
+    ExchangeSpecification inverseFuturesSpec;
+    if(exchange.getExchangeSpecification().getExchangeSpecificParametersItem(EXCHANGE_TYPE) != null)
+    {
+      switch ((ExchangeType) exchange.getExchangeSpecification()
+          .getExchangeSpecificParametersItem(EXCHANGE_TYPE)) {
+        case SPOT: {
+          break;
+        }
+        case FUTURES: {
+          futuresSpec = exchange.getExchangeSpecification();
+          binanceFutures =
+              ExchangeRestProxyBuilder.forInterface(BinanceFuturesAuthenticated.class, futuresSpec)
+                  .build();
+          inverseBinanceFutures = null;
+          break;
+        }
+        case INVERSE: {
+          inverseFuturesSpec = exchange.getExchangeSpecification();
+          inverseBinanceFutures =
+              ExchangeRestProxyBuilder.forInterface(BinanceFuturesAuthenticated.class,
+                      inverseFuturesSpec)
+                  .build();
+          binanceFutures = null;
+          break;
+        }
+      }
+    }
     this.apiKey = exchange.getExchangeSpecification().getApiKey();
     this.signatureCreator =
         BinanceHmacDigest.createInstance(exchange.getExchangeSpecification().getSecretKey());
@@ -71,20 +94,6 @@ public class BinanceBaseService extends BaseResilientExchangeService<BinanceExch
 
   public SynchronizedValueFactory<Long> getTimestampFactory() {
     return exchange.getTimestampFactory();
-  }
-
-  public BinanceExchangeInfo getExchangeInfo() throws IOException {
-    return decorateApiCall(binance::exchangeInfo)
-        .withRetry(retry("exchangeInfo"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
-        .call();
-  }
-
-  public BinanceExchangeInfo getFutureExchangeInfo() throws IOException {
-    return decorateApiCall(binanceFutures::exchangeInfo)
-            .withRetry(retry("exchangeInfo"))
-            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
-            .call();
   }
 
   public BinanceSystemStatus getSystemStatus() throws IOException {

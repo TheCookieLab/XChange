@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.kucoin.dto.KucoinWebSocketOrderEvent;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.slf4j.Logger;
@@ -24,8 +24,7 @@ public class KucoinStreamingTradeService implements StreamingTradeService {
 
   @Override
   public Observable<Order> getOrderChanges(CurrencyPair currencyPair, Object... args) {
-    return getRawOrderChanges(currencyPair)
-        .map(KucoinStreamingAdapters::adaptOrder);
+    return getRawOrderChanges(currencyPair).map(KucoinStreamingAdapters::adaptOrder);
   }
 
   public Observable<KucoinWebSocketOrderEvent> getRawOrderChanges(CurrencyPair currencyPair) {

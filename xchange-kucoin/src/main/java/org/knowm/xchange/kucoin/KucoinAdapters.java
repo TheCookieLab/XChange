@@ -41,7 +41,11 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
-import org.knowm.xchange.dto.meta.*;
+import org.knowm.xchange.dto.meta.CurrencyMetaData;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.meta.FeeTier;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
+import org.knowm.xchange.dto.meta.WalletHealth;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.StopOrder;
@@ -101,7 +105,9 @@ public class KucoinAdapters {
                 new Ticker.Builder()
                     .instrument(adaptCurrencyPair(ticker.getSymbol()))
                     .bid(ticker.getBuy())
+                    .bidSize(ticker.getBestBidSize())
                     .ask(ticker.getSell())
+                    .askSize(ticker.getBestAskSize())
                     .last(ticker.getLast())
                     .high(ticker.getHigh())
                     .low(ticker.getLow())
@@ -151,7 +157,9 @@ public class KucoinAdapters {
       FeeTier[] feeTiers = staticMetaData != null ? staticMetaData.getFeeTiers() : null;
       Currency feeCurrency = new Currency(symbol.getFeeCurrency());
 
-      currencyPairs.put(pair, new InstrumentMetaData.Builder()
+      currencyPairs.put(
+          pair,
+          new InstrumentMetaData.Builder()
               .tradingFee(takerTradingFee)
               .minimumAmount(minSize)
               .maximumAmount(maxSize)
@@ -325,7 +333,7 @@ public class KucoinAdapters {
   }
 
   public static UserTrade adaptUserTrade(TradeResponse trade) {
-    return new UserTrade.Builder()
+    return UserTrade.builder()
         .currencyPair(adaptCurrencyPair(trade.getSymbol()))
         .feeAmount(trade.getFee())
         .feeCurrency(Currency.getInstance(trade.getFeeCurrency()))
@@ -340,7 +348,7 @@ public class KucoinAdapters {
 
   public static UserTrade adaptHistOrder(HistOrdersResponse histOrder) {
     CurrencyPair currencyPair = adaptCurrencyPair(histOrder.getSymbol());
-    return new UserTrade.Builder()
+    return UserTrade.builder()
         .currencyPair(currencyPair)
         .feeAmount(histOrder.getFee())
         .feeCurrency(currencyPair.base)

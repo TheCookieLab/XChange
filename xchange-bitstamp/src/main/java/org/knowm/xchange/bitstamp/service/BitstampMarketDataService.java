@@ -13,7 +13,9 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
 
-/** @author Matija Mazi */
+/**
+ * @author Matija Mazi
+ */
 public class BitstampMarketDataService extends BitstampMarketDataServiceRaw
     implements MarketDataService {
 
