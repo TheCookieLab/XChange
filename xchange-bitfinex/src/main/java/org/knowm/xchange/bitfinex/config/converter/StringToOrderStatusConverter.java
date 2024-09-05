@@ -11,6 +11,10 @@ public class StringToOrderStatusConverter extends StdConverter<String, OrderStat
   @Override
   public OrderStatus convert(String value) {
 
+    if (value.contains("PARTIALLY FILLED")) {
+      return OrderStatus.PARTIALLY_FILLED;
+    }
+
     if (value.endsWith("CANCELED")) {
       return OrderStatus.CANCELED;
     }
