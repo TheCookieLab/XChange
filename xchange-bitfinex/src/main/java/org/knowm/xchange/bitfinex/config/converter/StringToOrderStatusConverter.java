@@ -11,7 +11,7 @@ public class StringToOrderStatusConverter extends StdConverter<String, OrderStat
   @Override
   public OrderStatus convert(String value) {
 
-    if (value.contains("PARTIALLY FILLED")) {
+    if (value.startsWith("INSUFFICIENT BALANCE (G1)") || value.startsWith("INSUFFICIENT BALANCE (U1)")) {
       return OrderStatus.PARTIALLY_FILLED;
     }
 
