@@ -11,7 +11,7 @@
 
     <artifactId>xchange-truefx</artifactId>
 
-    <name>XChange Bitcoin Core</name>
+    <name>XChange TrueFX</name>
     <description>XChange implementation for TrueFX</description>
 
     <url>http://knowm.org/open-source/xchange/</url>
