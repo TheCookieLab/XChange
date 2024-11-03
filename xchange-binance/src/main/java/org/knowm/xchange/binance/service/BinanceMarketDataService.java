@@ -44,7 +44,6 @@ public class BinanceMarketDataService extends BinanceMarketDataServiceRaw
     super(exchange, resilienceRegistries);
   }
 
-
   @Override
   public ExchangeHealth getExchangeHealth() {
     try {
@@ -56,7 +55,6 @@ public class BinanceMarketDataService extends BinanceMarketDataServiceRaw
     }
     return ExchangeHealth.OFFLINE;
   }
-
 
   /**
    * optional parameters provided in the args array:
@@ -78,18 +76,17 @@ public class BinanceMarketDataService extends BinanceMarketDataServiceRaw
   @Override
   public Ticker getTicker(Instrument instrument, Object... args) throws IOException {
     try {
-      return BinanceAdapters.toTicker(ticker24hAllProducts(instrument), instrument instanceof FuturesContract);
+      return BinanceAdapters.toTicker(
+          ticker24hAllProducts(instrument), instrument instanceof FuturesContract);
     } catch (BinanceException e) {
       throw BinanceErrorAdapter.adapt(e);
     }
   }
 
-
   @Override
   public Ticker getTicker(CurrencyPair currencyPair, Object... args) throws IOException {
     return getTicker((Instrument) currencyPair, args);
   }
-
 
   @Override
   public List<Ticker> getTickers(Params params) throws IOException {
@@ -109,7 +106,6 @@ public class BinanceMarketDataService extends BinanceMarketDataServiceRaw
   public OrderBook getOrderBook(CurrencyPair currencyPair, Object... args) throws IOException {
     return getOrderBook((Instrument) currencyPair, args);
   }
-
 
   @Override
   public OrderBook getOrderBook(Instrument instrument, Object... args) throws IOException {
