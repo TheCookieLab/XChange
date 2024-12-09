@@ -1,7 +1,6 @@
 package org.knowm.xchange.bitfinex.config.converter;
 
 import com.fasterxml.jackson.databind.util.StdConverter;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.dto.Order.OrderStatus;
 
@@ -11,18 +10,12 @@ import org.knowm.xchange.dto.Order.OrderStatus;
 @Slf4j
 public class StringToOrderStatusConverter extends StdConverter<String, OrderStatus> {
 
-  private static final Pattern PARTIALLY_CANCELED_PATTERN = Pattern.compile(
-      "EXECUTED .* was PARTIALLY FILLED .*");
 
   @Override
   public OrderStatus convert(String value) {
     OrderStatus result = null;
 
-    // eg "EXECUTED @ 0.014142(-803.80988437): was PARTIALLY FILLED @ 0.014196(-1069.0), PARTIALLY FILLED @ 0.014158(-1710.98002603)"
-    if (PARTIALLY_CANCELED_PATTERN.matcher(value).matches()) {
-      result = OrderStatus.PARTIALLY_CANCELED;
-
-    } else if (value.startsWith("EXECUTED")) {
+    if (value.startsWith("EXECUTED")) {
       result = OrderStatus.FILLED;
 
     } else if (value.contains("PARTIALLY FILLED")) {
