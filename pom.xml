@@ -5,7 +5,7 @@
 
     <groupId>org.knowm.xchange</groupId>
     <artifactId>xchange-parent</artifactId>
-    <version>5.2.1-SNAPSHOT</version>
+    <version>5.2.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>XChange</name>
@@ -84,7 +84,6 @@
         <module>xchange-enigma</module>
         <module>xchange-examples</module>
         <module>xchange-exmo</module>
-        <module>xchange-ftx</module>
         <module>xchange-gateio</module>
         <module>xchange-gateio-v4</module>
         <module>xchange-gemini</module>
@@ -133,7 +132,6 @@
         <module>xchange-stream-coinmate</module>
         <module>xchange-stream-core</module>
         <module>xchange-stream-dydx</module>
-        <module>xchange-stream-ftx</module>
         <module>xchange-stream-gateio</module>
         <module>xchange-stream-gemini</module>
         <module>xchange-stream-gemini-v2</module>
@@ -505,9 +503,9 @@
                                 <requireMavenVersion>
                                     <version>${version.maven-prerequisite}</version>
                                 </requireMavenVersion>
-                                <dependencyConvergence/>
-                                <banDuplicatePomDependencyVersions/>
-                                <reactorModuleConvergence/>
+                                <dependencyConvergence />
+                                <banDuplicatePomDependencyVersions />
+                                <reactorModuleConvergence />
                             </rules>
                         </configuration>
                     </execution>
