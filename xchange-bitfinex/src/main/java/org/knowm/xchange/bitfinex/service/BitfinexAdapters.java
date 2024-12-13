@@ -203,12 +203,12 @@ public class BitfinexAdapters {
     return BitfinexUtils.toPairString(pair);
   }
 
-  public OrderBook adaptOrderBook(BitfinexDepth btceDepth, CurrencyPair currencyPair) {
+  public OrderBook adaptOrderBook(BitfinexDepth btceDepth, Instrument instrument) {
 
     OrdersContainer asksOrdersContainer =
-        adaptOrders(btceDepth.getAsks(), currencyPair, OrderType.ASK);
+        adaptOrders(btceDepth.getAsks(), instrument, OrderType.ASK);
     OrdersContainer bidsOrdersContainer =
-        adaptOrders(btceDepth.getBids(), currencyPair, OrderType.BID);
+        adaptOrders(btceDepth.getBids(), instrument, OrderType.BID);
 
     return new OrderBook(
         new Date(Math.max(asksOrdersContainer.getTimestamp(), bidsOrdersContainer.getTimestamp())),
@@ -217,7 +217,7 @@ public class BitfinexAdapters {
   }
 
   public OrdersContainer adaptOrders(
-      BitfinexLevel[] bitfinexLevels, CurrencyPair currencyPair, OrderType orderType) {
+      BitfinexLevel[] bitfinexLevels, Instrument instrument, OrderType orderType) {
 
     BigDecimal maxTimestamp = new BigDecimal(Long.MIN_VALUE);
     List<LimitOrder> limitOrders = new ArrayList<>(bitfinexLevels.length);
@@ -232,7 +232,7 @@ public class BitfinexAdapters {
           adaptOrder(
               bitfinexLevel.getAmount(),
               bitfinexLevel.getPrice(),
-              currencyPair,
+              instrument,
               orderType,
               timestamp));
     }
@@ -244,11 +244,11 @@ public class BitfinexAdapters {
   public LimitOrder adaptOrder(
       BigDecimal originalAmount,
       BigDecimal price,
-      CurrencyPair currencyPair,
+      Instrument instrument,
       OrderType orderType,
       Date timestamp) {
 
-    return new LimitOrder(orderType, originalAmount, currencyPair, "", timestamp, price);
+    return new LimitOrder(orderType, originalAmount, instrument, "", timestamp, price);
   }
 
   public List<FixedRateLoanOrder> adaptFixedRateLoanOrders(
@@ -569,7 +569,7 @@ public class BitfinexAdapters {
     return new OpenOrders(limitOrders, hiddenOrders);
   }
 
-  private static void stopLimitWarning() {
+  private void stopLimitWarning() {
     if (warnedStopLimit.compareAndSet(false, true)) {
       log.warn(
           "Found a stop-limit order. Bitfinex v1 API does not return limit prices for stop-limit "
@@ -633,7 +633,7 @@ public class BitfinexAdapters {
     return new UserTrades(pastTrades, TradeSortType.SortByTimestamp);
   }
 
-  private static Date convertBigDecimalTimestampToDate(BigDecimal timestamp) {
+  private Date convertBigDecimalTimestampToDate(BigDecimal timestamp) {
 
     BigDecimal timestampInMillis = timestamp.multiply(new BigDecimal("1000"));
     return new Date(timestampInMillis.longValue());

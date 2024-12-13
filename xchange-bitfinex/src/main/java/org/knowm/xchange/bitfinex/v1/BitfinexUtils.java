@@ -4,6 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.instrument.Instrument;
 
 /** A central place for shared Bitfinex properties */
 public final class BitfinexUtils {
@@ -41,15 +42,15 @@ public final class BitfinexUtils {
         + adaptXchangeCurrency(currencyPair.getCounter());
   }
 
-  public static String toPairStringV1(CurrencyPair currencyPair) {
+  public static String toPairStringV1(Instrument instrument) {
 
-    if (currencyPair == null) {
+    if (instrument == null) {
       return null;
     }
 
-    String base = StringUtils.lowerCase(adaptXchangeCurrency(currencyPair.getBase()));
-    String counter = StringUtils.lowerCase(adaptXchangeCurrency(currencyPair.getCounter()));
-    return base + currencySeparator(base, counter) + adaptXchangeCurrency(currencyPair.getCounter());
+    String base = StringUtils.lowerCase(adaptXchangeCurrency(instrument.getBase()));
+    String counter = StringUtils.lowerCase(adaptXchangeCurrency(instrument.getCounter()));
+    return base + currencySeparator(base, counter) + adaptXchangeCurrency(instrument.getCounter());
   }
 
   /**
