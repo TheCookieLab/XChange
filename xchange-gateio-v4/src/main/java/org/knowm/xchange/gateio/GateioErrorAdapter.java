@@ -1,7 +1,14 @@
 package org.knowm.xchange.gateio;
 
 import lombok.experimental.UtilityClass;
-import org.knowm.xchange.exceptions.*;
+import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.ExchangeSecurityException;
+import org.knowm.xchange.exceptions.FundsExceededException;
+import org.knowm.xchange.exceptions.InstrumentNotValidException;
+import org.knowm.xchange.exceptions.InternalServerException;
+import org.knowm.xchange.exceptions.OrderAmountUnderMinimumException;
+import org.knowm.xchange.exceptions.OrderNotValidException;
+import org.knowm.xchange.exceptions.RateLimitExceededException;
 import org.knowm.xchange.gateio.dto.GateioException;
 
 @UtilityClass
@@ -17,7 +24,6 @@ public class GateioErrorAdapter {
   public final String TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS";
   public final String INVALID_PARAM_VALUE = "INVALID_PARAM_VALUE";
   public final String SERVER_ERROR = "SERVER_ERROR";
-
 
   public ExchangeException adapt(GateioException e) {
 
@@ -42,17 +48,14 @@ public class GateioErrorAdapter {
         return new InternalServerException(e.getMessage(), e);
 
       case INVALID_PARAM_VALUE:
-        if (e.getMessage().contains("below minimum")) {
+        if (e.getMessage().contains("below minimum") || e.getMessage().contains("too small")) {
           return new OrderAmountUnderMinimumException(e.getMessage(), e);
-        }
-        else {
+        } else {
           return new OrderNotValidException(e.getMessage(), e);
         }
 
       default:
         return new ExchangeException(e.getMessage(), e);
     }
-
   }
-
 }

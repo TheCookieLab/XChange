@@ -3,7 +3,7 @@ package info.bitrich.xchangestream.gateio;
 import info.bitrich.xchangestream.core.StreamingAccountService;
 import info.bitrich.xchangestream.gateio.config.Config;
 import info.bitrich.xchangestream.gateio.dto.response.balance.GateioSingleSpotBalanceNotification;
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.Balance;
 
@@ -15,13 +15,14 @@ public class GateioStreamingAccountService implements StreamingAccountService {
     this.service = service;
   }
 
-
   @Override
   public Observable<Balance> getBalanceChanges(Currency currency, Object... args) {
     return service
         .subscribeChannel(Config.SPOT_BALANCES_CHANNEL)
         .map(GateioSingleSpotBalanceNotification.class::cast)
-        .filter(notification -> (currency == null) || (notification.getResult().getCurrency().equals(currency)))
+        .filter(
+            notification ->
+                (currency == null) || (notification.getResult().getCurrency().equals(currency)))
         .map(GateioStreamingAdapters::toBalance);
   }
 }

@@ -4,8 +4,8 @@ import info.bitrich.xchangestream.bitmex.dto.BitmexTicker;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import info.bitrich.xchangestream.util.BookSanityChecker;
-import io.reactivex.Completable;
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Observable;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
@@ -49,13 +49,7 @@ public class BitmexTest {
   }
 
   private <T> void awaitDataCount(Observable<T> observable) {
-    observable
-        .test()
-        .assertSubscribed()
-        .assertNoErrors()
-        .awaitCount(BitmexTest.MIN_DATA_COUNT)
-        .assertNoTimeout()
-        .dispose();
+    observable.test().assertNoErrors().awaitCount(BitmexTest.MIN_DATA_COUNT).dispose();
   }
 
   @Test
@@ -87,16 +81,14 @@ public class BitmexTest {
     streamingMarketDataService
         .getOrderBook(xbtUsd)
         .test()
-        .assertSubscribed()
-        .assertNoErrors()
+        .assertComplete()
         .awaitCount(10)
-        .assertNever(
+        .assertValue(
             book -> {
               String err = BookSanityChecker.hasErrors(book);
               LOG.info("err {}", err);
-              return err != null;
+              return err == null;
             })
-        .assertNoTimeout()
         .dispose();
   }
 }

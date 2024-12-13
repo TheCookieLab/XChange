@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.Validate;
@@ -27,33 +28,54 @@ public class GateioTradeServiceRaw extends GateioBaseService {
     super(exchange);
   }
 
-
-  public List<GateioOrder> listOrders(Instrument instrument, OrderStatus orderStatus) throws IOException {
+  public List<GateioOrder> listOrders(Instrument instrument, OrderStatus orderStatus)
+      throws IOException {
     // validate arguments
-    Validate.notNull(orderStatus);
+    Objects.requireNonNull(orderStatus);
     Set<OrderStatus> allowedOrderStatuses = EnumSet.of(OrderStatus.OPEN, OrderStatus.CLOSED);
-    Validate.validState(allowedOrderStatuses.contains(orderStatus), "Allowed order statuses are: {}", allowedOrderStatuses);
-    Validate.notNull(instrument);
+    Validate.validState(
+        allowedOrderStatuses.contains(orderStatus),
+        "Allowed order statuses are: {}",
+        allowedOrderStatuses);
+    Objects.requireNonNull(instrument);
 
-    return gateioV4Authenticated.listOrders(apiKey, exchange.getNonceFactory(),
-        gateioV4ParamsDigest, GateioAdapters.toString(instrument), GateioAdapters.toString(orderStatus)
-    );
-
+    return gateioV4Authenticated.listOrders(
+        apiKey,
+        exchange.getNonceFactory(),
+        gateioV4ParamsDigest,
+        GateioAdapters.toString(instrument),
+        GateioAdapters.toString(orderStatus));
   }
 
-
-  public List<GateioUserTradeRaw> getGateioUserTrades(TradeHistoryParams params) throws IOException {
+  public List<GateioUserTradeRaw> getGateioUserTrades(TradeHistoryParams params)
+      throws IOException {
     // get arguments
-    CurrencyPair currencyPair = params instanceof TradeHistoryParamCurrencyPair ? ((CurrencyPairParam) params).getCurrencyPair() : null;
-    Integer pageLength = params instanceof TradeHistoryParamPaging ? ((TradeHistoryParamPaging) params).getPageLength() : null;
-    Integer pageNumber = params instanceof TradeHistoryParamPaging ? ((TradeHistoryParamPaging) params).getPageNumber() : null;
-    String orderId = params instanceof TradeHistoryParamTransactionId ? ((TradeHistoryParamTransactionId) params).getTransactionId() : null;
+    CurrencyPair currencyPair =
+        params instanceof TradeHistoryParamCurrencyPair
+            ? ((CurrencyPairParam) params).getCurrencyPair()
+            : null;
+    Integer pageLength =
+        params instanceof TradeHistoryParamPaging
+            ? ((TradeHistoryParamPaging) params).getPageLength()
+            : null;
+    Integer pageNumber =
+        params instanceof TradeHistoryParamPaging
+            ? ((TradeHistoryParamPaging) params).getPageNumber()
+            : null;
+    String orderId =
+        params instanceof TradeHistoryParamTransactionId
+            ? ((TradeHistoryParamTransactionId) params).getTransactionId()
+            : null;
     Long from = null;
     Long to = null;
     if (params instanceof TradeHistoryParamsTimeSpan) {
       TradeHistoryParamsTimeSpan paramsTimeSpan = ((TradeHistoryParamsTimeSpan) params);
-      from = paramsTimeSpan.getStartTime() != null ? paramsTimeSpan.getStartTime().getTime() / 1000 : null;
-      to = paramsTimeSpan.getEndTime() != null ? paramsTimeSpan.getEndTime().getTime() / 1000 : null;
+      from =
+          paramsTimeSpan.getStartTime() != null
+              ? paramsTimeSpan.getStartTime().getTime() / 1000
+              : null;
+      to =
+          paramsTimeSpan.getEndTime() != null ? paramsTimeSpan.getEndTime().getTime() / 1000 : null;
     }
 
     // if no pagination is given, get all records in chunks
@@ -63,38 +85,58 @@ public class GateioTradeServiceRaw extends GateioBaseService {
       Integer currentPageNumber = 1;
 
       do {
-        chunk = gateioV4Authenticated.getTradingHistory(apiKey, exchange.getNonceFactory(),
-            gateioV4ParamsDigest, GateioAdapters.toString(currencyPair),
-            1000, currentPageNumber, orderId, null, from, to);
+        chunk =
+            gateioV4Authenticated.getTradingHistory(
+                apiKey,
+                exchange.getNonceFactory(),
+                gateioV4ParamsDigest,
+                GateioAdapters.toString(currencyPair),
+                1000,
+                currentPageNumber,
+                orderId,
+                null,
+                from,
+                to);
         currentPageNumber++;
         result.addAll(chunk);
-      }
-      while (!chunk.isEmpty());
+      } while (!chunk.isEmpty());
 
       return result;
     }
 
-    return gateioV4Authenticated.getTradingHistory(apiKey, exchange.getNonceFactory(),
-        gateioV4ParamsDigest, GateioAdapters.toString(currencyPair),
-        pageLength, pageNumber, orderId, null, from, to);
+    return gateioV4Authenticated.getTradingHistory(
+        apiKey,
+        exchange.getNonceFactory(),
+        gateioV4ParamsDigest,
+        GateioAdapters.toString(currencyPair),
+        pageLength,
+        pageNumber,
+        orderId,
+        null,
+        from,
+        to);
   }
-
 
   public GateioOrder createOrder(GateioOrder gateioOrder) throws IOException {
-    return gateioV4Authenticated.createOrder(apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, gateioOrder);
+    return gateioV4Authenticated.createOrder(
+        apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, gateioOrder);
   }
-
 
   public GateioOrder getOrder(String orderId, Instrument instrument) throws IOException {
-    return gateioV4Authenticated.getOrder(apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest,
-        orderId, GateioAdapters.toString(instrument));
+    return gateioV4Authenticated.getOrder(
+        apiKey,
+        exchange.getNonceFactory(),
+        gateioV4ParamsDigest,
+        orderId,
+        GateioAdapters.toString(instrument));
   }
-
 
   public GateioOrder cancelOrderRaw(String orderId, Instrument instrument) throws IOException {
-    return gateioV4Authenticated.cancelOrder(apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest,
-        orderId, GateioAdapters.toString(instrument));
+    return gateioV4Authenticated.cancelOrder(
+        apiKey,
+        exchange.getNonceFactory(),
+        gateioV4ParamsDigest,
+        orderId,
+        GateioAdapters.toString(instrument));
   }
-
-
 }

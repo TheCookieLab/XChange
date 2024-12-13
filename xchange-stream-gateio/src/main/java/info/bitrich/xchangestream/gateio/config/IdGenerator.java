@@ -1,22 +1,18 @@
 package info.bitrich.xchangestream.gateio.config;
 
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class IdGenerator {
 
   private static IdGenerator instance = new IdGenerator();
 
-  private IdGenerator() {
-  }
+  private IdGenerator() {}
 
   public static IdGenerator getInstance() {
     return instance;
   }
 
-
   public Long requestId() {
-    return RandomUtils.nextLong();
+    return ThreadLocalRandom.current().nextLong();
   }
 }
-
-

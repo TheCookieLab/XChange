@@ -4,32 +4,17 @@
     <parent>
         <groupId>org.knowm.xchange</groupId>
         <artifactId>xchange-parent</artifactId>
-        <version>5.1.2-SNAPSHOT</version>
+        <version>5.2.2-SNAPSHOT</version>
     </parent>
     <artifactId>xchange-stream-gateio</artifactId>
 
     <name>XChange Gate.io Stream</name>
-
-    <properties>
-        <version.archunit>1.0.1</version.archunit>
-        <version.maven-enforcer-plugin>3.2.1</version.maven-enforcer-plugin>
-        <version.mockito>5.3.1</version.mockito>
-        <version.sortpom-maven-plugin>3.2.0</version.sortpom-maven-plugin>
-    </properties>
 
     <dependencies>
 
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>${version.fasterxml}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.tngtech.archunit</groupId>
-            <artifactId>archunit-junit5</artifactId>
-            <version>${version.archunit}</version>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -53,58 +38,25 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>${version.mockito}</version>
             <scope>test</scope>
         </dependency>
 
     </dependencies>
 
     <build>
-        <plugins>
-            <plugin>
-                <groupId>com.github.ekryd.sortpom</groupId>
-                <artifactId>sortpom-maven-plugin</artifactId>
-                <version>${version.sortpom-maven-plugin}</version>
-                <configuration>
-                    <sortProperties>true</sortProperties>
-                    <createBackupFile>false</createBackupFile>
-                    <sortDependencies>groupId,artifactId</sortDependencies>
-                    <sortModules>true</sortModules>
-                    <nrOfIndentSpace>4</nrOfIndentSpace>
-                    <sortPlugins>groupId,artifactId</sortPlugins>
-                    <expandEmptyElements>false</expandEmptyElements>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>sort</goal>
-                        </goals>
-                        <phase>verify</phase>
-                    </execution>
-                </executions>
-            </plugin>
 
-            <plugin>
-                <artifactId>maven-enforcer-plugin</artifactId>
-                <version>${version.maven-enforcer-plugin}</version>
-                <executions>
-                    <execution>
-                        <id>enforce</id>
-                        <goals>
-                            <goal>enforce</goal>
-                        </goals>
-                        <configuration>
-                            <rules>
-                                <dependencyConvergence/>
-                                <banDuplicatePomDependencyVersions/>
-                                <reactorModuleConvergence/>
-                            </rules>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <configuration>
+                        <systemPropertiesFile>integration-test.env.properties</systemPropertiesFile>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
 
-        </plugins>
     </build>
 
 </project>
