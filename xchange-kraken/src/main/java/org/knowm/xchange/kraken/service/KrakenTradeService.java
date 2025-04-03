@@ -98,6 +98,11 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
   }
 
   @Override
+  public Collection<String> cancelAllOrders(CancelAllOrders orderParams) throws IOException {
+    return Collections.singletonList(String.valueOf(super.cancelAllKrakenOrders().getCount()));
+  }
+
+  @Override
   public Class[] getRequiredCancelOrderParamClasses() {
     return new Class[] {CancelOrderByIdParams.class, CancelOrderByUserReferenceParams.class};
   }
