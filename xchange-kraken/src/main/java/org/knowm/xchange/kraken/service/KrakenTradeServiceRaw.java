@@ -318,6 +318,15 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
     return checkResult(result);
   }
 
+  public KrakenCancelOrderResponse cancelAllKrakenOrders() {
+    KrakenCancelOrderResult result =
+        kraken.cancelAllOrders(
+            exchange.getExchangeSpecification().getApiKey(),
+            signatureCreator,
+            exchange.getNonceFactory());
+    return checkResult(result);
+  }
+
   protected KrakenTradeVolume getTradeVolume(CurrencyPair... currencyPairs) throws IOException {
 
     KrakenTradeVolumeResult result =
