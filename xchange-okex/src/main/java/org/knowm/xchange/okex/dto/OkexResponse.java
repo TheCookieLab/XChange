@@ -1,8 +1,10 @@
 package org.knowm.xchange.okex.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
 
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
+@Getter
 public class OkexResponse<V> {
 
   private final String code;
@@ -20,18 +22,6 @@ public class OkexResponse<V> {
 
   public boolean isSuccess() {
     return "0".equals(code);
-  }
-
-  public V getData() {
-    return data;
-  }
-
-  public String getCode() {
-    return code;
-  }
-
-  public String getMsg() {
-    return msg;
   }
 
   @Override
