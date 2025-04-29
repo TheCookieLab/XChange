@@ -8,6 +8,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v2.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseAccountData.CoinbaseAccount;
@@ -24,8 +25,9 @@ public class AccountServiceIntegration {
 
   @BeforeClass
   public static void beforeClass() {
-    exchange = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class);
-    AuthUtils.setApiAndSecretKey(exchange.getExchangeSpecification());
+    ExchangeSpecification exchangeSpecification = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class).getDefaultExchangeSpecification();
+    AuthUtils.setApiAndSecretKey(exchangeSpecification);
+    exchange = ExchangeFactory.INSTANCE.createExchange(exchangeSpecification);
     accountService = exchange.getAccountService();
   }
 
