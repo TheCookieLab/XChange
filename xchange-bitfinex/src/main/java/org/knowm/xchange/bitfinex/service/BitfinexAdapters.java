@@ -651,7 +651,7 @@ public class BitfinexAdapters {
     // Remove currencies that are no-longer in use
     Set<Currency> currencies =
         currencyPairs.stream()
-            .flatMap(pair -> Stream.of(pair.base, pair.counter))
+            .flatMap(pair -> Stream.of(pair.getBase(), pair.getCounter()))
             .collect(Collectors.toSet());
     currenciesMap.keySet().retainAll(currencies);
 
@@ -661,16 +661,16 @@ public class BitfinexAdapters {
         pairsMap.put(c, null);
       }
 
-      if (!currenciesMap.containsKey(c.base)) {
+      if (!currenciesMap.containsKey(c.getBase())) {
         currenciesMap.put(
-            c.base,
+            c.getBase(),
             new CurrencyMetaData(
                 2,
                 null)); // When missing, add default meta-data with scale of 2 (Bitfinex's minimal
         // scale)
       }
-      if (!currenciesMap.containsKey(c.counter)) {
-        currenciesMap.put(c.counter, new CurrencyMetaData(2, null));
+      if (!currenciesMap.containsKey(c.getCounter())) {
+        currenciesMap.put(c.getCounter(), new CurrencyMetaData(2, null));
       }
     }
 
@@ -835,8 +835,10 @@ public class BitfinexAdapters {
     BigDecimal high = bitfinexTicker.getHigh();
     BigDecimal low = bitfinexTicker.getLow();
     BigDecimal volume = bitfinexTicker.getVolume();
-    BigDecimal percentageChange = bitfinexTicker.getDailyChangePerc() != null ?
-        bitfinexTicker.getDailyChangePerc().scaleByPowerOfTen(2) : null;
+    BigDecimal percentageChange =
+        bitfinexTicker.getDailyChangePerc() != null
+            ? bitfinexTicker.getDailyChangePerc().scaleByPowerOfTen(2)
+            : null;
 
     CurrencyPair currencyPair =
         CurrencyPairDeserializer.getCurrencyPairFromString(bitfinexTicker.getSymbol().substring(1));
