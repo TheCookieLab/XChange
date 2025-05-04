@@ -23,7 +23,7 @@ import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrder;
 public class TradeOgreAdapters {
 
   public static String adaptCurrencyPair(CurrencyPair currencyPair) {
-    return currencyPair.counter.toString() + "-" + currencyPair.base.toString();
+    return currencyPair.getBase().toString() + "-" + currencyPair.getCounter().toString();
   }
 
   public static CurrencyPair adaptTradeOgreCurrencyPair(String currencyPair) {
@@ -41,7 +41,7 @@ public class TradeOgreAdapters {
 
   public static Ticker adaptTicker(CurrencyPair currencyPair, TradeOgreTicker tradeOgreTicker) {
     return new Ticker.Builder()
-        .quoteVolume(new BigDecimal(tradeOgreTicker.getVolume()))
+        .volume(tradeOgreTicker.getVolume() != null ? new BigDecimal(tradeOgreTicker.getVolume()) : null)
         .high(new BigDecimal(tradeOgreTicker.getHigh()))
         .low(new BigDecimal(tradeOgreTicker.getLow()))
         .last(new BigDecimal(tradeOgreTicker.getPrice()))

@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import lombok.Setter;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
@@ -32,7 +33,8 @@ public abstract class Order implements Serializable {
   private final OrderType type;
 
   /** Amount to be ordered / amount that was ordered */
-  private final BigDecimal originalAmount;
+  @Setter
+  private BigDecimal originalAmount;
 
   /** The instrument could be a currency pair of derivative */
   private final Instrument instrument;

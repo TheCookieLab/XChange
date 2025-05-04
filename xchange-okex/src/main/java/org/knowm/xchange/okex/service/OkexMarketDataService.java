@@ -34,13 +34,13 @@ public class OkexMarketDataService extends OkexMarketDataServiceRaw implements M
   @Override
   public OrderBook getOrderBook(Instrument instrument, Object... args) throws IOException {
     return OkexAdapters.adaptOrderBook(
-        getOkexOrderbook(OkexAdapters.adaptInstrument(instrument)), instrument);
+        getOkexOrderbook(OkexAdapters.adaptInstrument(instrument)), instrument, exchange.getExchangeMetaData());
   }
 
   @Override
   public Trades getTrades(Instrument instrument, Object... args) throws IOException {
     return OkexAdapters.adaptTrades(
-        getOkexTrades(OkexAdapters.adaptInstrument(instrument), 100).getData(), instrument);
+        getOkexTrades(OkexAdapters.adaptInstrument(instrument), 100).getData(), instrument, exchange.getExchangeMetaData());
   }
 
   @Override
@@ -86,12 +86,13 @@ public class OkexMarketDataService extends OkexMarketDataServiceRaw implements M
         getOkexFundingRate(OkexAdapters.adaptInstrument(instrument)).getData());
   }
 
-
   public List<Ticker> getTickers(Params params) throws IOException {
     if (!(params instanceof OkexInstType)) {
       throw new IllegalArgumentException("Params must be instance of OkexInstType");
     }
     OkexInstType instType = (OkexInstType) params;
-    return getOkexTickers(instType).getData().stream().map(OkexAdapters::adaptTicker).collect(Collectors.toList());
+    return getOkexTickers(instType).getData().stream()
+        .map(OkexAdapters::adaptTicker)
+        .collect(Collectors.toList());
   }
 }
