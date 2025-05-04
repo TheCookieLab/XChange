@@ -41,7 +41,7 @@ public class TradeOgreAdapters {
 
   public static Ticker adaptTicker(CurrencyPair currencyPair, TradeOgreTicker tradeOgreTicker) {
     return new Ticker.Builder()
-        .quoteVolume(new BigDecimal(tradeOgreTicker.getVolume()))
+        .volume(tradeOgreTicker.getVolume() != null ? new BigDecimal(tradeOgreTicker.getVolume()) : null)
         .high(new BigDecimal(tradeOgreTicker.getHigh()))
         .low(new BigDecimal(tradeOgreTicker.getLow()))
         .last(new BigDecimal(tradeOgreTicker.getPrice()))
