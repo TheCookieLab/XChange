@@ -19,6 +19,7 @@ import org.knowm.xchange.bitstamp.dto.marketdata.BitstampTransaction;
 import org.knowm.xchange.bitstamp.dto.trade.BitstampOrderStatus;
 import org.knowm.xchange.bitstamp.dto.trade.BitstampOrderStatusResponse;
 import org.knowm.xchange.bitstamp.dto.trade.BitstampOrderTransaction;
+import org.knowm.xchange.bitstamp.dto.trade.BitstampTradingFee;
 import org.knowm.xchange.bitstamp.dto.trade.BitstampUserTransaction;
 import org.knowm.xchange.bitstamp.order.dto.BitstampGenericOrder;
 import org.knowm.xchange.currency.Currency;
@@ -27,6 +28,7 @@ import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.OrderBook;
@@ -311,6 +313,33 @@ public final class BitstampAdapters {
       }
     }
     return fundingRecords;
+  }
+
+  public static Map<Instrument, Fee> adaptTradingFees(
+      List<BitstampTradingFee> tradingFees) {
+    Map<Instrument, Fee> result = new HashMap<>();
+    if (tradingFees == null || tradingFees.isEmpty()) {
+      return result;
+    }
+
+    for (BitstampTradingFee tradingFee : tradingFees) {
+      String key = tradingFee.getCurrencyPair();
+      CurrencyPair currencyPair = new CurrencyPair(key);
+
+      if (tradingFee.getFees() == null || tradingFee.getFees().isEmpty()) {
+        throw new IllegalArgumentException(
+            "Trading fee is null or empty for currency pair: " + key);
+      }
+
+      BigDecimal maker = getFeeFromString(tradingFee.getFees().get(0).getMaker());
+      BigDecimal taker = getFeeFromString(tradingFee.getFees().get(0).getTaker());
+
+      Fee fee = new Fee(maker, taker);
+
+      result.put(currencyPair, fee);
+    }
+
+    return result;
   }
 
   private static CurrencyPair adaptCurrencyPair(
