@@ -6,9 +6,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.bitflyer.dto.account.BitflyerBalance;
 import org.knowm.xchange.bitflyer.dto.account.BitflyerCoinHistory;
 import org.knowm.xchange.bitflyer.dto.account.BitflyerDepositOrWithdrawal;
@@ -34,7 +33,6 @@ import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.instrument.Instrument;
 
 public class BitflyerAdapters {
-  private static Pattern CURRENCY_PATTERN = Pattern.compile("[A-Z]{3}");
 
   public static ExchangeMetaData adaptMetaData(List<BitflyerMarket> markets) {
     Map<Instrument, InstrumentMetaData> currencyPairs = new HashMap<>();
@@ -42,18 +40,18 @@ public class BitflyerAdapters {
 
     for (BitflyerMarket market : markets) {
       CurrencyPair pair = adaptCurrencyPair(market.getProductCode());
-      currencyPairs.put(pair, null);
+      if (pair != null) {
+        currencyPairs.put(pair, null);
+      }
     }
     return new ExchangeMetaData(currencyPairs, currencies, null, null, false);
   }
 
   public static CurrencyPair adaptCurrencyPair(String productCode) {
-    Matcher matcher = CURRENCY_PATTERN.matcher(productCode);
-    List<String> currencies = new ArrayList<>();
-    while (matcher.find()) {
-      currencies.add(matcher.group());
+    if (StringUtils.countMatches(productCode, "_") != 1) {
+      return null;
     }
-    return currencies.size() >= 2 ? new CurrencyPair(currencies.get(0), currencies.get(1)) : null;
+    return new CurrencyPair(productCode.replace("_", "/"));
   }
 
   /**
