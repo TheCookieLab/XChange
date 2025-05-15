@@ -22,8 +22,10 @@ class CoinexMarketDataServiceRawIntegration {
     assertThat(chainInfos)
         .allSatisfy(
             chainInfo -> {
-              assertThat(chainInfo.getCurrency()).isNotNull();
-              assertThat(chainInfo.getChainName()).isNotEmpty();
+              assertThat(chainInfo.getAsset().getCurrency()).isNotNull();
+              if (!chainInfo.getChains().isEmpty()) {
+                assertThat(chainInfo.getChains()).allSatisfy(coinexChain -> assertThat(coinexChain.getName()).isNotBlank());
+              }
             });
   }
 }
