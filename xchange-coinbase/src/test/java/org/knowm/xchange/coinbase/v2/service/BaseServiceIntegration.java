@@ -1,4 +1,4 @@
-package org.knowm.xchange.coinbase.v2.services;
+package org.knowm.xchange.coinbase.v2.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -9,7 +9,6 @@ import org.junit.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.coinbase.v2.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseTimeData.CoinbaseTime;
-import org.knowm.xchange.coinbase.v2.service.CoinbaseBaseService;
 
 public class BaseServiceIntegration {
 

@@ -10,16 +10,13 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.util.Map;
 import org.knowm.xchange.coinbase.v2.Coinbase;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseAccountsData;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseBuyData;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbasePaymentMethodsData;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseSellData;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseTransactionsResponse;
-import org.knowm.xchange.coinbase.v2.dto.account.transactions.CoinbaseBuySellResponse;
-import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBooksResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
 import si.mazi.rescu.ParamsDigest;
 
 @Path("/api/v3/brokerage")
@@ -49,50 +46,88 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @GET
   @Path("accounts/{account_id}")
   CoinbaseAccountsData getAccount(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      @PathParam("account_id") String accountId)
-      throws IOException, CoinbaseException;
+      @PathParam("account_id") String accountId) throws IOException, CoinbaseException;
 
   @POST
   @Path("orders")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrderResponse createOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+  CoinbaseOrdersResponse createOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       Object payload) throws IOException, CoinbaseException;
 
   @POST
   @Path("orders/batch_cancel")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrderResponse cancelOrders(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+  CoinbaseOrdersResponse cancelOrders(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       Object payload) throws IOException, CoinbaseException;
 
   @GET
   @Path("orders/historical/batch")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrderResponse listOrders(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
+  CoinbaseOrdersResponse listOrders(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
       throws IOException, CoinbaseException;
 
   @GET
   @Path("orders/historical/fills")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrderResponse listFills(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
+  CoinbaseOrdersResponse listFills(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
       throws IOException, CoinbaseException;
 
   @GET
   @Path("orders/historical/{order_id}}")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrderResponse getOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      @PathParam("order_id") String orderId)
-      throws IOException, CoinbaseException;
+  CoinbaseOrdersResponse getOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @PathParam("order_id") String orderId) throws IOException, CoinbaseException;
 
   @POST
   @Path("orders/preview")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrderResponse previewOrders(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+  CoinbaseOrdersResponse previewOrders(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       Object payload) throws IOException, CoinbaseException;
 
   @GET
   @Path("best_bid_ask")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrderResponse getBestBidAsk(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
+  CoinbasePriceBooksResponse getBestBidAsk(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @QueryParam("product_id") String productId) throws IOException, CoinbaseException;
+
+  @GET
+  @Path("product_book")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinbasePriceBooksResponse getProductBook(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @QueryParam("product_id") String productId, @QueryParam("limit") Integer limit,
+      @QueryParam("aggregation_price_increment") String aggregationPriceIncrement)
+      throws IOException, CoinbaseException;
+
+  @GET
+  @Path("products")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinbaseProductsResponse listProducts(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @QueryParam("limit") Integer limit, @QueryParam("offset") Integer offset,
+      @QueryParam("product_type") String productType,
+      @QueryParam("product_ids") String[] productIds,
+      @QueryParam("contract_expiry_type") String contractExpiryType,
+      @QueryParam("expiring_contract_status") String expiringContractStatus,
+      @QueryParam("get_tradability_status") Boolean getTradabilityStatus,
+      @QueryParam("get_all_products") Boolean getAllProducts,
+      @QueryParam("products_sort_order") String productsSortOrder)
+      throws IOException, CoinbaseException;
+
+  @GET
+  @Path("products/{product_id}")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinbaseProductsResponse getProduct(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @PathParam("product_id") String productId,
+      @QueryParam("get_tradability_status") Boolean getTradabilityStatus)
+      throws IOException, CoinbaseException;
+
+  @GET
+  @Path("products/{product_id}/candles")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinbaseProductCandlesResponse getProductCandles(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @PathParam("product_id") String productId,
+      @QueryParam("get_tradability_status") Boolean getTradabilityStatus)
       throws IOException, CoinbaseException;
 
 //  @GET

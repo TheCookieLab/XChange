@@ -20,6 +20,7 @@ import org.knowm.xchange.coinbase.v2.dto.account.CoinbasePaymentMethodsData;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseSellData;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseTransactionsResponse;
 import org.knowm.xchange.coinbase.v2.dto.account.transactions.CoinbaseBuySellResponse;
+import org.knowm.xchange.coinbase.v3.CoinbaseV3Digest;
 import si.mazi.rescu.ParamsDigest;
 
 @Path("/v2")
@@ -47,6 +48,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   String CB_ACCESS_SIGN = "CB-ACCESS-SIGN";
   String CB_ACCESS_TIMESTAMP = "CB-ACCESS-TIMESTAMP";
+  String CB_AUTHORIZATION_KEY = "Authorization";
 
   String CONTENT_TYPE = "Content-Type";
 
@@ -107,10 +109,11 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @GET
   @Path("accounts")
   CoinbaseAccountsData getAccounts(
-      @HeaderParam(CB_VERSION) String apiVersion,
-      @HeaderParam(CB_ACCESS_KEY) String apiKey,
-      @HeaderParam(CB_ACCESS_SIGN) ParamsDigest signature,
-      @HeaderParam(CB_ACCESS_TIMESTAMP) BigDecimal timestamp,
+//      @HeaderParam(CB_VERSION) String apiVersion,
+//      @HeaderParam(CB_ACCESS_KEY) String apiKey,
+//      @HeaderParam(CB_ACCESS_SIGN) ParamsDigest signature,
+//      @HeaderParam(CB_ACCESS_TIMESTAMP) BigDecimal timestamp,
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest signature,
       @QueryParam("limit") Integer limit,
       @QueryParam("starting_after") String starting_after)
       throws IOException, CoinbaseException;

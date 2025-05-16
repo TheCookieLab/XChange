@@ -1,4 +1,4 @@
-package org.knowm.xchange.coinbase.v2.services;
+package org.knowm.xchange.coinbase.v2.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,7 +13,6 @@ import org.knowm.xchange.coinbase.v2.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseAccountData.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbasePaymentMethodsData.CoinbasePaymentMethod;
-import org.knowm.xchange.coinbase.v2.service.CoinbaseAccountService;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.utils.AuthUtils;

@@ -1,4 +1,4 @@
-package org.knowm.xchange.coinbase.v2.services;
+package org.knowm.xchange.coinbase.v2.service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -13,8 +13,6 @@ import org.knowm.xchange.coinbase.v2.dto.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v2.dto.CoinbasePrice;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseBuyData.CoinbaseBuy;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseSellData.CoinbaseSell;
-import org.knowm.xchange.coinbase.v2.service.CoinbaseAccountService;
-import org.knowm.xchange.coinbase.v2.service.CoinbaseTradeService;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.utils.AuthUtils;

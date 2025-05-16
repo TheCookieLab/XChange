@@ -1,10 +1,7 @@
 package org.knowm.xchange.coinbase.v3;
 
-import static org.knowm.xchange.coinbase.v2.CoinbaseAuthenticated.CB_ACCESS_TIMESTAMP;
-
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import jakarta.ws.rs.HeaderParam;
 import java.io.IOException;
 import java.io.StringReader;
 import java.security.GeneralSecurityException;
@@ -26,7 +23,6 @@ import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.knowm.xchange.service.BaseParamsDigest;
-import org.knowm.xchange.utils.DigestUtils;
 import si.mazi.rescu.RestInvocation;
 
 public class CoinbaseV3Digest extends BaseParamsDigest {
@@ -36,21 +32,27 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
     Security.addProvider(new BouncyCastleProvider());
   }
 
-  private CoinbaseV3Digest(String secretKey) {
+  private final String keyName;
+  private final String secretKey;
+
+  private CoinbaseV3Digest(String keyName, String secretKey) {
     super(secretKey, HMAC_SHA_256);
+
+    this.keyName = keyName;
+    this.secretKey = secretKey;
   }
 
-  public static CoinbaseV3Digest createInstance(String secretKey) {
-    return secretKey == null ? null : new CoinbaseV3Digest(secretKey);
+  public static CoinbaseV3Digest createInstance(String keyName, String secretKey) {
+    return keyName == null || secretKey == null ? null : new CoinbaseV3Digest(keyName, secretKey);
   }
 
   /**
    * Load an EC keypair from either a PEMKeyPair or a raw PrivateKeyInfo, deriving the public key on
    * the P-256 curve if necessary.
    */
-  private static KeyPair loadECKeyPair(String privateKeyPEM)
+  private static KeyPair loadECKeyPair(String secretKey)
       throws IOException, GeneralSecurityException {
-    try (PEMParser parser = new PEMParser(new StringReader(privateKeyPEM))) {
+    try (PEMParser parser = new PEMParser(new StringReader(secretKey))) {
       Object obj = parser.readObject();
       JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
 
@@ -100,52 +102,49 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
   /**
    * Generate an ES256 JWT for Coinbase Advanced Trading authentication.
    *
-   * @param method        HTTP method (e.g. "GET")
-   * @param url           Full URL being called
-   * @param privateKeyPEM The PEM‐encoded EC private key (PKCS#8 or EC PRIVATE KEY)
-   * @param keyId         Your API key ID (goes into the kid header, sub claim)
+   * @param method HTTP method (e.g. "GET")
+   * @param uri    Must be exactly host/path
    */
-  public static String generateJWT(String method, String url, String privateKeyPEM, String keyId)
-      throws Exception {
+  private String generateJWT(String method, String uri) throws Exception {
 
-    KeyPair kp = loadECKeyPair(privateKeyPEM);
+    KeyPair kp = loadECKeyPair(secretKey);
     ECPublicKey publicKey = (ECPublicKey) kp.getPublic();
     ECPrivateKey privateKey = (ECPrivateKey) kp.getPrivate();
 
     long now = Instant.now().getEpochSecond();
 
-    // you can drop your custom 'nonce' header if you prefer,
-    // or keep it if Coinbase wants it
     Map<String, Object> header = new HashMap<>();
     header.put("alg", "ES256");
     header.put("typ", "JWT");
-    header.put("kid", keyId);
+    header.put("kid", keyName);
     header.put("nonce", String.valueOf(now));
 
-    String uriClaim = method + " " + url;
+    String uriClaim = method + " " + uri;
 
     Date nbf = Date.from(Instant.ofEpochSecond(now));
     Date exp = Date.from(Instant.ofEpochSecond(now + 120));
 
     Algorithm alg = Algorithm.ECDSA256(publicKey, privateKey);
 
-    return JWT.create().withHeader(header).withIssuer("cdp").withSubject(keyId).withNotBefore(nbf)
+    return JWT.create().withHeader(header).withIssuer("cdp").withSubject(keyName).withNotBefore(nbf)
         .withExpiresAt(exp).withClaim("uri", uriClaim).sign(alg);
+  }
+
+  private String generateAuthHeader(String method, String uri) {
+    String jwt = "";
+    try {
+      jwt = generateJWT(method, uri);
+    } catch (Exception e) {
+      Coinbase.LOG.error("Exception generating JWT", e);
+    }
+    return "Bearer " + jwt;
   }
 
   @Override
   public String digestParams(RestInvocation restInvocation) {
-    final String pathWithQueryString = restInvocation.getInvocationUrl()
-        .replace(restInvocation.getBaseUrl(), "");
-    final String timestamp = restInvocation.getParamValue(HeaderParam.class, CB_ACCESS_TIMESTAMP)
-        .toString();
-    final String message = timestamp + restInvocation.getHttpMethod() + pathWithQueryString;
+    String method = restInvocation.getHttpMethod();
+    String url = restInvocation.getBaseUrl().replace("https://", "") + restInvocation.getPath();
 
-    String requestMethod = restInvocation.getHttpMethod();
-    String url = restInvocation.getInvocationUrl();
-
-//    String jwt = generateJWT(restInvocation.getHttpMethod(), restInvocation.getInvocationUrl(), privateKeyPEM, keyId);
-
-    return DigestUtils.bytesToHex(getMac().doFinal(message.getBytes()));
+    return generateAuthHeader(method, url);
   }
 }
