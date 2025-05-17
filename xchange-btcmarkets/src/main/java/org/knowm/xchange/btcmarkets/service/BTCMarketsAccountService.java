@@ -74,7 +74,7 @@ public class BTCMarketsAccountService extends BTCMarketsAccountServiceRaw
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
     BTCMarketsTradingFeesResponse response = tradingFees();
     Map<Instrument, Fee> dynamicTradingFees = new HashMap<>();
     for (BTCMarketsTradingFeesResponse.FeeByMarket feeByMarket : response.feeByMarkets) {

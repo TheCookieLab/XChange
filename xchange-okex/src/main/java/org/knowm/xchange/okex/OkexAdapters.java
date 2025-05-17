@@ -22,6 +22,7 @@ import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.account.Wallet;
@@ -48,6 +49,7 @@ import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
 import org.knowm.xchange.okex.dto.account.OkexAssetBalance;
 import org.knowm.xchange.okex.dto.account.OkexPosition;
 import org.knowm.xchange.okex.dto.account.OkexTradeFee;
+import org.knowm.xchange.okex.dto.account.OkexTradeFee.FiatList;
 import org.knowm.xchange.okex.dto.account.OkexWalletBalance;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
 import org.knowm.xchange.okex.dto.marketdata.OkexCurrency;
@@ -68,10 +70,7 @@ import org.knowm.xchange.okex.dto.trade.OkexOrderType;
  */
 public class OkexAdapters {
 
-  public static final String SPOT = "SPOT";
-  public static final String SWAP = "SWAP";
-  public static final String FUTURES = "FUTURES";
-  public static final String OPTION = "OPTION";
+
   private static final String TRADING_WALLET_ID = "trading";
   private static final String FOUNDING_WALLET_ID = "founding";
   private static final String FUTURES_WALLET_ID = "futures";
@@ -228,12 +227,13 @@ public class OkexAdapters {
   public static LimitOrder adaptLimitOrder(OkexPublicOrder okexPublicOrder, Instrument instrument,
       OrderType orderType, Date timestamp, BigDecimal contractValue) {
     return adaptOrderbookOrder(
-        convertContractSizeToVolume(okexPublicOrder.getVolume(),instrument, contractValue),
+        convertContractSizeToVolume(okexPublicOrder.getVolume(), instrument, contractValue),
         okexPublicOrder.getPrice(), instrument, orderType, timestamp);
   }
 
   public static OrderBook adaptOrderBook(
-      List<OkexOrderbook> okexOrderbooks, Instrument instrument, ExchangeMetaData exchangeMetaData) {
+      List<OkexOrderbook> okexOrderbooks, Instrument instrument,
+      ExchangeMetaData exchangeMetaData) {
     List<LimitOrder> asks = new ArrayList<>();
     List<LimitOrder> bids = new ArrayList<>();
     Date timeStamp = new Date(Long.parseLong(okexOrderbooks.get(0).getTs()));
@@ -256,8 +256,9 @@ public class OkexAdapters {
   }
 
   public static OrderBook adaptOrderBook(
-      OkexResponse<List<OkexOrderbook>> okexOrderbook, Instrument instrument,ExchangeMetaData exchangeMetaData) {
-    return adaptOrderBook(okexOrderbook.getData(), instrument,exchangeMetaData);
+      OkexResponse<List<OkexOrderbook>> okexOrderbook, Instrument instrument,
+      ExchangeMetaData exchangeMetaData) {
+    return adaptOrderBook(okexOrderbook.getData(), instrument, exchangeMetaData);
   }
 
   public static LimitOrder adaptOrderbookOrder(
@@ -354,15 +355,10 @@ public class OkexAdapters {
   }
 
   public static ExchangeMetaData adaptToExchangeMetaData(
-      List<OkexInstrument> instruments, List<OkexCurrency> currs, List<OkexTradeFee> tradeFee) {
+      List<OkexInstrument> instruments, List<OkexCurrency> currs) {
 
     Map<Instrument, InstrumentMetaData> instrumentMetaData = new HashMap<>();
     Map<Currency, CurrencyMetaData> currencies = new HashMap<>();
-
-    String makerFee = "0.5";
-    if (tradeFee != null && !tradeFee.isEmpty()) {
-      makerFee = tradeFee.get(0).getMaker();
-    }
 
     for (OkexInstrument instrument : instruments) {
       if (!"live".equals(instrument.getState())) {
@@ -385,7 +381,6 @@ public class OkexAdapters {
       instrumentMetaData.put(
           pair,
           new InstrumentMetaData.Builder()
-              .tradingFee(new BigDecimal(makerFee).negate())
               .minimumAmount(
                   (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
                       ? convertContractSizeToVolume(
@@ -580,5 +575,54 @@ public class OkexAdapters {
                 : BigDecimal.ZERO)
         .features(new HashSet<>(Collections.singletonList(Wallet.WalletFeature.FUTURES_TRADING)))
         .build();
+  }
+
+  public static Fee adaptTradingFee(OkexTradeFee okexTradeFee, OkexInstType okexInstType,
+      Instrument instrument) {
+    switch (okexInstType) {
+      case SPOT: return adaptTradingFeeSPOT(okexTradeFee,instrument);
+      case SWAP: return adaptTradingFeeSWAP(okexTradeFee,instrument);
+    }
+    return null;
+  }
+
+  private static Fee adaptTradingFeeSWAP(OkexTradeFee okexTradeFee, Instrument instrument) {
+    if (instrument.getCounter().toString().equals("USDT")) {
+      return new Fee(new BigDecimal(okexTradeFee.getMakerU()).negate(),
+          new BigDecimal(okexTradeFee.getTakerU()).negate());
+    } else {
+        if (instrument.getCounter().toString().equals("USDC")) {
+          return new Fee(new BigDecimal(okexTradeFee.getMakerUSDC()).negate(),
+              new BigDecimal(okexTradeFee.getTakerUSDC()).negate());
+        } else
+          return new Fee(new BigDecimal(okexTradeFee.getMaker()).negate(),
+              new BigDecimal(okexTradeFee.getTaker()).negate());
+      }
+    }
+
+  private static Fee adaptTradingFeeSPOT(OkexTradeFee okexTradeFee, Instrument instrument) {
+    // https://www.okx.com/docs-v5/en/#trading-account-rest-api-get-fee-rates
+    if (instrument.getCounter().toString().equals("USDT")) {
+      return new Fee(new BigDecimal(okexTradeFee.getMaker()).negate(),
+          new BigDecimal(okexTradeFee.getTaker()).negate());
+    } else {
+      Fee tempFee = isContainsFiat(okexTradeFee.getFiatList(), instrument);
+      if (tempFee != null) {
+        return tempFee;
+      } else {
+        //represent the stablecoin besides USDT and USDC
+        return new Fee(new BigDecimal(okexTradeFee.getMakerUSDC()).negate(),
+            new BigDecimal(okexTradeFee.getTakerUSDC()).negate());
+      }
+    }
+  }
+
+  private static Fee isContainsFiat(List<FiatList> fiatList, Instrument instrument) {
+    for (FiatList fiat : fiatList) {
+      if (fiat.getCcy().equals(instrument.getCounter().toString())) {
+        return new Fee(new BigDecimal(fiat.getMaker()).negate(), new BigDecimal(fiat.getTaker()).negate());
+      }
+    }
+    return null;
   }
 }

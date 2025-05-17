@@ -124,7 +124,7 @@ public class IndependentReserveAccountService extends IndependentReserveAccountS
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
     return super.getBrokerageFees().getIndependentReserveBrokerageFees().stream()
         .collect(
             Collectors.toMap(

@@ -72,7 +72,7 @@ public class BittrexAccountService extends BittrexAccountServiceRaw implements A
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
     try {
       Map<Instrument, Fee> result = new HashMap<>();
       List<BittrexComissionRatesWithMarket> tradingFees = getTradingFees();

@@ -102,7 +102,7 @@ public class GeminiAccountService extends GeminiAccountServiceRaw implements Acc
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
     GeminiTrailingVolumeResponse volumes = Get30DayTrailingVolumeDescription();
     return GeminiAdapters.AdaptDynamicTradingFees(volumes, allCurrencyPairs);
   }

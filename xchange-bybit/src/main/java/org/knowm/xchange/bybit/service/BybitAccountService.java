@@ -5,7 +5,12 @@ import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.BybitExchange;
@@ -13,18 +18,24 @@ import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.BybitAccountInfoResponse;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
+import org.knowm.xchange.bybit.dto.account.feerates.BybitFeeRate;
 import org.knowm.xchange.bybit.dto.account.feerates.BybitFeeRates;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitAccountBalance;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitAccountType;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitWalletBalance;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.dto.account.AccountInfo;
+import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class BybitAccountService extends BybitAccountServiceRaw implements AccountService {
 
+  private final Logger LOG = LoggerFactory.getLogger(BybitAccountService.class);
   private final BybitAccountType accountType;
 
   public BybitAccountService(
@@ -100,16 +111,62 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
         .collect(Collectors.toList());
   }
 
-  public BybitResult<BybitFeeRates> getFeeRates(BybitCategory category, Instrument instrument)
+  @Override
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category)
       throws IOException {
-    String symbol = null;
-    if (instrument != null) {
-      symbol = BybitAdapters.convertToBybitSymbol(instrument);
+    Map<Instrument, Fee> result = new HashMap<>();
+    if (category != null && category.length > 0 && category[0] instanceof BybitCategory) {
+      BybitCategory bybitCategory = (BybitCategory) category[0];
+      if(bybitCategory.equals(BybitCategory.OPTION) || bybitCategory.equals(BybitCategory.INVERSE))
+        throw new IllegalArgumentException("category OPTION and INVERSE not yet implemented");
+      result.putAll(getFeeRates(bybitCategory));
+    } else {
+      // not fully supported yet
+//      result.putAll(getFeeRates(BybitCategory.OPTION));
+//      result.putAll(getFeeRates(BybitCategory.INVERSE));
+      result.putAll(getFeeRates(BybitCategory.SPOT));
+      result.putAll(getFeeRates(BybitCategory.LINEAR));
     }
-    return getFeeRatesRaw(category, symbol);
+    return result;
   }
 
-  /** Query the account information, like margin mode, account mode, etc. */
+  private Map<Instrument, Fee> getFeeRates(BybitCategory bybitCategory) throws IOException {
+    Map<Instrument, Fee> result = new HashMap<>();
+    BybitResult<BybitFeeRates> bybitFeeRates = getFeeRatesRaw(bybitCategory, null);
+    // seems bug in bybit, req fees for LINEAR category req also returns INVERSE pairs - remove it
+    if (bybitCategory == BybitCategory.LINEAR) {
+      clearUp(bybitFeeRates.getResult().getList().listIterator());
+    }
+    bybitFeeRates.getResult().getList().forEach(bybitFeeRate -> {
+      Instrument instrument = BybitAdapters.convertBybitSymbolToInstrument(
+          bybitFeeRate.getSymbol(), bybitCategory);
+      result.put(instrument,
+          new Fee(bybitFeeRate.getMakerFeeRate(), bybitFeeRate.getTakerFeeRate()));
+    });
+    return result;
+  }
+
+  private void clearUp(ListIterator<BybitFeeRate> listIterator) {
+    while (listIterator.hasNext()) {
+      BybitFeeRate feeRate = listIterator.next();
+      Pattern p = Pattern.compile("\\d");
+      if (feeRate.getSymbol().endsWith("USD")) {
+        listIterator.remove();
+      } else {
+        if (feeRate.getSymbol().contains("USDH") || feeRate.getSymbol().contains("USDM") ||
+            feeRate.getSymbol().contains("USDU") || feeRate.getSymbol().contains("USDZ")) {
+          Matcher m = p.matcher(feeRate.getSymbol());
+          if (m.find()) {
+            listIterator.remove();
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Query the account information, like margin mode, account mode, etc.
+   */
   public BybitAccountInfoResponse accountInfo() throws IOException {
     return accountInfoRaw().getResult();
   }

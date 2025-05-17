@@ -72,7 +72,7 @@ public class KrakenAccountService extends KrakenAccountServiceRaw implements Acc
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
     return KrakenAdapters.adaptFees(
         super.getTradeVolume(
             exchange.getExchangeMetaData().getInstruments().keySet().toArray(new CurrencyPair[0])));

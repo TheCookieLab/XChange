@@ -11,7 +11,6 @@ import org.knowm.xchange.bitstamp.BitstampAdapters;
 import org.knowm.xchange.bitstamp.BitstampUtils;
 import org.knowm.xchange.bitstamp.dto.account.BitstampDepositAddress;
 import org.knowm.xchange.bitstamp.dto.account.BitstampWithdrawal;
-import org.knowm.xchange.bitstamp.dto.account.WithdrawalFee;
 import org.knowm.xchange.bitstamp.dto.trade.BitstampUserTransaction;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
@@ -171,7 +170,7 @@ public class BitstampAccountService extends BitstampAccountServiceRaw implements
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
     return BitstampAdapters.adaptTradingFees(getTradingFees());
   }
 }

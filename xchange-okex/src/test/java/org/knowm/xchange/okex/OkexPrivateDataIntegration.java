@@ -1,10 +1,12 @@
 package org.knowm.xchange.okex;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.knowm.xchange.okex.dto.OkexInstType.SWAP;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.junit.Before;
@@ -16,12 +18,14 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.AccountInfo;
+import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.okex.service.OkexAccountService;
 import org.knowm.xchange.service.trade.params.DefaultCancelOrderByInstrumentAndIdParams;
 import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
@@ -40,7 +44,7 @@ public class OkexPrivateDataIntegration {
     Properties properties = new Properties();
 
     try {
-      properties.load(this.getClass().getResourceAsStream("/secret.keys"));
+      properties.load(this.getClass().getResourceAsStream("/m-secret.keys"));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -51,7 +55,7 @@ public class OkexPrivateDataIntegration {
     spec.setSecretKey(properties.getProperty("secret"));
     spec.setExchangeSpecificParametersItem(
         OkexExchange.PARAM_PASSPHRASE, properties.getProperty("passphrase"));
-    spec.setExchangeSpecificParametersItem(OkexExchange.PARAM_SIMULATED, "1");
+//    spec.setExchangeSpecificParametersItem(OkexExchange.PARAM_SIMULATED, "1");
 
     exchange = ExchangeFactory.INSTANCE.createExchange(spec);
   }
@@ -146,5 +150,14 @@ public class OkexPrivateDataIntegration {
     assertThat(accountInfo.getWallet(Wallet.WalletFeature.TRADING)).isNotNull();
     assertThat(accountInfo.getWallet(Wallet.WalletFeature.FUNDING)).isNotNull();
     assertThat(accountInfo.getWallet(Wallet.WalletFeature.FUTURES_TRADING)).isNotNull();
+  }
+
+  @Test
+  public void feeRates() throws IOException {
+    OkexAccountService okexAccountService = ((OkexAccountService) exchange.getAccountService());
+    Map<Instrument, Fee> feeMap = okexAccountService.getDynamicTradingFeesByInstrument(SWAP);
+    feeMap.forEach((key, value) -> {
+        System.out.println("Key : " + key + " Value : " + value);
+    });
   }
 }

@@ -75,7 +75,7 @@ public class CoinmateAccountService extends CoinmateAccountServiceRaw implements
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
     Set<Instrument> instruments = exchange.getExchangeMetaData().getInstruments().keySet();
     HashMap<Instrument, Fee> result = new HashMap<>();
     for (Instrument instrument : instruments) {

@@ -188,7 +188,7 @@ public class BitfinexAccountService extends BitfinexAccountServiceRaw implements
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
     try {
       List<Instrument> allCurrencyPairs = exchange.getExchangeInstruments();
       return BitfinexAdapters.adaptDynamicTradingFees(
