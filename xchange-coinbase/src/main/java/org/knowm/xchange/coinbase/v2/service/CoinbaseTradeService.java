@@ -91,7 +91,7 @@ public final class CoinbaseTradeService extends CoinbaseTradeServiceRaw implemen
         coinbase.getBuys(
             Coinbase.CB_VERSION_VALUE,
             apiKey,
-            signatureCreator2,
+            authTokenGenerator,
             timestamp,
             accountId,
             params.getLimit(),
@@ -111,7 +111,7 @@ public final class CoinbaseTradeService extends CoinbaseTradeServiceRaw implemen
         coinbase.getSells(
             Coinbase.CB_VERSION_VALUE,
             apiKey,
-            signatureCreator2,
+            authTokenGenerator,
             timestamp,
             accountId,
             params.getLimit(),

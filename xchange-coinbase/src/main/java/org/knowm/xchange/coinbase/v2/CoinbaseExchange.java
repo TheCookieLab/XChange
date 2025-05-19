@@ -6,6 +6,10 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v2.service.CoinbaseAccountService;
 import org.knowm.xchange.coinbase.v2.service.CoinbaseMarketDataService;
 import org.knowm.xchange.coinbase.v2.service.CoinbaseTradeService;
+import org.knowm.xchange.service.account.AccountService;
+import org.knowm.xchange.service.marketdata.MarketDataService;
+import org.knowm.xchange.service.trade.TradeService;
+import org.knowm.xchange.utils.AuthUtils;
 
 public class CoinbaseExchange extends BaseExchange implements Exchange {
 

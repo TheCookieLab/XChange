@@ -21,7 +21,7 @@ import org.knowm.xchange.utils.DigestUtils;
 public class CoinbaseBaseService extends BaseExchangeService implements BaseService {
 
   protected final CoinbaseAuthenticated coinbase;
-  protected final CoinbaseV2Digest signatureCreator2;
+  protected final CoinbaseV2Digest authTokenGenerator;
 
   protected CoinbaseBaseService(Exchange exchange) {
 
@@ -31,8 +31,8 @@ public class CoinbaseBaseService extends BaseExchangeService implements BaseServ
                 CoinbaseAuthenticated.class, exchange.getExchangeSpecification())
             .build();
 
-    signatureCreator2 =
-        CoinbaseV2Digest.createInstance(exchange.getExchangeSpecification().getSecretKey());
+    authTokenGenerator =
+        CoinbaseV2Digest.createInstance(exchange.getExchangeSpecification().getApiKey(), exchange.getExchangeSpecification().getSecretKey());
   }
 
   /**
