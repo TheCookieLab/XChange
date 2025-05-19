@@ -106,22 +106,6 @@ public interface CoinbaseAuthenticated extends Coinbase {
       @PathParam("currency") String currency) throws IOException, CoinbaseException;
 
   @POST
-  @Path("accounts")
-  @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseAccountData createAccount(@HeaderParam(CONTENT_TYPE) String contentType,
-      @HeaderParam(CB_VERSION) String apiVersion, @HeaderParam(CB_ACCESS_KEY) String apiKey,
-      @HeaderParam(CB_ACCESS_SIGN) String signature,
-      @HeaderParam(CB_ACCESS_TIMESTAMP) BigDecimal timestamp, Object payload)
-      throws IOException, CoinbaseException;
-
-  @GET
-  @Path("payment-methods")
-  CoinbasePaymentMethodsData getPaymentMethods(@HeaderParam(CB_VERSION) String apiVersion,
-      @HeaderParam(CB_ACCESS_KEY) String apiKey,
-      @HeaderParam(CB_ACCESS_SIGN) CoinbaseV2Digest signature,
-      @HeaderParam(CB_ACCESS_TIMESTAMP) BigDecimal timestamp) throws IOException, CoinbaseException;
-
-  @POST
   @Path("accounts/{account}/buys")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseBuyData buy(@HeaderParam(CONTENT_TYPE) String contentType,

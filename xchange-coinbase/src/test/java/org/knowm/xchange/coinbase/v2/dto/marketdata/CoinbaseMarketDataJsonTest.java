@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 import org.knowm.xchange.coinbase.v2.dto.CoinbasePrice;
-import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseCurrencyData.CoinbaseCurrency;
+import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseCryptocurrencyData.CoinbaseCryptocurrency;
 
 public class CoinbaseMarketDataJsonTest {
 
@@ -45,14 +45,14 @@ public class CoinbaseMarketDataJsonTest {
 
     // Use Jackson to parse it
     ObjectMapper mapper = new ObjectMapper();
-    JavaType javaType = mapper.getTypeFactory().constructType(CoinbaseCurrencyData.class);
-    CoinbaseCurrencyData rawdata = mapper.readValue(is, javaType);
+    JavaType javaType = mapper.getTypeFactory().constructType(CoinbaseCryptocurrencyData.class);
+    CoinbaseCryptocurrencyData rawdata = mapper.readValue(is, javaType);
 
-    List<CoinbaseCurrency> currencies = rawdata.getData();
+    List<CoinbaseCryptocurrency> currencies = rawdata.getData();
     assertThat(currencies.size()).isEqualTo(168);
 
-    CoinbaseCurrency currency = currencies.get(167);
-    assertThat(currency.getId()).isEqualTo("ZWL");
+    CoinbaseCryptocurrency currency = currencies.get(167);
+    assertThat(currency.getCode()).isEqualTo("ZWL");
     assertThat(currency.getName()).isEqualTo("Zimbabwean Dollar");
   }
 

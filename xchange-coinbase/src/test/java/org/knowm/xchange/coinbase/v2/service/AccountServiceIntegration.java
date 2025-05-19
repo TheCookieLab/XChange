@@ -58,30 +58,4 @@ public class AccountServiceIntegration {
     Assert.assertEquals("BTC", btcAccount.getBalance().getCurrency());
     Assert.assertEquals("BTC Wallet", btcAccount.getName());
   }
-
-  @Test
-  public void createAccount() throws Exception {
-
-    Assume.assumeNotNull(exchange.getExchangeSpecification().getApiKey());
-
-    CoinbaseAccountService coinbaseService = (CoinbaseAccountService) accountService;
-    try {
-      coinbaseService.createCoinbaseAccount("BTC Test");
-    } catch (CoinbaseException ex) {
-      Assert.assertEquals(400, ex.getHttpStatusCode());
-      Assert.assertEquals(
-          "Creation of multiple BTC accounts is not supported (HTTP status code: 400)",
-          ex.getMessage());
-    }
-  }
-
-  @Test
-  public void listPaymentMethods() throws Exception {
-
-    Assume.assumeNotNull(exchange.getExchangeSpecification().getApiKey());
-
-    CoinbaseAccountService coinbaseService = (CoinbaseAccountService) accountService;
-    List<CoinbasePaymentMethod> methods = coinbaseService.getCoinbasePaymentMethods();
-    Assert.assertTrue(methods.size() > 0);
-  }
 }

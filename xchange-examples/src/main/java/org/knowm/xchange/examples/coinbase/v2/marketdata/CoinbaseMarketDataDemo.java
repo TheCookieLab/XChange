@@ -10,7 +10,7 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.coinbase.v2.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v2.dto.CoinbasePrice;
-import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseCurrencyData.CoinbaseCurrency;
+import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseCryptocurrencyData.CoinbaseCryptocurrency;
 import org.knowm.xchange.coinbase.v2.service.CoinbaseMarketDataService;
 import org.knowm.xchange.currency.Currency;
 
@@ -22,7 +22,7 @@ public class CoinbaseMarketDataDemo {
     CoinbaseMarketDataService marketDataService =
         (CoinbaseMarketDataService) coinbaseExchange.getMarketDataService();
 
-    List<CoinbaseCurrency> currencies = marketDataService.getCoinbaseCurrencies();
+    List<CoinbaseCryptocurrency> currencies = marketDataService.getCoinbaseCryptocurrencies();
     System.out.println("Currencies: " + currencies);
 
     Map<String, BigDecimal> exchangeRates = marketDataService.getCoinbaseExchangeRates();

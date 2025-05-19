@@ -9,8 +9,9 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
-import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseCurrencyData;
+import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseCryptocurrencyData;
 import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseExchangeRateData;
+import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseFiatCurrencyData;
 import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbasePriceData;
 import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseTimeData;
 import org.slf4j.Logger;
@@ -33,7 +34,12 @@ public interface Coinbase {
 
   @GET
   @Path("currencies")
-  CoinbaseCurrencyData getCurrencies(@HeaderParam(CB_VERSION) String apiVersion)
+  CoinbaseFiatCurrencyData getFiatCurrencies(@HeaderParam(CB_VERSION) String apiVersion)
+      throws IOException, CoinbaseException;
+
+  @GET
+  @Path("currencies/crypto")
+  CoinbaseCryptocurrencyData getCryptocurrencies(@HeaderParam(CB_VERSION) String apiVersion)
       throws IOException, CoinbaseException;
 
   @GET
