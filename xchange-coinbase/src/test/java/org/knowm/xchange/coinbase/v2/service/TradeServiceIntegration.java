@@ -2,31 +2,39 @@ package org.knowm.xchange.coinbase.v2.service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v2.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v2.dto.CoinbasePrice;
+import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseAccountData.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseBuyData.CoinbaseBuy;
 import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseSellData.CoinbaseSell;
 import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.utils.AuthUtils;
 
 public class TradeServiceIntegration {
 
   static Exchange exchange;
-  static TradeService tradeService;
+  static CoinbaseTradeService tradeService;
+  static CoinbaseAccountService accountService;
 
   @BeforeClass
   public static void beforeClass() {
-    exchange = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class);
-    AuthUtils.setApiAndSecretKey(exchange.getExchangeSpecification());
-    tradeService = exchange.getTradeService();
+    ExchangeSpecification exchangeSpecification = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class).getDefaultExchangeSpecification();
+    AuthUtils.setApiAndSecretKey(exchangeSpecification);
+    exchange = ExchangeFactory.INSTANCE.createExchange(exchangeSpecification);
+    tradeService = (CoinbaseTradeService) exchange.getTradeService();
+    accountService = (CoinbaseAccountService) exchange.getAccountService();
   }
 
   @Test
@@ -38,15 +46,14 @@ public class TradeServiceIntegration {
     BigDecimal amount = new BigDecimal("10.00");
     BigDecimal total = new BigDecimal("10.00");
 
-    CoinbaseTradeService coinbaseService = (CoinbaseTradeService) tradeService;
-    CoinbaseBuy res = coinbaseService.buy(accountId(currency), total, currency, false);
+    CoinbaseBuy res = tradeService.buy(getAccountId(currency), total, currency, false);
     Assert.assertNotNull(res.getId());
     Assert.assertEquals("created", res.getStatus());
     Assert.assertEquals(new CoinbasePrice(new BigDecimal("1.00"), Currency.EUR), res.getFee());
     Assert.assertEquals(new CoinbaseAmount("BTC", new BigDecimal("0.0001")), res.getAmount());
     Assert.assertEquals(Currency.EUR, res.getSubtotal().getCurrency());
     Assert.assertEquals(Currency.EUR, res.getTotal().getCurrency());
-    Assert.assertEquals(false, res.isCommitted());
+    Assert.assertFalse(res.isCommitted());
   }
 
   @Test
@@ -58,15 +65,14 @@ public class TradeServiceIntegration {
     BigDecimal amount = new BigDecimal("0.0001");
     BigDecimal total = null;
 
-    CoinbaseTradeService coinbaseService = (CoinbaseTradeService) tradeService;
-    CoinbaseSell res = coinbaseService.sell(accountId(currency), total, currency, false);
+    CoinbaseSell res = tradeService.sell(getAccountId(currency), total, currency, false);
     Assert.assertNotNull(res.getId());
     Assert.assertEquals("created", res.getStatus());
     Assert.assertEquals(new CoinbasePrice(new BigDecimal("1.00"), Currency.EUR), res.getFee());
     Assert.assertEquals(new CoinbaseAmount("BTC", new BigDecimal("0.0001")), res.getAmount());
     Assert.assertEquals(Currency.EUR, res.getSubtotal().getCurrency());
     Assert.assertEquals(Currency.EUR, res.getTotal().getCurrency());
-    Assert.assertEquals(false, res.isCommitted());
+    Assert.assertFalse(res.isCommitted());
   }
 
   @Test
@@ -78,19 +84,18 @@ public class TradeServiceIntegration {
     BigDecimal amount = new BigDecimal("0.0001");
     BigDecimal total = null;
 
-    CoinbaseTradeService coinbaseService = (CoinbaseTradeService) tradeService;
-    CoinbaseSell res = coinbaseService.quote(accountId(currency), total, currency);
+    CoinbaseSell res = tradeService.quote(getAccountId(currency), amount, currency);
     Assert.assertNull(res.getId());
     Assert.assertEquals("quote", res.getStatus());
     Assert.assertEquals(new CoinbasePrice(new BigDecimal("1.00"), Currency.EUR), res.getFee());
     Assert.assertEquals(new CoinbaseAmount("BTC", new BigDecimal("0.0001")), res.getAmount());
     Assert.assertEquals(Currency.EUR, res.getSubtotal().getCurrency());
     Assert.assertEquals(Currency.EUR, res.getTotal().getCurrency());
-    Assert.assertEquals(false, res.isCommitted());
+    Assert.assertFalse(res.isCommitted());
   }
 
-  private String accountId(Currency currency) throws IOException {
-    CoinbaseAccountService accountService = (CoinbaseAccountService) exchange.getAccountService();
-    return accountService.getCoinbaseAccount(currency).getId();
+  private String getAccountId(Currency currency) throws IOException {
+    CoinbaseAccount account = accountService.getCoinbaseAccount(currency);
+    return account.getId();
   }
 }

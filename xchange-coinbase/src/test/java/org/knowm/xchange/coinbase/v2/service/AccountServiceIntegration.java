@@ -37,7 +37,7 @@ public class AccountServiceIntegration {
 
     CoinbaseAccountService coinbaseService = (CoinbaseAccountService) accountService;
     List<CoinbaseAccount> accounts = coinbaseService.getCoinbaseAccounts();
-    Assert.assertTrue(accounts.size() > 0);
+    Assert.assertFalse(accounts.isEmpty());
 
     CoinbaseAccount btcAccount =
         accounts.stream()
