@@ -481,8 +481,11 @@ public class BinanceAdapters {
         BigDecimal maxQty = null;
         BigDecimal stepSize = null;
 
+        BigDecimal priceStepSize = null;
+
         BigDecimal counterMinQty = null;
         BigDecimal counterMaxQty = null;
+        BigDecimal counterMaxQtyFallback = null;
 
         Instrument currentCurrencyPair =
             new FuturesContract(
@@ -492,8 +495,10 @@ public class BinanceAdapters {
         for (Filter filter : futureSymbol.getFilters()) {
           switch (filter.getFilterType()) {
             case "PRICE_FILTER":
+              priceStepSize = new BigDecimal(filter.getTickSize()).stripTrailingZeros();
               pairPrecision = Math.min(pairPrecision, numberOfDecimals(filter.getTickSize()));
-              counterMaxQty = new BigDecimal(filter.getMaxPrice()).stripTrailingZeros();
+              // why was here maxPrice as maxQty? used as fallback, but...
+              counterMaxQtyFallback = new BigDecimal(filter.getMaxPrice()).stripTrailingZeros();
               break;
             case "LOT_SIZE":
               amountPrecision = Math.min(amountPrecision, numberOfDecimals(filter.getStepSize()));
@@ -501,13 +506,29 @@ public class BinanceAdapters {
               maxQty = new BigDecimal(filter.getMaxQty()).stripTrailingZeros();
               stepSize = new BigDecimal(filter.getStepSize()).stripTrailingZeros();
               break;
+            // US Binance
             case "MIN_NOTIONAL":
               counterMinQty =
                   (filter.getMinNotional() != null)
                       ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
                       : null;
               break;
+            // NOT US Binance
+            case "NOTIONAL":
+              counterMinQty =
+                  (filter.getMinNotional() != null)
+                      ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
+                      : null;
+              counterMaxQty =
+                  (filter.getMaxNotional() != null)
+                      ? new BigDecimal(filter.getMaxNotional()).stripTrailingZeros()
+                      : null;
+              break;
           }
+        }
+
+        if (counterMaxQty == null) {
+          counterMaxQty = counterMaxQtyFallback;
         }
 
         exchangeMetaData
@@ -521,6 +542,7 @@ public class BinanceAdapters {
                     .counterMaximumAmount(counterMaxQty)
                     .volumeScale(amountPrecision)
                     .priceScale(pairPrecision)
+                    .priceStepSize(priceStepSize)
                     .amountStepSize(stepSize)
                     .marketOrderEnabled(
                         Arrays.asList(futureSymbol.getOrderTypes()).contains("MARKET"))
@@ -548,8 +570,11 @@ public class BinanceAdapters {
         BigDecimal maxQty = null;
         BigDecimal stepSize = null;
 
+        BigDecimal priceStepSize = null;
+
         BigDecimal counterMinQty = null;
         BigDecimal counterMaxQty = null;
+        BigDecimal counterMaxQtyFallback = null;
 
         CurrencyPair currentCurrencyPair =
             new CurrencyPair(symbol.getBaseAsset(), symbol.getQuoteAsset());
@@ -557,8 +582,10 @@ public class BinanceAdapters {
         for (Filter filter : symbol.getFilters()) {
           switch (filter.getFilterType()) {
             case "PRICE_FILTER":
+              priceStepSize = new BigDecimal(filter.getTickSize()).stripTrailingZeros();
               pairPrecision = Math.min(pairPrecision, numberOfDecimals(filter.getTickSize()));
-              counterMaxQty = new BigDecimal(filter.getMaxPrice()).stripTrailingZeros();
+              // why was here maxPrice as maxQty? used as fallback, but...
+              counterMaxQtyFallback = new BigDecimal(filter.getMaxPrice()).stripTrailingZeros();
               break;
             case "LOT_SIZE":
               amountPrecision = Math.min(amountPrecision, numberOfDecimals(filter.getStepSize()));
@@ -566,10 +593,29 @@ public class BinanceAdapters {
               maxQty = new BigDecimal(filter.getMaxQty()).stripTrailingZeros();
               stepSize = new BigDecimal(filter.getStepSize()).stripTrailingZeros();
               break;
+            // US Binance
             case "MIN_NOTIONAL":
-              counterMinQty = new BigDecimal(filter.getMinNotional()).stripTrailingZeros();
+              counterMinQty =
+                  (filter.getMinNotional() != null)
+                      ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
+                      : null;
+              break;
+            // NOT US Binance
+            case "NOTIONAL":
+              counterMinQty =
+                  (filter.getMinNotional() != null)
+                      ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
+                      : null;
+              counterMaxQty =
+                  (filter.getMaxNotional() != null)
+                      ? new BigDecimal(filter.getMaxNotional()).stripTrailingZeros()
+                      : null;
               break;
           }
+        }
+
+        if (counterMaxQty == null) {
+          counterMaxQty = counterMaxQtyFallback;
         }
 
         instruments.put(
@@ -582,6 +628,7 @@ public class BinanceAdapters {
                 .counterMaximumAmount(counterMaxQty)
                 .volumeScale(amountPrecision)
                 .priceScale(pairPrecision)
+                .priceStepSize(priceStepSize)
                 .amountStepSize(stepSize)
                 .marketOrderEnabled(Arrays.asList(symbol.getOrderTypes()).contains("MARKET"))
                 .build());
