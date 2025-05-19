@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import org.knowm.xchange.kucoin.dto.KucoinException;
 import org.knowm.xchange.kucoin.dto.response.AllTickersResponse;
 import org.knowm.xchange.kucoin.dto.response.CurrenciesResponse;
 import org.knowm.xchange.kucoin.dto.response.CurrencyResponseV2;
@@ -42,7 +43,7 @@ public interface SymbolAPI {
    */
   @GET
   @Path("/v2/symbols")
-  KucoinResponse<List<SymbolResponse>> getSymbolsV2() throws IOException;
+  KucoinResponse<List<SymbolResponse>> getSymbolsV2() throws IOException, KucoinException;
 
   /**
    * Get a list of available currencies for trading.

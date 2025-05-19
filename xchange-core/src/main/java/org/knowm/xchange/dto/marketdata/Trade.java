@@ -7,12 +7,15 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Objects;
+import lombok.Getter;
+import lombok.Setter;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 
 /** Data object representing a Trade */
+@Getter
 @JsonDeserialize(builder = Trade.Builder.class)
 public class Trade implements Serializable {
 
@@ -22,7 +25,8 @@ public class Trade implements Serializable {
   protected final OrderType type;
 
   /** Amount that was traded */
-  protected final BigDecimal originalAmount;
+  @Setter
+  protected BigDecimal originalAmount;
 
   /** The instrument */
   protected final Instrument instrument;
@@ -74,21 +78,6 @@ public class Trade implements Serializable {
     this.takerOrderId = takerOrderId;
   }
 
-  public OrderType getType() {
-
-    return type;
-  }
-
-  public BigDecimal getOriginalAmount() {
-
-    return originalAmount;
-  }
-
-  public Instrument getInstrument() {
-
-    return instrument;
-  }
-
   /**
    * @deprecated CurrencyPair is a subtype of Instrument - this method will throw an exception if
    *     the order was for a derivative
@@ -105,29 +94,6 @@ public class Trade implements Serializable {
           "The instrument of this order is not a currency pair: " + instrument);
     }
     return (CurrencyPair) instrument;
-  }
-
-  public BigDecimal getPrice() {
-
-    return price;
-  }
-
-  public Date getTimestamp() {
-
-    return timestamp;
-  }
-
-  public String getId() {
-
-    return id;
-  }
-
-  public String getMakerOrderId() {
-    return makerOrderId;
-  }
-
-  public String getTakerOrderId() {
-    return takerOrderId;
   }
 
   @Override

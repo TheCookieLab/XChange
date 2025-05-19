@@ -8,6 +8,7 @@ import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.kucoin.dto.request.ApplyWithdrawApiRequest;
 import org.knowm.xchange.kucoin.dto.request.CreateAccountRequest;
+import org.knowm.xchange.kucoin.dto.request.CreateDepositAddressApiRequest;
 import org.knowm.xchange.kucoin.dto.request.InnerTransferRequest;
 import org.knowm.xchange.kucoin.dto.response.AccountBalancesResponse;
 import org.knowm.xchange.kucoin.dto.response.AccountLedgersResponse;
@@ -184,17 +185,12 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                 .call());
   }
 
-  public DepositAddressResponse createDepositAddress(String currency, String chain)
-      throws IOException {
-    checkAuthenticated();
-    return classifyingExceptions(
-        () ->
-            decorateApiCall(
-                    () ->
-                        depositAPI.createDepositAddress(
-                            apiKey, digest, nonceFactory, passphrase, currency, chain))
-                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
-                .call());
+  public DepositAddressResponse createDepositAddress(CreateDepositAddressApiRequest request) throws IOException {
+    return decorateApiCall(() ->
+        depositAPI.createDepositAddress(apiKey, digest, nonceFactory, passphrase, request))
+        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+        .call()
+        .getData();
   }
 
   public DepositAddressResponse getDepositAddress(String currency, String chain)

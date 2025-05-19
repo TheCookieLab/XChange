@@ -73,7 +73,9 @@ public class KucoinAdapters {
   private static final String TAKER_FEE_RATE = "takerFeeRate";
 
   public static String adaptCurrencyPair(Instrument instrument) {
-    return instrument == null ? null : instrument.getBase().getCurrencyCode() + "-" + instrument.getCounter().getCurrencyCode();
+    return instrument == null
+        ? null
+        : instrument.getBase().getCurrencyCode() + "-" + instrument.getCounter().getCurrencyCode();
   }
 
   public static CurrencyPair adaptCurrencyPair(String symbol) {
@@ -173,9 +175,11 @@ public class KucoinAdapters {
               .build());
 
       if (!currencies.containsKey(pair.getBase()))
-        currencies.put(pair.getBase(), stringCurrencyMetaDataMap.get(pair.getBase().getCurrencyCode()));
+        currencies.put(
+            pair.getBase(), stringCurrencyMetaDataMap.get(pair.getBase().getCurrencyCode()));
       if (!currencies.containsKey(pair.getCounter()))
-        currencies.put(pair.getCounter(), stringCurrencyMetaDataMap.get(pair.getCounter().getCurrencyCode()));
+        currencies.put(
+            pair.getCounter(), stringCurrencyMetaDataMap.get(pair.getCounter().getCurrencyCode()));
     }
 
     return new ExchangeMetaData(
@@ -380,9 +384,21 @@ public class KucoinAdapters {
   }
 
   public static OrderCreateApiRequest adaptMarketOrder(MarketOrder marketOrder) {
-    return ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(marketOrder))
-        .type("market")
-        .build();
+    OrderCreateApiRequest.OrderCreateApiRequestBuilder builder = ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(marketOrder))
+        .type("market");
+
+    // on buy order amount corresponds to counter currency
+    if (marketOrder.getType() == BID) {
+      builder.size(null);
+      builder.funds(marketOrder.getOriginalAmount());
+    }
+    // on sell order amount corresponds to base currency
+    else if (marketOrder.getType() == ASK) {
+      builder.size(marketOrder.getOriginalAmount());
+      builder.funds(null);
+    }
+
+    return builder.build();
   }
 
   /**
@@ -400,6 +416,12 @@ public class KucoinAdapters {
         request.timeInForce(((TimeInForce) flag).name());
       }
     }
+
+    if (order.getUserReference() != null) {
+      request.clientOid(order.getUserReference());
+      hasClientId = true;
+    }
+
     if (!hasClientId) {
       request.clientOid(UUID.randomUUID().toString());
     }
