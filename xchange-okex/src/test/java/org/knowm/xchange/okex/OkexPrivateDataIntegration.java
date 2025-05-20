@@ -44,7 +44,7 @@ public class OkexPrivateDataIntegration {
     Properties properties = new Properties();
 
     try {
-      properties.load(this.getClass().getResourceAsStream("/m-secret.keys"));
+      properties.load(this.getClass().getResourceAsStream("/secret.keys"));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -55,7 +55,7 @@ public class OkexPrivateDataIntegration {
     spec.setSecretKey(properties.getProperty("secret"));
     spec.setExchangeSpecificParametersItem(
         OkexExchange.PARAM_PASSPHRASE, properties.getProperty("passphrase"));
-//    spec.setExchangeSpecificParametersItem(OkexExchange.PARAM_SIMULATED, "1");
+    spec.setExchangeSpecificParametersItem(OkexExchange.PARAM_SIMULATED, "1");
 
     exchange = ExchangeFactory.INSTANCE.createExchange(spec);
   }

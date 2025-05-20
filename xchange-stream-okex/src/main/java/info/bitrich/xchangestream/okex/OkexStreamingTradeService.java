@@ -1,6 +1,6 @@
 package info.bitrich.xchangestream.okex;
 
-import static info.bitrich.xchangestream.okex.OkexStreamingService.USERTRADES;
+import static info.bitrich.xchangestream.okex.OkexPrivateStreamingService.USERTRADES;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.core.StreamingTradeService;
@@ -15,13 +15,13 @@ import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
 
 public class OkexStreamingTradeService implements StreamingTradeService {
 
-  private final OkexStreamingService service;
+  private final OkexPrivateStreamingService privateStreamingService;
   private final ExchangeMetaData exchangeMetaData;
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
 
   public OkexStreamingTradeService(
-      OkexStreamingService service, ExchangeMetaData exchangeMetaData) {
-    this.service = service;
+      OkexPrivateStreamingService privateStreamingService, ExchangeMetaData exchangeMetaData) {
+    this.privateStreamingService = privateStreamingService;
     this.exchangeMetaData = exchangeMetaData;
   }
 
@@ -29,7 +29,7 @@ public class OkexStreamingTradeService implements StreamingTradeService {
   public Observable<UserTrade> getUserTrades(Instrument instrument, Object... args) {
     String channelUniqueId = USERTRADES + OkexAdapters.adaptInstrument(instrument);
 
-    return service
+    return privateStreamingService
         .subscribeChannel(channelUniqueId)
         .filter(message -> message.has("data"))
         .flatMap(
