@@ -22,21 +22,6 @@
     </organization>
 
     <dependencies>
-
-        <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
-            <version>1.15</version>
-            <!-- Or a version managed in parent POM if available -->
-        </dependency>
-
-        <dependency>
-            <groupId>jakarta.ws.rs</groupId>
-            <artifactId>jakarta.ws.rs-api</artifactId>
-            <version>3.1.0</version>
-            <!-- Explicitly set version -->
-        </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -53,14 +38,12 @@
             <artifactId>xchange-core</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${version.lombok}</version>
             <scope>compile</scope>
         </dependency>
-
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock</artifactId>
