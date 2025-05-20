@@ -6,8 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -48,29 +46,30 @@ public class CoinsphOrderBookTest {
   public void testUnmarshalOrderBookFromFile() throws IOException {
     // This test is already covered in testUnmarshalOrderBook
     // but we're adding it here to show how to read from a file
-    String json = "{\n" +
-        "  \"lastUpdateId\": 1234567890,\n" +
-        "  \"bids\": [\n" +
-        "    [\n" +
-        "      \"5803095.5\",\n" +
-        "      \"0.0000824\"\n" +
-        "    ],\n" +
-        "    [\n" +
-        "      \"5803000.0\",\n" +
-        "      \"0.0001000\"\n" +
-        "    ]\n" +
-        "  ],\n" +
-        "  \"asks\": [\n" +
-        "    [\n" +
-        "      \"5944316.4\",\n" +
-        "      \"0.0008186\"\n" +
-        "    ],\n" +
-        "    [\n" +
-        "      \"5944400.0\",\n" +
-        "      \"0.0010000\"\n" +
-        "    ]\n" +
-        "  ]\n" +
-        "}";
+    String json =
+        "{\n"
+            + "  \"lastUpdateId\": 1234567890,\n"
+            + "  \"bids\": [\n"
+            + "    [\n"
+            + "      \"5803095.5\",\n"
+            + "      \"0.0000824\"\n"
+            + "    ],\n"
+            + "    [\n"
+            + "      \"5803000.0\",\n"
+            + "      \"0.0001000\"\n"
+            + "    ]\n"
+            + "  ],\n"
+            + "  \"asks\": [\n"
+            + "    [\n"
+            + "      \"5944316.4\",\n"
+            + "      \"0.0008186\"\n"
+            + "    ],\n"
+            + "    [\n"
+            + "      \"5944400.0\",\n"
+            + "      \"0.0010000\"\n"
+            + "    ]\n"
+            + "  ]\n"
+            + "}";
 
     // when
     CoinsphOrderBook orderBook = objectMapper.readValue(json, CoinsphOrderBook.class);

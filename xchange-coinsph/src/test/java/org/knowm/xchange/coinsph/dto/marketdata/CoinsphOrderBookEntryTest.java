@@ -30,7 +30,8 @@ public class CoinsphOrderBookEntryTest {
   @Test
   public void testConstructor() {
     // given
-    List<BigDecimal> values = Arrays.asList(new BigDecimal("5803095.5"), new BigDecimal("0.0000824"));
+    List<BigDecimal> values =
+        Arrays.asList(new BigDecimal("5803095.5"), new BigDecimal("0.0000824"));
 
     // when
     CoinsphOrderBookEntry entry = new CoinsphOrderBookEntry(values);
@@ -45,10 +46,9 @@ public class CoinsphOrderBookEntryTest {
   public void testConstructorWithInvalidList() {
     // given
     List<BigDecimal> tooShort = Arrays.asList(new BigDecimal("5803095.5"));
-    List<BigDecimal> tooLong = Arrays.asList(
-        new BigDecimal("5803095.5"), 
-        new BigDecimal("0.0000824"),
-        new BigDecimal("123.456"));
+    List<BigDecimal> tooLong =
+        Arrays.asList(
+            new BigDecimal("5803095.5"), new BigDecimal("0.0000824"), new BigDecimal("123.456"));
 
     // then
     try {

@@ -6,16 +6,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 
 public class CoinsphTradesTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
-  
+
   // Configure ObjectMapper to handle field name differences
   {
-    objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    objectMapper.configure(
+        com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
 
   @Test
@@ -30,7 +30,7 @@ public class CoinsphTradesTest {
 
     // then
     assertThat(trades).isNotNull().hasSize(2);
-    
+
     CoinsphPublicTrade trade1 = trades[0];
     assertThat(trade1.getId()).isEqualTo(12345L);
     assertThat(trade1.getPrice()).isEqualByComparingTo(new BigDecimal("5803095.5"));
@@ -39,7 +39,7 @@ public class CoinsphTradesTest {
     assertThat(trade1.getTime()).isEqualTo(1621234567890L);
     // Note: The field is named "buyerMaker" in JSON but the getter is "isBuyerMaker()"
     assertThat(trade1.isBuyerMaker()).isTrue();
-    
+
     CoinsphPublicTrade trade2 = trades[1];
     assertThat(trade2.getId()).isEqualTo(12346L);
     assertThat(trade2.getPrice()).isEqualByComparingTo(new BigDecimal("5803000.0"));
@@ -52,24 +52,25 @@ public class CoinsphTradesTest {
   @Test
   public void testMarshalTrade() throws IOException {
     // given
-    CoinsphPublicTrade trade = new CoinsphPublicTrade(
-        12345L,
-        new BigDecimal("5803095.5"),
-        new BigDecimal("0.0000824"),
-        new BigDecimal("478.17506"),
-        1621234567890L,
-        true
-    );
+    CoinsphPublicTrade trade =
+        new CoinsphPublicTrade(
+            12345L,
+            new BigDecimal("5803095.5"),
+            new BigDecimal("0.0000824"),
+            new BigDecimal("478.17506"),
+            1621234567890L,
+            true);
 
     // when
     String json = objectMapper.writeValueAsString(trade);
-    
+
     // Print the JSON for debugging
     System.out.println("Serialized JSON: " + json);
-    
+
     // Create a new ObjectMapper with feature to ignore unknown properties
     ObjectMapper lenientMapper = new ObjectMapper();
-    lenientMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    lenientMapper.configure(
+        com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     // then
     assertThat(json).isNotNull();
@@ -80,12 +81,13 @@ public class CoinsphTradesTest {
     assertThat(unmarshalledTrade.getQty()).isEqualByComparingTo(trade.getQty());
     assertThat(unmarshalledTrade.getQuoteQty()).isEqualByComparingTo(trade.getQuoteQty());
     assertThat(unmarshalledTrade.getTime()).isEqualTo(trade.getTime());
-    
+
     // Print the value for debugging
     System.out.println("Original isBuyerMaker: " + trade.isBuyerMaker());
     System.out.println("Unmarshalled isBuyerMaker: " + unmarshalledTrade.isBuyerMaker());
-    
-    // The field is not correctly deserialized due to the mismatch between the field name in JSON ("buyerMaker")
+
+    // The field is not correctly deserialized due to the mismatch between the field name in JSON
+    // ("buyerMaker")
     // and the expected property name in the annotation (@JsonProperty("isBuyerMaker"))
     // For the purpose of this test, we'll just verify that the field can be accessed
     // In a real application, this would need to be fixed in the CoinsphPublicTrade class
