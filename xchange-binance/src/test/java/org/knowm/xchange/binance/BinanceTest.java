@@ -1,15 +1,16 @@
 package org.knowm.xchange.binance;
 
+
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.knowm.xchange.Exchange.USE_SANDBOX;
-import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
-import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
+import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import org.junit.Before;
@@ -21,14 +22,11 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceQueryOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceTradeHistoryParams;
-import org.knowm.xchange.binance.service.BinanceAccountService;
-import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.Order.IOrderFlags;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
-import org.knowm.xchange.dto.account.OpenPosition;
-import org.knowm.xchange.dto.account.Wallet;
-import org.knowm.xchange.dto.marketdata.FundingRates;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
@@ -40,31 +38,38 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Ignore
-public class BinanceFutureTest {
-
-  private static final Instrument instrument = new FuturesContract("BTC/USDT/PERP");
+public class BinanceTest {
+  private static final Instrument instrument = new CurrencyPair("ETH/USDT");
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
   private static Exchange binanceExchange;
 
   @Before
   public void setUp() throws IOException {
-    Properties prop = new Properties();
-    prop.load(this.getClass().getResourceAsStream("/secret.keys"));
+    Properties properties = new Properties();
+    try {
+      properties.load(BinanceTest.class.getResourceAsStream("/secret.keys"));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    final String apiKey =
+        (properties.getProperty("apikey") == null)
+            ? System.getenv("binance-api-key")
+            : properties.getProperty("apikey");
+    final String apiSecret =
+        (properties.getProperty("secret") == null)
+            ? System.getenv("binance-api-secret")
+            : properties.getProperty("secret");
 
     ExchangeSpecification spec = new ExchangeSpecification(BinanceExchange.class);
-
-    spec.setApiKey(prop.getProperty("apikey"));
-    spec.setSecretKey(prop.getProperty("secret"));
+    spec.setApiKey(apiKey);
+    spec.setSecretKey(apiSecret);
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
-    spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, FUTURES);
-
-    Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
-    binanceExchange = exchange;
+    binanceExchange = ExchangeFactory.INSTANCE.createExchange(spec);
   }
 
   @Test
-  public void binanceFutureMarketDataService() throws IOException {
+  public void binanceMarketDataService() throws IOException {
     // Get OrderBook
     OrderBook orderBook = binanceExchange.getMarketDataService().getOrderBook(instrument);
     logger.info("OrderBook: " + orderBook);
@@ -78,40 +83,20 @@ public class BinanceFutureTest {
     Trades trades = binanceExchange.getMarketDataService().getTrades(instrument);
     logger.info("Trades: " + trades);
     assertThat(trades.getTrades().get(0).getInstrument()).isEqualTo(instrument);
-    // Get Funding rates
-    FundingRates fundingRates = binanceExchange.getMarketDataService().getFundingRates();
-    fundingRates
-        .getFundingRates()
-        .forEach(fundingRate -> System.out.println(fundingRate.toString()));
   }
 
   @Test
-  public void binanceFutureAccountService() throws IOException {
-    BinanceAccountService binanceAccountService = ((BinanceAccountService)binanceExchange.getAccountService());
-    Fee fee = binanceAccountService.getCommissionRateByInstrument(instrument);
-    logger.info("fee: {}", fee);
+  public void binanceAccountService() throws IOException {
+    Map<Instrument, Fee> fees = binanceExchange.getAccountService().getDynamicTradingFeesByInstrument(SPOT);
+    logger.info("fee: {}", fees);
     AccountInfo accountInfo = binanceExchange.getAccountService().getAccountInfo();
-    logger.info("AccountInfo: {}", accountInfo.getWallet(Wallet.WalletFeature.FUTURES_TRADING));
-    assertThat(
-            accountInfo.getOpenPositions().stream()
-                .anyMatch(openPosition -> openPosition.getInstrument().equals(instrument)))
-        .isTrue();
-    logger.info("Positions: {}",accountInfo.getOpenPositions());
+    logger.info("AccountInfo: {}", accountInfo.getWallet());
   }
 
   @Test
-  public void binanceFutureTradeService() throws IOException {
-    Set<Order.IOrderFlags> orderFlags = new HashSet<>();
+  public void binanceTradeService() throws IOException {
+    Set<IOrderFlags> orderFlags = new HashSet<>();
     //        orderFlags.add(BinanceOrderFlags.REDUCE_ONLY);
-
-    // Open Positions
-    List<OpenPosition> openPositions =
-        binanceExchange.getTradeService().getOpenPositions().getOpenPositions();
-    logger.info("Positions: " + openPositions);
-    assertThat(
-            openPositions.stream()
-                .anyMatch(openPosition -> openPosition.getInstrument().equals(instrument)))
-        .isTrue();
 
     // Get UserTrades
     List<UserTrade> userTrades =
@@ -120,10 +105,6 @@ public class BinanceFutureTest {
             .getTradeHistory(new BinanceTradeHistoryParams(instrument))
             .getUserTrades();
     logger.info("UserTrades: " + userTrades);
-    assertThat(
-            userTrades.stream().anyMatch(userTrade -> userTrade.getInstrument().equals(instrument)))
-        .isTrue();
-
     // Place LimitOrder
     String orderId =
         binanceExchange
@@ -142,7 +123,7 @@ public class BinanceFutureTest {
             .getOpenOrders();
     logger.info("OpenOrders: " + openOrders);
     assertThat(
-            openOrders.stream().anyMatch(openOrder -> openOrder.getInstrument().equals(instrument)))
+        openOrders.stream().anyMatch(openOrder -> openOrder.getInstrument().equals(instrument)))
         .isTrue();
 
     // Get order
@@ -158,7 +139,8 @@ public class BinanceFutureTest {
     logger.info(
         "CancelOrder: "
             + binanceExchange
-                .getTradeService()
-                .cancelOrder(new BinanceCancelOrderParams(instrument, orderId)));
+            .getTradeService()
+            .cancelOrder(new BinanceCancelOrderParams(instrument, orderId)));
   }
+
 }

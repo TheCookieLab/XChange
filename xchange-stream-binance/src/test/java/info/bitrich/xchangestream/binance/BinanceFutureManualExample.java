@@ -2,8 +2,9 @@ package info.bitrich.xchangestream.binance;
 
 import static org.knowm.xchange.Exchange.USE_SANDBOX;
 import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
-import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
+import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
 
+import info.bitrich.xchangestream.binancefuture.BinanceFutureStreamingExchange;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
@@ -11,19 +12,21 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import java.io.IOException;
 import java.util.Properties;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Created by Lukas Zaoralek on 15.11.17. */
-public class BinanceManualExample {
-  private static final Logger LOG = LoggerFactory.getLogger(BinanceManualExample.class);
+public class BinanceFutureManualExample {
+  private static final Logger LOG = LoggerFactory.getLogger(BinanceFutureManualExample.class);
+  static Instrument ETH = new FuturesContract("ETH/USDT/SWAP");
+  static Instrument LTC = new FuturesContract("LTC/USDT/SWAP");
 
   public static void main(String[] args) throws InterruptedException {
-    // Far safer than temporarily adding these to code that might get committed to VCS
+
     Properties properties = new Properties();
     try {
-      properties.load(BinanceManualExample.class.getResourceAsStream("/secret.keys"));
+      properties.load(BinanceFutureManualExample.class.getResourceAsStream("/secret.keys"));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -38,32 +41,33 @@ public class BinanceManualExample {
 
     ExchangeSpecification spec =
         StreamingExchangeFactory.INSTANCE
-            .createExchange(BinanceStreamingExchange.class)
+            .createExchange(BinanceFutureStreamingExchange.class)
             .getDefaultExchangeSpecification();
     spec.setApiKey(apiKey);
     spec.setSecretKey(apiSecret);
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
-    spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, SPOT);
-    BinanceStreamingExchange exchange =
-        (BinanceStreamingExchange) StreamingExchangeFactory.INSTANCE.createExchange(spec);
+    spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, FUTURES);
+    BinanceFutureStreamingExchange exchange =
+        (BinanceFutureStreamingExchange) StreamingExchangeFactory.INSTANCE.createExchange(spec);
 
     ProductSubscription subscription =
         ProductSubscription.create()
-            .addTicker(CurrencyPair.ETH_BTC)
-            .addTicker(CurrencyPair.LTC_BTC)
-            .addOrderbook(CurrencyPair.LTC_BTC)
-            .addTrades(CurrencyPair.BTC_USDT)
-            .addUserTrades(CurrencyPair.BTC_USDT)
+            .addTicker(ETH)
+            .addTicker(ETH)
+            .addOrderbook(LTC)
+            .addTrades(LTC)
+            .addFundingRates(LTC)
             .build();
 
     exchange.connect(subscription).blockingAwait();
+    exchange.enableLiveSubscription();
 
     LOG.info("Subscribing public channels");
 
     Disposable tickers =
         exchange
             .getStreamingMarketDataService()
-            .getTicker(CurrencyPair.ETH_BTC)
+            .getTicker(ETH)
             .subscribe(
                 ticker -> LOG.info("Ticker: {}", ticker),
                 throwable -> LOG.error("ERROR in getting ticker: ", throwable));
@@ -71,7 +75,7 @@ public class BinanceManualExample {
     Disposable trades =
         exchange
             .getStreamingMarketDataService()
-            .getTrades(CurrencyPair.BTC_USDT)
+            .getTrades(LTC)
             .subscribe(trade -> LOG.info("Trade: {}", trade));
 
     Disposable orderChanges = null;
@@ -88,12 +92,12 @@ public class BinanceManualExample {
       orderChanges =
           exchange
               .getStreamingTradeService()
-              .getOrderChanges(false)
+              .getOrderChanges(true)
               .subscribe(oc -> LOG.info("Order change: {}", oc));
       userTrades =
           exchange
               .getStreamingTradeService()
-              .getUserTrades(false)
+              .getUserTrades(true)
               .subscribe(trade -> LOG.info("User trade: {}", trade));
       balances =
           exchange
@@ -125,7 +129,7 @@ public class BinanceManualExample {
     Disposable orderbookUpdates1 = orderbooksIncremental(exchange, "one");
     Disposable orderbookUpdates2 = orderbooksIncremental(exchange, "two");
 
-    Thread.sleep(100000);
+    Thread.sleep(1000000);
 
     tickers.dispose();
     trades.dispose();
@@ -148,7 +152,7 @@ public class BinanceManualExample {
   private static Disposable orderbooks(StreamingExchange exchange, String identifier) {
     return exchange
         .getStreamingMarketDataService()
-        .getOrderBook(CurrencyPair.LTC_BTC)
+        .getOrderBook(LTC)
         .subscribe(
             orderBook ->
                 LOG.info(
@@ -166,9 +170,10 @@ public class BinanceManualExample {
   private static Disposable orderbooksIncremental(StreamingExchange exchange, String identifier) {
     return exchange
         .getStreamingMarketDataService()
-        .getOrderBookUpdates(CurrencyPair.LTC_BTC)
+        .getOrderBookUpdates(LTC)
         .subscribe(
             level -> LOG.info("Order Book Level update({}): {}", identifier, level),
             throwable -> LOG.error("ERROR in getting order book: ", throwable));
   }
+
 }
