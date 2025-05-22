@@ -1,18 +1,10 @@
 package info.bitrich.xchangestream.bybit.example;
 
-import static java.math.RoundingMode.UP;
-import static org.knowm.xchange.bybit.BybitExchange.SPECIFIC_PARAM_ACCOUNT_TYPE;
-import static org.knowm.xchange.bybit.BybitExchange.SPECIFIC_PARAM_TESTNET;
-
 import info.bitrich.xchangestream.bybit.BybitStreamingExchange;
 import info.bitrich.xchangestream.bybit.BybitStreamingTradeService;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.concurrent.atomic.AtomicReference;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitAccountType;
@@ -25,6 +17,16 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static java.math.RoundingMode.UP;
+import static org.knowm.xchange.bybit.BybitExchange.SPECIFIC_PARAM_ACCOUNT_TYPE;
+import static org.knowm.xchange.bybit.BybitExchange.SPECIFIC_PARAM_TESTNET;
 
 public class BybitStreamTestNetExample {
 
@@ -48,8 +50,23 @@ public class BybitStreamTestNetExample {
   private static void withAuth() throws IOException, InterruptedException {
     ExchangeSpecification exchangeSpecification =
         new BybitStreamingExchange().getDefaultExchangeSpecification();
-    exchangeSpecification.setApiKey(System.getProperty("test_api_key"));
-    exchangeSpecification.setSecretKey(System.getProperty("test_secret_key"));
+    Properties properties = new Properties();
+    try {
+      properties.load(BybitStreamTestNetExample.class.getResourceAsStream("/secret.keys"));
+    // Enter your authentication details here to run private endpoint tests
+    final String API_KEY =
+            (properties.getProperty("apikey") == null)
+                    ? System.getenv("bybit_apikey")
+                    : properties.getProperty("apikey");
+    final String SECRET_KEY =
+            (properties.getProperty("secret") == null)
+                    ? System.getenv("bybit_secretkey")
+                    : properties.getProperty("secret");
+    exchangeSpecification.setApiKey(API_KEY);
+    exchangeSpecification.setSecretKey(SECRET_KEY);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     exchangeSpecification.setExchangeSpecificParametersItem(
         SPECIFIC_PARAM_ACCOUNT_TYPE, BybitAccountType.UNIFIED);
     exchangeSpecification.setExchangeSpecificParametersItem(
