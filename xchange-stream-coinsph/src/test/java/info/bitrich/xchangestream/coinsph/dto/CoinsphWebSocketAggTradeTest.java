@@ -64,7 +64,8 @@ public class CoinsphWebSocketAggTradeTest {
     assertThat(unmarshalledAggTrade.getEventType()).isEqualTo(aggTrade.getEventType());
     assertThat(unmarshalledAggTrade.getEventTime()).isEqualTo(aggTrade.getEventTime());
     assertThat(unmarshalledAggTrade.getSymbol()).isEqualTo(aggTrade.getSymbol());
-    assertThat(unmarshalledAggTrade.getAggregateTradeId()).isEqualTo(aggTrade.getAggregateTradeId());
+    assertThat(unmarshalledAggTrade.getAggregateTradeId())
+        .isEqualTo(aggTrade.getAggregateTradeId());
     assertThat(unmarshalledAggTrade.getPrice()).isEqualByComparingTo(aggTrade.getPrice());
     assertThat(unmarshalledAggTrade.getQuantity()).isEqualByComparingTo(aggTrade.getQuantity());
     assertThat(unmarshalledAggTrade.getFirstTradeId()).isEqualTo(aggTrade.getFirstTradeId());

@@ -4,10 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.ToString;
+import org.knowm.xchange.coinsph.dto.CoinsphResponse;
 
 @Getter
 @ToString
-public class CoinsphOrder {
+public class CoinsphOrder extends CoinsphResponse {
 
   private final String symbol;
   private final long orderId;

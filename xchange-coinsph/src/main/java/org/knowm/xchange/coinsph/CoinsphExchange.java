@@ -15,6 +15,7 @@ import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import si.mazi.rescu.Interceptor;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 
@@ -97,10 +98,14 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
 
     // Initialize API proxies using the provided exchangeSpecification
     // BEFORE calling super.applySpecification() which might call remoteInit/initServices
+    Interceptor errorInterceptor = new CoinsphErrorInterceptor();
     this.publicApi =
-        ExchangeRestProxyBuilder.forInterface(Coinsph.class, exchangeSpecification).build();
+        ExchangeRestProxyBuilder.forInterface(Coinsph.class, exchangeSpecification)
+            .customInterceptor(errorInterceptor)
+            .build();
     this.authenticatedApi =
         ExchangeRestProxyBuilder.forInterface(CoinsphAuthenticated.class, exchangeSpecification)
+            .customInterceptor(errorInterceptor)
             .build();
 
     // Initialize signature creator
