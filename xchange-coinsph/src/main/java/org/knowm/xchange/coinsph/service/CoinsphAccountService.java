@@ -1,18 +1,10 @@
 package org.knowm.xchange.coinsph.service;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.coinsph.CoinsphAdapters;
 import org.knowm.xchange.coinsph.CoinsphExchange;
 import org.knowm.xchange.coinsph.dto.CoinsphException;
-import org.knowm.xchange.coinsph.dto.account.CoinsphAccount;
-import org.knowm.xchange.coinsph.dto.account.CoinsphDepositAddress;
-import org.knowm.xchange.coinsph.dto.account.CoinsphFundingRecord;
-import org.knowm.xchange.coinsph.dto.account.CoinsphTradeFee;
-import org.knowm.xchange.coinsph.dto.account.CoinsphWithdrawal;
+import org.knowm.xchange.coinsph.dto.account.*;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
@@ -24,6 +16,11 @@ import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.NetworkWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
 public class CoinsphAccountService extends CoinsphAccountServiceRaw implements AccountService {
 
@@ -123,7 +120,7 @@ public class CoinsphAccountService extends CoinsphAccountServiceRaw implements A
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument()
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category)
       throws IOException, CoinsphException {
     List<CoinsphTradeFee> fees = super.getCoinsphTradeFees();
     return CoinsphAdapters.adaptTradeFees(fees);
