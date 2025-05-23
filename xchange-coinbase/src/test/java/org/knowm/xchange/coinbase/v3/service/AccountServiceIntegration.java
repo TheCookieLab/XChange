@@ -8,9 +8,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
-import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
+import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethod;
 import org.knowm.xchange.utils.AuthUtils;
 
 public class AccountServiceIntegration {
@@ -20,7 +20,8 @@ public class AccountServiceIntegration {
 
   @BeforeClass
   public static void beforeClass() {
-    ExchangeSpecification exchangeSpecification = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class).getDefaultExchangeSpecification();
+    ExchangeSpecification exchangeSpecification = ExchangeFactory.INSTANCE.createExchange(
+        CoinbaseExchange.class).getDefaultExchangeSpecification();
     AuthUtils.setApiAndSecretKey(exchangeSpecification);
     exchange = (CoinbaseExchange) ExchangeFactory.INSTANCE.createExchange(exchangeSpecification);
     accountService = (CoinbaseAccountService) exchange.getAccountService();
@@ -43,35 +44,20 @@ public class AccountServiceIntegration {
   }
 
   @Test
-  public void getAccountByCurrency() throws Exception {
+  public void getAccountById() throws Exception {
     Assume.assumeNotNull(accountService.authTokenCreator);
 
-//    CoinbaseAccount btcAccount = coinbaseService.getCoinbaseAccount(Currency.BTC);
-//    Assert.assertEquals("BTC", btcAccount.getBalance().getCurrency());
-//    Assert.assertEquals("BTC Wallet", btcAccount.getName());
-  }
-
-  @Test
-  public void createAccount() throws Exception {
-    Assume.assumeNotNull(accountService.authTokenCreator);
-
-    try {
-      //coinbaseService.createCoinbaseAccount("BTC Test");
-    } catch (CoinbaseException ex) {
-      Assert.assertEquals(400, ex.getHttpStatusCode());
-      Assert.assertEquals(
-          "Creation of multiple BTC accounts is not supported (HTTP status code: 400)",
-          ex.getMessage());
-    }
+    CoinbaseAccount btcAccount = accountService.getCoinbaseAccount(
+        "49c5ceb8-a14f-575b-a6c6-6bab51a73c46");
+    Assert.assertEquals("BTC", btcAccount.getBalance().getCurrency());
+    Assert.assertEquals("BTC Wallet", btcAccount.getName());
   }
 
   @Test
   public void listPaymentMethods() throws Exception {
+    Assume.assumeNotNull(accountService.authTokenCreator);
 
-    Assume.assumeNotNull(exchange.getExchangeSpecification().getApiKey());
-
-    CoinbaseAccountService coinbaseService = (CoinbaseAccountService) accountService;
-//    List<CoinbasePaymentMethod> methods = coinbaseService.getCoinbasePaymentMethods();
-//    Assert.assertTrue(methods.size() > 0);
+    List<CoinbasePaymentMethod> methods = accountService.getCoinbasePaymentMethods();
+    Assert.assertFalse(methods.isEmpty());
   }
 }

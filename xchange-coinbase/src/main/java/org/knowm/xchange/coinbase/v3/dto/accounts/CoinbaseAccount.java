@@ -3,7 +3,9 @@ package org.knowm.xchange.coinbase.v3.dto.accounts;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
 
+@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoinbaseAccount {
 
@@ -20,22 +22,6 @@ public class CoinbaseAccount {
     this.name = name;
     this.currency = currency;
     this.balance = balance;
-  }
-
-  public String getUuid() {
-    return uuid;
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  public CoinbaseAmount getBalance() {
-    return balance;
-  }
-
-  public String getCurrency() {
-    return this.currency;
   }
 
   @Override

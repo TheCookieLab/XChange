@@ -12,7 +12,8 @@ import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import org.knowm.xchange.coinbase.v2.Coinbase;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseAccountsData;
+import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBooksResponse;
@@ -48,7 +49,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @GET
   @Path("accounts/{account_id}")
-  CoinbaseAccountsData getAccount(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+  CoinbaseAccountResponse getAccount(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("account_id") String accountId) throws IOException, CoinbaseException;
 
   @POST
@@ -152,49 +153,12 @@ public interface CoinbaseAuthenticated extends Coinbase {
       @QueryParam("contract_expiry_type") String contractExpiryType,
       @QueryParam("product_venue") String productVenue) throws IOException, CoinbaseException;
 
-//  @GET
-//  @Path("accounts/{accountId}/transactions")
-//  CoinbaseTransactionsResponse getTransactions(
-//      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-//      @PathParam("accountId") String accountId) throws IOException, CoinbaseException;
-//
-//  @GET
-//  @Path("accounts/{accountId}/buys")
-//  CoinbaseBuySellResponse getBuys(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-//      @PathParam("accountId") String accountId, @QueryParam("limit") Integer limit,
-//      @QueryParam("starting_after") String startingAfter) throws IOException, CoinbaseException;
-//
-//  @GET
-//  @Path("accounts/{accountId}/sells")
-//  CoinbaseBuySellResponse getSells(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-//      @PathParam("accountId") String accountId, @QueryParam("limit") Integer limit,
-//      @QueryParam("starting_after") String startingAfter) throws IOException, CoinbaseException;
-//
-//  @GET
-//  @Path("accounts/{accountId}/deposits")
-//  Map getDeposits(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-//      @PathParam("accountId") String accountId) throws IOException, CoinbaseException;
-//
-//  @GET
-//  @Path("accounts/{accountId}/withdrawals")
-//  Map getWithdrawals(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-//      @PathParam("accountId") String accountId) throws IOException, CoinbaseException;
-//
-//  @GET
-//  @Path("payment-methods")
-//  CoinbasePaymentMethodsData getPaymentMethods(
-//      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
-//      throws IOException, CoinbaseException;
-//
-//  @POST
-//  @Path("accounts/{account}/buys")
-//  @Consumes(MediaType.APPLICATION_JSON)
-//  CoinbaseBuyData buy(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-//      @PathParam("account") String accountId, Object payload) throws IOException, CoinbaseException;
-//
-//  @POST
-//  @Path("accounts/{account}/sells")
-//  @Consumes(MediaType.APPLICATION_JSON)
-//  CoinbaseSellData sell(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-//      @PathParam("account") String accountId, Object payload) throws IOException, CoinbaseException;
+
+  @GET
+  @Path("payment_methods")
+  CoinbasePaymentMethodsResponse getPaymentMethods(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
+      throws IOException, CoinbaseException;
+
+
 }

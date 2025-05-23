@@ -4,12 +4,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
+import lombok.Getter;
 import org.knowm.xchange.utils.Assert;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoinbaseAmount {
 
+  @Getter
   private final String currency;
+  @Getter
   private final BigDecimal value;
   private final String toString;
 
@@ -22,14 +25,6 @@ public class CoinbaseAmount {
     this.value = value;
 
     toString = String.format("%.8f %s", value, currency);
-  }
-
-  public String getCurrency() {
-    return currency;
-  }
-
-  public BigDecimal getValue() {
-    return value;
   }
 
   @Override
