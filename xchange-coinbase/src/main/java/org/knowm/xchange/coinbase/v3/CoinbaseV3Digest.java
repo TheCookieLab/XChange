@@ -85,6 +85,10 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
    */
 
   public static CoinbaseV3Digest createInstance(String keyName, String secretKey) {
+    if (keyName == null || secretKey == null) {
+      Coinbase.LOG.warn("Missing api and/or secret key");
+      return null;
+    }
     try {
       return new CoinbaseV3Digest(keyName, secretKey);
     } catch (Exception e) {

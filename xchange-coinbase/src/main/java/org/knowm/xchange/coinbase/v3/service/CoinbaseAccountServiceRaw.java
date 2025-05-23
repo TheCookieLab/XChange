@@ -1,20 +1,12 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import org.knowm.xchange.Exchange;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseAccountData.CoinbaseAccount;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbasePaymentMethodsData.CoinbasePaymentMethod;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseTransactionsResponse;
-import org.knowm.xchange.coinbase.v3.Coinbase;
-import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 
 public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
 
@@ -50,42 +42,31 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
 //  }
 
   /**
-   * Authenticated resource that shows the current user accounts.
+   * Authenticated resource that retrieves the current user's accounts.
    *
    * @see <a
-   * href="https://developers.coinbase.com/api/v2#list-accounts">developers.coinbase.com/api/v2#list-accounts</a>
+   * href="https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccounts">https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccounts</a>
    */
   public List<CoinbaseAccount> getCoinbaseAccounts() throws IOException {
-    String apiKey = exchange.getExchangeSpecification().getApiKey();
-
     List<CoinbaseAccount> returnList = new ArrayList<>();
-    List<CoinbaseAccount> tmpList = null;
+    List<CoinbaseAccount> tmpList;
 
-    String lastAccount = null;
+    String cursor = null;
+    Boolean hasNext;
     do {
-      BigDecimal timestamp = coinbaseAdvancedTrade.getTime(Coinbase.CB_VERSION_VALUE).getData()
-          .getEpoch();
+      CoinbaseAccountsResponse response = coinbaseAdvancedTrade.listAccounts(authTokenCreator, 10,
+          cursor);
+      cursor = response.getCursor();
+      hasNext = response.getHasNext();
+      tmpList = response.getAccounts();
 
-      tmpList = coinbaseAdvancedTrade.listAccounts(authTokenCreator, 100, lastAccount).getData();
-
-      lastAccount = null;
-      if (tmpList != null && tmpList.size() > 0) {
+      if (tmpList != null && !tmpList.isEmpty()) {
         returnList.addAll(tmpList);
-        lastAccount = tmpList.get(tmpList.size() - 1).getId();
       }
 
-    } while (lastAccount != null && isValidUUID(lastAccount));
+    } while (hasNext && cursor != null && !cursor.isEmpty());
 
     return returnList;
-  }
-
-  private boolean isValidUUID(String uuid) {
-    try {
-      UUID.fromString(uuid);
-      return true;
-    } catch (IllegalArgumentException exception) {
-      return false;
-    }
   }
 
   /**

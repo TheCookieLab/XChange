@@ -39,6 +39,7 @@ import si.mazi.rescu.SynchronizedValueFactory;
 /**
  * @author jamespedwards42
  */
+@Deprecated
 @Path("api/v1")
 @Produces(MediaType.APPLICATION_JSON)
 public interface CoinbaseAuthenticated extends Coinbase {

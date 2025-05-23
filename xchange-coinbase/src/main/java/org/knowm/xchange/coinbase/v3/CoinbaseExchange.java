@@ -3,17 +3,15 @@ package org.knowm.xchange.coinbase.v3;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.coinbase.v2.service.CoinbaseAccountService;
-import org.knowm.xchange.coinbase.v2.service.CoinbaseMarketDataService;
-import org.knowm.xchange.coinbase.v2.service.CoinbaseTradeService;
+import org.knowm.xchange.coinbase.v3.service.CoinbaseAccountService;
 
 public class CoinbaseExchange extends BaseExchange implements Exchange {
 
   @Override
   protected void initServices() {
-    this.marketDataService = new CoinbaseMarketDataService(this);
+//    this.marketDataService = new CoinbaseMarketDataService(this);
     this.accountService = new CoinbaseAccountService(this);
-    this.tradeService = new CoinbaseTradeService(this);
+//    this.tradeService = new CoinbaseTradeService(this);
   }
 
   @Override

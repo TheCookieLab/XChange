@@ -6,38 +6,32 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseAccountData.CoinbaseAccount;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbasePaymentMethodsData.CoinbasePaymentMethod;
-import org.knowm.xchange.currency.Currency;
-import org.knowm.xchange.service.account.AccountService;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
+import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.utils.AuthUtils;
 
 public class AccountServiceIntegration {
 
-  static Exchange exchange;
-  static AccountService accountService;
+  static CoinbaseExchange exchange;
+  static CoinbaseAccountService accountService;
 
   @BeforeClass
   public static void beforeClass() {
     ExchangeSpecification exchangeSpecification = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class).getDefaultExchangeSpecification();
     AuthUtils.setApiAndSecretKey(exchangeSpecification);
-    exchange = ExchangeFactory.INSTANCE.createExchange(exchangeSpecification);
-    accountService = exchange.getAccountService();
+    exchange = (CoinbaseExchange) ExchangeFactory.INSTANCE.createExchange(exchangeSpecification);
+    accountService = (CoinbaseAccountService) exchange.getAccountService();
   }
 
   @Test
   public void listAccounts() throws Exception {
+    Assume.assumeNotNull(accountService.authTokenCreator);
 
-    Assume.assumeNotNull(exchange.getExchangeSpecification().getApiKey());
-
-    CoinbaseAccountService coinbaseService = (CoinbaseAccountService) accountService;
-    List<CoinbaseAccount> accounts = coinbaseService.getCoinbaseAccounts();
-    Assert.assertTrue(accounts.size() > 0);
+    List<CoinbaseAccount> accounts = accountService.getCoinbaseAccounts();
+    Assert.assertFalse(accounts.isEmpty());
 
     CoinbaseAccount btcAccount =
         accounts.stream()
@@ -50,10 +44,8 @@ public class AccountServiceIntegration {
 
   @Test
   public void getAccountByCurrency() throws Exception {
+    Assume.assumeNotNull(accountService.authTokenCreator);
 
-    Assume.assumeNotNull(exchange.getExchangeSpecification().getApiKey());
-
-    CoinbaseAccountService coinbaseService = (CoinbaseAccountService) accountService;
 //    CoinbaseAccount btcAccount = coinbaseService.getCoinbaseAccount(Currency.BTC);
 //    Assert.assertEquals("BTC", btcAccount.getBalance().getCurrency());
 //    Assert.assertEquals("BTC Wallet", btcAccount.getName());
@@ -61,10 +53,8 @@ public class AccountServiceIntegration {
 
   @Test
   public void createAccount() throws Exception {
+    Assume.assumeNotNull(accountService.authTokenCreator);
 
-    Assume.assumeNotNull(exchange.getExchangeSpecification().getApiKey());
-
-    CoinbaseAccountService coinbaseService = (CoinbaseAccountService) accountService;
     try {
       //coinbaseService.createCoinbaseAccount("BTC Test");
     } catch (CoinbaseException ex) {

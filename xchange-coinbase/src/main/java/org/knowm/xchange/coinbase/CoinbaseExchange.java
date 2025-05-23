@@ -10,6 +10,7 @@ import org.knowm.xchange.coinbase.service.CoinbaseTradeService;
 /**
  * @author jamespedwards42
  */
+@Deprecated
 public class CoinbaseExchange extends BaseExchange implements Exchange {
 
   @Override

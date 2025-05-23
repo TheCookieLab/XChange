@@ -21,6 +21,7 @@ import org.knowm.xchange.coinbase.dto.marketdata.CoinbasePrice;
 /**
  * @author jamespedwards42
  */
+@Deprecated
 @Path("api/v1")
 @Produces(MediaType.APPLICATION_JSON)
 public interface Coinbase {

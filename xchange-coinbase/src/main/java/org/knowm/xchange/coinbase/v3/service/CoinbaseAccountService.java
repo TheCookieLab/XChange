@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.knowm.xchange.Exchange;
-import org.knowm.xchange.coinbase.v2.dto.CoinbaseAmount;
-import org.knowm.xchange.coinbase.v2.dto.account.CoinbaseAccountData;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
@@ -31,12 +31,12 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
   public AccountInfo getAccountInfo() throws IOException {
     List<Wallet> wallets = new ArrayList<>();
 
-    List<CoinbaseAccountData.CoinbaseAccount> coinbaseAccounts = getCoinbaseAccounts();
-    for (CoinbaseAccountData.CoinbaseAccount coinbaseAccount : coinbaseAccounts) {
+    List<CoinbaseAccount> coinbaseAccounts = getCoinbaseAccounts();
+    for (CoinbaseAccount coinbaseAccount : coinbaseAccounts) {
       CoinbaseAmount balance = coinbaseAccount.getBalance();
       Wallet wallet = Wallet.Builder.from(Arrays.asList(
-              new Balance(Currency.getInstance(balance.getCurrency()), balance.getAmount())))
-          .id(coinbaseAccount.getId()).build();
+              new Balance(Currency.getInstance(balance.getCurrency()), balance.getValue())))
+          .id(coinbaseAccount.getUuid()).build();
       wallets.add(wallet);
     }
 
