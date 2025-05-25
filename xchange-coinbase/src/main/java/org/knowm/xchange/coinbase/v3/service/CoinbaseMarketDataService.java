@@ -2,9 +2,11 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBooksResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
@@ -27,7 +29,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw
   }
 
   public List<CoinbasePriceBook> getBestBidAsk(CurrencyPair currencyPair) throws IOException {
-    return this.getBestBidAsk(currencyPair.toString().replace("/", "-"));
+    return this.getBestBidAsk(formatProductId(currencyPair)).getPriceBooks();
   }
 
   @Override
@@ -41,7 +43,12 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw
   }
 
   @Override
-  public Trades getTrades(CurrencyPair currencyPair, final Object... args) {
-    throw new NotAvailableFromExchangeException();
+  public Trades getTrades(CurrencyPair currencyPair, final Object... args) throws IOException {
+    CoinbaseProductMarketTradesResponse response = this.getMarketTrades(formatProductId(currencyPair), null, null, null);
+  }
+
+  private static String formatProductId(CurrencyPair currencyPair) {
+    Objects.requireNonNull(currencyPair, "Cannot format productId from a null currencyPair");
+    return currencyPair.toString().replace("/", "-");
   }
 }

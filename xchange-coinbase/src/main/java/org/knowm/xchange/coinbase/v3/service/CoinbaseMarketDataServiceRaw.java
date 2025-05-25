@@ -3,6 +3,7 @@ package org.knowm.xchange.coinbase.v3.service;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -12,6 +13,8 @@ import org.knowm.xchange.coinbase.v3.Coinbase;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBooksResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.currency.Currency;
 
 class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
@@ -29,65 +32,27 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
    *         Each entry includes price levels, quantities, and timestamps.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public List<CoinbasePriceBook> getBestBidAsk(String productId) throws IOException {
-    CoinbasePriceBooksResponse response = coinbaseAdvancedTrade.getBestBidAsk(authTokenCreator,
-        productId);
-
-    return response.getPriceBooks();
+  public CoinbasePriceBooksResponse getBestBidAsk(String productId) throws IOException {
+    return coinbaseAdvancedTrade.getBestBidAsk(authTokenCreator, productId);
   }
 
   /**
-   * Unauthenticated resource that tells you the price to buy one unit.
+   * Retrieves market trades for a specified product within a given time range and limit.
+   * This method authenticates the request using the stored API credentials.
    *
-   * @return The price in the desired {@code currency} to buy one unit.
-   * @throws IOException
-   * @see <a
-   *     href="https://developers.coinbase.com/api/v2#get-buy-price">developers.coinbase.com/api/v2#get-buy-price</a>
+   * @param productId The product identifier (e.g., "BTC-USD") for which to fetch market trades. Must not be null.
+   * @param limit     The maximum number of trades to retrieve. If null, the default limit enforced by the API is used.
+   * @param start     The start time for the trade data window in ISO 8601 format (e.g., "2023-10-01T00:00:00Z"). If null, data starts from the earliest available.
+   * @param end       The end time for the trade data window in ISO 8601 format. If null, data ends at the latest available timestamp.
+   * @return A {@link CoinbaseProductMarketTradesResponse} containing:
+   *         - A list of {@link CoinbaseMarketTrade} objects representing individual trades,
+   *         - The current best bid price for the product,
+   *         - The current best ask price for the product.
+   * @throws IOException If there is an error communicating with the Coinbase API.
    */
-//  public CoinbaseAmount getCoinbaseBuyPrice(Currency base, Currency counter) throws IOException {
-//    return coinbaseAdvancedTrade.getBuyPrice(Coinbase.CB_VERSION_VALUE, base + "-" + counter).getData();
-//  }
+  public CoinbaseProductMarketTradesResponse getMarketTrades(String productId, Integer limit, String start, String end)
+      throws IOException {
+    return coinbaseAdvancedTrade.getMarketTrades(authTokenCreator, productId, limit, start, end);
+  }
 
-  /**
-   * Unauthenticated resource that tells you the amount you can get if you sell one unit.
-   *
-   * @return The price in the desired {@code currency} to sell one unit.
-   * @throws IOException
-   * @see <a
-   *     href="https://developers.coinbase.com/api/v2#get-sell-price">developers.coinbase.com/api/v2#get-sell-price</a>
-   */
-//  public CoinbaseAmount getCoinbaseSellPrice(Currency base, Currency counter) throws IOException {
-//    return coinbaseAdvancedTrade.getSellPrice(Coinbase.CB_VERSION_VALUE, base + "-" + counter).getData();
-//  }
-
-  /**
-   * Unauthenticated resource that tells you the current price of one unit. This is usually
-   * somewhere in between the buy and sell price, current to within a few minutes.
-   *
-   * @return The price in the desired {@code currency} for one unit.
-   * @throws IOException
-   * @see <a
-   *     href="https://developers.coinbase.com/api/v2#get-spot-price">developers.coinbase.com/api/v2#get-spot-price</a>
-   */
-//  public CoinbaseAmount getCoinbaseSpotRate(Currency base, Currency counter) throws IOException {
-//    return coinbaseAdvancedTrade.getSpotRate(Coinbase.CB_VERSION_VALUE, base + "-" + counter).getData();
-//  }
-
-  /**
-   * Unauthenticated resource that tells you the current price of one unit. This is usually
-   * somewhere in between the buy and sell price, current to within a few minutes.
-   *
-   * @param date The given date.
-   * @return The price in the desired {@code currency} ont the give {@code date} for one unit.
-   * @throws IOException
-   * @see <a
-   *     href="https://developers.coinbase.com/api/v2#get-spot-price">developers.coinbase.com/api/v2#get-spot-price</a>
-   */
-//  public CoinbaseAmount getCoinbaseHistoricalSpotRate(Currency base, Currency counter, Date date)
-//      throws IOException {
-//    String datespec = new SimpleDateFormat("yyyy-MM-dd").format(date);
-//    return coinbaseAdvancedTrade
-//        .getHistoricalSpotRate(Coinbase.CB_VERSION_VALUE, base + "-" + counter, datespec)
-//        .getData();
-//  }
 }

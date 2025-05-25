@@ -2,6 +2,9 @@ package org.knowm.xchange.coinbase;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -15,6 +18,7 @@ import org.knowm.xchange.coinbase.dto.trade.CoinbaseTransfer;
 import org.knowm.xchange.coinbase.dto.trade.CoinbaseTransferType;
 import org.knowm.xchange.coinbase.dto.trade.CoinbaseTransfers;
 import org.knowm.xchange.coinbase.v2.dto.account.transactions.CoinbaseBuySell;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -22,6 +26,7 @@ import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
@@ -114,13 +119,27 @@ public final class CoinbaseAdapters {
         .build();
   }
 
-  public static OrderType adaptOrderType(CoinbaseTransferType transferType) {
+  public static Trade adaptTrade(CoinbaseMarketTrade marketTrade) {
+    return new Trade.Builder()
+        .id(marketTrade.getTradeId())
+        .instrument(new CurrencyPair(marketTrade.getProductId()))
+        .price(marketTrade.getPrice())
+        .originalAmount(marketTrade.getSize())
+        .timestamp(Date.from(DateTimeFormatter.ISO_INSTANT.parse(marketTrade.getTime(), Instant::from)))
+        .type(adaptOrderType(marketTrade.getSide()))
+        .build();
+  }
 
-    switch (transferType) {
-      case BUY:
-        return OrderType.BID;
-      case SELL:
+  public static OrderType adaptOrderType(CoinbaseTransferType transferType) {
+    return adaptOrderType(transferType.name());
+  }
+
+  public static OrderType adaptOrderType(String side) {
+    switch (side) {
+      case "SELL":
         return OrderType.ASK;
+      case "BUY":
+        return OrderType.BID;
     }
     return null;
   }

@@ -33,14 +33,6 @@ public class MarketDataServiceIntegration {
   }
 
   @Test
-  public void getBestBidAskWithProductId() throws Exception {
-    Assume.assumeNotNull(marketDataService.authTokenCreator);
-
-    List<CoinbasePriceBook> priceBooks = marketDataService.getBestBidAsk("BTC-USD");
-    assertEquals(1, priceBooks.size());
-  }
-
-  @Test
   public void getBestBidAskWithCurrencyPair() throws Exception {
     Assume.assumeNotNull(marketDataService.authTokenCreator);
 
