@@ -10,6 +10,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.util.List;
 import org.knowm.xchange.coinbase.v2.Coinbase;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
@@ -93,7 +94,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbasePriceBooksResponse getBestBidAsk(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      @QueryParam("product_id") String productId) throws IOException, CoinbaseException;
+      @QueryParam("product_ids") String productId) throws IOException, CoinbaseException;
 
   @GET
   @Path("product_book")

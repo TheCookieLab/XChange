@@ -1,6 +1,5 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,40 +8,13 @@ import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethod;
-import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 
 public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
 
   public CoinbaseAccountServiceRaw(Exchange exchange) {
     super(exchange);
   }
-
-//  public CoinbaseTransactionsResponse getTransactions(String accountId) throws IOException {
-//    String apiKey = exchange.getExchangeSpecification().getApiKey();
-//    BigDecimal timestamp = coinbaseAdvancedTrade.getTime(Coinbase.CB_VERSION_VALUE).getData()
-//        .getEpoch();
-//
-//    return coinbaseAdvancedTrade.getTransactions(Coinbase.CB_VERSION_VALUE, apiKey,
-//        authTokenCreator, timestamp, accountId);
-//  }
-//
-//  public Map getDeposits(String accountId) throws IOException {
-//    String apiKey = exchange.getExchangeSpecification().getApiKey();
-//    BigDecimal timestamp = coinbaseAdvancedTrade.getTime(Coinbase.CB_VERSION_VALUE).getData()
-//        .getEpoch();
-//
-//    return coinbaseAdvancedTrade.getDeposits(Coinbase.CB_VERSION_VALUE, apiKey, authTokenCreator,
-//        timestamp, accountId);
-//  }
-//
-//  public Map getWithdrawals(String accountId) throws IOException {
-//    String apiKey = exchange.getExchangeSpecification().getApiKey();
-//    BigDecimal timestamp = coinbaseAdvancedTrade.getTime(Coinbase.CB_VERSION_VALUE).getData()
-//        .getEpoch();
-//
-//    return coinbaseAdvancedTrade.getWithdrawals(Coinbase.CB_VERSION_VALUE, apiKey,
-//        authTokenCreator, timestamp, accountId);
-//  }
 
   /**
    * Authenticated resource that retrieves the current user's accounts.
@@ -79,7 +51,8 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * href="https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccount">https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccount</a>
    */
   public CoinbaseAccount getCoinbaseAccount(String accountId) throws IOException {
-    CoinbaseAccountResponse response = coinbaseAdvancedTrade.getAccount(authTokenCreator, accountId);
+    CoinbaseAccountResponse response = coinbaseAdvancedTrade.getAccount(authTokenCreator,
+        accountId);
     return response.getAccount();
   }
 

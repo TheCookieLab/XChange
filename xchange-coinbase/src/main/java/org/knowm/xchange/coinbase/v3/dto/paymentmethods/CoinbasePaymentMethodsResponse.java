@@ -11,7 +11,7 @@ public class CoinbasePaymentMethodsResponse {
   @Getter
   private final List<CoinbasePaymentMethod> paymentMethods;
 
-  private CoinbasePaymentMethodsResponse(
+  public CoinbasePaymentMethodsResponse(
       @JsonProperty("payment_methods") List<CoinbasePaymentMethod> paymentMethods) {
     this.paymentMethods = paymentMethods;
   }
