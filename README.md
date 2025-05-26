@@ -15,6 +15,16 @@ XChange is a Java based library providing a simple and consistent API for intera
 
 Basic usage is very simple: Create an `Exchange` instance, get the appropriate service, and request data. More complex usages are progressively detailed below.
 
+## Integration status
+
+| Exchange | Status                                                                                                                                                               |
+|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| bitget   | [![status](https://github.com/knowm/XChange/actions/workflows/bitget.yml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitget.yml)                   |
+| bitmex   | [![status](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml)       |
+| coinex   | [![status](https://github.com/knowm/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/coinex.yaml)       |
+| gate.io  | [![status](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml) |
+| mexc     | [![status](https://github.com/knowm/XChange/actions/workflows/mexc.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/mexc.yaml)           |
+
 ## REST API
 #### Public Market Data
 
