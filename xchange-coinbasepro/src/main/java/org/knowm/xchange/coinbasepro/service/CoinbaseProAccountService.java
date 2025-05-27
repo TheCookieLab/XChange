@@ -1,13 +1,5 @@
 package org.knowm.xchange.coinbasepro.service;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.coinbasepro.CoinbaseProAdapters;
 import org.knowm.xchange.coinbasepro.CoinbaseProExchange;
@@ -32,6 +24,15 @@ import org.knowm.xchange.service.trade.params.HistoryParamsFundingType;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 public class CoinbaseProAccountService extends CoinbaseProAccountServiceRaw
     implements AccountService {
 
@@ -47,7 +48,7 @@ public class CoinbaseProAccountService extends CoinbaseProAccountServiceRaw
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
     CoinbaseProFee fees = getCoinbaseProFees();
 
     Map<Instrument, Fee> tradingFees = new HashMap<>();

@@ -1,17 +1,5 @@
 package org.knowm.xchange.bybit.service;
 
-import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitBalances;
-import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
@@ -31,6 +19,15 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitBalances;
+import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 
 
 public class BybitAccountService extends BybitAccountServiceRaw implements AccountService {
@@ -111,15 +108,20 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
         .collect(Collectors.toList());
   }
 
+  /**
+   *
+   * @param category Optional, instrument category ("SPOT" or "LINEAR").
+   *                 If not specified, return all instruments trading fees.
+   */
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category)
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
       throws IOException {
     Map<Instrument, Fee> result = new HashMap<>();
-    if (category != null && category.length > 0 && category[0] instanceof BybitCategory) {
-      BybitCategory bybitCategory = (BybitCategory) category[0];
-      if(bybitCategory.equals(BybitCategory.OPTION) || bybitCategory.equals(BybitCategory.INVERSE))
+    if (category != null && category.length > 0 && category[0] != null) {
+      String bybitCategory = category[0];
+      if(bybitCategory.equals(BybitCategory.OPTION.getValue()) || bybitCategory.equals(BybitCategory.INVERSE.getValue()))
         throw new IllegalArgumentException("category OPTION and INVERSE not yet implemented");
-      result.putAll(getFeeRates(bybitCategory));
+      result.putAll(getFeeRates(BybitCategory.valueOf(bybitCategory.toUpperCase())));
     } else {
       // not fully supported yet
 //      result.putAll(getFeeRates(BybitCategory.OPTION));

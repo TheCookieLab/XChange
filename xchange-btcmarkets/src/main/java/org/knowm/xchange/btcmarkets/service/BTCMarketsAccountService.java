@@ -1,9 +1,5 @@
 package org.knowm.xchange.btcmarkets.service;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.btcmarkets.BTCMarketsAdapters;
 import org.knowm.xchange.btcmarkets.dto.v3.account.BTCMarketsAddressesResponse;
@@ -19,6 +15,11 @@ import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.RippleWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Matija Mazi
@@ -74,7 +75,7 @@ public class BTCMarketsAccountService extends BTCMarketsAccountServiceRaw
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
     BTCMarketsTradingFeesResponse response = tradingFees();
     Map<Instrument, Fee> dynamicTradingFees = new HashMap<>();
     for (BTCMarketsTradingFeesResponse.FeeByMarket feeByMarket : response.feeByMarkets) {

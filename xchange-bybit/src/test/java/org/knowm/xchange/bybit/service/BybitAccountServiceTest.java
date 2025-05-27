@@ -1,11 +1,5 @@
 package org.knowm.xchange.bybit.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Map;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.knowm.xchange.bybit.BybitExchange;
@@ -17,6 +11,13 @@ import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.instrument.Instrument;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.fail;
 
 @Ignore
 public class BybitAccountServiceTest extends BaseWiremockTest {
@@ -63,7 +64,7 @@ public class BybitAccountServiceTest extends BaseWiremockTest {
     initGetStub("/v5/account/fee-rate", "/getFeeRates.json5");
     Instrument ETH_USDT = new CurrencyPair("ETH/USDT");
     Map<Instrument, Fee> feeMap =
-        bybitAccountService.getDynamicTradingFeesByInstrument(BybitCategory.SPOT);
+        bybitAccountService.getDynamicTradingFeesByInstrument(BybitCategory.SPOT.getValue());
     Fee feeRate = feeMap.get(ETH_USDT);
 
     assertThat(feeRate.getTakerFee()).isEqualTo("0.0006");

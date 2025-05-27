@@ -1,8 +1,5 @@
 package org.knowm.xchange.cexio.service;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Map;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.cexio.CexIOAdapters;
 import org.knowm.xchange.cexio.dto.account.CexIOBalanceInfo;
@@ -17,6 +14,10 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Map;
 
 /** Author: brox Since: 2/6/14 */
 public class CexIOAccountService extends CexIOAccountServiceRaw implements AccountService {
@@ -46,7 +47,7 @@ public class CexIOAccountService extends CexIOAccountServiceRaw implements Accou
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
     Map<CurrencyPair, FeeDetails> dynamicTradingFees = getMyFee();
     return CexIOAdapters.adaptDynamicTradingFees(dynamicTradingFees);
   }
