@@ -1,18 +1,6 @@
 package org.knowm.xchange.binance;
 
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.knowm.xchange.Exchange.USE_SANDBOX;
-import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -36,6 +24,13 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.*;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.knowm.xchange.Exchange.USE_SANDBOX;
 
 @Ignore
 public class BinanceTest {
@@ -87,7 +82,8 @@ public class BinanceTest {
 
   @Test
   public void binanceAccountService() throws IOException {
-    Map<Instrument, Fee> fees = binanceExchange.getAccountService().getDynamicTradingFeesByInstrument(SPOT);
+    // Works only on main(not demo) account
+    Map<Instrument, Fee> fees = binanceExchange.getAccountService().getDynamicTradingFeesByInstrument();
     logger.info("fee: {}", fees);
     AccountInfo accountInfo = binanceExchange.getAccountService().getAccountInfo();
     logger.info("AccountInfo: {}", accountInfo.getWallet());

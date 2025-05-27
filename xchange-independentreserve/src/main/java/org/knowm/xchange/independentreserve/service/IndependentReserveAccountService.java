@@ -1,11 +1,5 @@
 package org.knowm.xchange.independentreserve.service;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
@@ -18,14 +12,14 @@ import org.knowm.xchange.independentreserve.dto.account.IndependentReserveBalanc
 import org.knowm.xchange.independentreserve.dto.trade.IndependentReserveTransaction;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
-import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamPaging;
-import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
-import org.knowm.xchange.service.trade.params.MoneroWithdrawFundsParams;
-import org.knowm.xchange.service.trade.params.RippleWithdrawFundsParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrency;
-import org.knowm.xchange.service.trade.params.TradeHistoryParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
-import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+import org.knowm.xchange.service.trade.params.*;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /** Author: Kamil Zbikowski Date: 4/10/15 */
 public class IndependentReserveAccountService extends IndependentReserveAccountServiceRaw
@@ -124,7 +118,7 @@ public class IndependentReserveAccountService extends IndependentReserveAccountS
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
     return super.getBrokerageFees().getIndependentReserveBrokerageFees().stream()
         .collect(
             Collectors.toMap(

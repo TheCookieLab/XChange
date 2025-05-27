@@ -1,14 +1,5 @@
 package org.knowm.xchange.okex;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.knowm.xchange.okex.dto.OkexInstType.SWAP;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -31,6 +22,15 @@ import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamInstrument
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @Ignore
 public class OkexPrivateDataIntegration {
@@ -155,7 +155,7 @@ public class OkexPrivateDataIntegration {
   @Test
   public void feeRates() throws IOException {
     OkexAccountService okexAccountService = ((OkexAccountService) exchange.getAccountService());
-    Map<Instrument, Fee> feeMap = okexAccountService.getDynamicTradingFeesByInstrument(SWAP);
+    Map<Instrument, Fee> feeMap = okexAccountService.getDynamicTradingFeesByInstrument("SWAP");
     feeMap.forEach((key, value) -> {
         System.out.println("Key : " + key + " Value : " + value);
     });

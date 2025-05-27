@@ -1,14 +1,5 @@
 package org.knowm.xchange.blockchain.service;
 
-import static org.knowm.xchange.blockchain.BlockchainConstants.FUNDING_RECORD_TYPE_UNSUPPORTED;
-import static org.knowm.xchange.blockchain.BlockchainConstants.WITHDRAWAL_EXCEPTION;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.knowm.xchange.blockchain.BlockchainAdapters;
 import org.knowm.xchange.blockchain.BlockchainAuthenticated;
 import org.knowm.xchange.blockchain.BlockchainErrorAdapter;
@@ -21,18 +12,23 @@ import org.knowm.xchange.blockchain.params.BlockchainWithdrawalParams;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.dto.account.AccountInfo;
-import org.knowm.xchange.dto.account.AddressWithTag;
-import org.knowm.xchange.dto.account.Balance;
-import org.knowm.xchange.dto.account.Fee;
-import org.knowm.xchange.dto.account.FundingRecord;
-import org.knowm.xchange.dto.account.Wallet;
+import org.knowm.xchange.dto.account.*;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.HistoryParamsFundingType;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.knowm.xchange.blockchain.BlockchainConstants.FUNDING_RECORD_TYPE_UNSUPPORTED;
+import static org.knowm.xchange.blockchain.BlockchainConstants.WITHDRAWAL_EXCEPTION;
 
 public class BlockchainAccountService extends BlockchainAccountServiceRaw
     implements AccountService {
@@ -142,7 +138,7 @@ public class BlockchainAccountService extends BlockchainAccountServiceRaw
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category) throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
     try {
       BlockchainFees fees = this.getFees();
       Map<Instrument, Fee> tradingFees = new HashMap<>();

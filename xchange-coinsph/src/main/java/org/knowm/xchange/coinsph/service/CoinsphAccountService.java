@@ -120,7 +120,7 @@ public class CoinsphAccountService extends CoinsphAccountServiceRaw implements A
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(Object... category)
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
       throws IOException, CoinsphException {
     List<CoinsphTradeFee> fees = super.getCoinsphTradeFees();
     return CoinsphAdapters.adaptTradeFees(fees);
