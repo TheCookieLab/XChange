@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import org.knowm.xchange.coinbase.dto.account.CoinbaseUser;
 import org.knowm.xchange.coinbase.dto.marketdata.CoinbaseHistoricalSpotPrice;
 import org.knowm.xchange.coinbase.dto.marketdata.CoinbaseMoney;
@@ -142,6 +143,11 @@ public final class CoinbaseAdapters {
         return OrderType.BID;
     }
     return null;
+  }
+
+  public static String adaptProductId(CurrencyPair currencyPair) {
+    Objects.requireNonNull(currencyPair, "Cannot format productId from a null currencyPair");
+    return currencyPair.toString().replace("/", "-");
   }
 
   public static Ticker adaptTicker(

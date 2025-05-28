@@ -1,21 +1,14 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import org.knowm.xchange.Exchange;
-import org.knowm.xchange.coinbase.v3.Coinbase;
-import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
+import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBooksResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
-import org.knowm.xchange.currency.Currency;
+import si.mazi.rescu.ParamsDigest;
 
 class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
 
@@ -23,13 +16,24 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
     super(exchange);
   }
 
+  public CoinbaseMarketDataServiceRaw(Exchange exchange,
+      CoinbaseAuthenticated coinbaseAdvancedTrade) {
+    super(exchange, coinbaseAdvancedTrade);
+  }
+
+  public CoinbaseMarketDataServiceRaw(Exchange exchange,
+      CoinbaseAuthenticated coinbaseAdvancedTrade, ParamsDigest authTokenCreator) {
+    super(exchange, coinbaseAdvancedTrade, authTokenCreator);
+  }
+
   /**
-   * Retrieves the best bid and ask price book entries for a specified product.
-   * This method authenticates the request using the stored API credentials.
+   * Retrieves the best bid and ask price book entries for a specified product. This method
+   * authenticates the request using the stored API credentials.
    *
-   * @param productId The product identifier (e.g., "BTC-USD") for which to fetch bid/ask data. If null is passed, then retrieve the best bid/ask data for ALL products
-   * @return A list of {@link CoinbasePriceBook} objects containing bid and ask entries for the requested product.
-   *         Each entry includes price levels, quantities, and timestamps.
+   * @param productId The product identifier (e.g., "BTC-USD") for which to fetch bid/ask data. If
+   *                  null is passed, then retrieve the best bid/ask data for ALL products
+   * @return A list of {@link CoinbasePriceBook} objects containing bid and ask entries for the
+   * requested product. Each entry includes price levels, quantities, and timestamps.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
   public CoinbasePriceBooksResponse getBestBidAsk(String productId) throws IOException {
@@ -37,21 +41,27 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
   }
 
   /**
-   * Retrieves market trades for a specified product within a given time range and limit.
-   * This method authenticates the request using the stored API credentials.
+   * Retrieves market trades for a specified product within a given time range and limit. This
+   * method authenticates the request using the stored API credentials.
    *
-   * @param productId The product identifier (e.g., "BTC-USD") for which to fetch market trades. Must not be null.
-   * @param limit     The maximum number of trades to retrieve. If null, the default limit enforced by the API is used.
-   * @param start     The start time for the trade data window in ISO 8601 format (e.g., "2023-10-01T00:00:00Z"). If null, data starts from the earliest available.
-   * @param end       The end time for the trade data window in ISO 8601 format. If null, data ends at the latest available timestamp.
-   * @return A {@link CoinbaseProductMarketTradesResponse} containing:
-   *         - A list of {@link CoinbaseMarketTrade} objects representing individual trades,
-   *         - The current best bid price for the product,
-   *         - The current best ask price for the product.
+   * @param productId The product identifier (e.g., "BTC-USD") for which to fetch market trades.
+   *                  Must not be null.
+   * @param limit     The maximum number of trades to retrieve. If null, the default limit enforced
+   *                  by the API is used.
+   * @param start     The start time for the trade data window in ISO 8601 format (e.g.,
+   *                  "2023-10-01T00:00:00Z"). If null, data starts from the earliest available.
+   * @param end       The end time for the trade data window in ISO 8601 format. If null, data ends
+   *                  at the latest available timestamp.
+   * @return A {@link CoinbaseProductMarketTradesResponse} containing: - A list of
+   * {@link CoinbaseMarketTrade} objects representing individual trades, - The current best bid
+   * price for the product, - The current best ask price for the product.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public CoinbaseProductMarketTradesResponse getMarketTrades(String productId, Integer limit, String start, String end)
+  public CoinbaseProductMarketTradesResponse getMarketTrades(String productId, Integer limit,
+      String start, String end)
       throws IOException {
+    Objects.requireNonNull(productId, "productId cannot be null");
+
     return coinbaseAdvancedTrade.getMarketTrades(authTokenCreator, productId, limit, start, end);
   }
 

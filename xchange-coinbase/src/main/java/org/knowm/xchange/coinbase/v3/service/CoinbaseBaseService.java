@@ -21,14 +21,23 @@ public class CoinbaseBaseService extends BaseExchangeService implements BaseServ
   protected final ParamsDigest authTokenCreator;
 
   protected CoinbaseBaseService(Exchange exchange) {
+    this(exchange, ExchangeRestProxyBuilder.forInterface(CoinbaseAuthenticated.class,
+            exchange.getExchangeSpecification()).build(),
+        CoinbaseV3Digest.createInstance(exchange.getExchangeSpecification().getApiKey(),
+            exchange.getExchangeSpecification().getSecretKey()));
+  }
 
+  public CoinbaseBaseService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade) {
+    this(exchange, coinbaseAdvancedTrade,
+        CoinbaseV3Digest.createInstance(exchange.getExchangeSpecification().getApiKey(),
+            exchange.getExchangeSpecification().getSecretKey()));
+  }
+
+  public CoinbaseBaseService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade,
+      ParamsDigest authTokenCreator) {
     super(exchange);
-    coinbaseAdvancedTrade = ExchangeRestProxyBuilder.forInterface(CoinbaseAuthenticated.class,
-        exchange.getExchangeSpecification()).build();
-
-    authTokenCreator = CoinbaseV3Digest.createInstance(
-        exchange.getExchangeSpecification().getApiKey(),
-        exchange.getExchangeSpecification().getSecretKey());
+    this.coinbaseAdvancedTrade = coinbaseAdvancedTrade;
+    this.authTokenCreator = authTokenCreator;
   }
 
   /**

@@ -1,25 +1,38 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.coinbase.CoinbaseAdapters;
+import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
-import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBooksResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.service.marketdata.MarketDataService;
+import si.mazi.rescu.ParamsDigest;
 
 public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw
     implements MarketDataService {
 
   public CoinbaseMarketDataService(Exchange exchange) {
     super(exchange);
+  }
+
+  public CoinbaseMarketDataService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade) {
+    super(exchange, coinbaseAdvancedTrade);
+  }
+
+  public CoinbaseMarketDataService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade,
+      ParamsDigest authTokenCreator) {
+    super(exchange, coinbaseAdvancedTrade, authTokenCreator);
   }
 
   public List<CoinbasePriceBook> getBestBidAsk(Currency base, Currency counter) throws IOException {
@@ -29,7 +42,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw
   }
 
   public List<CoinbasePriceBook> getBestBidAsk(CurrencyPair currencyPair) throws IOException {
-    return this.getBestBidAsk(formatProductId(currencyPair)).getPriceBooks();
+    return this.getBestBidAsk(CoinbaseAdapters.adaptProductId(currencyPair)).getPriceBooks();
   }
 
   @Override
@@ -44,11 +57,19 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw
 
   @Override
   public Trades getTrades(CurrencyPair currencyPair, final Object... args) throws IOException {
-    CoinbaseProductMarketTradesResponse response = this.getMarketTrades(formatProductId(currencyPair), null, null, null);
-  }
+    Integer limit = args.length > 0 && args[0] instanceof Integer ? (Integer) args[0] : null;
+    String start = args.length > 1 && args[1] instanceof String ? (String) args[1] : null;
+    String end = args.length > 2 && args[2] instanceof String ? (String) args[2] : null;
 
-  private static String formatProductId(CurrencyPair currencyPair) {
-    Objects.requireNonNull(currencyPair, "Cannot format productId from a null currencyPair");
-    return currencyPair.toString().replace("/", "-");
+    CoinbaseProductMarketTradesResponse response = this.getMarketTrades(
+        CoinbaseAdapters.adaptProductId(currencyPair), limit, start, end);
+
+    List<Trade> trades = new ArrayList<>();
+    for (CoinbaseMarketTrade marketTrade : response.getMarketTrades()) {
+      Trade trade = CoinbaseAdapters.adaptTrade(marketTrade);
+      trades.add(trade);
+    }
+
+    return new Trades(trades);
   }
 }

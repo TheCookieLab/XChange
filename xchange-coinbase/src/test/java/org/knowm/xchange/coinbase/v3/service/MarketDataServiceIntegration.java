@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,6 +17,7 @@ import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethod;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.utils.AuthUtils;
 
 public class MarketDataServiceIntegration {
@@ -46,5 +48,13 @@ public class MarketDataServiceIntegration {
 
     List<CoinbasePriceBook> priceBooks = marketDataService.getBestBidAsk(Currency.BTC, Currency.USD);
     assertEquals(1, priceBooks.size());
+  }
+
+  @Test
+  public void getMarketTrades() throws Exception {
+    Assume.assumeNotNull(marketDataService.authTokenCreator);
+
+    Trades trades = marketDataService.getTrades(CurrencyPair.ETH_USD, 1);
+    assertFalse(trades.getTrades().isEmpty());
   }
 }
