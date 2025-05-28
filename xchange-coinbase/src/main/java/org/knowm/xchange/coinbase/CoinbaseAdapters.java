@@ -222,6 +222,17 @@ public final class CoinbaseAdapters {
         .build();
   }
 
+  public static Ticker adaptTicker(CoinbasePriceBook priceBook) {
+    return new Ticker.Builder()
+        .ask(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getPrice())
+        .askSize(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getSize())
+        .bid(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getPrice())
+        .bidSize(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getSize())
+        .instrument(adaptInstrument(priceBook.getProductId()))
+        .timestamp(Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)))
+        .build();
+  }
+
   public static Ticker adaptTicker(CurrencyPair currencyPair, final CoinbasePrice buyPrice,
       final CoinbasePrice sellPrice, final CoinbaseMoney spotRate,
       final CoinbaseSpotPriceHistory coinbaseSpotPriceHistory) {

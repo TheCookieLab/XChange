@@ -55,7 +55,9 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
 
   @Override
   public Ticker getTicker(Instrument instrument, final Object... args) throws IOException {
-    throw new NotAvailableFromExchangeException();
+    List<CoinbasePriceBook> priceBooks = this.getBestBidAsk(CoinbaseAdapters.adaptProductId(instrument)).getPriceBooks();
+
+    return priceBooks.isEmpty() ? null : CoinbaseAdapters.adaptTicker(priceBooks.get(0));
   }
 
   @Override

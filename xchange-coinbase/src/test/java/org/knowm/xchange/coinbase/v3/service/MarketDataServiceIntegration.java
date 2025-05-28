@@ -2,6 +2,7 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.DefaultCandleStickParam;
@@ -79,7 +81,9 @@ public class MarketDataServiceIntegration {
 
     assertEquals(limit, candleStickData.getCandleSticks().size());
     assertEquals(currencyPair, candleStickData.getInstrument());
-    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().after(candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1).getTimestamp()));
+    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().after(
+        candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1)
+            .getTimestamp()));
   }
 
   @Test
@@ -95,7 +99,9 @@ public class MarketDataServiceIntegration {
 
     assertEquals(daysInPast + 1, candleStickData.getCandleSticks().size());
     assertEquals(currencyPair, candleStickData.getInstrument());
-    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().after(candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1).getTimestamp()));
+    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().after(
+        candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1)
+            .getTimestamp()));
   }
 
   @Test
@@ -106,9 +112,25 @@ public class MarketDataServiceIntegration {
     double priceAggregationIncrement = 1;
     int limit = 20;
 
-    OrderBook orderBook = marketDataService.getOrderBook(instrument, limit, priceAggregationIncrement);
+    OrderBook orderBook = marketDataService.getOrderBook(instrument, limit,
+        priceAggregationIncrement);
 
     assertFalse(orderBook.getAsks().isEmpty());
     assertFalse(orderBook.getBids().isEmpty());
+  }
+
+  @Test
+  public void getETHUSDTicker() throws IOException {
+    Assume.assumeNotNull(marketDataService.authTokenCreator);
+
+    Instrument instrument = CurrencyPair.ETH_USD;
+
+    Ticker ticker = marketDataService.getTicker(instrument);
+
+    assertEquals(instrument, ticker.getInstrument());
+    assertNotNull(ticker.getAsk());
+    assertNotNull(ticker.getAskSize());
+    assertNotNull(ticker.getBid());
+    assertNotNull(ticker.getBidSize());
   }
 }
