@@ -10,13 +10,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.util.List;
 import org.knowm.xchange.coinbase.v2.Coinbase;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
-import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBooksResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
@@ -133,7 +132,8 @@ public interface CoinbaseAuthenticated extends Coinbase {
   CoinbaseProductCandlesResponse getProductCandles(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("product_id") String productId,
-      @QueryParam("get_tradability_status") Boolean getTradabilityStatus)
+      @QueryParam("start") String start, @QueryParam("end") String end,
+      @QueryParam("granularity") String granularity, @QueryParam("limit") Integer limit)
       throws IOException, CoinbaseException;
 
   @GET

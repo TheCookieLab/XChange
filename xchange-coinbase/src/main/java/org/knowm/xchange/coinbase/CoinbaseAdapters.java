@@ -20,17 +20,20 @@ import org.knowm.xchange.coinbase.dto.trade.CoinbaseTransferType;
 import org.knowm.xchange.coinbase.dto.trade.CoinbaseTransfers;
 import org.knowm.xchange.coinbase.v2.dto.account.transactions.CoinbaseBuySell;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Wallet;
+import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.instrument.Instrument;
 
 /** jamespedwards42 */
 public final class CoinbaseAdapters {
@@ -145,9 +148,43 @@ public final class CoinbaseAdapters {
     return null;
   }
 
-  public static String adaptProductId(CurrencyPair currencyPair) {
-    Objects.requireNonNull(currencyPair, "Cannot format productId from a null currencyPair");
-    return currencyPair.toString().replace("/", "-");
+  public static String adaptProductId(Instrument instrument) {
+    Objects.requireNonNull(instrument, "Cannot format productId from a null instrument");
+    return instrument.toString().replace("/", "-");
+  }
+
+  public static String adaptProductCandleGranularity(Long candleIntervalSeconds) {
+    switch (candleIntervalSeconds.intValue()) {
+      case 60:
+        return "ONE_MINUTE";
+      case 300:
+        return "FIVE_MINUTE";
+      case 900:
+        return "FIFTEEN_MINUTE";
+      case 1800:
+        return "THIRTY_MINUTE";
+      case 3600:
+        return "ONE_HOUR";
+      case 7200:
+        return "TWO_HOUR";
+      case 21_600:
+        return "SIX_HOUR";
+      case 86_400:
+        return "ONE_DAY";
+      default:
+        return null;
+    }
+  }
+
+  public static CandleStick adaptProductCandle(CoinbaseProductCandle productCandle) {
+    return new CandleStick.Builder()
+        .open(productCandle.getOpen())
+        .high(productCandle.getHigh())
+        .low(productCandle.getLow())
+        .close(productCandle.getClose())
+        .volume(productCandle.getVolume())
+        .timestamp(Date.from(Instant.ofEpochSecond(Long.parseLong(productCandle.getStart()))))
+        .build();
   }
 
   public static Ticker adaptTicker(
