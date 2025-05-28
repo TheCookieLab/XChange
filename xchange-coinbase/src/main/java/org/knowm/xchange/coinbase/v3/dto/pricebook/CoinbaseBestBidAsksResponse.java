@@ -6,18 +6,18 @@ import java.util.List;
 import lombok.Getter;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CoinbasePriceBooksResponse {
+public class CoinbaseBestBidAsksResponse {
 
   @Getter
   private final List<CoinbasePriceBook> priceBooks;
 
-  public CoinbasePriceBooksResponse(
+  public CoinbaseBestBidAsksResponse(
       @JsonProperty("pricebooks") List<CoinbasePriceBook> priceBooks) {
     this.priceBooks = priceBooks;
   }
 
   @Override
   public String toString() {
-    return "CoinbasePriceBooksResponse [priceBooks=" + priceBooks + "]";
+    return "CoinbaseBestBidAsksResponse [priceBooks=" + priceBooks + "]";
   }
 }

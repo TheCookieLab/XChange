@@ -16,7 +16,8 @@ import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
-import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBooksResponse;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
@@ -91,14 +92,14 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @GET
   @Path("best_bid_ask")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbasePriceBooksResponse getBestBidAsk(
+  CoinbaseBestBidAsksResponse getBestBidAsk(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @QueryParam("product_ids") String productId) throws IOException, CoinbaseException;
 
   @GET
   @Path("product_book")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbasePriceBooksResponse getProductBook(
+  CoinbaseProductPriceBookResponse getProductBook(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @QueryParam("product_id") String productId, @QueryParam("limit") Integer limit,
       @QueryParam("aggregation_price_increment") String aggregationPriceIncrement)

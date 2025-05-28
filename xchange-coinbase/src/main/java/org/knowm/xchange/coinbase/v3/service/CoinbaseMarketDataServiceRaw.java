@@ -1,11 +1,13 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Objects;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
-import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBooksResponse;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
@@ -38,7 +40,7 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
    * requested product. Each entry includes price levels, quantities, and timestamps.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public CoinbasePriceBooksResponse getBestBidAsk(String productId) throws IOException {
+  public CoinbaseBestBidAsksResponse getBestBidAsk(String productId) throws IOException {
     return coinbaseAdvancedTrade.getBestBidAsk(authTokenCreator, productId);
   }
 
@@ -95,6 +97,29 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
 
     return coinbaseAdvancedTrade.getProductCandles(authTokenCreator, productId, start, end,
         granularity, limit);
+  }
+
+  /**
+   * Retrieves the price book data for a specified product, including bid/ask levels, mid-market price,
+   * and spread metrics. This method authenticates the request using the stored API credentials.
+   *
+   * @param productId The product identifier (e.g., "BTC-USD") for which to fetch price book data. Must not be null.
+   * @param limit The maximum number of price levels to retrieve. If null, the API's default limit is used.
+   * @param aggregationPriceIncrement The price increment interval for aggregating order book data.
+   *                                  Must be a positive BigDecimal. If null, the API's default aggregation is applied.
+   * @return A {@link CoinbaseProductPriceBookResponse} containing:
+   *         - The {@link CoinbasePriceBook} with bid and ask price levels, quantities, and timestamps,
+   *         - The absolute spread between bid and ask,
+   *         - The mid-market price (average of bid and ask),
+   *         - The spread in basis points (relative to mid-market),
+   *         - The last traded price for the product.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseProductPriceBookResponse getProductBook(String productId, Integer limit, Double aggregationPriceIncrement)
+      throws IOException {
+    Objects.requireNonNull(productId, "productId cannot be null");
+
+    return coinbaseAdvancedTrade.getProductBook(authTokenCreator, productId, limit, aggregationPriceIncrement != null ? aggregationPriceIncrement.toString() : null);
   }
 
 }

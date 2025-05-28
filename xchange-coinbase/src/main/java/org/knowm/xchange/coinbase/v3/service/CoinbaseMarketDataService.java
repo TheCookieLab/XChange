@@ -1,14 +1,14 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
-import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.currency.Currency;
@@ -59,10 +59,28 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
   }
 
   @Override
-  public OrderBook getOrderBook(Instrument instrument, final Object... args) {
-    throw new NotAvailableFromExchangeException();
+  public OrderBook getOrderBook(Instrument instrument, final Object... args) throws IOException {
+    Integer limit = args.length > 0 && args[0] instanceof Integer ? (Integer) args[0] : null;
+    Double aggregationPriceIncrement = args.length > 1 && args[1] instanceof Double ? (Double) args[1] : null;
+
+    CoinbaseProductPriceBookResponse response = this.getProductBook(CoinbaseAdapters.adaptProductId(instrument), limit, aggregationPriceIncrement);
+
+    return CoinbaseAdapters.adaptOrderBook(response.getPriceBook());
   }
 
+  /**
+   * Retrieves market trades for the specified instrument with optional parameters.
+   *
+   * @param instrument The financial instrument (e.g., currency pair) for which trades are
+   *                   requested.
+   * @param args       Optional parameters in the following order: <br> 1. {@code Integer} limit:
+   *                   Maximum number of trades to retrieve. <br> 2. {@code String} start: Start
+   *                   time for the trade history (ISO 8601 format). <br> 3. {@code String} end: End
+   *                   time for the trade history (ISO 8601 format). <br>
+   * @return A {@link Trades} object containing a list of trades sorted by ID or timestamp, along
+   * with metadata such as the last trade ID and next page cursor.
+   * @throws IOException If there is an error communicating with the exchange.
+   */
   @Override
   public Trades getTrades(Instrument instrument, final Object... args) throws IOException {
     Integer limit = args.length > 0 && args[0] instanceof Integer ? (Integer) args[0] : null;
@@ -72,11 +90,9 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
     CoinbaseProductMarketTradesResponse response = this.getMarketTrades(
         CoinbaseAdapters.adaptProductId(instrument), limit, start, end);
 
-    List<Trade> trades = new ArrayList<>();
-    for (CoinbaseMarketTrade marketTrade : response.getMarketTrades()) {
-      Trade trade = CoinbaseAdapters.adaptTrade(marketTrade);
-      trades.add(trade);
-    }
+    List<Trade> trades = response.getMarketTrades().stream()
+        .map(CoinbaseAdapters::adaptTrade)
+        .collect(Collectors.toList());
 
     return new Trades(trades);
   }
@@ -106,7 +122,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
       DefaultCandleStickParam defaultParams = (DefaultCandleStickParam) params;
       granularity = CoinbaseAdapters.adaptProductCandleGranularity(defaultParams.getPeriodInSecs());
       if (granularity == null) {
-        throw new IllegalArgumentException("Invalid granularity for Coinbase API");
+        throw new IllegalArgumentException("Invalid granularity for Coinbase Product Candles API");
       }
 
       if (defaultParams.getStartDate() != null) {
@@ -119,7 +135,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
 
       if (params instanceof DefaultCandleStickParamWithLimit) {
         DefaultCandleStickParamWithLimit paramsWithLimit = (DefaultCandleStickParamWithLimit) params;
-        limit = Math.min(paramsWithLimit.getLimit(), 350);
+        limit = paramsWithLimit.getLimit();
       }
     }
 
