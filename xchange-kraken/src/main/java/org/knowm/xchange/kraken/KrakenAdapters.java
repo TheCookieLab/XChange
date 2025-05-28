@@ -179,7 +179,9 @@ public class KrakenAdapters {
     List<Ticker> tickers = new ArrayList<>();
     for (Entry<String, KrakenTicker> ticker : krakenTickers.entrySet()) {
       CurrencyPair pair = KrakenUtils.translateKrakenCurrencyPair(ticker.getKey());
-      tickers.add(adaptTicker(ticker.getValue(), pair));
+      if (pair != null) {
+        tickers.add(adaptTicker(ticker.getValue(), pair));
+      }
     }
     return tickers;
   }
