@@ -53,7 +53,7 @@ public interface TradeOgreAuthenticated extends TradeOgre {
 
   @POST
   @Path("account/orders")
-  TradeOgreOrdersResponse getOrders(
+  List<TradeOgreOrder> getOrders(
       @HeaderParam("Authorization") String base64UserPwd, @FormParam("market") String market)
       throws IOException;
 

@@ -12,6 +12,7 @@ import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParam;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 import org.knowm.xchange.tradeogre.TradeOgreAdapters;
 import org.knowm.xchange.tradeogre.TradeOgreExchange;
+import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrder;
 import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrdersResponse;
 import org.knowm.xchange.tradeogre.dto.trade.TradeOgreTrade;
 
@@ -33,9 +34,8 @@ public class TradeOgreTradeService extends TradeOgreTradeServiceRaw implements T
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
-    TradeOgreOrdersResponse ordersResponse = getOrders();
     List<LimitOrder> orders =
-        TradeOgreAdapters.adaptOpenOrders(ordersResponse.getOrders()).getOpenOrders().stream()
+        TradeOgreAdapters.adaptOpenOrders(getOrders()).getOpenOrders().stream()
             .filter(params != null ? params::accept : o -> true)
             .collect(Collectors.toList());
     return new OpenOrders(orders);
