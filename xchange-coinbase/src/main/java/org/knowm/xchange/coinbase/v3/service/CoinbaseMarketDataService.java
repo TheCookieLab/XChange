@@ -1,15 +1,14 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
-import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.currency.Currency;
@@ -82,6 +81,17 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
     return new Trades(trades);
   }
 
+  /**
+   * Fetches candlestick data for a given currency pair and parameters.
+   *
+   * @param currencyPair The currency pair for which data is requested.
+   * @param params       Additional parameters for candlestick data (e.g., period, start/end time,
+   *                     limit).
+   * @return A {@link CandleStickData} object containing the candlestick data.
+   * @throws IOException              If there is an error communicating with the exchange.
+   * @throws IllegalArgumentException If the granularity is invalid or the limit exceeds API
+   *                                  constraints.
+   */
   @Override
   public CandleStickData getCandleStickData(CurrencyPair currencyPair, CandleStickDataParams params)
       throws IOException {
@@ -95,29 +105,30 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
     if (params instanceof DefaultCandleStickParam) {
       DefaultCandleStickParam defaultParams = (DefaultCandleStickParam) params;
       granularity = CoinbaseAdapters.adaptProductCandleGranularity(defaultParams.getPeriodInSecs());
+      if (granularity == null) {
+        throw new IllegalArgumentException("Invalid granularity for Coinbase API");
+      }
 
       if (defaultParams.getStartDate() != null) {
-        start = Long.toString(defaultParams.getStartDate().getTime() / 1000);
+        start = Long.toString(defaultParams.getStartDate().toInstant().getEpochSecond());
       }
 
       if (defaultParams.getEndDate() != null) {
-        end = Long.toString(defaultParams.getEndDate().getTime() / 1000);
+        end = Long.toString(defaultParams.getEndDate().toInstant().getEpochSecond());
       }
 
       if (params instanceof DefaultCandleStickParamWithLimit) {
         DefaultCandleStickParamWithLimit paramsWithLimit = (DefaultCandleStickParamWithLimit) params;
-        limit = paramsWithLimit.getLimit();
+        limit = Math.min(paramsWithLimit.getLimit(), 350);
       }
     }
 
     CoinbaseProductCandlesResponse response = this.getProductCandles(productId, granularity, limit,
         start, end);
 
-    List<CandleStick> candleSticks = new ArrayList<>();
-    for (CoinbaseProductCandle productCandle : response.getCandles()) {
-      CandleStick candleStick = CoinbaseAdapters.adaptProductCandle(productCandle);
-      candleSticks.add(candleStick);
-    }
+    List<CandleStick> candleSticks = response.getCandles().stream()
+        .map(CoinbaseAdapters::adaptProductCandle)
+        .collect(Collectors.toList());
 
     return new CandleStickData(currencyPair, candleSticks);
   }

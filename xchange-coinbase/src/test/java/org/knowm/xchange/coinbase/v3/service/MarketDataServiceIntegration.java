@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -75,6 +76,7 @@ public class MarketDataServiceIntegration {
 
     assertEquals(limit, candleStickData.getCandleSticks().size());
     assertEquals(currencyPair, candleStickData.getInstrument());
+    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().after(candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1).getTimestamp()));
   }
 
   @Test
@@ -85,11 +87,11 @@ public class MarketDataServiceIntegration {
     int daysInPast = 100;
     Date startDate = Date.from(
         LocalDate.now().minusDays(daysInPast).atStartOfDay(ZoneOffset.UTC).toInstant());
-    Date endDate = null;
     CandleStickData candleStickData = marketDataService.getCandleStickData(currencyPair,
-        new DefaultCandleStickParam(startDate, endDate, 86_400));
+        new DefaultCandleStickParam(startDate, null, 86_400));
 
     assertEquals(daysInPast + 1, candleStickData.getCandleSticks().size());
     assertEquals(currencyPair, candleStickData.getInstrument());
+    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().after(candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1).getTimestamp()));
   }
 }
