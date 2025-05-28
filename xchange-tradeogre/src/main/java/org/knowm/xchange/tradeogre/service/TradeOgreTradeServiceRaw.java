@@ -1,13 +1,15 @@
 package org.knowm.xchange.tradeogre.service;
 
 import java.io.IOException;
-import java.util.Collection;
+import java.util.List;
+
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.tradeogre.TradeOgreAdapters;
 import org.knowm.xchange.tradeogre.TradeOgreExchange;
-import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrder;
+import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrdersResponse;
+import org.knowm.xchange.tradeogre.dto.trade.TradeOgreTrade;
 
 public class TradeOgreTradeServiceRaw extends TradeOgreBaseService {
 
@@ -29,7 +31,11 @@ public class TradeOgreTradeServiceRaw extends TradeOgreBaseService {
     return tradeOgre.cancel(base64UserPwd, id).isSuccess();
   }
 
-  public Collection<TradeOgreOrder> getOrders() throws IOException {
+  public TradeOgreOrdersResponse getOrders() throws IOException {
     return tradeOgre.getOrders(base64UserPwd, null);
+  }
+
+  public List<TradeOgreTrade> getTradeHistory() throws IOException {
+    return tradeOgre.getTradeHistory(base64UserPwd, null);
   }
 }
