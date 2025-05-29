@@ -20,6 +20,7 @@ import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import si.mazi.rescu.ParamsDigest;
@@ -122,7 +123,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @GET
   @Path("products/{product_id}")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseProductsResponse getProduct(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+  CoinbaseProductResponse getProduct(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("product_id") String productId,
       @QueryParam("get_tradability_status") Boolean getTradabilityStatus)
       throws IOException, CoinbaseException;

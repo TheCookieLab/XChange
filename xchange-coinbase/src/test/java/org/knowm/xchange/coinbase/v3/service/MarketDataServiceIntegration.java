@@ -123,7 +123,7 @@ public class MarketDataServiceIntegration {
   public void getETHUSDTicker() throws IOException {
     Assume.assumeNotNull(marketDataService.authTokenCreator);
 
-    Instrument instrument = CurrencyPair.ETH_USD;
+    Instrument instrument = CurrencyPair.BTC_USD;
 
     Ticker ticker = marketDataService.getTicker(instrument);
 
@@ -132,5 +132,9 @@ public class MarketDataServiceIntegration {
     assertNotNull(ticker.getAskSize());
     assertNotNull(ticker.getBid());
     assertNotNull(ticker.getBidSize());
+
+    assertNotNull(ticker.getPercentageChange());
+    assertNotNull(ticker.getQuoteVolume());
+    assertNotNull(ticker.getVolume());
   }
 }

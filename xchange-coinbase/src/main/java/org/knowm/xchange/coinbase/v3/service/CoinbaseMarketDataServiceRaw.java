@@ -12,6 +12,7 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import si.mazi.rescu.ParamsDigest;
 
 class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
@@ -28,6 +29,10 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
   public CoinbaseMarketDataServiceRaw(Exchange exchange,
       CoinbaseAuthenticated coinbaseAdvancedTrade, ParamsDigest authTokenCreator) {
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
+  }
+
+  public CoinbaseProductResponse getProduct(String productId) throws IOException {
+    return coinbaseAdvancedTrade.getProduct(authTokenCreator, productId, false);
   }
 
   /**

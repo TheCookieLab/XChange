@@ -45,10 +45,9 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
       Security.addProvider(new BouncyCastleProvider());
     }
   }
-
-  private final ECPrivateKey privateKey;
-  private final ECPublicKey publicKey;
+  
   private final String keyName;
+  private final Algorithm alg;
 
   /**
    * <p>Initializes a new digest instance with the provided API key name and secret key.</p>
@@ -70,8 +69,10 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
     super(secretKey, HMAC_SHA_256);
 
     KeyPair kp = loadECKeyPair(normalizePem(secretKey));
-    this.publicKey = (ECPublicKey) kp.getPublic();
-    this.privateKey = (ECPrivateKey) kp.getPrivate();
+    ECPublicKey publicKey = (ECPublicKey) kp.getPublic();
+    ECPrivateKey privateKey = (ECPrivateKey) kp.getPrivate();
+
+    this.alg = Algorithm.ECDSA256(publicKey, privateKey);
     this.keyName = keyName;
   }
 
@@ -217,8 +218,6 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
     long now = Instant.now().getEpochSecond();
     Date nbf = Date.from(Instant.ofEpochSecond(now));
     Date exp = Date.from(Instant.ofEpochSecond(now + 120));
-
-    Algorithm alg = Algorithm.ECDSA256(publicKey, privateKey);
 
     return JWT.create().withKeyId(keyName).withIssuer("cdp").withSubject(keyName).withNotBefore(nbf)
         .withExpiresAt(exp).withClaim("uri", method + " " + uri)

@@ -11,6 +11,7 @@ import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.CandleStick;
@@ -55,9 +56,11 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
 
   @Override
   public Ticker getTicker(Instrument instrument, final Object... args) throws IOException {
-    List<CoinbasePriceBook> priceBooks = this.getBestBidAsk(CoinbaseAdapters.adaptProductId(instrument)).getPriceBooks();
+    String productId = CoinbaseAdapters.adaptProductId(instrument);
+    CoinbaseProductResponse product = this.getProduct(productId);
+    List<CoinbasePriceBook> priceBooks = this.getBestBidAsk(productId).getPriceBooks();
 
-    return priceBooks.isEmpty() ? null : CoinbaseAdapters.adaptTicker(priceBooks.get(0));
+    return CoinbaseAdapters.adaptTicker(product, priceBooks.get(0));
   }
 
   @Override

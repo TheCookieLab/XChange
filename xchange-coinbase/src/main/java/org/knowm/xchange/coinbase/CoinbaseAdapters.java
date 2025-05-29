@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -23,6 +24,7 @@ import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -222,13 +224,16 @@ public final class CoinbaseAdapters {
         .build();
   }
 
-  public static Ticker adaptTicker(CoinbasePriceBook priceBook) {
+  public static Ticker adaptTicker(CoinbaseProductResponse product, CoinbasePriceBook priceBook) {
     return new Ticker.Builder()
         .ask(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getPrice())
         .askSize(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getSize())
         .bid(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getPrice())
         .bidSize(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getSize())
         .instrument(adaptInstrument(priceBook.getProductId()))
+        .percentageChange(product.getPricePercentageChange24H().round(new MathContext(2, RoundingMode.HALF_EVEN)))
+        .volume(product.getVolume24H())
+        .quoteVolume(product.getApproximateQuoteVolume24H())
         .timestamp(Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)))
         .build();
   }
