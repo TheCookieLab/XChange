@@ -30,6 +30,7 @@ import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.FundingRate;
 import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
@@ -624,5 +625,34 @@ public class OkexAdapters {
       }
     }
     return null;
+  }
+
+  public static List<OrderBookUpdate> adaptOrderBookUpdates(Instrument instrument, List<OkexPublicOrder> asks, List<OkexPublicOrder> bids, BigDecimal contractValue, Date date) {
+    List<OrderBookUpdate> orderBookUpdates = new ArrayList<>();
+    for (OkexPublicOrder ask : asks) {
+      BigDecimal volume = convertContractSizeToVolume(ask.getVolume(), instrument, contractValue);
+      OrderBookUpdate o =
+          new OrderBookUpdate(
+              Order.OrderType.ASK,
+              volume,
+              instrument,
+              ask.getPrice(),
+              date,
+              volume);
+      orderBookUpdates.add(o);
+    }
+    for (OkexPublicOrder bid : bids) {
+      BigDecimal volume = convertContractSizeToVolume(bid.getVolume(), instrument, contractValue);
+      OrderBookUpdate o =
+          new OrderBookUpdate(
+              Order.OrderType.BID,
+              volume,
+              instrument,
+              bid.getPrice(),
+              date,
+              volume);
+      orderBookUpdates.add(o);
+    }
+    return orderBookUpdates;
   }
 }
