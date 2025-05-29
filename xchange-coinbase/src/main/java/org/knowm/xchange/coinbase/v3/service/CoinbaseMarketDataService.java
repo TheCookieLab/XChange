@@ -59,8 +59,9 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
     String productId = CoinbaseAdapters.adaptProductId(instrument);
     CoinbaseProductResponse product = this.getProduct(productId);
     List<CoinbasePriceBook> priceBooks = this.getBestBidAsk(productId).getPriceBooks();
+    CoinbaseProductCandlesResponse candle = this.getProductCandles(productId, "ONE_DAY", 1, null, null);
 
-    return CoinbaseAdapters.adaptTicker(product, priceBooks.get(0));
+    return CoinbaseAdapters.adaptTicker(product, candle, priceBooks.get(0));
   }
 
   @Override

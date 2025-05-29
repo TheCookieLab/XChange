@@ -24,6 +24,7 @@ import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -224,7 +225,7 @@ public final class CoinbaseAdapters {
         .build();
   }
 
-  public static Ticker adaptTicker(CoinbaseProductResponse product, CoinbasePriceBook priceBook) {
+  public static Ticker adaptTicker(CoinbaseProductResponse product, CoinbaseProductCandlesResponse candle, CoinbasePriceBook priceBook) {
     return new Ticker.Builder()
         .ask(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getPrice())
         .askSize(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getSize())
@@ -234,6 +235,10 @@ public final class CoinbaseAdapters {
         .percentageChange(product.getPricePercentageChange24H().round(new MathContext(2, RoundingMode.HALF_EVEN)))
         .volume(product.getVolume24H())
         .quoteVolume(product.getApproximateQuoteVolume24H())
+        .low(candle.getCandles().get(0).getLow())
+        .high(candle.getCandles().get(0).getHigh())
+        .open(candle.getCandles().get(0).getOpen())
+        .last(candle.getCandles().get(0).getClose())
         .timestamp(Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)))
         .build();
   }

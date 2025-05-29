@@ -45,7 +45,7 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
       Security.addProvider(new BouncyCastleProvider());
     }
   }
-  
+
   private final String keyName;
   private final Algorithm alg;
 
