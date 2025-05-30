@@ -9,7 +9,6 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.tradeogre.TradeOgreAdapters;
 import org.knowm.xchange.tradeogre.TradeOgreExchange;
 import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrder;
-import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrdersResponse;
 import org.knowm.xchange.tradeogre.dto.trade.TradeOgreTrade;
 
 public class TradeOgreTradeServiceRaw extends TradeOgreBaseService {
