@@ -9,7 +9,6 @@ import java.util.List;
 import org.knowm.xchange.tradeogre.dto.account.TradeOgreBalance;
 import org.knowm.xchange.tradeogre.dto.account.TradeOgreBalances;
 import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrder;
-import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrdersResponse;
 import org.knowm.xchange.tradeogre.dto.trade.TradeOgreTrade;
 import org.knowm.xchange.tradeogre.dto.trade.TradeOgreTradeResponse;
 
