@@ -3,6 +3,7 @@ package org.knowm.xchange.tradeogre.service;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
@@ -12,8 +13,6 @@ import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParam;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 import org.knowm.xchange.tradeogre.TradeOgreAdapters;
 import org.knowm.xchange.tradeogre.TradeOgreExchange;
-import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrder;
-import org.knowm.xchange.tradeogre.dto.trade.TradeOgreOrdersResponse;
 import org.knowm.xchange.tradeogre.dto.trade.TradeOgreTrade;
 
 public class TradeOgreTradeService extends TradeOgreTradeServiceRaw implements TradeService {
