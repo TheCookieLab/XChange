@@ -1,55 +1,33 @@
 package org.knowm.xchange.binance.service;
 
-import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceErrorAdapter;
 import org.knowm.xchange.binance.BinanceExchange;
 import org.knowm.xchange.binance.dto.BinanceException;
 import org.knowm.xchange.binance.dto.ExchangeType;
-import org.knowm.xchange.binance.dto.account.AssetDetail;
-import org.knowm.xchange.binance.dto.account.BinanceAccountInformation;
-import org.knowm.xchange.binance.dto.account.BinanceCurrencyInfo;
+import org.knowm.xchange.binance.dto.account.*;
 import org.knowm.xchange.binance.dto.account.BinanceCurrencyInfo.Network;
-import org.knowm.xchange.binance.dto.account.BinanceFundingHistoryParams;
-import org.knowm.xchange.binance.dto.account.BinanceMasterAccountTransferHistoryParams;
-import org.knowm.xchange.binance.dto.account.BinanceSubAccountTransferHistoryParams;
-import org.knowm.xchange.binance.dto.account.DepositAddress;
-import org.knowm.xchange.binance.dto.account.WithdrawResponse;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureAccountInformation;
+import org.knowm.xchange.binance.dto.account.futures.BinanceFutureCommissionRate;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.Currency;
-import org.knowm.xchange.dto.account.AccountInfo;
-import org.knowm.xchange.dto.account.AddressWithTag;
-import org.knowm.xchange.dto.account.Fee;
-import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.dto.account.*;
 import org.knowm.xchange.dto.account.FundingRecord.Status;
 import org.knowm.xchange.dto.account.FundingRecord.Type;
-import org.knowm.xchange.dto.account.OpenPosition;
-import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.account.params.RequestDepositAddressParams;
-import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
-import org.knowm.xchange.service.trade.params.HistoryParamsFundingType;
-import org.knowm.xchange.service.trade.params.NetworkWithdrawFundsParams;
-import org.knowm.xchange.service.trade.params.RippleWithdrawFundsParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrency;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamLimit;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamPaging;
-import org.knowm.xchange.service.trade.params.TradeHistoryParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
-import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+import org.knowm.xchange.service.trade.params.*;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.*;
+
+import static org.knowm.xchange.binance.BinanceAdapters.adaptSymbol;
+import static org.knowm.xchange.binance.BinanceAdapters.toSymbol;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 
 public class BinanceAccountService extends BinanceAccountServiceRaw implements AccountService {
 
@@ -139,21 +117,37 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
     }
   }
 
+  /**
+   * Results based on ExchangeSpecificParametersItem(EXCHANGE_TYPE)
+   *
+   */
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
     try {
-      BinanceAccountInformation acc = account();
-      BigDecimal makerFee =
-          acc.makerCommission.divide(new BigDecimal("10000"), 4, RoundingMode.UNNECESSARY);
-      BigDecimal takerFee =
-          acc.takerCommission.divide(new BigDecimal("10000"), 4, RoundingMode.UNNECESSARY);
+      Map<Instrument, Fee> fees = new HashMap<>();
+      if (exchange.getExchangeSpecification().getExchangeSpecificParametersItem(EXCHANGE_TYPE).equals(ExchangeType.SPOT)) {
+        List<BinanceTradeFee> binanceTradeFees = getTradeFee();
+        binanceTradeFees.forEach(binanceTradeFee -> {
+          Instrument instrument = adaptSymbol(binanceTradeFee.getSymbol(),false);
+          if(instrument!= null) // some deleted pair still exist in fees result
+            fees.put(instrument, new Fee(new BigDecimal(binanceTradeFee.getMakerCommission()),
+                new BigDecimal(binanceTradeFee.getTakerCommission())));
+        });
+      } else throw new UnsupportedOperationException("Only SPOT exchange type is supported");
+      return fees;
+    } catch (BinanceException e) {
+      throw BinanceErrorAdapter.adapt(e);
+    }
+  }
 
-      Map<Instrument, Fee> tradingFees = new HashMap<>();
-      List<Instrument> pairs = exchange.getExchangeInstruments();
-
-      pairs.forEach(pair -> tradingFees.put(pair, new Fee(makerFee, takerFee)));
-
-      return tradingFees;
+  public Fee getCommissionRateByInstrument(Instrument instrument) throws IOException {
+    try {
+      // only 1 req per every symbol, cost 20 REQUEST_WEIGHT, did not find any other way to get all fees
+        if(exchange.getExchangeSpecification().getExchangeSpecificParametersItem(EXCHANGE_TYPE).equals(ExchangeType.FUTURES)) {
+          BinanceFutureCommissionRate binanceFutureCommissionRate = getCommissionRate(toSymbol(instrument));
+          return new Fee(new BigDecimal(binanceFutureCommissionRate.getMakerCommissionRate()),
+              new BigDecimal(binanceFutureCommissionRate.getTakerCommissionRate()));
+        } else throw new UnsupportedOperationException("Only FUTURES exchange type is supported");
     } catch (BinanceException e) {
       throw BinanceErrorAdapter.adapt(e);
     }

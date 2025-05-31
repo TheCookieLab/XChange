@@ -23,14 +23,6 @@
  */
 package org.knowm.xchange.coinmate.service;
 
-import static org.apache.commons.lang3.math.NumberUtils.toLong;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinmate.CoinmateAdapters;
 import org.knowm.xchange.coinmate.CoinmateUtils;
@@ -49,14 +41,16 @@ import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
-import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamLimit;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamOffset;
-import org.knowm.xchange.service.trade.params.TradeHistoryParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamsIdSpan;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamsSorted;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
-import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+import org.knowm.xchange.service.trade.params.*;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.apache.commons.lang3.math.NumberUtils.toLong;
 
 /**
  * @author Martin Stachon
@@ -75,7 +69,7 @@ public class CoinmateAccountService extends CoinmateAccountServiceRaw implements
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
     Set<Instrument> instruments = exchange.getExchangeMetaData().getInstruments().keySet();
     HashMap<Instrument, Fee> result = new HashMap<>();
     for (Instrument instrument : instruments) {

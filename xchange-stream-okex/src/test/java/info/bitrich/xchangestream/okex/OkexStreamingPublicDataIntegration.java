@@ -87,7 +87,7 @@ public class OkexStreamingPublicDataIntegration {
             .getOrderBook(currencyPair)
             .subscribe(
                 orderBook -> {
-                  System.out.println(orderBook);
+//                  System.out.println(orderBook);
                   assertThat(orderBook.getBids().get(0).getLimitPrice())
                       .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
                   assertThat(orderBook.getBids().get(0).getInstrument()).isEqualTo(currencyPair);
@@ -98,7 +98,7 @@ public class OkexStreamingPublicDataIntegration {
             .getOrderBook(instrumentSHIB)
             .subscribe(
                 orderBook -> {
-                  System.out.println("orderbook " + orderBook);
+//                  System.out.println(orderBook);
                   assertThat(orderBook.getBids().get(0).getLimitPrice())
                       .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
                   assertThat(orderBook.getBids().get(0).getInstrument()).isEqualTo(instrumentSHIB);

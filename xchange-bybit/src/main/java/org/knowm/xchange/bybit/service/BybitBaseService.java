@@ -25,6 +25,7 @@ public class BybitBaseService extends BaseResilientExchangeService<BybitExchange
                     clientConfig.setJacksonObjectMapperFactory(
                         new BybitJacksonObjectMapperFactory()))
             .build();
+
     bybitAuthenticated =
         ExchangeRestProxyBuilder.forInterface(
                 BybitAuthenticated.class, exchange.getExchangeSpecification())
@@ -33,6 +34,7 @@ public class BybitBaseService extends BaseResilientExchangeService<BybitExchange
                     clientConfig.setJacksonObjectMapperFactory(
                         new BybitJacksonObjectMapperFactory()))
             .build();
+
     signatureCreator =
         BybitDigest.createInstance(exchange.getExchangeSpecification().getSecretKey());
     apiKey = exchange.getExchangeSpecification().getApiKey();

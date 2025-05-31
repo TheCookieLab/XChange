@@ -1,12 +1,5 @@
 package org.knowm.xchange.bitflyer.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitflyer.BitflyerAdapters;
 import org.knowm.xchange.bitflyer.BitflyerUtils;
@@ -28,6 +21,9 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.*;
+
 public class BitflyerAccountService extends BitflyerAccountServiceRaw implements AccountService {
   private static final Logger LOG = LoggerFactory.getLogger(BitflyerAccountService.class);
 
@@ -41,7 +37,7 @@ public class BitflyerAccountService extends BitflyerAccountServiceRaw implements
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
     Map<Instrument, Fee> tradingFees = new HashMap<>();
     List<Instrument> pairs = exchange.getExchangeInstruments();
 
