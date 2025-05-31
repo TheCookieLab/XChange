@@ -10,7 +10,7 @@ public final class BinanceResilience {
 
   public static final String ORDERS_PER_SECOND_RATE_LIMITER = "ordersPerSecond";
 
-  public static final String ORDERS_PER_DAY_RATE_LIMITER = "ordersPerDay";
+  public static final String RAW_REQUESTS_RATE_LIMITER = "rawRequests";
 
   private BinanceResilience() {}
 
@@ -23,7 +23,7 @@ public final class BinanceResilience {
             RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
                 .timeoutDuration(Duration.ofMinutes(1))
                 .limitRefreshPeriod(Duration.ofMinutes(1))
-                .limitForPeriod(1200)
+                .limitForPeriod(6000)
                 .build());
     registries
         .rateLimiters()
@@ -36,11 +36,42 @@ public final class BinanceResilience {
     registries
         .rateLimiters()
         .rateLimiter(
-            ORDERS_PER_DAY_RATE_LIMITER,
+            RAW_REQUESTS_RATE_LIMITER,
             RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
                 .timeoutDuration(Duration.ZERO)
-                .limitRefreshPeriod(Duration.ofDays(1))
-                .limitForPeriod(200000)
+                .limitRefreshPeriod(Duration.ofMinutes(5))
+                .limitForPeriod(61000)
+                .build());
+    return registries;
+  }
+
+  public static ResilienceRegistries createRegistriesFuture() {
+    ResilienceRegistries registries = new ResilienceRegistries();
+    registries
+        .rateLimiters()
+        .rateLimiter(
+            REQUEST_WEIGHT_RATE_LIMITER,
+            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
+                .timeoutDuration(Duration.ofMinutes(1))
+                .limitRefreshPeriod(Duration.ofMinutes(1))
+                .limitForPeriod(2400)
+                .build());
+    registries
+        .rateLimiters()
+        .rateLimiter(
+            ORDERS_PER_SECOND_RATE_LIMITER,
+            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
+                .limitRefreshPeriod(Duration.ofSeconds(1))
+                .limitForPeriod(20)
+                .build());
+    registries
+        .rateLimiters()
+        .rateLimiter(
+            RAW_REQUESTS_RATE_LIMITER,
+            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
+                .timeoutDuration(Duration.ofSeconds(1))
+                .limitRefreshPeriod(Duration.ofSeconds(1))
+                .limitForPeriod(Integer.MAX_VALUE)
                 .build());
     return registries;
   }

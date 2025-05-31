@@ -19,5 +19,8 @@
     <!-- Define logging for organization applications only -->
 <!--    <logger name="org.knowm.xchange" level="DEBUG"/>-->
 <!--    <logger name="si.mazi.rescu" level="TRACE"/>-->
+<!--    <logger name="info.bitrich.xchangestream.okex" level="debug"/>-->
+<!--    <logger name="info.bitrich.xchangestream.service.netty" level="trace"/>-->
+
 
 </configuration>
