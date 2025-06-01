@@ -1,6 +1,6 @@
 package info.bitrich.xchangestream.bybit.example;
 
-import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connect;
+import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectDemoApi;
 import static java.math.RoundingMode.UP;
 
 import info.bitrich.xchangestream.bybit.BybitStreamingTradeService;
@@ -38,7 +38,7 @@ public class BybitStreamPositionChangeExample {
   static BigDecimal amount;
 
   private static void positionChangeExample() throws IOException {
-    StreamingExchange exchange = connect(BybitCategory.LINEAR, true);
+    StreamingExchange exchange = connectDemoApi(BybitCategory.LINEAR, true);
     ticker = (exchange.getMarketDataService().getTicker(ETH_PERP));
     amount = exchange.getExchangeMetaData().getInstruments().get(ETH_PERP).getMinimumAmount();
     // minimal trade size - 5 USDT

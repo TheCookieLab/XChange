@@ -1,13 +1,16 @@
 package info.bitrich.xchangestream.bybit.example;
 
-import info.bitrich.xchangestream.bybit.BybitStreamingExchange;
+import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectTestApi;
+import static java.math.RoundingMode.UP;
+
 import info.bitrich.xchangestream.bybit.BybitStreamingTradeService;
 import info.bitrich.xchangestream.core.StreamingExchange;
-import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
-import org.knowm.xchange.ExchangeSpecification;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.concurrent.atomic.AtomicReference;
 import org.knowm.xchange.bybit.dto.BybitCategory;
-import org.knowm.xchange.bybit.dto.account.walletbalance.BybitAccountType;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
@@ -18,16 +21,6 @@ import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicReference;
-
-import static java.math.RoundingMode.UP;
-import static org.knowm.xchange.bybit.BybitExchange.SPECIFIC_PARAM_ACCOUNT_TYPE;
-import static org.knowm.xchange.bybit.BybitExchange.SPECIFIC_PARAM_TESTNET;
-
 public class BybitStreamTestNetExample {
 
   private static final Logger log = LoggerFactory.getLogger(BybitStreamTestNetExample.class);
@@ -35,7 +28,7 @@ public class BybitStreamTestNetExample {
   // Uses TEST_NET
   public static void main(String[] args) {
     try {
-      withAuth();
+      testNetExample();
     } catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -47,34 +40,8 @@ public class BybitStreamTestNetExample {
 
   private static final Instrument ETH_SPOT = new CurrencyPair("ETH/USDT");
 
-  private static void withAuth() throws IOException, InterruptedException {
-    ExchangeSpecification exchangeSpecification =
-        new BybitStreamingExchange().getDefaultExchangeSpecification();
-    Properties properties = new Properties();
-    try {
-      properties.load(BybitStreamTestNetExample.class.getResourceAsStream("/secret.keys"));
-    // Enter your authentication details here to run private endpoint tests
-    final String API_KEY =
-            (properties.getProperty("apikey") == null)
-                    ? System.getenv("bybit_apikey")
-                    : properties.getProperty("apikey");
-    final String SECRET_KEY =
-            (properties.getProperty("secret") == null)
-                    ? System.getenv("bybit_secretkey")
-                    : properties.getProperty("secret");
-    exchangeSpecification.setApiKey(API_KEY);
-    exchangeSpecification.setSecretKey(SECRET_KEY);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    exchangeSpecification.setExchangeSpecificParametersItem(
-        SPECIFIC_PARAM_ACCOUNT_TYPE, BybitAccountType.UNIFIED);
-    exchangeSpecification.setExchangeSpecificParametersItem(
-        BybitStreamingExchange.EXCHANGE_TYPE, BybitCategory.LINEAR);
-    exchangeSpecification.setExchangeSpecificParametersItem(SPECIFIC_PARAM_TESTNET, true);
-    StreamingExchange exchange =
-        StreamingExchangeFactory.INSTANCE.createExchange(exchangeSpecification);
-    exchange.connect().blockingAwait();
+  private static void testNetExample() throws IOException, InterruptedException {
+    StreamingExchange exchange = connectTestApi(BybitCategory.LINEAR, true);
     Ticker ticker = (exchange.getMarketDataService().getTicker(DOGE_PERP));
     BigDecimal amount =
         exchange.getExchangeMetaData().getInstruments().get(DOGE_PERP).getMinimumAmount();

@@ -1,19 +1,21 @@
 package info.bitrich.xchangestream.bybit.example;
 
+import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectDemoApi;
+import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectMainApi;
+
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.rxjava3.disposables.Disposable;
-import lombok.var;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connect;
 
 public class BybitStreamOrderBookAndFeesExample {
 
@@ -23,6 +25,8 @@ public class BybitStreamOrderBookAndFeesExample {
     // Stream orderBook and OrderBookUpdates
     try {
       getOrderBookExample();
+    // main(not demo) api only
+      getFeesExample();
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -33,7 +37,7 @@ public class BybitStreamOrderBookAndFeesExample {
   static StreamingExchange exchange;
 
   private static void getFeesExample() {
-    exchange = connect(BybitCategory.LINEAR, true);
+    exchange = connectMainApi(BybitCategory.LINEAR, true);
     // if auth response is not received at this moment, wee get non-auth exception here
     // var fees = exchange.getAccountService().getDynamicTradingFeesByInstrument(BybitCategory.LINEAR);
     // OPTION - wait for login message response
@@ -44,14 +48,19 @@ public class BybitStreamOrderBookAndFeesExample {
         e.printStackTrace();
       }
     }
-    var fees = exchange.getAccountService().getDynamicTradingFeesByInstrument(BybitCategory.LINEAR);
+    Map<Instrument, Fee> fees;
+    try {
+      fees = exchange.getAccountService().getDynamicTradingFeesByInstrument(BybitCategory.LINEAR.getValue());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     LOG.info("fees: {}", fees);
   }
 
   private static void getOrderBookExample() throws InterruptedException {
-    exchange = connect(BybitCategory.LINEAR, false);
+    exchange = connectDemoApi(BybitCategory.LINEAR, false);
     subscribeOrderBook();
-    Thread.sleep(600000L);
+    Thread.sleep(6000L);
     for (Disposable dis : booksDisposable) {
       dis.dispose();
     }
