@@ -5,10 +5,11 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 import lombok.ToString;
+import org.knowm.xchange.coinsph.dto.CoinsphResponse;
 
 @Getter
 @ToString
-public class CoinsphAccount {
+public class CoinsphAccount extends CoinsphResponse {
 
   private final BigDecimal makerCommission;
   private final BigDecimal takerCommission;

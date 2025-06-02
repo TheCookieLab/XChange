@@ -82,7 +82,7 @@ public class CoinsphWebSocketExecutionReportTest {
 
     // then
     assertThat(json).isNotNull();
-    
+
     // Verify that the JSON contains the expected fields
     assertThat(json).contains("\"e\":\"executionReport\"");
     assertThat(json).contains("\"E\":1621234567890");

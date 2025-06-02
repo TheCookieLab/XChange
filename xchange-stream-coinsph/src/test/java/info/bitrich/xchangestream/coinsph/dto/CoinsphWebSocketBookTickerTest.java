@@ -62,11 +62,9 @@ public class CoinsphWebSocketBookTickerTest {
     assertThat(unmarshalledBookTicker.getEventTime()).isEqualTo(bookTicker.getEventTime());
     assertThat(unmarshalledBookTicker.getUpdateId()).isEqualTo(bookTicker.getUpdateId());
     assertThat(unmarshalledBookTicker.getSymbol()).isEqualTo(bookTicker.getSymbol());
-    assertThat(unmarshalledBookTicker.getBidPrice())
-        .isEqualByComparingTo(bookTicker.getBidPrice());
+    assertThat(unmarshalledBookTicker.getBidPrice()).isEqualByComparingTo(bookTicker.getBidPrice());
     assertThat(unmarshalledBookTicker.getBidQty()).isEqualByComparingTo(bookTicker.getBidQty());
-    assertThat(unmarshalledBookTicker.getAskPrice())
-        .isEqualByComparingTo(bookTicker.getAskPrice());
+    assertThat(unmarshalledBookTicker.getAskPrice()).isEqualByComparingTo(bookTicker.getAskPrice());
     assertThat(unmarshalledBookTicker.getAskQty()).isEqualByComparingTo(bookTicker.getAskQty());
   }
 }

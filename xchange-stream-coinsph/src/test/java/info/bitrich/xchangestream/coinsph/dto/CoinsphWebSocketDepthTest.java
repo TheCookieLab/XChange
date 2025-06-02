@@ -80,7 +80,8 @@ public class CoinsphWebSocketDepthTest {
 
     // then
     assertThat(json).isNotNull();
-    CoinsphWebSocketDepth unmarshalledDepth = objectMapper.readValue(json, CoinsphWebSocketDepth.class);
+    CoinsphWebSocketDepth unmarshalledDepth =
+        objectMapper.readValue(json, CoinsphWebSocketDepth.class);
     assertThat(unmarshalledDepth).isNotNull();
     assertThat(unmarshalledDepth.getEventType()).isEqualTo(depth.getEventType());
     assertThat(unmarshalledDepth.getEventTime()).isEqualTo(depth.getEventTime());
