@@ -36,6 +36,7 @@ import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Ticker.Builder;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
 import org.knowm.xchange.dto.trade.LimitOrder;
@@ -135,7 +136,8 @@ public final class CoinbaseAdapters {
 
   public static LimitOrder adaptOrderBookEntry(CoinbasePriceBookEntry priceBookEntry,
       Order.OrderType orderType, Instrument instrument) {
-    return new LimitOrder(orderType, priceBookEntry.getSize(), instrument, null, null, priceBookEntry.getPrice());
+    return new LimitOrder(orderType, priceBookEntry.getSize(), instrument, null, null,
+        priceBookEntry.getPrice());
   }
 
   public static Trade adaptTrade(CoinbaseMarketTrade marketTrade) {
@@ -225,22 +227,33 @@ public final class CoinbaseAdapters {
         .build();
   }
 
-  public static Ticker adaptTicker(CoinbaseProductResponse product, CoinbaseProductCandlesResponse candle, CoinbasePriceBook priceBook) {
-    return new Ticker.Builder()
-        .ask(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getPrice())
-        .askSize(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getSize())
-        .bid(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getPrice())
-        .bidSize(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getSize())
-        .instrument(adaptInstrument(priceBook.getProductId()))
-        .percentageChange(product.getPricePercentageChange24H().round(new MathContext(2, RoundingMode.HALF_EVEN)))
-        .volume(product.getVolume24H())
-        .quoteVolume(product.getApproximateQuoteVolume24H())
-        .low(candle.getCandles().get(0).getLow())
-        .high(candle.getCandles().get(0).getHigh())
-        .open(candle.getCandles().get(0).getOpen())
-        .last(candle.getCandles().get(0).getClose())
-        .timestamp(Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)))
-        .build();
+  public static Ticker adaptTicker(CoinbaseProductResponse product,
+      CoinbaseProductCandlesResponse candle, CoinbasePriceBook priceBook) {
+    Builder builder = new Ticker.Builder();
+
+    if (product != null) {
+      builder = builder.percentageChange(
+              product.getPricePercentageChange24H().round(new MathContext(2, RoundingMode.HALF_EVEN)))
+          .volume(product.getVolume24H()).quoteVolume(product.getApproximateQuoteVolume24H());
+    }
+
+    if (priceBook != null) {
+      builder = builder.ask(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getPrice())
+          .askSize(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getSize())
+          .bid(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getPrice())
+          .bidSize(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getSize())
+          .instrument(adaptInstrument(priceBook.getProductId())).timestamp(
+              Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)));
+    }
+
+    if (candle != null) {
+      builder = builder.low(candle.getCandles().get(0).getLow())
+          .high(candle.getCandles().get(0).getHigh())
+          .open(candle.getCandles().get(0).getOpen())
+          .last(candle.getCandles().get(0).getClose());
+    }
+
+    return builder.build();
   }
 
   public static Ticker adaptTicker(CurrencyPair currencyPair, final CoinbasePrice buyPrice,

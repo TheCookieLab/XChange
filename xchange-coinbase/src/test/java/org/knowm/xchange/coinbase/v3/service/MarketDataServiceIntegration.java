@@ -136,5 +136,10 @@ public class MarketDataServiceIntegration {
     assertNotNull(ticker.getPercentageChange());
     assertNotNull(ticker.getQuoteVolume());
     assertNotNull(ticker.getVolume());
+
+    assertNotNull(ticker.getOpen());
+    assertNotNull(ticker.getHigh());
+    assertNotNull(ticker.getLow());
+    assertNotNull(ticker.getLast());
   }
 }
