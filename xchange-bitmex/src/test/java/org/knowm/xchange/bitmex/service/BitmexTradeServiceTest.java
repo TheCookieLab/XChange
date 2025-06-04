@@ -1,13 +1,5 @@
 package org.knowm.xchange.bitmex.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.Collection;
-import java.util.Date;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitmex.BitmexExchangeWiremock;
 import org.knowm.xchange.currency.Currency;
@@ -15,14 +7,19 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
-import org.knowm.xchange.dto.trade.LimitOrder;
-import org.knowm.xchange.dto.trade.MarketOrder;
-import org.knowm.xchange.dto.trade.OpenOrders;
-import org.knowm.xchange.dto.trade.UserTrade;
-import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.dto.trade.*;
 import org.knowm.xchange.exceptions.FundsExceededException;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.Date;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class BitmexTradeServiceTest extends BitmexExchangeWiremock {
 
@@ -42,6 +39,28 @@ class BitmexTradeServiceTest extends BitmexExchangeWiremock {
             .build();
 
     Collection<Order> orders = tradeService.getOrder("5d873440-48c6-48ed-86d9-e8e4259b0e7a");
+    assertThat(orders).hasSize(1);
+    assertThat(orders)
+        .first()
+        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .usingRecursiveComparison()
+        .isEqualTo(expected);
+  }
+
+  @Test
+  void canceled_market_buy_order_details() throws IOException {
+    MarketOrder expected =
+        new MarketOrder.Builder(OrderType.BID, new CurrencyPair("FTR/USDT"))
+            .id("48cd2721-f9b9-45ce-8754-eb46dd0691ea")
+            .userReference("Canceled: Order had timeInForce of ImmediateOrCancel\nSubmitted via API.")
+            .timestamp(Date.from(Instant.parse("2025-06-04T13:33:02.563Z")))
+            .originalAmount(new BigDecimal("790.00000"))
+            .orderStatus(OrderStatus.CANCELED)
+            .cumulativeAmount(new BigDecimal("388.00000"))
+            .averagePrice(new BigDecimal("0.008"))
+            .build();
+
+    Collection<Order> orders = tradeService.getOrder("48cd2721-f9b9-45ce-8754-eb46dd0691ea");
     assertThat(orders).hasSize(1);
     assertThat(orders)
         .first()
