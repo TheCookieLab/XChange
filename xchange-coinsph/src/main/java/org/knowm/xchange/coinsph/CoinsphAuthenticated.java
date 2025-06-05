@@ -1,32 +1,16 @@
 package org.knowm.xchange.coinsph;
 
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import org.knowm.xchange.coinsph.dto.CoinsphException;
+import org.knowm.xchange.coinsph.dto.account.*;
+import org.knowm.xchange.coinsph.dto.trade.*;
+import si.mazi.rescu.ParamsDigest;
+import si.mazi.rescu.SynchronizedValueFactory;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
-import org.knowm.xchange.coinsph.dto.CoinsphException;
-import org.knowm.xchange.coinsph.dto.account.CoinsphAccount;
-import org.knowm.xchange.coinsph.dto.account.CoinsphDepositAddress;
-import org.knowm.xchange.coinsph.dto.account.CoinsphDepositRecord;
-import org.knowm.xchange.coinsph.dto.account.CoinsphListenKey;
-import org.knowm.xchange.coinsph.dto.account.CoinsphTradeFee;
-import org.knowm.xchange.coinsph.dto.account.CoinsphWithdrawal;
-import org.knowm.xchange.coinsph.dto.account.CoinsphWithdrawalRecord;
-import org.knowm.xchange.coinsph.dto.trade.CoinsphOrder;
-import org.knowm.xchange.coinsph.dto.trade.CoinsphOrderSide;
-import org.knowm.xchange.coinsph.dto.trade.CoinsphOrderType;
-import org.knowm.xchange.coinsph.dto.trade.CoinsphTimeInForce;
-import org.knowm.xchange.coinsph.dto.trade.CoinsphUserTrade;
-import si.mazi.rescu.ParamsDigest;
-import si.mazi.rescu.SynchronizedValueFactory;
 
 @Path("/openapi") // Base path for all endpoints of Coins.ph API
 @Produces(MediaType.APPLICATION_JSON)
@@ -368,6 +352,56 @@ public interface CoinsphAuthenticated extends Coinsph {
       @QueryParam("startTime") Long startTime,
       @QueryParam("endTime") Long endTime,
       @QueryParam("limit") Integer limit,
+      @QueryParam("recvWindow") Long recvWindow)
+      throws IOException, CoinsphException;
+
+  // Fiat API
+  // =================================================================================================
+
+  /**
+   * Get supported fiat channels for cash out operations.
+   *
+   * @param apiKey API Key (Header)
+   * @param timestamp Timestamp in ms (Query Param)
+   * @param signature Signature (Query Param)
+   * @param currency The currency for which to get supported channels
+   * @param transactionType Transaction type (-1 for cash out)
+   * @param recvWindow Optional. The value cannot be greater than 60000
+   * @return List of supported fiat channels
+   * @throws IOException
+   * @throws CoinsphException
+   */
+  @GET
+  @Path("/fiat/v1/support-channel")
+  List<CoinsphFiatChannel> getSupportedFiatChannels(
+      @HeaderParam(X_COINS_APIKEY) String apiKey,
+      @QueryParam("timestamp") SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("signature") ParamsDigest signature,
+      @QueryParam("currency") String currency,
+      @QueryParam("transactionType") int transactionType,
+      @QueryParam("recvWindow") Long recvWindow)
+      throws IOException, CoinsphException;
+
+  /**
+   * Create a cash out request.
+   *
+   * @param apiKey API Key (Header)
+   * @param timestamp Timestamp in ms (Query Param)
+   * @param signature Signature (Query Param)
+   * @param request Cash out request details
+   * @param recvWindow Optional. The value cannot be greater than 60000
+   * @return Cash out response
+   * @throws IOException
+   * @throws CoinsphException
+   */
+  @POST
+  @Path("/fiat/v1/cash-out")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinsphCashOutResponse cashOut(
+      @HeaderParam(X_COINS_APIKEY) String apiKey,
+      @QueryParam("timestamp") SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("signature") ParamsDigest signature,
+      CoinsphCashOutRequest request,
       @QueryParam("recvWindow") Long recvWindow)
       throws IOException, CoinsphException;
 }

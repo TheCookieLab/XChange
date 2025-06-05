@@ -1,20 +1,15 @@
 package org.knowm.xchange.coinsph.service;
 
+import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.coinsph.CoinsphExchange;
+import org.knowm.xchange.coinsph.dto.CoinsphException;
+import org.knowm.xchange.coinsph.dto.account.*;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import org.knowm.xchange.client.ResilienceRegistries;
-import org.knowm.xchange.coinsph.CoinsphExchange;
-import org.knowm.xchange.coinsph.dto.CoinsphException;
-import org.knowm.xchange.coinsph.dto.account.CoinsphAccount;
-import org.knowm.xchange.coinsph.dto.account.CoinsphDepositAddress;
-import org.knowm.xchange.coinsph.dto.account.CoinsphDepositRecord;
-import org.knowm.xchange.coinsph.dto.account.CoinsphFundingRecord;
-import org.knowm.xchange.coinsph.dto.account.CoinsphListenKey;
-import org.knowm.xchange.coinsph.dto.account.CoinsphTradeFee;
-import org.knowm.xchange.coinsph.dto.account.CoinsphWithdrawal;
-import org.knowm.xchange.coinsph.dto.account.CoinsphWithdrawalRecord;
+import java.util.Optional;
 
 public class CoinsphAccountServiceRaw extends CoinsphBaseService {
 
@@ -213,5 +208,65 @@ public class CoinsphAccountServiceRaw extends CoinsphBaseService {
     }
 
     return fundingRecords;
+  }
+
+  // Fiat API methods
+  // =================================================================================================
+
+  /**
+   * Get supported fiat channels for cash out operations
+   *
+   * @param currency The currency for which to get supported channels
+   * @param transactionType Transaction type (-1 for cash out)
+   * @return List of supported fiat channels
+   * @throws IOException
+   * @throws CoinsphException
+   */
+  public List<CoinsphFiatChannel> getSupportedFiatChannels(String currency, int transactionType)
+      throws IOException, CoinsphException {
+    return decorateApiCall(
+            () ->
+                coinsphAuthenticated.getSupportedFiatChannels(
+                    apiKey,
+                    timestampFactory,
+                    signatureCreator,
+                    currency,
+                    transactionType,
+                    exchange.getRecvWindow()))
+        .call();
+  }
+
+  /**
+   * Create a cash out request
+   *
+   * @param request Cash out request details
+   * @return Cash out response
+   * @throws IOException
+   * @throws CoinsphException
+   */
+  public CoinsphCashOutResponse cashOut(CoinsphCashOutRequest request)
+      throws IOException, CoinsphException {
+    return decorateApiCall(
+            () ->
+                coinsphAuthenticated.cashOut(
+                    apiKey, timestampFactory, signatureCreator, request, exchange.getRecvWindow()))
+        .call();
+  }
+
+  /**
+   * Find the first available channel for a given currency and transaction type
+   *
+   * @param currency The currency to search for
+   * @param transactionType Transaction type (-1 for cash out)
+   * @return Optional of the first available channel
+   * @throws IOException
+   * @throws CoinsphException
+   */
+  protected Optional<CoinsphFiatChannel> findFirstAvailableChannel(
+      String currency, int transactionType) throws IOException, CoinsphException {
+    List<CoinsphFiatChannel> channels = getSupportedFiatChannels(currency, transactionType);
+    return channels.stream()
+        .filter(channel -> channel.getStatus() == 1) // Status 1 means available
+        .findFirst();
   }
 }

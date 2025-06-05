@@ -1,20 +1,5 @@
 package org.knowm.xchange.coinsph.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.client.ResilienceRegistries;
@@ -22,22 +7,29 @@ import org.knowm.xchange.coinsph.Coinsph;
 import org.knowm.xchange.coinsph.CoinsphAdapters;
 import org.knowm.xchange.coinsph.CoinsphAuthenticated;
 import org.knowm.xchange.coinsph.CoinsphExchange;
-import org.knowm.xchange.coinsph.dto.account.CoinsphAccount;
-import org.knowm.xchange.coinsph.dto.account.CoinsphBalance;
-import org.knowm.xchange.coinsph.dto.account.CoinsphDepositAddress;
-import org.knowm.xchange.coinsph.dto.account.CoinsphDepositRecord;
-import org.knowm.xchange.coinsph.dto.account.CoinsphFundingRecord;
-import org.knowm.xchange.coinsph.dto.account.CoinsphWithdrawal;
-import org.knowm.xchange.coinsph.dto.account.CoinsphWithdrawalRecord;
+import org.knowm.xchange.coinsph.dto.account.*;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
+import org.knowm.xchange.service.trade.params.FiatWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsZero;
+import org.knowm.xchange.service.trade.params.withdrawals.Address;
+import org.knowm.xchange.service.trade.params.withdrawals.Beneficiary;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 public class CoinsphAccountServiceTest {
 
@@ -298,5 +290,371 @@ public class CoinsphAccountServiceTest {
     String withdrawalId = spyService.withdrawFunds(params);
 
     assertThat(withdrawalId).isEqualTo("67890");
+  }
+
+  // New tests for fiat withdrawal functionality
+  // =================================================================================================
+
+  @Test
+  public void testGetSupportedFiatChannels() throws IOException {
+    // given
+    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
+
+    CoinsphFiatChannel instapayChannel =
+        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 1, "PHP");
+    CoinsphFiatChannel pesonetChannel = new CoinsphFiatChannel("PESONET", "Union Bank", 1, "PHP");
+    CoinsphFiatChannel unavailableChannel =
+        new CoinsphFiatChannel("DRAGONPAY", "Dragonpay", 0, "PHP");
+
+    mockChannels.add(instapayChannel);
+    mockChannels.add(pesonetChannel);
+    mockChannels.add(unavailableChannel);
+
+    // when
+    when(coinsphAuthenticated.getSupportedFiatChannels(
+            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
+        .thenReturn(mockChannels);
+
+    // then
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(mockChannels).when(spyService).getSupportedFiatChannels("PHP", -1);
+
+    List<CoinsphFiatChannel> result = spyService.getSupportedFiatChannels("PHP", -1);
+
+    assertThat(result).hasSize(3);
+    assertThat(result.get(0).getChannelName()).isEqualTo("INSTAPAY");
+    assertThat(result.get(0).getChannelSubject()).isEqualTo("BDO Network Bank");
+    assertThat(result.get(0).getStatus()).isEqualTo(1);
+    assertThat(result.get(0).getCurrency()).isEqualTo("PHP");
+
+    assertThat(result.get(1).getChannelName()).isEqualTo("PESONET");
+    assertThat(result.get(2).getStatus()).isEqualTo(0); // unavailable
+  }
+
+  @Test
+  public void testFindFirstAvailableChannel() throws IOException {
+    // given
+    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
+
+    CoinsphFiatChannel unavailableChannel =
+        new CoinsphFiatChannel("DRAGONPAY", "Dragonpay", 0, "PHP");
+    CoinsphFiatChannel availableChannel =
+        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 1, "PHP");
+
+    mockChannels.add(unavailableChannel);
+    mockChannels.add(availableChannel);
+
+    // when
+    when(coinsphAuthenticated.getSupportedFiatChannels(
+            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
+        .thenReturn(mockChannels);
+
+    // then
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(mockChannels).when(spyService).getSupportedFiatChannels("PHP", -1);
+
+    Optional<CoinsphFiatChannel> result = spyService.findFirstAvailableChannel("PHP", -1);
+
+    assertThat(result).isPresent();
+    assertThat(result.get().getChannelName()).isEqualTo("INSTAPAY");
+    assertThat(result.get().getStatus()).isEqualTo(1);
+  }
+
+  @Test
+  public void testFindFirstAvailableChannel_NoAvailableChannels() throws IOException {
+    // given
+    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
+
+    CoinsphFiatChannel unavailableChannel1 =
+        new CoinsphFiatChannel("DRAGONPAY", "Dragonpay", 0, "PHP");
+    CoinsphFiatChannel unavailableChannel2 =
+        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 0, "PHP");
+
+    mockChannels.add(unavailableChannel1);
+    mockChannels.add(unavailableChannel2);
+
+    // when
+    when(coinsphAuthenticated.getSupportedFiatChannels(
+            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
+        .thenReturn(mockChannels);
+
+    // then
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(mockChannels).when(spyService).getSupportedFiatChannels("PHP", -1);
+
+    Optional<CoinsphFiatChannel> result = spyService.findFirstAvailableChannel("PHP", -1);
+
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  public void testCashOut() throws IOException {
+    // given
+    Map<String, Object> extendInfo = new HashMap<>();
+    extendInfo.put("recipientAccountNumber", "046800021457");
+    extendInfo.put("recipientName", "NEDDIE C QUINONAS");
+    extendInfo.put("recipientAddress", "29 P.G. Almendras, Danao City, Cebu, PH");
+    extendInfo.put("remarks", "BVNK test payment");
+
+    CoinsphCashOutRequest request =
+        CoinsphCashOutRequest.builder()
+            .amount(new BigDecimal("60"))
+            .internalOrderId("test-order-123")
+            .currency("PHP")
+            .channelName("INSTAPAY")
+            .channelSubject("BDO Network Bank")
+            .extendInfo(extendInfo)
+            .build();
+
+    CoinsphCashOutResponse mockResponse = new CoinsphCashOutResponse("cash-out-order-456");
+
+    // when
+    when(coinsphAuthenticated.cashOut(anyString(), any(), any(), any(), anyLong()))
+        .thenReturn(mockResponse);
+
+    // then
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(mockResponse).when(spyService).cashOut(request);
+
+    CoinsphCashOutResponse result = spyService.cashOut(request);
+
+    assertThat(result).isNotNull();
+    assertThat(result.getOrderId()).isEqualTo("cash-out-order-456");
+  }
+
+  @Test
+  public void testWithdrawFiat_WithBeneficiary() throws IOException {
+    // given
+    Beneficiary mockBeneficiary = mock(Beneficiary.class);
+    Address mockAddress = mock(Address.class);
+
+    when(mockBeneficiary.getAccountNumber()).thenReturn("046800021457");
+    when(mockBeneficiary.getName()).thenReturn("NEDDIE C QUINONAS");
+    when(mockBeneficiary.getReference()).thenReturn("BVNK test payment");
+    when(mockBeneficiary.getAddress()).thenReturn(mockAddress);
+
+    when(mockAddress.getLine1()).thenReturn("29 P.G. Almendras");
+    when(mockAddress.getCity()).thenReturn("Danao City");
+    when(mockAddress.getState()).thenReturn("Cebu");
+    when(mockAddress.getCountry()).thenReturn("PH");
+
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .amount(new BigDecimal("60"))
+            .currency(Currency.getInstance("PHP"))
+            .userReference("test-order-123")
+            .beneficiary(mockBeneficiary)
+            .build();
+
+    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
+    CoinsphFiatChannel availableChannel =
+        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 1, "PHP");
+    mockChannels.add(availableChannel);
+
+    CoinsphCashOutResponse mockResponse = new CoinsphCashOutResponse("cash-out-order-456");
+
+    // when
+    when(coinsphAuthenticated.getSupportedFiatChannels(
+            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
+        .thenReturn(mockChannels);
+
+    when(coinsphAuthenticated.cashOut(anyString(), any(), any(), any(), anyLong()))
+        .thenReturn(mockResponse);
+
+    // then
+    String orderId = accountService.withdrawFunds(params);
+
+    assertThat(orderId).isEqualTo("cash-out-order-456");
+  }
+
+  @Test
+  public void testWithdrawFiat_WithUserReference() throws IOException {
+    // given
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .amount(new BigDecimal("100"))
+            .currency(Currency.getInstance("PHP"))
+            .userReference("custom-ref-789")
+            .build();
+
+    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
+    CoinsphFiatChannel availableChannel = new CoinsphFiatChannel("PESONET", "Union Bank", 1, "PHP");
+    mockChannels.add(availableChannel);
+
+    CoinsphCashOutResponse mockResponse = new CoinsphCashOutResponse("cash-out-order-789");
+
+    // when
+    when(coinsphAuthenticated.getSupportedFiatChannels(
+            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
+        .thenReturn(mockChannels);
+
+    when(coinsphAuthenticated.cashOut(anyString(), any(), any(), any(), anyLong()))
+        .thenReturn(mockResponse);
+
+    // then
+    String orderId = accountService.withdrawFunds(params);
+
+    assertThat(orderId).isEqualTo("cash-out-order-789");
+  }
+
+  @Test
+  public void testWithdrawFiat_WithCustomParameters() throws IOException {
+    // given
+    Map<String, Object> customParams = new HashMap<>();
+    customParams.put("customField1", "customValue1");
+    customParams.put("customField2", 123);
+
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .amount(new BigDecimal("250"))
+            .currency(Currency.getInstance("PHP"))
+            .customParameters(customParams)
+            .build();
+
+    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
+    CoinsphFiatChannel availableChannel =
+        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 1, "PHP");
+    mockChannels.add(availableChannel);
+
+    CoinsphCashOutResponse mockResponse = new CoinsphCashOutResponse("cash-out-order-custom");
+
+    // when
+    when(coinsphAuthenticated.getSupportedFiatChannels(
+            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
+        .thenReturn(mockChannels);
+
+    when(coinsphAuthenticated.cashOut(anyString(), any(), any(), any(), anyLong()))
+        .thenReturn(mockResponse);
+
+    // then
+    String orderId = accountService.withdrawFunds(params);
+
+    assertThat(orderId).isEqualTo("cash-out-order-custom");
+  }
+
+  @Test
+  public void testWithdrawFiat_NoAvailableChannels() throws IOException {
+    // given
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .amount(new BigDecimal("60"))
+            .currency(Currency.getInstance("PHP"))
+            .build();
+
+    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
+    CoinsphFiatChannel unavailableChannel =
+        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 0, "PHP");
+    mockChannels.add(unavailableChannel);
+
+    // when
+    when(coinsphAuthenticated.getSupportedFiatChannels(
+            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
+        .thenReturn(mockChannels);
+
+    // then
+    assertThatThrownBy(() -> accountService.withdrawFunds(params))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("No available fiat channels found for currency: PHP");
+  }
+
+  @Test
+  public void testFormatAddress_FullAddress() {
+    // given
+    Address mockAddress = mock(Address.class);
+    when(mockAddress.getLine1()).thenReturn("123 Main Street");
+    when(mockAddress.getLine2()).thenReturn("Apt 4B");
+    when(mockAddress.getCity()).thenReturn("Manila");
+    when(mockAddress.getState()).thenReturn("Metro Manila");
+    when(mockAddress.getCountry()).thenReturn("Philippines");
+
+    // when
+    CoinsphAccountService spyService = spy(accountService);
+
+    // Use reflection to test the private method by creating a test method
+    String result = invokeFormatAddress(spyService, mockAddress);
+
+    // then
+    assertThat(result).isEqualTo("123 Main Street, Apt 4B, Manila, Metro Manila, Philippines");
+  }
+
+  @Test
+  public void testFormatAddress_PartialAddress() {
+    // given
+    Address mockAddress = mock(Address.class);
+    when(mockAddress.getLine1()).thenReturn("456 Oak Avenue");
+    when(mockAddress.getLine2()).thenReturn("");
+    when(mockAddress.getCity()).thenReturn("Cebu City");
+    when(mockAddress.getState()).thenReturn(null);
+    when(mockAddress.getCountry()).thenReturn("Philippines");
+
+    // when
+    CoinsphAccountService spyService = spy(accountService);
+    String result = invokeFormatAddress(spyService, mockAddress);
+
+    // then
+    assertThat(result).isEqualTo("456 Oak Avenue, Cebu City, Philippines");
+  }
+
+  @Test
+  public void testGenerateInternalOrderId_WithUserReference() {
+    // given
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .amount(new BigDecimal("100"))
+            .currency(Currency.getInstance("PHP"))
+            .userReference("user-provided-id")
+            .build();
+
+    // when
+    CoinsphAccountService spyService = spy(accountService);
+    String result = invokeGenerateInternalOrderId(spyService, params);
+
+    // then
+    assertThat(result).isEqualTo("user-provided-id");
+  }
+
+  @Test
+  public void testGenerateInternalOrderId_WithoutUserReference() {
+    // given
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .amount(new BigDecimal("100"))
+            .currency(Currency.getInstance("PHP"))
+            .build();
+
+    // when
+    CoinsphAccountService spyService = spy(accountService);
+    String result = invokeGenerateInternalOrderId(spyService, params);
+
+    // then
+    assertThat(result).isNotNull();
+    assertThat(result).hasSize(36); // UUID format length
+    assertThat(result).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+  }
+
+  // Helper methods to test private methods using reflection
+  private String invokeFormatAddress(CoinsphAccountService service, Address address) {
+    try {
+      java.lang.reflect.Method method =
+          CoinsphAccountService.class.getDeclaredMethod(
+              "formatAddress", org.knowm.xchange.service.trade.params.withdrawals.Address.class);
+      method.setAccessible(true);
+      return (String) method.invoke(service, address);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private String invokeGenerateInternalOrderId(
+      CoinsphAccountService service, FiatWithdrawFundsParams params) {
+    try {
+      java.lang.reflect.Method method =
+          CoinsphAccountService.class.getDeclaredMethod(
+              "generateInternalOrderId", FiatWithdrawFundsParams.class);
+      method.setAccessible(true);
+      return (String) method.invoke(service, params);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }
