@@ -1,109 +1,113 @@
 package org.knowm.xchange.bitso.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import lombok.Builder;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
+
 import java.math.BigDecimal;
-import java.util.Date;
-import si.mazi.rescu.ExceptionalReturnContentException;
-import si.mazi.rescu.serialization.jackson.serializers.TimestampDeserializer;
+import java.time.Instant;
 
 /**
- * @author Piotr Ładyżyński
+ * @author Piotr Ładyżyński Updated for Bitso API v3
  */
+@Value
+@Jacksonized
+@Builder
 public class BitsoTicker {
 
-  private final BigDecimal last;
-  private final BigDecimal high;
-  private final BigDecimal low;
-  private final BigDecimal vwap;
-  private final BigDecimal volume;
-  private final BigDecimal bid;
-  private final BigDecimal ask;
-  private final Date timestamp;
+  private Boolean success;
 
-  public BitsoTicker(
-      @JsonProperty("last") BigDecimal last,
-      @JsonProperty("high") BigDecimal high,
-      @JsonProperty("low") BigDecimal low,
-      @JsonProperty("vwap") BigDecimal vwap,
-      @JsonProperty("volume") BigDecimal volume,
-      @JsonProperty("bid") BigDecimal bid,
-      @JsonProperty("ask") BigDecimal ask,
-      @JsonProperty("timestamp") @JsonDeserialize(using = TimestampDeserializer.class)
-          Date timestamp) {
+  private BitsoTickerData payload;
 
-    if (last == null) {
-      throw new ExceptionalReturnContentException("No last in response.");
+  @Value
+  @Jacksonized
+  @Builder
+  public static class BitsoTickerData {
+
+    private String book;
+
+    private String volume;
+
+    private String high;
+
+    private String last;
+
+    private String low;
+
+    private String vwap;
+
+    private String ask;
+
+    private String bid;
+
+    private Instant createdAt;
+
+    @JsonProperty("change_24")
+    private String change24;
+
+    private Object rollingAverageChange;
+
+    // Legacy getters for backwards compatibility
+    public BigDecimal getLastAsDecimal() {
+      return last != null ? new BigDecimal(last) : null;
     }
-    this.last = last;
-    this.high = high;
-    this.low = low;
-    this.vwap = vwap;
-    this.volume = volume;
-    this.bid = bid;
-    this.ask = ask;
-    this.timestamp = timestamp;
+
+    public BigDecimal getHighAsDecimal() {
+      return high != null ? new BigDecimal(high) : null;
+    }
+
+    public BigDecimal getLowAsDecimal() {
+      return low != null ? new BigDecimal(low) : null;
+    }
+
+    public BigDecimal getVwapAsDecimal() {
+      return vwap != null ? new BigDecimal(vwap) : null;
+    }
+
+    public BigDecimal getVolumeAsDecimal() {
+      return volume != null ? new BigDecimal(volume) : null;
+    }
+
+    public BigDecimal getBidAsDecimal() {
+      return bid != null ? new BigDecimal(bid) : null;
+    }
+
+    public BigDecimal getAskAsDecimal() {
+      return ask != null ? new BigDecimal(ask) : null;
+    }
+
+    public BigDecimal getChange24AsDecimal() {
+      return change24 != null ? new BigDecimal(change24) : null;
+    }
   }
 
+  // Legacy methods for backwards compatibility
   public BigDecimal getLast() {
-
-    return last;
+    return payload != null ? payload.getLastAsDecimal() : null;
   }
 
   public BigDecimal getHigh() {
-
-    return high;
+    return payload != null ? payload.getHighAsDecimal() : null;
   }
 
   public BigDecimal getLow() {
-
-    return low;
+    return payload != null ? payload.getLowAsDecimal() : null;
   }
 
   public BigDecimal getVwap() {
-
-    return vwap;
+    return payload != null ? payload.getVwapAsDecimal() : null;
   }
 
   public BigDecimal getVolume() {
-
-    return volume;
+    return payload != null ? payload.getVolumeAsDecimal() : null;
   }
 
   public BigDecimal getBid() {
-
-    return bid;
+    return payload != null ? payload.getBidAsDecimal() : null;
   }
 
   public BigDecimal getAsk() {
-
-    return ask;
-  }
-
-  public Date getTimestamp() {
-
-    return timestamp;
-  }
-
-  @Override
-  public String toString() {
-
-    return "BitsoTicker [last="
-        + last
-        + ", high="
-        + high
-        + ", low="
-        + low
-        + ", vwap="
-        + vwap
-        + ", volume="
-        + volume
-        + ", bid="
-        + bid
-        + ", ask="
-        + ask
-        + ", timestamp="
-        + timestamp
-        + "]";
+    return payload != null ? payload.getAskAsDecimal() : null;
   }
 }
