@@ -1,6 +1,5 @@
 package org.knowm.xchange.bitso.service;
 
-import java.io.IOException;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.BitsoAdapters;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -9,8 +8,10 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 
+import java.io.IOException;
+
 /**
- * @author Piotr Ładyżyński
+ * @author Piotr Ładyżyński Updated for Bitso API v3
  */
 public class BitsoMarketDataService extends BitsoMarketDataServiceRaw implements MarketDataService {
 
@@ -30,6 +31,6 @@ public class BitsoMarketDataService extends BitsoMarketDataServiceRaw implements
 
   @Override
   public Trades getTrades(CurrencyPair currencyPair, Object... args) throws IOException {
-    return BitsoAdapters.adaptTrades(getBitsoTransactions(args), currencyPair);
+    return BitsoAdapters.adaptTrades(getBitsoTrades(currencyPair, args), currencyPair);
   }
 }

@@ -1,0 +1,7382 @@
+{
+  "payload": [
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.05",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "ada_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "40000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.04",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "200",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "90000",
+      "book": "sol_mxn",
+      "minimum_value": "3",
+      "maximum_amount": "500000",
+      "maximum_value": "70000000",
+      "minimum_amount": "0.0005",
+      "tick_size": "0.01"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.06",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "dydx_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "9000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.009",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.004",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.00075",
+          "taker": "0.00098"
+        },
+        "structure": [
+          {
+            "volume": "8",
+            "maker": "0.00075",
+            "taker": "0.00098"
+          },
+          {
+            "volume": "10",
+            "maker": "0.00072",
+            "taker": "0.00094"
+          },
+          {
+            "volume": "18",
+            "maker": "0.00071",
+            "taker": "0.00092"
+          },
+          {
+            "volume": "30",
+            "maker": "0.0007",
+            "taker": "0.00091"
+          },
+          {
+            "volume": "45",
+            "maker": "0.00067",
+            "taker": "0.00087"
+          },
+          {
+            "volume": "65",
+            "maker": "0.00065",
+            "taker": "0.00085"
+          },
+          {
+            "volume": "180",
+            "maker": "0.00063",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "500",
+            "maker": "0.00059",
+            "taker": "0.00077"
+          },
+          {
+            "volume": "950",
+            "maker": "0.00055",
+            "taker": "0.00072"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0005",
+            "taker": "0.00065"
+          }
+        ]
+      },
+      "maximum_price": "1",
+      "book": "eth_btc",
+      "minimum_value": "0.00003",
+      "maximum_amount": "8000",
+      "maximum_value": "600",
+      "minimum_amount": "0.000008",
+      "tick_size": "0.000001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.000003",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.00075",
+          "taker": "0.00098"
+        },
+        "structure": [
+          {
+            "volume": "8",
+            "maker": "0.00075",
+            "taker": "0.00098"
+          },
+          {
+            "volume": "10",
+            "maker": "0.00072",
+            "taker": "0.00094"
+          },
+          {
+            "volume": "18",
+            "maker": "0.00071",
+            "taker": "0.00092"
+          },
+          {
+            "volume": "30",
+            "maker": "0.0007",
+            "taker": "0.00091"
+          },
+          {
+            "volume": "45",
+            "maker": "0.00067",
+            "taker": "0.00087"
+          },
+          {
+            "volume": "65",
+            "maker": "0.00065",
+            "taker": "0.00085"
+          },
+          {
+            "volume": "180",
+            "maker": "0.00063",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "500",
+            "maker": "0.00059",
+            "taker": "0.00077"
+          },
+          {
+            "volume": "950",
+            "maker": "0.00055",
+            "taker": "0.00072"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0005",
+            "taker": "0.00065"
+          }
+        ]
+      },
+      "maximum_price": "0.001",
+      "book": "tusd_btc",
+      "minimum_value": "0.00003",
+      "maximum_amount": "10000000",
+      "maximum_value": "600",
+      "minimum_amount": "0.01",
+      "tick_size": "0.00000001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "20",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00274"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00224"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00084",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "10000",
+      "book": "ltc_brl",
+      "minimum_value": "3",
+      "maximum_amount": "100000",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.0001",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.07",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "30",
+      "book": "ondo_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "4000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.72",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "70",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "30000",
+      "book": "ltc_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "100000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.0001",
+      "tick_size": "0.1"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "20",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0045",
+          "taker": "0.006"
+        },
+        "structure": [
+          {
+            "volume": "1300000",
+            "maker": "0.0045",
+            "taker": "0.006"
+          },
+          {
+            "volume": "6500000",
+            "maker": "0.0041",
+            "taker": "0.0055"
+          },
+          {
+            "volume": "19500000",
+            "maker": "0.0037",
+            "taker": "0.005"
+          },
+          {
+            "volume": "65000000",
+            "maker": "0.0032",
+            "taker": "0.0045"
+          },
+          {
+            "volume": "195000000",
+            "maker": "0.0028",
+            "taker": "0.004"
+          },
+          {
+            "volume": "455000000",
+            "maker": "0.0025",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "975000000",
+            "maker": "0.0022",
+            "taker": "0.003"
+          },
+          {
+            "volume": "1950000000",
+            "maker": "0.0017",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "3900000000",
+            "maker": "0.0014",
+            "taker": "0.002"
+          },
+          {
+            "volume": "99999999999",
+            "maker": "0.001",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "7000",
+      "book": "usd_ars",
+      "minimum_value": "200",
+      "maximum_amount": "10000000",
+      "maximum_value": "3000000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.01"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "200000",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0045",
+          "taker": "0.006"
+        },
+        "structure": [
+          {
+            "volume": "1300000",
+            "maker": "0.0045",
+            "taker": "0.006"
+          },
+          {
+            "volume": "6500000",
+            "maker": "0.0041",
+            "taker": "0.0055"
+          },
+          {
+            "volume": "19500000",
+            "maker": "0.0037",
+            "taker": "0.005"
+          },
+          {
+            "volume": "65000000",
+            "maker": "0.0032",
+            "taker": "0.0045"
+          },
+          {
+            "volume": "195000000",
+            "maker": "0.0028",
+            "taker": "0.004"
+          },
+          {
+            "volume": "455000000",
+            "maker": "0.0025",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "975000000",
+            "maker": "0.0022",
+            "taker": "0.003"
+          },
+          {
+            "volume": "1950000000",
+            "maker": "0.0017",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "3900000000",
+            "maker": "0.0014",
+            "taker": "0.002"
+          },
+          {
+            "volume": "99999999999",
+            "maker": "0.001",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "70000000",
+      "book": "eth_ars",
+      "minimum_value": "200",
+      "maximum_amount": "8000",
+      "maximum_value": "3000000000",
+      "minimum_amount": "0.000008",
+      "tick_size": "10"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.03",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "10",
+      "book": "crv_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "20000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.02",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "300",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "100000",
+      "book": "yfi_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.000002",
+      "tick_size": "0.1"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "70",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00274"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00224"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00084",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "30000",
+      "book": "sol_brl",
+      "minimum_value": "3",
+      "maximum_amount": "300000",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.0003",
+      "tick_size": "0.01"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.01",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "4",
+      "book": "trx_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "200000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.2",
+      "tick_size": "0.000001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.03",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "10",
+      "book": "xlm_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "100000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.1",
+      "tick_size": "0.000001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "5000",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "40000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "52000",
+            "maker": "0.0024",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "130000",
+            "maker": "0.0021",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "180000",
+            "maker": "0.002",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "260000",
+            "maker": "0.0018",
+            "taker": "0.002"
+          },
+          {
+            "volume": "390000",
+            "maker": "0.0016",
+            "taker": "0.0018"
+          },
+          {
+            "volume": "910000",
+            "maker": "0.0015",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "5200000",
+            "maker": "0.001",
+            "taker": "0.0014"
+          },
+          {
+            "volume": "19500000",
+            "maker": "0.0009",
+            "taker": "0.0013"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.001"
+          }
+        ]
+      },
+      "maximum_price": "2000000",
+      "book": "btc_dai",
+      "minimum_value": "0.5",
+      "maximum_amount": "600",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0000006",
+      "tick_size": "1"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "5000",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "2000000",
+      "book": "btc_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "600",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0000006",
+      "tick_size": "1"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.07",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "30",
+      "book": "snx_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "7000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.007",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "50",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.00389"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "20000",
+      "book": "avax_mxn",
+      "minimum_value": "3",
+      "maximum_amount": "600000",
+      "maximum_value": "70000000",
+      "minimum_amount": "0.0006",
+      "tick_size": "0.01"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.05",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "ldo_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "10000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.00095",
+          "taker": "0.00099"
+        },
+        "structure": [
+          {
+            "volume": "500000",
+            "maker": "0.00095",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.0009",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1500000",
+            "maker": "0.00084",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "3000000",
+            "maker": "0.0008",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00075",
+            "taker": "0.0009"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00069",
+            "taker": "0.0008"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "50",
+      "book": "xrp_usdt",
+      "minimum_value": "0.5",
+      "maximum_amount": "20000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.02",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "90",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "40000",
+      "book": "paxg_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "6000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.000006",
+      "tick_size": "0.1"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.05",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "s_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "50000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.05",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "5000",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.00095",
+          "taker": "0.00099"
+        },
+        "structure": [
+          {
+            "volume": "500000",
+            "maker": "0.00095",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.0009",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1500000",
+            "maker": "0.00084",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "3000000",
+            "maker": "0.0008",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00075",
+            "taker": "0.0009"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00069",
+            "taker": "0.0008"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "2000000",
+      "book": "btc_usdt",
+      "minimum_value": "0.5",
+      "maximum_amount": "600",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0000006",
+      "tick_size": "1"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.05",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "omg_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00545"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.00389"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "400",
+      "book": "pyusd_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "10000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.01",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "5",
+      "book": "popcat_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "5000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.8",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "100",
+      "book": "psg_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.000001",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "0.0004",
+      "book": "pepe_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "8000000000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "8000",
+      "tick_size": "0.00000001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.2",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "80",
+      "book": "bar_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "90",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "40000",
+      "book": "mkr_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "20000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.00002",
+      "tick_size": "0.01"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.5",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.00095",
+          "taker": "0.00099"
+        },
+        "structure": [
+          {
+            "volume": "500000",
+            "maker": "0.00095",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.0009",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1500000",
+            "maker": "0.00084",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "3000000",
+            "maker": "0.0008",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00075",
+            "taker": "0.0009"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00069",
+            "taker": "0.0008"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "2000",
+      "book": "sol_usdt",
+      "minimum_value": "0.5",
+      "maximum_amount": "900000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0009",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "1000",
+      "book": "avax_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "600000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0006",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "200",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "80000",
+      "book": "eth_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "8000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.000008",
+      "tick_size": "0.1"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.9",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "300",
+      "book": "uni_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.05",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "sushi_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "10000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.000002",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "0.0008",
+      "book": "bonk_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "140000000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "25000",
+      "tick_size": "0.00000001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "100",
+      "book": "axs_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.01",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "6",
+      "book": "hbar_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "20000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "5",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.01",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "5",
+      "book": "bat_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "40000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.04",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.03",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "10",
+      "book": "wif_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.28",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "2",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "700",
+      "book": "comp_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "300000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0003",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.5",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "200",
+      "book": "render_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "600000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.1",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.2",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "80",
+      "book": "ton_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "1500000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.25",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.00001",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "0.004",
+      "book": "floki_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "25000000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "5000",
+      "tick_size": "0.00000001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "200",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "15000000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0048",
+            "taker": "0.0062"
+          },
+          {
+            "volume": "75000000",
+            "maker": "0.0045",
+            "taker": "0.0059"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.0036",
+            "taker": "0.0047"
+          },
+          {
+            "volume": "300000000",
+            "maker": "0.0034",
+            "taker": "0.0045"
+          },
+          {
+            "volume": "750000000",
+            "maker": "0.0033",
+            "taker": "0.0042"
+          },
+          {
+            "volume": "2500000000",
+            "maker": "0.0026",
+            "taker": "0.0034"
+          },
+          {
+            "volume": "6000000000",
+            "maker": "0.0025",
+            "taker": "0.0032"
+          },
+          {
+            "volume": "30000000000",
+            "maker": "0.0024",
+            "taker": "0.0031"
+          },
+          {
+            "volume": "85000000000",
+            "maker": "0.0015",
+            "taker": "0.002"
+          },
+          {
+            "volume": "120000000000",
+            "maker": "0.0014",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "190000000000",
+            "maker": "0.0013",
+            "taker": "0.0018"
+          },
+          {
+            "volume": "999999999999999",
+            "maker": "0.0012",
+            "taker": "0.0017"
+          }
+        ]
+      },
+      "maximum_price": "90000",
+      "book": "usd_cop",
+      "minimum_value": "2000",
+      "maximum_amount": "10000000",
+      "maximum_value": "50000000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.1"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "30",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "10000",
+      "book": "bch_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "90000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.00009",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.07",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0025",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "30",
+      "book": "fet_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "4000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.72",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.2",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "90",
+      "book": "dot_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "100",
+      "book": "mana_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "30000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.03",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "100",
+      "book": "near_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "3000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.003",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "100000",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "40000000",
+      "book": "btc_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "600",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.0000006",
+      "tick_size": "10"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00274"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00224"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00084",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "100",
+      "book": "usdt_brl",
+      "minimum_value": "3",
+      "maximum_amount": "2000000",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "90",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.00095",
+          "taker": "0.00099"
+        },
+        "structure": [
+          {
+            "volume": "500000",
+            "maker": "0.00095",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.0009",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1500000",
+            "maker": "0.00084",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "3000000",
+            "maker": "0.0008",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00075",
+            "taker": "0.0009"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00069",
+            "taker": "0.0008"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "40000",
+      "book": "eth_usdt",
+      "minimum_value": "0.5",
+      "maximum_amount": "5000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.000005",
+      "tick_size": "0.1"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.01",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "5",
+      "book": "grt_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "200000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.2",
+      "tick_size": "0.000001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.02",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "9",
+      "book": "sand_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "20000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.02",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "1000",
+      "book": "ltc_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "100000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0001",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "100",
+      "book": "bal_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.999",
+      "fees": {
+        "flat_rate": {
+          "maker": "0",
+          "taker": "0.0001"
+        },
+        "structure": [
+          {
+            "volume": "1",
+            "maker": "0",
+            "taker": "0.0001"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0",
+            "taker": "0.0001"
+          }
+        ]
+      },
+      "maximum_price": "1.0011",
+      "book": "brl1_brl",
+      "minimum_value": "2.5",
+      "maximum_amount": "30000000",
+      "maximum_value": "30000000",
+      "minimum_amount": "1",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00545"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.00389"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "400",
+      "book": "usdt_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "10000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.005",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "2",
+      "book": "chz_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "90000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.09",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "400",
+      "book": "dai_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "10000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "30000",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00275"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00225"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00085",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "10000000",
+      "book": "btc_brl",
+      "minimum_value": "3",
+      "maximum_amount": "600",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.0000006",
+      "tick_size": "10"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.0000004",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "0.0002",
+      "book": "shib_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "1000000000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "1000",
+      "tick_size": "0.00000001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00274"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00224"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00084",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "50",
+      "book": "ada_brl",
+      "minimum_value": "3",
+      "maximum_amount": "20000000",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.02",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.5",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "2000",
+      "book": "sol_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "900000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0009",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.6",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "200",
+      "book": "atom_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "700000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0007",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.01",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "5",
+      "book": "enj_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "40000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.04",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "500",
+      "book": "hype_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "250000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.08",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.05",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.00095",
+          "taker": "0.00099"
+        },
+        "structure": [
+          {
+            "volume": "500000",
+            "maker": "0.00095",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.0009",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "1500000",
+            "maker": "0.00084",
+            "taker": "0.00099"
+          },
+          {
+            "volume": "3000000",
+            "maker": "0.0008",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00075",
+            "taker": "0.0009"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00069",
+            "taker": "0.0008"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "usd_usdt",
+      "minimum_value": "0.5",
+      "maximum_amount": "10000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.01",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "4",
+      "book": "lrc_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "50000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.05",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "10",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "4000",
+      "book": "aave_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "200000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.0002",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.003",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "1",
+      "book": "gala_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "600000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.6",
+      "tick_size": "0.000001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.07",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "30",
+      "book": "xrp_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "30000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.03",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.006",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "3",
+      "book": "doge_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "80000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.08",
+      "tick_size": "0.000001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "50",
+      "book": "virtual_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2400000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.5",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "100",
+      "book": "trx_mxn",
+      "minimum_value": "3",
+      "maximum_amount": "100000000",
+      "maximum_value": "70000000",
+      "minimum_amount": "0.1",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "5000000",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0045",
+          "taker": "0.006"
+        },
+        "structure": [
+          {
+            "volume": "1300000",
+            "maker": "0.0045",
+            "taker": "0.006"
+          },
+          {
+            "volume": "6500000",
+            "maker": "0.0041",
+            "taker": "0.0055"
+          },
+          {
+            "volume": "19500000",
+            "maker": "0.0037",
+            "taker": "0.005"
+          },
+          {
+            "volume": "65000000",
+            "maker": "0.0032",
+            "taker": "0.0045"
+          },
+          {
+            "volume": "195000000",
+            "maker": "0.0028",
+            "taker": "0.004"
+          },
+          {
+            "volume": "455000000",
+            "maker": "0.0025",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "975000000",
+            "maker": "0.0022",
+            "taker": "0.003"
+          },
+          {
+            "volume": "1950000000",
+            "maker": "0.0017",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "3900000000",
+            "maker": "0.0014",
+            "taker": "0.002"
+          },
+          {
+            "volume": "99999999999",
+            "maker": "0.001",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "2000000000",
+      "book": "btc_ars",
+      "minimum_value": "200",
+      "maximum_amount": "600",
+      "maximum_value": "3000000000",
+      "minimum_amount": "0.0000006",
+      "tick_size": "100"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.2",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "70",
+      "book": "bat_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "60000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.06",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.02",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "7",
+      "book": "tigres_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "5000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.005",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.3",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00274"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00224"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00084",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "100",
+      "book": "usd_brl",
+      "minimum_value": "3",
+      "maximum_amount": "10000000",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00545"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.00389"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "400",
+      "book": "eur_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "10000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.03",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "10",
+      "book": "ape_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "1200000",
+      "maximum_value": "10000000",
+      "minimum_amount": "2",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.04",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "arb_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "8000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.008",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00545"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.00389"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "400",
+      "book": "usd_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "10000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00274"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00224"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00084",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "40",
+      "book": "doge_brl",
+      "minimum_value": "3",
+      "maximum_amount": "200000000",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.2",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "1000",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "500000",
+      "book": "eth_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "8000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.000008",
+      "tick_size": "1"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "2",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "600",
+      "book": "xrp_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "30000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.03",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "500",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "200000",
+      "book": "bch_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "100000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.0001",
+      "tick_size": "0.1"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.04",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "matic_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "10000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.04",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "20",
+      "book": "pol_usd",
+      "minimum_value": "0.05",
+      "maximum_amount": "10000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.7",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00274"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00224"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00084",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "300",
+      "book": "xrp_brl",
+      "minimum_value": "3",
+      "maximum_amount": "20000000",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.02",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "6",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "2000",
+      "book": "qnt_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "90000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.00009",
+      "tick_size": "0.01"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00546"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.0039"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "400",
+      "book": "tusd_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "10000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.02",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "6",
+      "book": "mana_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "30000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.03",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "1000",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00274"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00224"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00084",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "400000",
+      "book": "eth_brl",
+      "minimum_value": "3",
+      "maximum_amount": "8000",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.000008",
+      "tick_size": "0.1"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "20",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0045",
+          "taker": "0.006"
+        },
+        "structure": [
+          {
+            "volume": "1300000",
+            "maker": "0.0045",
+            "taker": "0.006"
+          },
+          {
+            "volume": "6500000",
+            "maker": "0.0041",
+            "taker": "0.0055"
+          },
+          {
+            "volume": "19500000",
+            "maker": "0.0037",
+            "taker": "0.005"
+          },
+          {
+            "volume": "65000000",
+            "maker": "0.0032",
+            "taker": "0.0045"
+          },
+          {
+            "volume": "195000000",
+            "maker": "0.0028",
+            "taker": "0.004"
+          },
+          {
+            "volume": "455000000",
+            "maker": "0.0025",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "975000000",
+            "maker": "0.0022",
+            "taker": "0.003"
+          },
+          {
+            "volume": "1950000000",
+            "maker": "0.0017",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "3900000000",
+            "maker": "0.0014",
+            "taker": "0.002"
+          },
+          {
+            "volume": "99999999999",
+            "maker": "0.001",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "7000",
+      "book": "usdt_ars",
+      "minimum_value": "200",
+      "maximum_amount": "10000000",
+      "maximum_value": "3000000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.01"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "200",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.002",
+          "taker": "0.004"
+        },
+        "structure": [
+          {
+            "volume": "541000",
+            "maker": "0.002",
+            "taker": "0.004"
+          },
+          {
+            "volume": "1352500",
+            "maker": "0.002",
+            "taker": "0.0035"
+          },
+          {
+            "volume": "2705000",
+            "maker": "0.00175",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5410000",
+            "maker": "0.0015",
+            "taker": "0.00274"
+          },
+          {
+            "volume": "27050000",
+            "maker": "0.00125",
+            "taker": "0.0025"
+          },
+          {
+            "volume": "54100000",
+            "maker": "0.001",
+            "taker": "0.00224"
+          },
+          {
+            "volume": "81150000",
+            "maker": "0.00095",
+            "taker": "0.002"
+          },
+          {
+            "volume": "108200000",
+            "maker": "0.0009",
+            "taker": "0.00175"
+          },
+          {
+            "volume": "162300000",
+            "maker": "0.00084",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0008",
+            "taker": "0.0015"
+          }
+        ]
+      },
+      "maximum_price": "60000",
+      "book": "bch_brl",
+      "minimum_value": "3",
+      "maximum_amount": "70000",
+      "maximum_value": "50000000",
+      "minimum_amount": "0.00007",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "0.008",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "3",
+      "book": "algo_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "60000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.06",
+      "tick_size": "0.00001"
+    },
+    {
+      "default_chart": "tradingview",
+      "minimum_price": "0.00002",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "0.008",
+      "book": "neiro_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "500",
+      "tick_size": "0.00000001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "1500000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "2000000",
+            "maker": "0.0049",
+            "taker": "0.00637"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.0048",
+            "taker": "0.00624"
+          },
+          {
+            "volume": "7000000",
+            "maker": "0.0044",
+            "taker": "0.00572"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.0042",
+            "taker": "0.00545"
+          },
+          {
+            "volume": "15000000",
+            "maker": "0.004",
+            "taker": "0.0052"
+          },
+          {
+            "volume": "35000000",
+            "maker": "0.0037",
+            "taker": "0.00481"
+          },
+          {
+            "volume": "50000000",
+            "maker": "0.003",
+            "taker": "0.00389"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.002",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.001",
+            "taker": "0.0013"
+          }
+        ]
+      },
+      "maximum_price": "400",
+      "book": "rlusd_mxn",
+      "minimum_value": "10",
+      "maximum_amount": "10000000",
+      "maximum_value": "200000000",
+      "minimum_amount": "0.01",
+      "tick_size": "0.001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "1",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.0025",
+          "taker": "0.003"
+        },
+        "structure": [
+          {
+            "volume": "1000",
+            "maker": "0.0025",
+            "taker": "0.003"
+          },
+          {
+            "volume": "5000",
+            "maker": "0.0021",
+            "taker": "0.0026"
+          },
+          {
+            "volume": "10000",
+            "maker": "0.0018",
+            "taker": "0.0022"
+          },
+          {
+            "volume": "50000",
+            "maker": "0.0015",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "100000",
+            "maker": "0.0012",
+            "taker": "0.0016"
+          },
+          {
+            "volume": "1000000",
+            "maker": "0.001",
+            "taker": "0.0012"
+          },
+          {
+            "volume": "5000000",
+            "maker": "0.00085",
+            "taker": "0.00095"
+          },
+          {
+            "volume": "10000000",
+            "maker": "0.00072",
+            "taker": "0.00082"
+          },
+          {
+            "volume": "20000000",
+            "maker": "0.0006",
+            "taker": "0.00069"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0005",
+            "taker": "0.0006"
+          },
+          {
+            "volume": "9999999999",
+            "maker": "0.0004",
+            "taker": "0.0005"
+          }
+        ]
+      },
+      "maximum_price": "600",
+      "book": "link_usd",
+      "minimum_value": "0.5",
+      "maximum_amount": "2000000",
+      "maximum_value": "10000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.0001"
+    },
+    {
+      "default_chart": "depth",
+      "minimum_price": "200",
+      "fees": {
+        "flat_rate": {
+          "maker": "0.005",
+          "taker": "0.0065"
+        },
+        "structure": [
+          {
+            "volume": "15000000",
+            "maker": "0.005",
+            "taker": "0.0065"
+          },
+          {
+            "volume": "30000000",
+            "maker": "0.0048",
+            "taker": "0.0062"
+          },
+          {
+            "volume": "75000000",
+            "maker": "0.0045",
+            "taker": "0.0059"
+          },
+          {
+            "volume": "150000000",
+            "maker": "0.0036",
+            "taker": "0.0047"
+          },
+          {
+            "volume": "300000000",
+            "maker": "0.0034",
+            "taker": "0.0045"
+          },
+          {
+            "volume": "750000000",
+            "maker": "0.0033",
+            "taker": "0.0042"
+          },
+          {
+            "volume": "2500000000",
+            "maker": "0.0026",
+            "taker": "0.0034"
+          },
+          {
+            "volume": "6000000000",
+            "maker": "0.0025",
+            "taker": "0.0032"
+          },
+          {
+            "volume": "30000000000",
+            "maker": "0.0024",
+            "taker": "0.0031"
+          },
+          {
+            "volume": "85000000000",
+            "maker": "0.0015",
+            "taker": "0.002"
+          },
+          {
+            "volume": "120000000000",
+            "maker": "0.0014",
+            "taker": "0.0019"
+          },
+          {
+            "volume": "190000000000",
+            "maker": "0.0013",
+            "taker": "0.0018"
+          },
+          {
+            "volume": "999999999999999",
+            "maker": "0.0012",
+            "taker": "0.0017"
+          }
+        ]
+      },
+      "maximum_price": "90000",
+      "book": "usdt_cop",
+      "minimum_value": "2000",
+      "maximum_amount": "2000000",
+      "maximum_value": "50000000000",
+      "minimum_amount": "0.002",
+      "tick_size": "0.1"
+    }
+  ],
+  "success": true
+}
