@@ -14,48 +14,53 @@ import java.util.Map;
 public class BitsoWithdrawalRequest {
 
   /** Currency code */
-  private final String currency;
+  String currency;
 
   /** Amount to withdraw */
-  private final BigDecimal amount;
+  BigDecimal amount;
 
-  private final BigDecimal maxFee;
+  BigDecimal maxFee;
 
-  private final String asset;
+  String asset;
 
-  /** Network for crypto withdrawals */
-  private final String network;
+  String network;
 
-  private final String method;
+  String method;
 
-  private final String protocol;
+  String protocol;
 
   /** Destination address for crypto withdrawals */
-  private final String address;
+  String address;
 
   /** Address tag for currencies that require it */
-  private final String addressTag;
+  String addressTag;
 
-  private final String originId;
+  String originId;
 
   /** Receiving account ID for fiat withdrawals */
-  private final String receivingAccountId;
+  String receivingAccountId;
 
   /** PIX key for PIX withdrawals */
-  private final String pixKey;
+  String pixKey;
 
   /** PIX key type (cpf, cnpj, email, phone, random) */
-  private final String pixKeyType;
+  String pixKeyType;
 
   /** Description for PIX withdrawals */
-  private final String description;
+  String description;
 
   /** Internal reference ID */
-  private final String internalId;
+  String internalId;
 
   /** Additional parameters for specific withdrawal types */
-  private final Map<String, Object> additionalInfo;
+  Map<String, Object> additionalInfo;
 
   /** Notes or reference for the withdrawal */
-  private final String notes;
+  String notesRef;
+
+  String beneficiary;
+
+  String clabe;
+
+  String institutionCode;
 }

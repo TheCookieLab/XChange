@@ -169,7 +169,7 @@ public final class BitsoAdapters {
     if (currency.equalsIgnoreCase("usdc")) {
       return Currency.USD.getCurrencyCode().toLowerCase();
     }
-    return currency;
+    return currency.toLowerCase();
   }
 
   public static String fromBitsoCurrency(String bitsoCurrency) {

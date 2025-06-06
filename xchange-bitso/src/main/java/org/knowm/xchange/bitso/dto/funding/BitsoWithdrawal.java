@@ -1,5 +1,6 @@
 package org.knowm.xchange.bitso.dto.funding;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
@@ -15,62 +16,63 @@ import java.util.Map;
 public class BitsoWithdrawal {
 
   /** Withdrawal ID */
-  private final String withdrawalId;
+  @JsonProperty("wid")
+  String withdrawalId;
 
   /** Currency code */
-  private final String currency;
+  String currency;
 
   /** Withdrawal method (BTC, ETH, SPEI, PIX, etc.) */
-  private final String method;
+  String method;
 
   /** Amount withdrawn */
-  private final BigDecimal amount;
+  BigDecimal amount;
 
   /** Status (pending, complete, cancelled, failed) */
-  private final String status;
+  String status;
 
   /** Creation timestamp */
-  private final Date createdAt;
+  Date createdAt;
 
   /** Network for crypto withdrawal */
-  private final String network;
+  String network;
 
   /** Destination address for crypto withdrawal */
-  private final String address;
+  String address;
 
   /** Address tag for currencies that require it */
-  private final String addressTag;
+  String addressTag;
 
   /** Transaction hash for crypto withdrawal */
-  private final String txHash;
+  String txHash;
 
   /** Number of confirmations for crypto withdrawal */
-  private final Integer confirmations;
+  Integer confirmations;
 
   /** Fee charged for the withdrawal */
-  private final BigDecimal fee;
+  BigDecimal fee;
 
   /** Additional details specific to the withdrawal method */
-  private final Map<String, Object> details;
+  Map<String, Object> details;
 
   /** Internal reference ID */
-  private final String internalId;
+  String internalId;
 
   /** External reference ID */
-  private final String externalId;
+  String externalId;
 
   /** Receiving account ID for fiat withdrawals */
-  private final String receivingAccountId;
+  String receivingAccountId;
 
   /** PIX key for PIX withdrawals */
-  private final String pixKey;
+  String pixKey;
 
   /** CLABE for Mexican peso withdrawals */
-  private final String clabe;
+  String clabe;
 
   /** Bank name for fiat withdrawals */
-  private final String bankName;
+  String bankName;
 
   /** Account holder name for fiat withdrawals */
-  private final String accountHolderName;
+  String accountHolderName;
 }

@@ -3,7 +3,10 @@ package org.knowm.xchange.bitso.service;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.BitsoAdapters;
 import org.knowm.xchange.bitso.BitsoFundingAdapters;
-import org.knowm.xchange.bitso.dto.funding.*;
+import org.knowm.xchange.bitso.dto.funding.BitsoFunding;
+import org.knowm.xchange.bitso.dto.funding.BitsoWithdrawal;
+import org.knowm.xchange.bitso.dto.funding.BitsoWithdrawalMethod;
+import org.knowm.xchange.bitso.dto.funding.BitsoWithdrawalRequest;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.FundingRecord;
@@ -116,18 +119,17 @@ public class BitsoAccountService extends BitsoAccountServiceRaw implements Accou
   }
 
   private String withdrawMXN(FiatWithdrawFundsParams params) throws IOException {
-    List<BitsoReceivingAccount> receivingAccounts =
-        getBitsoReceivingAccounts(
-            BitsoAdapters.toBitsoCurrency(params.getCurrency().getCurrencyCode()));
-
     // MXN withdrawals via SPEI
     BitsoWithdrawalRequest request =
         BitsoWithdrawalRequest.builder()
-            .currency(params.getCurrency().getCurrencyCode())
+            .currency(BitsoAdapters.toBitsoCurrency(params.getCurrency().getCurrencyCode()))
             .amount(params.getAmount())
-            .receivingAccountId(getReceivingAccountId(params))
-            .internalId(params.getUserReference())
-            .additionalInfo(params.getCustomParameters())
+            .protocol("clabe")
+            .notesRef(params.getBeneficiary().getReference())
+            .beneficiary(params.getBeneficiary().getName())
+            .clabe(params.getBeneficiary().getAccountNumber())
+            .institutionCode(params.getBeneficiary().getBank().getCode())
+            .originId(params.getUserReference())
             .build();
 
     BitsoWithdrawal withdrawal = createBitsoFiatWithdrawal(request);
@@ -183,12 +185,5 @@ public class BitsoAccountService extends BitsoAccountServiceRaw implements Accou
     }
 
     return fundingRecords;
-  }
-
-  private String getReceivingAccountId(FiatWithdrawFundsParams params) {
-    if (params.getCustomParameters() != null) {
-      return (String) params.getCustomParameters().get("account_id");
-    }
-    return null;
   }
 }
