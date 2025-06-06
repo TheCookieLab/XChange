@@ -101,7 +101,7 @@ public interface BitsoFundingAuthenticated {
    * @throws IOException Network exception
    */
   @POST
-  @Path("/fiat_withdrawals")
+  @Path("/withdrawals")
   BitsoBaseResponse<BitsoWithdrawal> createFiatWithdrawal(
       @HeaderParam("Authorization") BitsoDigest signer,
       @HeaderParam("Bitso-Nonce") SynchronizedValueFactory<Long> nonce,
