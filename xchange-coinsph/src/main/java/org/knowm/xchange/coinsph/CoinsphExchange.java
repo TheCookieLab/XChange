@@ -5,6 +5,7 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.coinsph.dto.CoinsphJacksonObjectMapperFactory;
 import org.knowm.xchange.coinsph.dto.meta.CoinsphExchangeInfo;
 import org.knowm.xchange.coinsph.service.*;
 import org.knowm.xchange.exceptions.ExchangeException;
@@ -98,10 +99,18 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
     this.publicApi =
         ExchangeRestProxyBuilder.forInterface(Coinsph.class, exchangeSpecification)
             .customInterceptor(errorInterceptor)
+            .clientConfigCustomizer(
+                clientConfig ->
+                    clientConfig.setJacksonObjectMapperFactory(
+                        new CoinsphJacksonObjectMapperFactory()))
             .build();
     this.authenticatedApi =
         ExchangeRestProxyBuilder.forInterface(CoinsphAuthenticated.class, exchangeSpecification)
             .customInterceptor(errorInterceptor)
+            .clientConfigCustomizer(
+                clientConfig ->
+                    clientConfig.setJacksonObjectMapperFactory(
+                        new CoinsphJacksonObjectMapperFactory()))
             .build();
 
     // Initialize signature creator

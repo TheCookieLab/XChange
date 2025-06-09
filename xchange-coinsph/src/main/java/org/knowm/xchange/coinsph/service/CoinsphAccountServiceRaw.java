@@ -4,6 +4,7 @@ import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.coinsph.CoinsphExchange;
 import org.knowm.xchange.coinsph.dto.CoinsphException;
 import org.knowm.xchange.coinsph.dto.account.*;
+import org.knowm.xchange.currency.Currency;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -164,25 +165,28 @@ public class CoinsphAccountServiceRaw extends CoinsphBaseService {
   }
 
   /**
-   * Get combined funding history (deposits and withdrawals)
+   * Get combined funding history (deposits, withdrawals, and fiat transactions)
    *
-   * @param params Funding history parameters
+   * @param includeDeposits Whether to include deposit records
+   * @param includeWithdrawals Whether to include withdrawal records
+   * @param currency Currency filter (optional)
    * @return List of funding records
    * @throws IOException
    * @throws CoinsphException
    */
-  public List<CoinsphFundingRecord> getFundingHistory(CoinsphFundingHistoryParams params)
+  public List<CoinsphFundingRecord> getFundingHistory(
+      boolean includeDeposits, boolean includeWithdrawals, Currency currency)
       throws IOException, CoinsphException {
     List<CoinsphFundingRecord> fundingRecords = new ArrayList<>();
 
     // Convert parameters
-    String coin = params.getCurrency() != null ? params.getCurrency().getCurrencyCode() : null;
-    Long startTime = params.getStartTime() != null ? params.getStartTime().getTime() : null;
-    Long endTime = params.getEndTime() != null ? params.getEndTime().getTime() : null;
-    Integer limit = params.getLimit();
+    String coin = currency != null ? currency.getCurrencyCode() : null;
+    Long startTime = null;
+    Long endTime = null;
+    Integer limit = null;
 
     // Get deposit history if requested
-    if (params.isIncludeDeposits()) {
+    if (includeDeposits) {
       List<CoinsphDepositRecord> depositRecords =
           getDepositHistory(coin, startTime, endTime, limit);
       for (CoinsphDepositRecord depositRecord : depositRecords) {
@@ -191,12 +195,29 @@ public class CoinsphAccountServiceRaw extends CoinsphBaseService {
     }
 
     // Get withdrawal history if requested
-    if (params.isIncludeWithdrawals()) {
+    if (includeWithdrawals) {
       List<CoinsphWithdrawalRecord> withdrawalRecords =
           getWithdrawalHistory(coin, null, startTime, endTime, limit);
       for (CoinsphWithdrawalRecord withdrawalRecord : withdrawalRecords) {
         fundingRecords.add(new CoinsphFundingRecord(withdrawalRecord));
       }
+    }
+
+    // Always get fiat history (both cash in and cash out transactions)
+    String fiatCurrency = coin; // Use the currency filter for fiat currency
+
+    // Get both cash in (1) and cash out (-1) transactions
+    try {
+      CoinsphFiatResponse<List<CoinsphFiatHistory>> cashInResponse =
+          getFiatHistory(CoinsphFiatHistoryRequest.builder().fiatCurrency(fiatCurrency).build());
+      if (cashInResponse != null && cashInResponse.getData() != null) {
+        for (CoinsphFiatHistory fiatHistory : cashInResponse.getData()) {
+          fundingRecords.add(new CoinsphFundingRecord(fiatHistory));
+        }
+      }
+    } catch (Exception e) {
+      // Log and continue if fiat cash in history fails
+      // This allows the method to still return other funding records
     }
 
     // Sort by timestamp (newest first)
@@ -222,7 +243,12 @@ public class CoinsphAccountServiceRaw extends CoinsphBaseService {
    * @throws IOException
    * @throws CoinsphException
    */
-  public List<CoinsphFiatChannel> getSupportedFiatChannels(String currency, int transactionType)
+  public CoinsphFiatResponse<List<CoinsphFiatChannel>> getSupportedFiatChannels(
+      String currency,
+      int transactionType,
+      String transactionChannel,
+      String transactionChannelSubject,
+      BigDecimal amount)
       throws IOException, CoinsphException {
     return decorateApiCall(
             () ->
@@ -232,6 +258,9 @@ public class CoinsphAccountServiceRaw extends CoinsphBaseService {
                     signatureCreator,
                     currency,
                     transactionType,
+                    transactionChannel,
+                    transactionChannelSubject,
+                    amount,
                     exchange.getRecvWindow()))
         .call();
   }
@@ -250,6 +279,27 @@ public class CoinsphAccountServiceRaw extends CoinsphBaseService {
             () ->
                 coinsphAuthenticated.cashOut(
                     apiKey, timestampFactory, signatureCreator, request, exchange.getRecvWindow()))
+        .call()
+        .getData();
+  }
+
+  /**
+   * Get fiat transaction history
+   *
+   * @return Fiat transaction history response
+   * @throws IOException
+   * @throws CoinsphException
+   */
+  public CoinsphFiatResponse<List<CoinsphFiatHistory>> getFiatHistory(
+      CoinsphFiatHistoryRequest fiatHistoryRequest) throws IOException, CoinsphException {
+    return decorateApiCall(
+            () ->
+                coinsphAuthenticated.fiatHistory(
+                    apiKey,
+                    timestampFactory,
+                    signatureCreator,
+                    fiatHistoryRequest,
+                    exchange.getRecvWindow()))
         .call();
   }
 
@@ -263,8 +313,16 @@ public class CoinsphAccountServiceRaw extends CoinsphBaseService {
    * @throws CoinsphException
    */
   protected Optional<CoinsphFiatChannel> findFirstAvailableChannel(
-      String currency, int transactionType) throws IOException, CoinsphException {
-    List<CoinsphFiatChannel> channels = getSupportedFiatChannels(currency, transactionType);
+      String currency,
+      int transactionType,
+      String transactionChannel,
+      String transactionSubject,
+      BigDecimal amount)
+      throws IOException, CoinsphException {
+    List<CoinsphFiatChannel> channels =
+        getSupportedFiatChannels(
+                currency, transactionType, transactionChannel, transactionSubject, amount)
+            .getData();
     return channels.stream()
         .filter(channel -> channel.getStatus() == 1) // Status 1 means available
         .findFirst();

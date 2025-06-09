@@ -5,9 +5,11 @@ import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
 @Value
-@Jacksonized
 @Builder
-public class CoinsphCashOutResponse {
-  String externalOrderId;
-  String internalOrderId;
+@Jacksonized
+public class CoinsphFiatHistoryRequest {
+    String fiatCurrency;
+
+    @Builder.Default
+    int pageSize = 100;
 }

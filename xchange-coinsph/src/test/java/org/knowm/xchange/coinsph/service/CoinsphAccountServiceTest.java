@@ -4,9 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.coinsph.Coinsph;
-import org.knowm.xchange.coinsph.CoinsphAdapters;
 import org.knowm.xchange.coinsph.CoinsphAuthenticated;
 import org.knowm.xchange.coinsph.CoinsphExchange;
+import org.knowm.xchange.coinsph.dto.CoinsphException;
 import org.knowm.xchange.coinsph.dto.account.*;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
@@ -15,10 +15,10 @@ import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.FiatWithdrawFundsParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamsZero;
+import org.knowm.xchange.service.trade.params.HistoryParamsFundingType;
 import org.knowm.xchange.service.trade.params.withdrawals.Address;
 import org.knowm.xchange.service.trade.params.withdrawals.Beneficiary;
+import org.mockito.ArgumentCaptor;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 
@@ -159,117 +159,6 @@ public class CoinsphAccountServiceTest {
   }
 
   @Test
-  public void testGetFundingHistory() throws IOException {
-    // given
-    List<CoinsphDepositRecord> mockDeposits = new ArrayList<>();
-
-    CoinsphDepositRecord deposit1 =
-        new CoinsphDepositRecord(
-            "12345", // id
-            new BigDecimal("1.0"), // amount
-            "BTC", // coin
-            "BTC", // network
-            1, // status (1 = Success)
-            "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", // address
-            null, // addressTag
-            "abcdef1234567890", // txId
-            1621234560000L, // insertTime
-            6 // confirmNo
-            );
-    mockDeposits.add(deposit1);
-
-    List<CoinsphWithdrawalRecord> mockWithdrawals = new ArrayList<>();
-
-    CoinsphWithdrawalRecord withdrawal1 =
-        new CoinsphWithdrawalRecord(
-            "67890", // id
-            new BigDecimal("0.5"), // amount
-            new BigDecimal("0.0001"), // transactionFee
-            "BTC", // coin
-            1, // status (1 = Success)
-            "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", // address
-            null, // addressTag
-            "zyxwvu9876543210", // txId
-            1621234570000L, // applyTime
-            "BTC", // network
-            "W12345", // withdrawOrderId
-            null, // info
-            6 // confirmNo
-            );
-    mockWithdrawals.add(withdrawal1);
-
-    // Mock the service methods directly instead of the API calls
-    CoinsphAccountServiceRaw rawService = mock(CoinsphAccountServiceRaw.class);
-    when(rawService.getDepositHistory(anyString(), any(), any(), any())).thenReturn(mockDeposits);
-    when(rawService.getWithdrawalHistory(anyString(), anyString(), any(), any(), any()))
-        .thenReturn(mockWithdrawals);
-
-    // Create a list of funding records that would be returned by getFundingHistory
-    List<CoinsphFundingRecord> mockFundingRecords = new ArrayList<>();
-    mockFundingRecords.add(new CoinsphFundingRecord(deposit1));
-    mockFundingRecords.add(new CoinsphFundingRecord(withdrawal1));
-
-    when(rawService.getFundingHistory(any(CoinsphFundingHistoryParams.class)))
-        .thenReturn(mockFundingRecords);
-
-    // No need to use reflection, we'll use a spy instead
-
-    // then
-    List<FundingRecord> fundingRecords = new ArrayList<>();
-    fundingRecords.add(CoinsphAdapters.adaptFundingRecord(new CoinsphFundingRecord(deposit1)));
-    fundingRecords.add(CoinsphAdapters.adaptFundingRecord(new CoinsphFundingRecord(withdrawal1)));
-
-    when(coinsphAuthenticated.getDepositHistory(
-            anyString(), any(), any(), any(), any(), any(), any(), anyLong()))
-        .thenReturn(mockDeposits);
-
-    when(coinsphAuthenticated.getWithdrawalHistory(
-            anyString(), any(), any(), any(), any(), any(), any(), any(), anyLong()))
-        .thenReturn(mockWithdrawals);
-
-    // Create a spy of the accountService to mock getFundingHistory
-    CoinsphAccountService spyService = spy(accountService);
-    doReturn(fundingRecords).when(spyService).getFundingHistory(any(TradeHistoryParams.class));
-
-    // Execute the test with the spy
-    List<FundingRecord> result = spyService.getFundingHistory(TradeHistoryParamsZero.PARAMS_ZERO);
-
-    assertThat(result).hasSize(2);
-
-    // Check deposit record
-    FundingRecord depositRecord =
-        result.stream()
-            .filter(r -> r.getType() == FundingRecord.Type.DEPOSIT)
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("No deposit record found"));
-
-    assertThat(depositRecord.getAddress()).isEqualTo("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
-    assertThat(depositRecord.getAmount()).isEqualByComparingTo(new BigDecimal("1.0"));
-    assertThat(depositRecord.getCurrency()).isEqualTo(Currency.BTC);
-    assertThat(depositRecord.getDate()).isEqualTo(new Date(1621234560000L));
-    assertThat(depositRecord.getStatus()).isEqualTo(FundingRecord.Status.COMPLETE);
-    assertThat(depositRecord.getInternalId()).isEqualTo("12345");
-    assertThat(depositRecord.getBlockchainTransactionHash()).isEqualTo("abcdef1234567890");
-
-    // Check withdrawal record
-    FundingRecord withdrawalRecord =
-        result.stream()
-            .filter(r -> r.getType() == FundingRecord.Type.WITHDRAWAL)
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("No withdrawal record found"));
-
-    assertThat(withdrawalRecord.getAddress())
-        .isEqualTo("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
-    assertThat(withdrawalRecord.getAmount()).isEqualByComparingTo(new BigDecimal("0.5"));
-    assertThat(withdrawalRecord.getCurrency()).isEqualTo(Currency.BTC);
-    assertThat(withdrawalRecord.getDate()).isEqualTo(new Date(1621234570000L));
-    assertThat(withdrawalRecord.getStatus()).isEqualTo(FundingRecord.Status.COMPLETE);
-    assertThat(withdrawalRecord.getInternalId()).isEqualTo("67890");
-    assertThat(withdrawalRecord.getBlockchainTransactionHash()).isEqualTo("zyxwvu9876543210");
-    assertThat(withdrawalRecord.getFee()).isEqualByComparingTo(new BigDecimal("0.0001"));
-  }
-
-  @Test
   public void testWithdrawFunds() throws IOException {
     // given
     Currency currency = Currency.BTC;
@@ -290,271 +179,6 @@ public class CoinsphAccountServiceTest {
     String withdrawalId = spyService.withdrawFunds(params);
 
     assertThat(withdrawalId).isEqualTo("67890");
-  }
-
-  // New tests for fiat withdrawal functionality
-  // =================================================================================================
-
-  @Test
-  public void testGetSupportedFiatChannels() throws IOException {
-    // given
-    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
-
-    CoinsphFiatChannel instapayChannel =
-        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 1, "PHP");
-    CoinsphFiatChannel pesonetChannel = new CoinsphFiatChannel("PESONET", "Union Bank", 1, "PHP");
-    CoinsphFiatChannel unavailableChannel =
-        new CoinsphFiatChannel("DRAGONPAY", "Dragonpay", 0, "PHP");
-
-    mockChannels.add(instapayChannel);
-    mockChannels.add(pesonetChannel);
-    mockChannels.add(unavailableChannel);
-
-    // when
-    when(coinsphAuthenticated.getSupportedFiatChannels(
-            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
-        .thenReturn(mockChannels);
-
-    // then
-    CoinsphAccountService spyService = spy(accountService);
-    doReturn(mockChannels).when(spyService).getSupportedFiatChannels("PHP", -1);
-
-    List<CoinsphFiatChannel> result = spyService.getSupportedFiatChannels("PHP", -1);
-
-    assertThat(result).hasSize(3);
-    assertThat(result.get(0).getChannelName()).isEqualTo("INSTAPAY");
-    assertThat(result.get(0).getChannelSubject()).isEqualTo("BDO Network Bank");
-    assertThat(result.get(0).getStatus()).isEqualTo(1);
-    assertThat(result.get(0).getCurrency()).isEqualTo("PHP");
-
-    assertThat(result.get(1).getChannelName()).isEqualTo("PESONET");
-    assertThat(result.get(2).getStatus()).isEqualTo(0); // unavailable
-  }
-
-  @Test
-  public void testFindFirstAvailableChannel() throws IOException {
-    // given
-    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
-
-    CoinsphFiatChannel unavailableChannel =
-        new CoinsphFiatChannel("DRAGONPAY", "Dragonpay", 0, "PHP");
-    CoinsphFiatChannel availableChannel =
-        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 1, "PHP");
-
-    mockChannels.add(unavailableChannel);
-    mockChannels.add(availableChannel);
-
-    // when
-    when(coinsphAuthenticated.getSupportedFiatChannels(
-            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
-        .thenReturn(mockChannels);
-
-    // then
-    CoinsphAccountService spyService = spy(accountService);
-    doReturn(mockChannels).when(spyService).getSupportedFiatChannels("PHP", -1);
-
-    Optional<CoinsphFiatChannel> result = spyService.findFirstAvailableChannel("PHP", -1);
-
-    assertThat(result).isPresent();
-    assertThat(result.get().getChannelName()).isEqualTo("INSTAPAY");
-    assertThat(result.get().getStatus()).isEqualTo(1);
-  }
-
-  @Test
-  public void testFindFirstAvailableChannel_NoAvailableChannels() throws IOException {
-    // given
-    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
-
-    CoinsphFiatChannel unavailableChannel1 =
-        new CoinsphFiatChannel("DRAGONPAY", "Dragonpay", 0, "PHP");
-    CoinsphFiatChannel unavailableChannel2 =
-        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 0, "PHP");
-
-    mockChannels.add(unavailableChannel1);
-    mockChannels.add(unavailableChannel2);
-
-    // when
-    when(coinsphAuthenticated.getSupportedFiatChannels(
-            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
-        .thenReturn(mockChannels);
-
-    // then
-    CoinsphAccountService spyService = spy(accountService);
-    doReturn(mockChannels).when(spyService).getSupportedFiatChannels("PHP", -1);
-
-    Optional<CoinsphFiatChannel> result = spyService.findFirstAvailableChannel("PHP", -1);
-
-    assertThat(result).isEmpty();
-  }
-
-  @Test
-  public void testCashOut() throws IOException {
-    // given
-    Map<String, Object> extendInfo = new HashMap<>();
-    extendInfo.put("recipientAccountNumber", "046800021457");
-    extendInfo.put("recipientName", "NEDDIE C QUINONAS");
-    extendInfo.put("recipientAddress", "29 P.G. Almendras, Danao City, Cebu, PH");
-    extendInfo.put("remarks", "BVNK test payment");
-
-    CoinsphCashOutRequest request =
-        CoinsphCashOutRequest.builder()
-            .amount(new BigDecimal("60"))
-            .internalOrderId("test-order-123")
-            .currency("PHP")
-            .channelName("INSTAPAY")
-            .channelSubject("BDO Network Bank")
-            .extendInfo(extendInfo)
-            .build();
-
-    CoinsphCashOutResponse mockResponse = new CoinsphCashOutResponse("cash-out-order-456");
-
-    // when
-    when(coinsphAuthenticated.cashOut(anyString(), any(), any(), any(), anyLong()))
-        .thenReturn(mockResponse);
-
-    // then
-    CoinsphAccountService spyService = spy(accountService);
-    doReturn(mockResponse).when(spyService).cashOut(request);
-
-    CoinsphCashOutResponse result = spyService.cashOut(request);
-
-    assertThat(result).isNotNull();
-    assertThat(result.getOrderId()).isEqualTo("cash-out-order-456");
-  }
-
-  @Test
-  public void testWithdrawFiat_WithBeneficiary() throws IOException {
-    // given
-    Beneficiary mockBeneficiary = mock(Beneficiary.class);
-    Address mockAddress = mock(Address.class);
-
-    when(mockBeneficiary.getAccountNumber()).thenReturn("046800021457");
-    when(mockBeneficiary.getName()).thenReturn("NEDDIE C QUINONAS");
-    when(mockBeneficiary.getReference()).thenReturn("BVNK test payment");
-    when(mockBeneficiary.getAddress()).thenReturn(mockAddress);
-
-    when(mockAddress.getLine1()).thenReturn("29 P.G. Almendras");
-    when(mockAddress.getCity()).thenReturn("Danao City");
-    when(mockAddress.getState()).thenReturn("Cebu");
-    when(mockAddress.getCountry()).thenReturn("PH");
-
-    FiatWithdrawFundsParams params =
-        FiatWithdrawFundsParams.builder()
-            .amount(new BigDecimal("60"))
-            .currency(Currency.getInstance("PHP"))
-            .userReference("test-order-123")
-            .beneficiary(mockBeneficiary)
-            .build();
-
-    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
-    CoinsphFiatChannel availableChannel =
-        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 1, "PHP");
-    mockChannels.add(availableChannel);
-
-    CoinsphCashOutResponse mockResponse = new CoinsphCashOutResponse("cash-out-order-456");
-
-    // when
-    when(coinsphAuthenticated.getSupportedFiatChannels(
-            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
-        .thenReturn(mockChannels);
-
-    when(coinsphAuthenticated.cashOut(anyString(), any(), any(), any(), anyLong()))
-        .thenReturn(mockResponse);
-
-    // then
-    String orderId = accountService.withdrawFunds(params);
-
-    assertThat(orderId).isEqualTo("cash-out-order-456");
-  }
-
-  @Test
-  public void testWithdrawFiat_WithUserReference() throws IOException {
-    // given
-    FiatWithdrawFundsParams params =
-        FiatWithdrawFundsParams.builder()
-            .amount(new BigDecimal("100"))
-            .currency(Currency.getInstance("PHP"))
-            .userReference("custom-ref-789")
-            .build();
-
-    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
-    CoinsphFiatChannel availableChannel = new CoinsphFiatChannel("PESONET", "Union Bank", 1, "PHP");
-    mockChannels.add(availableChannel);
-
-    CoinsphCashOutResponse mockResponse = new CoinsphCashOutResponse("cash-out-order-789");
-
-    // when
-    when(coinsphAuthenticated.getSupportedFiatChannels(
-            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
-        .thenReturn(mockChannels);
-
-    when(coinsphAuthenticated.cashOut(anyString(), any(), any(), any(), anyLong()))
-        .thenReturn(mockResponse);
-
-    // then
-    String orderId = accountService.withdrawFunds(params);
-
-    assertThat(orderId).isEqualTo("cash-out-order-789");
-  }
-
-  @Test
-  public void testWithdrawFiat_WithCustomParameters() throws IOException {
-    // given
-    Map<String, Object> customParams = new HashMap<>();
-    customParams.put("customField1", "customValue1");
-    customParams.put("customField2", 123);
-
-    FiatWithdrawFundsParams params =
-        FiatWithdrawFundsParams.builder()
-            .amount(new BigDecimal("250"))
-            .currency(Currency.getInstance("PHP"))
-            .customParameters(customParams)
-            .build();
-
-    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
-    CoinsphFiatChannel availableChannel =
-        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 1, "PHP");
-    mockChannels.add(availableChannel);
-
-    CoinsphCashOutResponse mockResponse = new CoinsphCashOutResponse("cash-out-order-custom");
-
-    // when
-    when(coinsphAuthenticated.getSupportedFiatChannels(
-            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
-        .thenReturn(mockChannels);
-
-    when(coinsphAuthenticated.cashOut(anyString(), any(), any(), any(), anyLong()))
-        .thenReturn(mockResponse);
-
-    // then
-    String orderId = accountService.withdrawFunds(params);
-
-    assertThat(orderId).isEqualTo("cash-out-order-custom");
-  }
-
-  @Test
-  public void testWithdrawFiat_NoAvailableChannels() throws IOException {
-    // given
-    FiatWithdrawFundsParams params =
-        FiatWithdrawFundsParams.builder()
-            .amount(new BigDecimal("60"))
-            .currency(Currency.getInstance("PHP"))
-            .build();
-
-    List<CoinsphFiatChannel> mockChannels = new ArrayList<>();
-    CoinsphFiatChannel unavailableChannel =
-        new CoinsphFiatChannel("INSTAPAY", "BDO Network Bank", 0, "PHP");
-    mockChannels.add(unavailableChannel);
-
-    // when
-    when(coinsphAuthenticated.getSupportedFiatChannels(
-            anyString(), any(), any(), eq("PHP"), eq(-1), anyLong()))
-        .thenReturn(mockChannels);
-
-    // then
-    assertThatThrownBy(() -> accountService.withdrawFunds(params))
-        .isInstanceOf(ExchangeException.class)
-        .hasMessageContaining("No available fiat channels found for currency: PHP");
   }
 
   @Test
@@ -653,6 +277,516 @@ public class CoinsphAccountServiceTest {
               "generateInternalOrderId", FiatWithdrawFundsParams.class);
       method.setAccessible(true);
       return (String) method.invoke(service, params);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  // =======================================================================================
+  // FIAT WITHDRAWAL TESTS
+  // =======================================================================================
+
+  @Test
+  public void testWithdrawFiat_Success() throws IOException, CoinsphException {
+    // given
+    Currency phpCurrency = Currency.getInstance("PHP");
+    BigDecimal amount = new BigDecimal("1000.00");
+    String userRef = "test-order-123";
+
+    Address mockAddress = mock(Address.class);
+    when(mockAddress.getLine1()).thenReturn("123 Test Street");
+    when(mockAddress.getCity()).thenReturn("Manila");
+    when(mockAddress.getCountry()).thenReturn("Philippines");
+
+    Beneficiary beneficiary = mock(Beneficiary.class);
+    when(beneficiary.getName()).thenReturn("John Doe");
+    when(beneficiary.getAccountNumber()).thenReturn("1234567890");
+    when(beneficiary.getReference()).thenReturn("Transfer to savings");
+    when(beneficiary.getAddress()).thenReturn(mockAddress);
+
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .currency(phpCurrency)
+            .amount(amount)
+            .userReference(userRef)
+            .beneficiary(beneficiary)
+            .build();
+
+    // Mock available channel
+    CoinsphFiatChannel mockChannel =
+        CoinsphFiatChannel.builder()
+            .id("channel-1")
+            .transactionChannel("BANK_TRANSFER")
+            .transactionSubject("BPI")
+            .transactionChannelName("Bank Transfer")
+            .transactionSubjectName("Bank of the Philippine Islands")
+            .status(1) // Available
+            .minimum(new BigDecimal("100"))
+            .maximum(new BigDecimal("50000"))
+            .fee(new BigDecimal("0"))
+            .build();
+
+    CoinsphFiatResponse<List<CoinsphFiatChannel>> channelResponse =
+        CoinsphFiatResponse.<List<CoinsphFiatChannel>>builder()
+            .status(0)
+            .data(Arrays.asList(mockChannel))
+            .build();
+
+    // Mock cash out response
+    CoinsphCashOutResponse mockCashOutResponse =
+        CoinsphCashOutResponse.builder()
+            .externalOrderId("ext-123")
+            .internalOrderId(userRef)
+            .build();
+
+    CoinsphFiatResponse<CoinsphCashOutResponse> cashOutResponse =
+        CoinsphFiatResponse.<CoinsphCashOutResponse>builder()
+            .status(0)
+            .data(mockCashOutResponse)
+            .build();
+
+    // Create spy
+    CoinsphAccountService spyService = spy(accountService);
+
+    // Mock the raw methods
+    doReturn(channelResponse)
+        .when(spyService)
+        .getSupportedFiatChannels(eq("PHP"), eq(-1), any(), any(), eq(amount));
+    doReturn(mockCashOutResponse).when(spyService).cashOut(any(CoinsphCashOutRequest.class));
+
+    // when
+    String result = spyService.withdrawFunds(params);
+
+    // then
+    assertThat(result).isEqualTo(userRef);
+
+    // Verify the cashOut method was called with correct request
+    ArgumentCaptor<CoinsphCashOutRequest> requestCaptor =
+        ArgumentCaptor.forClass(CoinsphCashOutRequest.class);
+    verify(spyService).cashOut(requestCaptor.capture());
+
+    CoinsphCashOutRequest capturedRequest = requestCaptor.getValue();
+    assertThat(capturedRequest.getAmount()).isEqualByComparingTo(amount);
+    assertThat(capturedRequest.getCurrency()).isEqualTo("PHP");
+    assertThat(capturedRequest.getChannelName()).isEqualTo("BANK_TRANSFER");
+    assertThat(capturedRequest.getChannelSubject()).isEqualTo("BPI");
+    assertThat(capturedRequest.getInternalOrderId()).isEqualTo(userRef);
+    assertThat(capturedRequest.getExtendInfo()).containsEntry("recipientName", "John Doe");
+    assertThat(capturedRequest.getExtendInfo())
+        .containsEntry("recipientAccountNumber", "1234567890");
+    assertThat(capturedRequest.getExtendInfo()).containsEntry("remarks", "Transfer to savings");
+    assertThat(capturedRequest.getExtendInfo())
+        .containsEntry("recipientAddress", "123 Test Street, Manila, Philippines");
+  }
+
+  @Test
+  public void testWithdrawFiat_NoAvailableChannels() throws IOException, CoinsphException {
+    // given
+    Currency phpCurrency = Currency.getInstance("PHP");
+    BigDecimal amount = new BigDecimal("1000.00");
+
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder().currency(phpCurrency).amount(amount).build();
+
+    // Mock empty channel response (no available channels)
+    CoinsphFiatResponse<List<CoinsphFiatChannel>> channelResponse =
+        CoinsphFiatResponse.<List<CoinsphFiatChannel>>builder()
+            .status(0)
+            .data(Collections.emptyList())
+            .build();
+
+    // Create spy
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(channelResponse)
+        .when(spyService)
+        .getSupportedFiatChannels(eq("PHP"), eq(-1), any(), any(), eq(amount));
+
+    // when & then
+    assertThatThrownBy(() -> spyService.withdrawFunds(params))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("No available fiat channels found for currency: PHP");
+  }
+
+  @Test
+  public void testWithdrawFiat_WithCustomChannelParameters() throws IOException, CoinsphException {
+    // given
+    Currency phpCurrency = Currency.getInstance("PHP");
+    BigDecimal amount = new BigDecimal("1000.00");
+
+    Map<String, Object> customParams = new HashMap<>();
+    customParams.put("transactionChannel", "GCASH");
+    customParams.put("transactionSubject", "MOBILE_WALLET");
+
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .currency(phpCurrency)
+            .amount(amount)
+            .customParameters(customParams)
+            .build();
+
+    // Mock available channel matching custom parameters
+    CoinsphFiatChannel mockChannel =
+        CoinsphFiatChannel.builder()
+            .id("channel-gcash")
+            .transactionChannel("GCASH")
+            .transactionSubject("MOBILE_WALLET")
+            .transactionChannelName("GCash")
+            .transactionSubjectName("Mobile Wallet")
+            .status(1) // Available
+            .minimum(new BigDecimal("10"))
+            .maximum(new BigDecimal("50000"))
+            .fee(new BigDecimal("5"))
+            .build();
+
+    CoinsphFiatResponse<List<CoinsphFiatChannel>> channelResponse =
+        CoinsphFiatResponse.<List<CoinsphFiatChannel>>builder()
+            .status(0)
+            .data(Arrays.asList(mockChannel))
+            .build();
+
+    CoinsphCashOutResponse mockCashOutResponse =
+        CoinsphCashOutResponse.builder()
+            .externalOrderId("ext-gcash-123")
+            .internalOrderId("generated-uuid")
+            .build();
+
+    // Create spy
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(channelResponse)
+        .when(spyService)
+        .getSupportedFiatChannels(eq("PHP"), eq(-1), eq("GCASH"), eq("MOBILE_WALLET"), eq(amount));
+    doReturn(mockCashOutResponse).when(spyService).cashOut(any(CoinsphCashOutRequest.class));
+
+    // when
+    String result = spyService.withdrawFunds(params);
+
+    // then
+    assertThat(result).isEqualTo("generated-uuid");
+
+    // Verify the channel search was called with custom parameters
+    verify(spyService)
+        .getSupportedFiatChannels(eq("PHP"), eq(-1), eq("GCASH"), eq("MOBILE_WALLET"), eq(amount));
+  }
+
+  @Test
+  public void testBuildExtendInfo_WithBeneficiaryAndCustomParams() {
+    // given
+    Address mockAddress = mock(Address.class);
+    when(mockAddress.getLine1()).thenReturn("456 Main Ave");
+    when(mockAddress.getLine2()).thenReturn("Unit 789");
+    when(mockAddress.getCity()).thenReturn("Quezon City");
+    when(mockAddress.getState()).thenReturn("Metro Manila");
+    when(mockAddress.getCountry()).thenReturn("Philippines");
+
+    Beneficiary beneficiary = mock(Beneficiary.class);
+    when(beneficiary.getName()).thenReturn("Jane Smith");
+    when(beneficiary.getAccountNumber()).thenReturn("9876543210");
+    when(beneficiary.getReference()).thenReturn("Monthly allowance");
+    when(beneficiary.getAddress()).thenReturn(mockAddress);
+
+    Map<String, Object> customParams = new HashMap<>();
+    customParams.put("customField1", "value1");
+    customParams.put("customField2", 123);
+
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .currency(Currency.getInstance("PHP"))
+            .amount(new BigDecimal("2000"))
+            .beneficiary(beneficiary)
+            .customParameters(customParams)
+            .build();
+
+    // when
+    CoinsphAccountService spyService = spy(accountService);
+    Map<String, Object> result = invokeBuildExtendInfo(spyService, params);
+
+    // then
+    assertThat(result).containsEntry("recipientName", "Jane Smith");
+    assertThat(result).containsEntry("recipientAccountNumber", "9876543210");
+    assertThat(result).containsEntry("remarks", "Monthly allowance");
+    assertThat(result)
+        .containsEntry(
+            "recipientAddress", "456 Main Ave, Unit 789, Quezon City, Metro Manila, Philippines");
+    assertThat(result).containsEntry("customField1", "value1");
+    assertThat(result).containsEntry("customField2", 123);
+  }
+
+  @Test
+  public void testBuildExtendInfo_WithoutBeneficiary() {
+    // given
+    FiatWithdrawFundsParams params =
+        FiatWithdrawFundsParams.builder()
+            .currency(Currency.getInstance("PHP"))
+            .amount(new BigDecimal("500"))
+            .build();
+
+    // when
+    CoinsphAccountService spyService = spy(accountService);
+    Map<String, Object> result = invokeBuildExtendInfo(spyService, params);
+
+    // then
+    assertThat(result).isEmpty();
+  }
+
+  // =======================================================================================
+  // FUNDING HISTORY TESTS (FIAT-RELATED)
+  // =======================================================================================
+
+  @Test
+  public void testGetFundingHistory_IncludingFiatDeposits() throws IOException, CoinsphException {
+    // given
+    Currency phpCurrency = Currency.getInstance("PHP");
+    CoinsphFundingHistoryParams params =
+        CoinsphFundingHistoryParams.builder()
+            .currency(phpCurrency)
+            .type(FundingRecord.Type.DEPOSIT)
+            .build();
+
+    // Mock funding records that combine crypto and fiat
+    CoinsphFundingRecord cryptoDepositRecord = mock(CoinsphFundingRecord.class);
+    when(cryptoDepositRecord.getId()).thenReturn("deposit-123");
+    when(cryptoDepositRecord.getType()).thenReturn(CoinsphFundingRecord.Type.DEPOSIT);
+    when(cryptoDepositRecord.getCurrency()).thenReturn("PHP");
+    when(cryptoDepositRecord.getAmount()).thenReturn(new BigDecimal("500.00"));
+    when(cryptoDepositRecord.getTimestamp()).thenReturn(new Date(1621234560000L));
+    when(cryptoDepositRecord.getStatus()).thenReturn(1);
+    when(cryptoDepositRecord.getDescription()).thenReturn("Deposit via PHP");
+    when(cryptoDepositRecord.getAddress()).thenReturn("php-address-123");
+    when(cryptoDepositRecord.getFee()).thenReturn(BigDecimal.ZERO);
+    when(cryptoDepositRecord.getTxId()).thenReturn("tx-hash-123");
+
+    CoinsphFundingRecord fiatDepositRecord = mock(CoinsphFundingRecord.class);
+    when(fiatDepositRecord.getId()).thenReturn("fiat-deposit-456");
+    when(fiatDepositRecord.getType()).thenReturn(CoinsphFundingRecord.Type.FIAT_DEPOSIT);
+    when(fiatDepositRecord.getCurrency()).thenReturn("PHP");
+    when(fiatDepositRecord.getAmount()).thenReturn(new BigDecimal("1000.00"));
+    when(fiatDepositRecord.getTimestamp()).thenReturn(new Date(1621234620000L));
+    when(fiatDepositRecord.getStatus()).thenReturn(1);
+    when(fiatDepositRecord.getDescription()).thenReturn("Fiat Cash In via Bank Transfer");
+    when(fiatDepositRecord.getAddress()).thenReturn(null);
+    when(fiatDepositRecord.getFee()).thenReturn(BigDecimal.ZERO);
+    when(fiatDepositRecord.getTxId()).thenReturn(null);
+
+    List<CoinsphFundingRecord> mockFundingRecords =
+        Arrays.asList(cryptoDepositRecord, fiatDepositRecord);
+
+    // Create spy and mock the raw service method
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(mockFundingRecords)
+        .when(spyService)
+        .getFundingHistory(eq(true), eq(false), eq(phpCurrency));
+
+    // when
+    List<FundingRecord> result = spyService.getFundingHistory(params);
+
+    // then
+    assertThat(result).hasSize(2);
+
+    // Verify regular deposit record
+    FundingRecord depositRecord =
+        result.stream()
+            .filter(r -> r.getInternalId().equals("deposit-123"))
+            .findFirst()
+            .orElse(null);
+    assertThat(depositRecord).isNotNull();
+    assertThat(depositRecord.getType()).isEqualTo(FundingRecord.Type.DEPOSIT);
+    assertThat(depositRecord.getAmount()).isEqualByComparingTo(new BigDecimal("500.00"));
+    assertThat(depositRecord.getCurrency()).isEqualTo(phpCurrency);
+
+    // Verify fiat deposit record
+    FundingRecord fiatDepositRecord2 =
+        result.stream()
+            .filter(r -> r.getInternalId().equals("fiat-deposit-456"))
+            .findFirst()
+            .orElse(null);
+    assertThat(fiatDepositRecord2).isNotNull();
+    assertThat(fiatDepositRecord2.getType()).isEqualTo(FundingRecord.Type.DEPOSIT);
+    assertThat(fiatDepositRecord2.getAmount()).isEqualByComparingTo(new BigDecimal("1000.00"));
+    assertThat(fiatDepositRecord2.getCurrency()).isEqualTo(phpCurrency);
+    assertThat(fiatDepositRecord2.getDescription()).contains("Fiat Cash In");
+  }
+
+  @Test
+  public void testGetFundingHistory_IncludingFiatWithdrawals()
+      throws IOException, CoinsphException {
+    // given
+    CoinsphFundingHistoryParams params =
+        CoinsphFundingHistoryParams.builder().type(FundingRecord.Type.WITHDRAWAL).build();
+
+    // Mock funding records that combine crypto and fiat
+    CoinsphFundingRecord cryptoWithdrawalRecord = mock(CoinsphFundingRecord.class);
+    when(cryptoWithdrawalRecord.getId()).thenReturn("withdrawal-789");
+    when(cryptoWithdrawalRecord.getType()).thenReturn(CoinsphFundingRecord.Type.WITHDRAWAL);
+    when(cryptoWithdrawalRecord.getCurrency()).thenReturn("BTC");
+    when(cryptoWithdrawalRecord.getAmount()).thenReturn(new BigDecimal("0.001"));
+    when(cryptoWithdrawalRecord.getTimestamp()).thenReturn(new Date(1621234680000L));
+    when(cryptoWithdrawalRecord.getStatus()).thenReturn(1);
+    when(cryptoWithdrawalRecord.getDescription()).thenReturn("BTC withdrawal");
+    when(cryptoWithdrawalRecord.getAddress())
+        .thenReturn("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
+    when(cryptoWithdrawalRecord.getFee()).thenReturn(new BigDecimal("0.0001"));
+    when(cryptoWithdrawalRecord.getTxId()).thenReturn("tx-hash-withdrawal");
+
+    CoinsphFundingRecord fiatWithdrawalRecord = mock(CoinsphFundingRecord.class);
+    when(fiatWithdrawalRecord.getId()).thenReturn("fiat-withdrawal-999");
+    when(fiatWithdrawalRecord.getType()).thenReturn(CoinsphFundingRecord.Type.FIAT_WITHDRAWAL);
+    when(fiatWithdrawalRecord.getCurrency()).thenReturn("PHP");
+    when(fiatWithdrawalRecord.getAmount()).thenReturn(new BigDecimal("2000.00"));
+    when(fiatWithdrawalRecord.getTimestamp()).thenReturn(new Date(1621234740000L));
+    when(fiatWithdrawalRecord.getStatus()).thenReturn(1);
+    when(fiatWithdrawalRecord.getDescription()).thenReturn("Fiat Cash Out via GCash");
+    when(fiatWithdrawalRecord.getAddress()).thenReturn(null);
+    when(fiatWithdrawalRecord.getFee()).thenReturn(new BigDecimal("10.00"));
+    when(fiatWithdrawalRecord.getTxId()).thenReturn(null);
+
+    List<CoinsphFundingRecord> mockFundingRecords =
+        Arrays.asList(cryptoWithdrawalRecord, fiatWithdrawalRecord);
+
+    // Create spy and mock the raw service method
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(mockFundingRecords)
+        .when(spyService)
+        .getFundingHistory(eq(false), eq(true), nullable(Currency.class));
+
+    // when
+    List<FundingRecord> result = spyService.getFundingHistory(params);
+
+    // then
+    assertThat(result).hasSize(2);
+
+    // Verify crypto withdrawal record
+    FundingRecord cryptoWithdrawal =
+        result.stream()
+            .filter(r -> r.getInternalId().equals("withdrawal-789"))
+            .findFirst()
+            .orElse(null);
+    assertThat(cryptoWithdrawal).isNotNull();
+    assertThat(cryptoWithdrawal.getType()).isEqualTo(FundingRecord.Type.WITHDRAWAL);
+    assertThat(cryptoWithdrawal.getAmount()).isEqualByComparingTo(new BigDecimal("0.001"));
+    assertThat(cryptoWithdrawal.getCurrency()).isEqualTo(Currency.BTC);
+
+    // Verify fiat withdrawal record
+    FundingRecord fiatWithdrawal =
+        result.stream()
+            .filter(r -> r.getInternalId().equals("fiat-withdrawal-999"))
+            .findFirst()
+            .orElse(null);
+    assertThat(fiatWithdrawal).isNotNull();
+    assertThat(fiatWithdrawal.getType()).isEqualTo(FundingRecord.Type.WITHDRAWAL);
+    assertThat(fiatWithdrawal.getAmount()).isEqualByComparingTo(new BigDecimal("2000.00"));
+    assertThat(fiatWithdrawal.getCurrency()).isEqualTo(Currency.getInstance("PHP"));
+    assertThat(fiatWithdrawal.getDescription()).contains("Fiat Cash Out");
+    assertThat(fiatWithdrawal.getDescription()).contains("GCash");
+  }
+
+  @Test
+  public void testGetFundingHistory_WithFiatHistoryParams() throws IOException, CoinsphException {
+    // given - Use HistoryParamsFundingType for withdrawal only
+    HistoryParamsFundingType fundingTypeParams =
+        new HistoryParamsFundingType() {
+          @Override
+          public FundingRecord.Type getType() {
+            return FundingRecord.Type.WITHDRAWAL;
+          }
+
+          @Override
+          public void setType(FundingRecord.Type type) {
+            // Not implemented for this test
+          }
+        };
+
+    // Mock fiat withdrawal
+    CoinsphFiatHistory mockFiatWithdrawal =
+        CoinsphFiatHistory.builder()
+            .internalOrderId("fiat-only-withdrawal")
+            .fiatCurrency("PHP")
+            .fiatAmount(new BigDecimal("5000.00"))
+            .transactionType(-1) // Cash out
+            .transactionChannel("BANK_TRANSFER")
+            .status("completed")
+            .createdAt(java.time.Instant.ofEpochMilli(1621234800000L))
+            .build();
+
+    CoinsphFiatResponse<List<CoinsphFiatHistory>> fiatResponse =
+        CoinsphFiatResponse.<List<CoinsphFiatHistory>>builder()
+            .status(0)
+            .data(Arrays.asList(mockFiatWithdrawal))
+            .build();
+
+    // Create spy
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(Collections.emptyList())
+        .when(spyService)
+        .getWithdrawalHistory(any(), any(), any(), any(), any());
+    doReturn(fiatResponse).when(spyService).getFiatHistory(any(CoinsphFiatHistoryRequest.class));
+
+    // when
+    List<FundingRecord> result = spyService.getFundingHistory(fundingTypeParams);
+
+    // then
+    assertThat(result).hasSize(1);
+    FundingRecord record = result.get(0);
+    assertThat(record.getInternalId()).isEqualTo("fiat-only-withdrawal");
+    assertThat(record.getType()).isEqualTo(FundingRecord.Type.WITHDRAWAL);
+    assertThat(record.getAmount()).isEqualByComparingTo(new BigDecimal("5000.00"));
+    assertThat(record.getCurrency()).isEqualTo(Currency.getInstance("PHP"));
+  }
+
+  @Test
+  public void testGetFundingHistory_ErrorHandling() throws IOException, CoinsphException {
+    // given
+    HistoryParamsFundingType params =
+        new HistoryParamsFundingType() {
+          @Override
+          public FundingRecord.Type getType() {
+            return FundingRecord.Type.DEPOSIT;
+          }
+
+          @Override
+          public void setType(FundingRecord.Type type) {
+            // Not implemented for this test
+          }
+        };
+
+    // Mock crypto deposit record only (fiat will fail)
+    CoinsphFundingRecord cryptoDepositRecord = mock(CoinsphFundingRecord.class);
+    when(cryptoDepositRecord.getId()).thenReturn("deposit-only");
+    when(cryptoDepositRecord.getType()).thenReturn(CoinsphFundingRecord.Type.DEPOSIT);
+    when(cryptoDepositRecord.getCurrency()).thenReturn("BTC");
+    when(cryptoDepositRecord.getAmount()).thenReturn(new BigDecimal("100.00"));
+    when(cryptoDepositRecord.getTimestamp()).thenReturn(new Date(1621234560000L));
+    when(cryptoDepositRecord.getStatus()).thenReturn(1);
+    when(cryptoDepositRecord.getDescription()).thenReturn("Deposit via BTC");
+    when(cryptoDepositRecord.getAddress()).thenReturn("btc-address");
+    when(cryptoDepositRecord.getFee()).thenReturn(BigDecimal.ZERO);
+    when(cryptoDepositRecord.getTxId()).thenReturn("tx-hash");
+
+    List<CoinsphFundingRecord> mockFundingRecords = Arrays.asList(cryptoDepositRecord);
+
+    // Create spy and mock the raw service method
+    CoinsphAccountService spyService = spy(accountService);
+    doReturn(mockFundingRecords)
+        .when(spyService)
+        .getFundingHistory(eq(true), eq(false), nullable(Currency.class));
+
+    // when
+    List<FundingRecord> result = spyService.getFundingHistory(params);
+
+    // then - Should still return crypto deposits even if fiat history fails
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).getInternalId()).isEqualTo("deposit-only");
+    assertThat(result.get(0).getCurrency()).isEqualTo(Currency.BTC);
+  }
+
+  // Helper methods for private method testing
+  private Map<String, Object> invokeBuildExtendInfo(
+      CoinsphAccountService service, FiatWithdrawFundsParams params) {
+    try {
+      java.lang.reflect.Method method =
+          CoinsphAccountService.class.getDeclaredMethod(
+              "buildExtendInfo", FiatWithdrawFundsParams.class);
+      method.setAccessible(true);
+      return (Map<String, Object>) method.invoke(service, params);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

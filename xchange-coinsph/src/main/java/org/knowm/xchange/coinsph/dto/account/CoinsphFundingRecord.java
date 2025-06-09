@@ -1,9 +1,10 @@
 package org.knowm.xchange.coinsph.dto.account;
 
-import java.math.BigDecimal;
-import java.util.Date;
 import lombok.Getter;
 import lombok.ToString;
+
+import java.math.BigDecimal;
+import java.util.Date;
 
 /**
  * Represents a unified funding record (deposit or withdrawal) from Coins.ph API Used for adapting
@@ -15,7 +16,9 @@ public class CoinsphFundingRecord {
 
   public enum Type {
     DEPOSIT,
-    WITHDRAWAL
+    WITHDRAWAL,
+    FIAT_DEPOSIT,
+    FIAT_WITHDRAWAL
   }
 
   private final String id;
@@ -61,5 +64,60 @@ public class CoinsphFundingRecord {
             : "Withdrawal via " + withdrawalRecord.getNetwork();
     this.status = withdrawalRecord.getStatus();
     this.fee = withdrawalRecord.getTransactionFee();
+  }
+
+  // Constructor for fiat history records
+  public CoinsphFundingRecord(CoinsphFiatHistory fiatHistory) {
+    this.id =
+        fiatHistory.getInternalOrderId() != null
+            ? fiatHistory.getInternalOrderId()
+            : fiatHistory.getExternalOrderId();
+
+    // Determine type based on transactionType: 1 = cash in (deposit), -1 = cash out (withdrawal)
+    this.type =
+        fiatHistory.getTransactionType() != null && fiatHistory.getTransactionType() == 1
+            ? Type.FIAT_DEPOSIT
+            : Type.FIAT_WITHDRAWAL;
+
+    this.currency = fiatHistory.getFiatCurrency();
+    this.amount = fiatHistory.getFiatAmount();
+    this.address = null; // Fiat transactions don't have crypto addresses
+    this.addressTag = null; // Fiat transactions don't have address tags
+    this.timestamp =
+        fiatHistory.getCreatedAt() != null
+            ? Date.from(fiatHistory.getCreatedAt())
+            : (fiatHistory.getCompletedTime() != null
+                ? Date.from(fiatHistory.getCompletedTime())
+                : new Date());
+    this.txId = fiatHistory.getPaymentOrderId();
+
+    // Build description from available information
+    StringBuilder descBuilder = new StringBuilder();
+    if (fiatHistory.getTransactionType() != null && fiatHistory.getTransactionType() == 1) {
+      descBuilder.append("Fiat Cash In");
+    } else {
+      descBuilder.append("Fiat Cash Out");
+    }
+
+    if (fiatHistory.getTransactionChannelName() != null) {
+      descBuilder.append(" via ").append(fiatHistory.getTransactionChannelName());
+    } else if (fiatHistory.getTransactionChannel() != null) {
+      descBuilder.append(" via ").append(fiatHistory.getTransactionChannel());
+    }
+
+    this.description = descBuilder.toString();
+
+    // Map status string to integer (simplified mapping)
+    this.status = "completed".equalsIgnoreCase(fiatHistory.getStatus()) ? 1 : 0;
+
+    // Calculate total fees
+    BigDecimal totalFee = BigDecimal.ZERO;
+    if (fiatHistory.getChannelFee() != null) {
+      totalFee = totalFee.add(fiatHistory.getChannelFee());
+    }
+    if (fiatHistory.getPlatformFee() != null) {
+      totalFee = totalFee.add(fiatHistory.getPlatformFee());
+    }
+    this.fee = totalFee;
   }
 }

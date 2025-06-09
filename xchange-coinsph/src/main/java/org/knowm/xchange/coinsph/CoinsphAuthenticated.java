@@ -371,14 +371,17 @@ public interface CoinsphAuthenticated extends Coinsph {
    * @throws IOException
    * @throws CoinsphException
    */
-  @GET
+  @POST
   @Path("/fiat/v1/support-channel")
-  List<CoinsphFiatChannel> getSupportedFiatChannels(
+  CoinsphFiatResponse<List<CoinsphFiatChannel>> getSupportedFiatChannels(
       @HeaderParam(X_COINS_APIKEY) String apiKey,
       @QueryParam("timestamp") SynchronizedValueFactory<Long> timestamp,
       @QueryParam("signature") ParamsDigest signature,
       @QueryParam("currency") String currency,
       @QueryParam("transactionType") int transactionType,
+      @QueryParam("transactionChannel") String transactionChannel,
+      @QueryParam("transactionSubject") String transactionSubject,
+      @QueryParam("amount") BigDecimal amount,
       @QueryParam("recvWindow") Long recvWindow)
       throws IOException, CoinsphException;
 
@@ -397,11 +400,33 @@ public interface CoinsphAuthenticated extends Coinsph {
   @POST
   @Path("/fiat/v1/cash-out")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinsphCashOutResponse cashOut(
+  CoinsphFiatResponse<CoinsphCashOutResponse> cashOut(
       @HeaderParam(X_COINS_APIKEY) String apiKey,
       @QueryParam("timestamp") SynchronizedValueFactory<Long> timestamp,
       @QueryParam("signature") ParamsDigest signature,
       CoinsphCashOutRequest request,
+      @QueryParam("recvWindow") Long recvWindow)
+      throws IOException, CoinsphException;
+
+  /**
+   * List fiat history for fiat transactions.
+   *
+   * @param apiKey API Key (Header)
+   * @param timestamp Timestamp in ms (Query Param)
+   * @param signature Signature (Query Param)
+   * @param recvWindow Optional. The value cannot be greater than 60000
+   * @return Fiat history response containing a list of fiat transactions
+   * @throws IOException
+   * @throws CoinsphException
+   */
+  @POST
+  @Path("/fiat/v2/history")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinsphFiatResponse<List<CoinsphFiatHistory>> fiatHistory(
+      @HeaderParam(X_COINS_APIKEY) String apiKey,
+      @QueryParam("timestamp") SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("signature") ParamsDigest signature,
+      CoinsphFiatHistoryRequest fiatHistoryRequest,
       @QueryParam("recvWindow") Long recvWindow)
       throws IOException, CoinsphException;
 }

@@ -1,30 +1,41 @@
 package org.knowm.xchange.coinsph.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Builder;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
+
+import java.math.BigDecimal;
 
 /**
  * Represents a fiat channel from Coins.ph API Based on GET /openapi/fiat/v1/support-channel
  * endpoint
  */
-@Getter
-@ToString
+@Value
+@Jacksonized
+@Builder
 public class CoinsphFiatChannel {
-
-  private final String channelName;
-  private final String channelSubject;
-  private final int status; // 1: available, 0: unavailable
-  private final String currency;
-
-  public CoinsphFiatChannel(
-      @JsonProperty("channelName") String channelName,
-      @JsonProperty("channelSubject") String channelSubject,
-      @JsonProperty("status") int status,
-      @JsonProperty("currency") String currency) {
-    this.channelName = channelName;
-    this.channelSubject = channelSubject;
-    this.status = status;
-    this.currency = currency;
-  }
+  String id;
+  String transactionChannel;
+  String transactionChannelName;
+  String transactionSubject;
+  String transactionSubjectType;
+  String transactionSubjectTypeLabel;
+  String transactionSubjectName;
+  int transactionType;
+  String paymentMethod;
+  String channelIcon;
+  String subjectIcon;
+  BigDecimal maximum;
+  BigDecimal minimum;
+  BigDecimal dailyLimit;
+  BigDecimal monthlyLimit;
+  BigDecimal annualLimit;
+  BigDecimal remainingDailyLimit;
+  BigDecimal remainingMonthlyLimit;
+  BigDecimal remainingAnnualLimit;
+  int precision;
+  BigDecimal fee;
+  String feeType;
+  int status;
+  BigDecimal maxWithdrawBalance;
 }

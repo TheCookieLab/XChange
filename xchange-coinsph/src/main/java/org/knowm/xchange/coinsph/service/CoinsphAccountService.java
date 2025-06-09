@@ -78,7 +78,16 @@ public class CoinsphAccountService extends CoinsphAccountServiceRaw implements A
   private String withdrawFiat(FiatWithdrawFundsParams params) throws IOException, CoinsphException {
     // 1. List channels using the currency provided and transactionType -1
     String currencyCode = params.getCurrency().getCurrencyCode();
-    Optional<CoinsphFiatChannel> availableChannel = findFirstAvailableChannel(currencyCode, -1);
+
+    String transactionChannel =
+        getCustomParameter(params.getCustomParameters(), "transactionChannel", String.class);
+
+    String transactionSubject =
+        getCustomParameter(params.getCustomParameters(), "transactionSubject", String.class);
+
+    Optional<CoinsphFiatChannel> availableChannel =
+        findFirstAvailableChannel(
+            currencyCode, -1, transactionChannel, transactionSubject, params.getAmount());
 
     if (!availableChannel.isPresent()) {
       throw new ExchangeException("No available fiat channels found for currency: " + currencyCode);
@@ -95,14 +104,14 @@ public class CoinsphAccountService extends CoinsphAccountServiceRaw implements A
             .amount(params.getAmount())
             .internalOrderId(internalOrderId)
             .currency(currencyCode)
-            .channelName(channel.getChannelName())
-            .channelSubject(channel.getChannelSubject())
+            .channelName(channel.getTransactionChannel())
+            .channelSubject(channel.getTransactionSubject())
             .extendInfo(extendInfo)
             .build();
 
     // 4. Return the resulting ID
     CoinsphCashOutResponse response = cashOut(request);
-    return response.getOrderId();
+    return response.getInternalOrderId();
   }
 
   private String generateInternalOrderId(FiatWithdrawFundsParams params) {
@@ -216,18 +225,23 @@ public class CoinsphAccountService extends CoinsphAccountServiceRaw implements A
   @Override
   public List<FundingRecord> getFundingHistory(TradeHistoryParams params)
       throws IOException, CoinsphException {
-    CoinsphFundingHistoryParams coinsphParams;
 
-    if (params instanceof CoinsphFundingHistoryParams) {
-      coinsphParams = (CoinsphFundingHistoryParams) params;
-    } else {
-      coinsphParams = new CoinsphFundingHistoryParams();
-      // Set default values: include both deposits and withdrawals
-      coinsphParams.setIncludeDeposits(true);
-      coinsphParams.setIncludeWithdrawals(true);
+    boolean includeDeposits = false;
+    boolean includeWithdrawals = false;
+    Currency currency = null;
+
+    if (params instanceof HistoryParamsFundingType) {
+      HistoryParamsFundingType fundingTypeParams = (HistoryParamsFundingType) params;
+      includeDeposits = fundingTypeParams.getType() == FundingRecord.Type.DEPOSIT;
+      includeWithdrawals = fundingTypeParams.getType() == FundingRecord.Type.WITHDRAWAL;
+    }
+    if (params instanceof TradeHistoryParamCurrency) {
+      TradeHistoryParamCurrency currencyParam = (TradeHistoryParamCurrency) params;
+      currency = currencyParam.getCurrency();
     }
 
-    List<CoinsphFundingRecord> fundingRecords = getFundingHistory(coinsphParams);
+    List<CoinsphFundingRecord> fundingRecords =
+        getFundingHistory(includeDeposits, includeWithdrawals, currency);
     return CoinsphAdapters.adaptFundingRecords(fundingRecords);
   }
 
@@ -236,5 +250,20 @@ public class CoinsphAccountService extends CoinsphAccountServiceRaw implements A
       throws IOException, CoinsphException {
     List<CoinsphTradeFee> fees = super.getCoinsphTradeFees();
     return CoinsphAdapters.adaptTradeFees(fees);
+  }
+
+  private static <T> T getCustomParameter(Map<String, Object> params, String key, Class<T> type) {
+    if (params == null) {
+      return null;
+    }
+    Object value = params.get(key);
+    if (value == null) {
+      return null;
+    }
+
+    if (type.isInstance(value)) {
+      return type.cast(value);
+    }
+    return null;
   }
 }

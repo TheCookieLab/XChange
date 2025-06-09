@@ -13,9 +13,9 @@ import java.util.Map;
 @NonFinal
 @SuperBuilder
 public class FiatWithdrawFundsParams implements WithdrawFundsParams {
-    BigDecimal amount;
-    Currency currency;
-    String userReference;
-    Beneficiary beneficiary;
-    Map<String, Object> customParameters;
+  BigDecimal amount;
+  Currency currency;
+  String userReference;
+  Beneficiary beneficiary;
+  Map<String, Object> customParameters;
 }
