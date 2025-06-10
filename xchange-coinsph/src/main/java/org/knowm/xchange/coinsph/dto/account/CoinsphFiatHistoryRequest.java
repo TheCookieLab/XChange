@@ -8,8 +8,7 @@ import lombok.extern.jackson.Jacksonized;
 @Builder
 @Jacksonized
 public class CoinsphFiatHistoryRequest {
-    String fiatCurrency;
+  String fiatCurrency;
 
-    @Builder.Default
-    int pageSize = 100;
+  @Builder.Default int pageSize = 100;
 }

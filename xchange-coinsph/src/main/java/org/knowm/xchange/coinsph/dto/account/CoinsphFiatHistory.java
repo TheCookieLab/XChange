@@ -38,7 +38,8 @@ public class CoinsphFiatHistory {
   @Builder
   @Jacksonized
   public static class OrderExtendedMap {
-    String channelReferenceNo;
-    String senderAccountNumber;
+    String channelSubject;
+    String tfrAcctNo;
+    String tfrName;
   }
 }

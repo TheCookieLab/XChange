@@ -2,6 +2,7 @@ package org.knowm.xchange.coinsph.dto.account;
 
 import lombok.Getter;
 import lombok.ToString;
+import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -81,8 +82,6 @@ public class CoinsphFundingRecord {
 
     this.currency = fiatHistory.getFiatCurrency();
     this.amount = fiatHistory.getFiatAmount();
-    this.address = null; // Fiat transactions don't have crypto addresses
-    this.addressTag = null; // Fiat transactions don't have address tags
     this.timestamp =
         fiatHistory.getCreatedAt() != null
             ? Date.from(fiatHistory.getCreatedAt())
@@ -105,10 +104,14 @@ public class CoinsphFundingRecord {
       descBuilder.append(" via ").append(fiatHistory.getTransactionChannel());
     }
 
+    if (!StringUtils.isEmpty(fiatHistory.getErrorCode())) {
+      descBuilder.append(" Error: ").append(fiatHistory.getErrorMessage());
+    }
+
     this.description = descBuilder.toString();
 
     // Map status string to integer (simplified mapping)
-    this.status = "completed".equalsIgnoreCase(fiatHistory.getStatus()) ? 1 : 0;
+    this.status = getFiatStatusFromString(fiatHistory.getStatus());
 
     // Calculate total fees
     BigDecimal totalFee = BigDecimal.ZERO;
@@ -119,5 +122,28 @@ public class CoinsphFundingRecord {
       totalFee = totalFee.add(fiatHistory.getPlatformFee());
     }
     this.fee = totalFee;
+
+    if (fiatHistory.getOrderExtendedMap() != null
+        && !StringUtils.isEmpty(fiatHistory.getOrderExtendedMap().getTfrName())) {
+      this.address = fiatHistory.getOrderExtendedMap().getTfrName();
+      this.addressTag = fiatHistory.getOrderExtendedMap().getTfrAcctNo();
+    } else {
+      this.address = null;
+      this.addressTag = null;
+    }
+  }
+
+  private static int getFiatStatusFromString(String status) {
+    switch (status.toUpperCase()) {
+      case "PENDING":
+        return 0;
+      case "SUCCEEDED":
+        return 1;
+      case "FAILED":
+      case "CANCEL":
+        return 2;
+      default:
+        return 0; // Unknown status
+    }
   }
 }
