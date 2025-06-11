@@ -11,7 +11,7 @@ import lombok.extern.jackson.Jacksonized;
 public class KucoinException extends RuntimeException {
 
   @JsonProperty("code")
-  String code;
+  int code;
 
   @JsonProperty("msg")
   String message;
