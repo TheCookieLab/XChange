@@ -100,7 +100,8 @@ SIGN: {{sign}}
 Timestamp: {{timestamp}}
 Content-Type: application/json
 
-###
+
+### Retrieve ticker information
 GET {{api_v4}}/spot/tickers
 Content-Type: application/json
 
