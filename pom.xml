@@ -89,7 +89,6 @@
         <module>xchange-gateio</module>
         <module>xchange-gateio-v4</module>
         <module>xchange-gemini</module>
-        <module>xchange-globitex</module>
         <module>xchange-hitbtc</module>
         <module>xchange-huobi</module>
         <module>xchange-idex</module>
