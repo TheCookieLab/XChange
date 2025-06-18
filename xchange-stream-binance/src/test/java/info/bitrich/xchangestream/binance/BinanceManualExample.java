@@ -1,9 +1,15 @@
 package info.bitrich.xchangestream.binance;
 
+import static org.knowm.xchange.Exchange.USE_SANDBOX;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
+
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
+import java.io.IOException;
+import java.util.Properties;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.slf4j.Logger;
@@ -15,8 +21,20 @@ public class BinanceManualExample {
 
   public static void main(String[] args) throws InterruptedException {
     // Far safer than temporarily adding these to code that might get committed to VCS
-    String apiKey = System.getProperty("binance-api-key");
-    String apiSecret = System.getProperty("binance-api-secret");
+    Properties properties = new Properties();
+    try {
+      properties.load(BinanceManualExample.class.getResourceAsStream("/secret.keys"));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    final String apiKey =
+        (properties.getProperty("apikey") == null)
+            ? System.getenv("binance-api-key")
+            : properties.getProperty("apikey");
+    final String apiSecret =
+        (properties.getProperty("secret") == null)
+            ? System.getenv("binance-api-secret")
+            : properties.getProperty("secret");
 
     ExchangeSpecification spec =
         StreamingExchangeFactory.INSTANCE
@@ -24,6 +42,8 @@ public class BinanceManualExample {
             .getDefaultExchangeSpecification();
     spec.setApiKey(apiKey);
     spec.setSecretKey(apiSecret);
+    spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
+    spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, SPOT);
     BinanceStreamingExchange exchange =
         (BinanceStreamingExchange) StreamingExchangeFactory.INSTANCE.createExchange(spec);
 
@@ -33,6 +53,7 @@ public class BinanceManualExample {
             .addTicker(CurrencyPair.LTC_BTC)
             .addOrderbook(CurrencyPair.LTC_BTC)
             .addTrades(CurrencyPair.BTC_USDT)
+            .addUserTrades(CurrencyPair.BTC_USDT)
             .build();
 
     exchange.connect(subscription).blockingAwait();
@@ -104,7 +125,7 @@ public class BinanceManualExample {
     Disposable orderbookUpdates1 = orderbooksIncremental(exchange, "one");
     Disposable orderbookUpdates2 = orderbooksIncremental(exchange, "two");
 
-    Thread.sleep(1000000);
+    Thread.sleep(100000);
 
     tickers.dispose();
     trades.dispose();

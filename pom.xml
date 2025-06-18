@@ -47,6 +47,7 @@
         <module>xchange-bitfinex</module>
         <module>xchange-bitflyer</module>
         <module>xchange-bitget</module>
+        <module>xchange-bitget-futures</module>
         <module>xchange-bithumb</module>
         <module>xchange-bitmex</module>
         <module>xchange-bitso</module>
@@ -76,6 +77,7 @@
         <module>xchange-coinmarketcap</module>
         <module>xchange-coinmate</module>
         <module>xchange-coinone</module>
+        <module>xchange-coinsph</module>
         <module>xchange-core</module>
         <module>xchange-cryptowatch</module>
         <module>xchange-deribit</module>
@@ -129,6 +131,7 @@
         <module>xchange-stream-coincheck</module>
         <module>xchange-stream-coinjar</module>
         <module>xchange-stream-coinmate</module>
+        <module>xchange-stream-coinsph</module>
         <module>xchange-stream-core</module>
         <module>xchange-stream-dydx</module>
         <module>xchange-stream-gateio</module>
@@ -203,7 +206,7 @@
         <version.maven-enforcer-plugin>3.2.1</version.maven-enforcer-plugin>
         <version.maven-prerequisite>3.6.3</version.maven-prerequisite>
         <version.mockito>5.11.0</version.mockito>
-        <version.qos.logback>1.5.6</version.qos.logback>
+        <version.qos.logback>1.5.13</version.qos.logback>
         <version.reflections>0.10.2</version.reflections>
         <version.resilience4j>1.7.1</version.resilience4j>
         <version.slf4j>2.0.13</version.slf4j>

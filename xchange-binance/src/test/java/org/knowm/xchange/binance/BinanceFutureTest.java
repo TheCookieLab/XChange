@@ -21,9 +21,11 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceQueryOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceTradeHistoryParams;
+import org.knowm.xchange.binance.service.BinanceAccountService;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.AccountInfo;
+import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.FundingRates;
@@ -85,14 +87,16 @@ public class BinanceFutureTest {
 
   @Test
   public void binanceFutureAccountService() throws IOException {
-
+    BinanceAccountService binanceAccountService = ((BinanceAccountService)binanceExchange.getAccountService());
+    Fee fee = binanceAccountService.getCommissionRateByInstrument(instrument);
+    logger.info("fee: {}", fee);
     AccountInfo accountInfo = binanceExchange.getAccountService().getAccountInfo();
-    logger.info("AccountInfo: " + accountInfo.getWallet(Wallet.WalletFeature.FUTURES_TRADING));
+    logger.info("AccountInfo: {}", accountInfo.getWallet(Wallet.WalletFeature.FUTURES_TRADING));
     assertThat(
             accountInfo.getOpenPositions().stream()
                 .anyMatch(openPosition -> openPosition.getInstrument().equals(instrument)))
         .isTrue();
-    logger.info("Positions: " + accountInfo.getOpenPositions());
+    logger.info("Positions: {}",accountInfo.getOpenPositions());
   }
 
   @Test

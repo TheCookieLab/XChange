@@ -51,6 +51,28 @@ class BitmexTradeServiceTest extends BitmexExchangeWiremock {
   }
 
   @Test
+  void canceled_market_buy_order_details() throws IOException {
+    MarketOrder expected =
+        new MarketOrder.Builder(OrderType.BID, new CurrencyPair("FTR/USDT"))
+            .id("48cd2721-f9b9-45ce-8754-eb46dd0691ea")
+            .userReference("Canceled: Order had timeInForce of ImmediateOrCancel\nSubmitted via API.")
+            .timestamp(Date.from(Instant.parse("2025-06-04T13:33:02.563Z")))
+            .originalAmount(new BigDecimal("790.00000"))
+            .orderStatus(OrderStatus.CANCELED)
+            .cumulativeAmount(new BigDecimal("388.00000"))
+            .averagePrice(new BigDecimal("0.008"))
+            .build();
+
+    Collection<Order> orders = tradeService.getOrder("48cd2721-f9b9-45ce-8754-eb46dd0691ea");
+    assertThat(orders).hasSize(1);
+    assertThat(orders)
+        .first()
+        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .usingRecursiveComparison()
+        .isEqualTo(expected);
+  }
+
+  @Test
   void filled_market_sell_order_details() throws IOException {
     MarketOrder expected =
         new MarketOrder.Builder(OrderType.ASK, new CurrencyPair("SOL/USDT"))

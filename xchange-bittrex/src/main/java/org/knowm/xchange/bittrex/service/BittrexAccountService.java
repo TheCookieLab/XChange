@@ -1,15 +1,6 @@
 package org.knowm.xchange.bittrex.service;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.knowm.xchange.bittrex.BittrexAdapters;
-import org.knowm.xchange.bittrex.BittrexAuthenticated;
-import org.knowm.xchange.bittrex.BittrexErrorAdapter;
-import org.knowm.xchange.bittrex.BittrexExchange;
-import org.knowm.xchange.bittrex.BittrexUtils;
+import org.knowm.xchange.bittrex.*;
 import org.knowm.xchange.bittrex.dto.BittrexException;
 import org.knowm.xchange.bittrex.dto.account.BittrexAddress;
 import org.knowm.xchange.bittrex.dto.account.BittrexComissionRatesWithMarket;
@@ -22,6 +13,12 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsZero;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class BittrexAccountService extends BittrexAccountServiceRaw implements AccountService {
 
@@ -72,7 +69,7 @@ public class BittrexAccountService extends BittrexAccountServiceRaw implements A
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
     try {
       Map<Instrument, Fee> result = new HashMap<>();
       List<BittrexComissionRatesWithMarket> tradingFees = getTradingFees();
