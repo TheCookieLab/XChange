@@ -1,6 +1,8 @@
 package org.knowm.xchange.okex.service;
 
-import static org.knowm.xchange.okex.OkexAdapters.*;
+import static org.knowm.xchange.okex.dto.OkexInstType.OPTION;
+import static org.knowm.xchange.okex.dto.OkexInstType.SPOT;
+import static org.knowm.xchange.okex.dto.OkexInstType.SWAP;
 
 import jakarta.ws.rs.NotSupportedException;
 import java.io.IOException;
@@ -54,11 +56,11 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
     if (params instanceof TradeHistoryParamInstrument) {
       Instrument instrument = ((TradeHistoryParamInstrument) params).getInstrument();
 
-      String instrumentType = SPOT;
+      String instrumentType = SPOT.name();
       if (instrument instanceof FuturesContract) {
-        instrumentType = SWAP;
+        instrumentType = SWAP.name();
       } else if (instrument instanceof OptionsContract) {
-        instrumentType = OPTION;
+        instrumentType = OPTION.name();
       }
 
       return OkexAdapters.adaptUserTrades(

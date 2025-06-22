@@ -1,9 +1,5 @@
 package org.knowm.xchange.service.account;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
@@ -19,6 +15,11 @@ import org.knowm.xchange.service.account.params.RequestDepositAddressParams;
 import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Interface to provide the following to {@link Exchange}:
@@ -212,6 +213,8 @@ public interface AccountService extends BaseService {
    * fees by recent volume traded. Some exchanges will provide the current fees per currency via a
    * single API request, while others require more logic to compute by hand.
    *
+   * @param category Optional arguments - instrument category. Exchange-specific (SPOT, SWAP,
+   *     etc...)
    * @return map between currency pairs and their fees at the time of invocation.
    * @throws ExchangeException - Indication that the exchange reported some kind of error with the
    *     request or response
@@ -221,7 +224,8 @@ public interface AccountService extends BaseService {
    *     requested function or data, but it has not yet been implemented
    * @throws IOException - Indication that a networking error occurred while fetching JSON data
    */
-  default Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  default Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
+      throws IOException {
     throw new NotYetImplementedForExchangeException("getDynamicTradingFeesByInstrument");
   }
 }
