@@ -5,12 +5,9 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.coinsph.dto.CoinsphJacksonObjectMapperFactory;
 import org.knowm.xchange.coinsph.dto.meta.CoinsphExchangeInfo;
-import org.knowm.xchange.coinsph.service.CoinsPHSignatureCreator;
-import org.knowm.xchange.coinsph.service.CoinsphAccountService;
-import org.knowm.xchange.coinsph.service.CoinsphMarketDataService;
-import org.knowm.xchange.coinsph.service.CoinsphMarketDataServiceRaw;
-import org.knowm.xchange.coinsph.service.CoinsphTradeService;
+import org.knowm.xchange.coinsph.service.*;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
@@ -25,7 +22,7 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
   // Coins.ph specific URLs
   public static final String PARAM_RECV_WINDOW = "recvWindow";
   private static final String PRODUCTION_URL =
-      "https://api.coins.ph"; // Placeholder, verify actual URL
+      "https://api.pro.coins.ph"; // Placeholder, verify actual URL
   public static final String SANDBOX_URL = "https://9001.pl-qa.coinsxyz.me";
 
   protected static ResilienceRegistries RESILIENCE_REGISTRIES;
@@ -102,10 +99,18 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
     this.publicApi =
         ExchangeRestProxyBuilder.forInterface(Coinsph.class, exchangeSpecification)
             .customInterceptor(errorInterceptor)
+            .clientConfigCustomizer(
+                clientConfig ->
+                    clientConfig.setJacksonObjectMapperFactory(
+                        new CoinsphJacksonObjectMapperFactory()))
             .build();
     this.authenticatedApi =
         ExchangeRestProxyBuilder.forInterface(CoinsphAuthenticated.class, exchangeSpecification)
             .customInterceptor(errorInterceptor)
+            .clientConfigCustomizer(
+                clientConfig ->
+                    clientConfig.setJacksonObjectMapperFactory(
+                        new CoinsphJacksonObjectMapperFactory()))
             .build();
 
     // Initialize signature creator
