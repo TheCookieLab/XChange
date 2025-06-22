@@ -1,27 +1,18 @@
 package org.knowm.xchange.binance;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.knowm.xchange.Exchange.USE_SANDBOX;
-import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
-import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.binance.dto.marketdata.BinanceKline;
+import org.knowm.xchange.binance.dto.marketdata.KlineInterval;
 import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceQueryOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceTradeHistoryParams;
 import org.knowm.xchange.binance.service.BinanceAccountService;
+import org.knowm.xchange.binance.service.BinanceMarketDataService;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.AccountInfo;
@@ -39,6 +30,15 @@ import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstr
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.*;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.knowm.xchange.Exchange.USE_SANDBOX;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
+
 @Ignore
 public class BinanceFutureTest {
 
@@ -49,18 +49,29 @@ public class BinanceFutureTest {
 
   @Before
   public void setUp() throws IOException {
-    Properties prop = new Properties();
-    prop.load(this.getClass().getResourceAsStream("/secret.keys"));
+    //Properties prop = new Properties();
+    //prop.load(this.getClass().getResourceAsStream("/secret.keys"));
 
     ExchangeSpecification spec = new ExchangeSpecification(BinanceExchange.class);
 
-    spec.setApiKey(prop.getProperty("apikey"));
-    spec.setSecretKey(prop.getProperty("secret"));
+    //spec.setApiKey(prop.getProperty("apikey"));
+    //spec.setSecretKey(prop.getProperty("secret"));
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
     spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, FUTURES);
 
     Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
     binanceExchange = exchange;
+  }
+
+  @Test
+  public void kline() throws IOException {
+    BinanceMarketDataService marketDataService = (BinanceMarketDataService) binanceExchange.getMarketDataService();
+    // Get Kline data
+    List<BinanceKline> klines =
+            marketDataService
+            .klines(instrument, KlineInterval.m5, 10, null, null);
+    logger.info("Klines: " + klines);
+    assertThat(klines.get(0).getInstrument()).isEqualTo(instrument);
   }
 
   @Test

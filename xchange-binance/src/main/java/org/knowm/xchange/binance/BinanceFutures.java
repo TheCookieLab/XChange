@@ -5,8 +5,6 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-import java.io.IOException;
-import java.util.List;
 import org.knowm.xchange.binance.dto.BinanceException;
 import org.knowm.xchange.binance.dto.marketdata.BinanceAggTrades;
 import org.knowm.xchange.binance.dto.marketdata.BinanceFundingRate;
@@ -14,6 +12,9 @@ import org.knowm.xchange.binance.dto.marketdata.BinanceOrderbook;
 import org.knowm.xchange.binance.dto.marketdata.BinanceTicker24h;
 import org.knowm.xchange.binance.dto.meta.BinanceSystemStatus;
 import org.knowm.xchange.binance.dto.meta.exchangeinfo.BinanceExchangeInfo;
+
+import java.io.IOException;
+import java.util.List;
 
 @Path("")
 @Produces(MediaType.APPLICATION_JSON)
@@ -121,4 +122,27 @@ public interface BinanceFutures {
   @Path("fapi/v1/premiumIndex")
   BinanceFundingRate fundingRate(@QueryParam("symbol") String symbol)
       throws IOException, BinanceException;
+
+  /**
+   * Kline/candlestick bars for a symbol. Klines are uniquely identified by their open time.<br>
+   * If startTime and endTime are not sent, the most recent klines are returned.
+   *
+   * @param symbol
+   * @param interval
+   * @param limit optional, default 500; max 500.
+   * @param startTime optional
+   * @param endTime optional
+   * @return
+   * @throws IOException
+   * @throws BinanceException
+   */
+  @GET
+  @Path("fapi/v1/klines")
+  List<Object[]> klines(
+          @QueryParam("symbol") String symbol,
+          @QueryParam("interval") String interval,
+          @QueryParam("limit") Integer limit,
+          @QueryParam("startTime") Long startTime,
+          @QueryParam("endTime") Long endTime)
+          throws IOException, BinanceException;
 }
