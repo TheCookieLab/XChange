@@ -1,7 +1,5 @@
 package org.knowm.xchange.coinsph.service;
 
-import java.io.IOException;
-import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.coinsph.CoinsphAdapters;
 import org.knowm.xchange.coinsph.CoinsphExchange;
@@ -10,8 +8,12 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
+
+import java.io.IOException;
+import java.util.List;
 
 // For getTickers
 
@@ -24,6 +26,11 @@ public class CoinsphMarketDataService extends CoinsphMarketDataServiceRaw
   public CoinsphMarketDataService(
       CoinsphExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
+  }
+
+  @Override
+  public Ticker getTicker(Instrument instrument, Object... args) throws IOException {
+    return getTicker((CurrencyPair) instrument, args);
   }
 
   @Override
@@ -40,6 +47,11 @@ public class CoinsphMarketDataService extends CoinsphMarketDataServiceRaw
     List<org.knowm.xchange.coinsph.dto.marketdata.CoinsphTicker> coinsphTickers =
         getCoinsphTickers();
     return CoinsphAdapters.adaptTickers(coinsphTickers);
+  }
+
+  @Override
+  public OrderBook getOrderBook(Instrument instrument, Object... args) throws IOException {
+    return getOrderBook((CurrencyPair) instrument, args);
   }
 
   @Override
