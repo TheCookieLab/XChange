@@ -589,4 +589,17 @@ public interface BinanceAuthenticated extends Binance {
       @HeaderParam(X_MBX_APIKEY) String apiKey,
       @QueryParam(SIGNATURE) ParamsDigest signature)
       throws IOException, BinanceException;
+
+  /**
+   * Returns a listen key for websocket login.
+   *
+   * @param apiKey the api key
+   * @return
+   * @throws BinanceException
+   * @throws IOException
+   */
+  @POST
+  @Path("/fapi/v1/listenKey")
+  BinanceListenKey startFutureUserDataStream(@HeaderParam(X_MBX_APIKEY) String apiKey)
+      throws IOException, BinanceException;
 }
