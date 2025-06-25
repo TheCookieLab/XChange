@@ -1,10 +1,6 @@
 package org.knowm.xchange.examples.bitso.account;
 
 import org.knowm.xchange.Exchange;
-import org.knowm.xchange.bitso.dto.account.BitsoBalance;
-import org.knowm.xchange.bitso.dto.account.BitsoWithdrawalRequest;
-import org.knowm.xchange.bitso.dto.account.BitsoWithdrawalResponse;
-import org.knowm.xchange.bitso.service.BitsoAccountServiceRaw;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.examples.bitso.BitsoDemoUtils;
@@ -31,7 +27,6 @@ public class BitsoAccountDemo {
     AccountService accountService = bitso.getAccountService();
 
     generic(accountService);
-    raw((BitsoAccountServiceRaw) accountService);
   }
 
   private static void generic(AccountService accountService) throws IOException {
@@ -47,25 +42,5 @@ public class BitsoAccountDemo {
     String withdrawResult =
         accountService.withdrawFunds(Currency.BTC, new BigDecimal(1).movePointLeft(4), "XXX");
     System.out.println("withdrawResult = " + withdrawResult);
-  }
-
-  private static void raw(BitsoAccountServiceRaw accountService) throws IOException {
-
-    BitsoBalance bitsoBalance = accountService.getBitsoBalance();
-    System.out.println("Bitso balance: " + bitsoBalance);
-
-    // Note: Deposit address functionality is not implemented in Bitso
-    // BitsoDepositAddress depositAddress = accountService.getBitsoBitcoinDepositAddress();
-    // System.out.println("Bitcoin deposit address: " + depositAddress);
-
-    // Example of crypto withdrawal using the new API
-    BitsoWithdrawalRequest withdrawalRequest = BitsoWithdrawalRequest.builder()
-        .currency("btc")
-        .amount(new BigDecimal(1).movePointLeft(4))
-        .address("XXX")
-        .build();
-    
-    BitsoWithdrawalResponse withdrawResult = accountService.createBitsoCryptoWithdrawal(withdrawalRequest);
-    System.out.println("Bitso withdrawal response = " + withdrawResult);
   }
 }

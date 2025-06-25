@@ -13,6 +13,7 @@ import org.knowm.xchange.service.trade.TradeService;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Arrays;
 
 /**
  * Example showing the following:
@@ -78,8 +79,8 @@ public class BitsoTradeDemo {
     printRawOpenOrders(tradeService);
 
     // Cancel the added order
-    boolean cancelResult = tradeService.cancelBitsoOrder(orderId);
-    System.out.println("Canceling returned " + cancelResult);
+    String[] cancelResult = tradeService.cancelBitsoOrder(orderId);
+    System.out.println("Canceling returned " + Arrays.toString(cancelResult));
 
     printRawOpenOrders(tradeService);
   }
