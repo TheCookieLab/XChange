@@ -14,6 +14,7 @@ import org.knowm.xchange.bitso.dto.trade.BitsoOrderResponse;
 import org.knowm.xchange.bitso.dto.trade.BitsoUserTransaction;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -211,7 +212,7 @@ public class BitsoV3DTOTest {
     assertThat(payload.getVwap()).isEqualTo("388387.4631589659");
     assertThat(payload.getAsk()).isEqualTo("372800.00");
     assertThat(payload.getBid()).isEqualTo("372110.00");
-    assertThat(payload.getCreatedAt()).isEqualTo("2023-03-09T20:58:23+00:00");
+    assertThat(payload.getCreatedAt()).isEqualTo(Instant.parse("2023-03-09T20:58:23Z"));
     assertThat(payload.getChange24()).isEqualTo("-25580.00");
 
     assertThat(ticker.getLast()).isEqualTo(new BigDecimal("372110.00"));
@@ -249,7 +250,7 @@ public class BitsoV3DTOTest {
     assertThat(payload.getBids()).isNotNull();
     assertThat(payload.getAsks().size()).isEqualTo(2);
     assertThat(payload.getBids().size()).isEqualTo(2);
-    assertThat(payload.getUpdatedAt()).isEqualTo("2023-03-09T20:58:23+00:00");
+    assertThat(payload.getUpdatedAt()).isEqualTo(Instant.parse("2023-03-09T20:58:23Z"));
     assertThat(payload.getSequence()).isEqualTo("1234567890");
 
     // Test individual entries

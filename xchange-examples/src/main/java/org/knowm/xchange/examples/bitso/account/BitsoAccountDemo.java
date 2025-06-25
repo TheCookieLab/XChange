@@ -1,15 +1,17 @@
 package org.knowm.xchange.examples.bitso.account;
 
-import java.io.IOException;
-import java.math.BigDecimal;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.dto.account.BitsoBalance;
-import org.knowm.xchange.bitso.dto.account.BitsoDepositAddress;
+import org.knowm.xchange.bitso.dto.account.BitsoWithdrawalRequest;
+import org.knowm.xchange.bitso.dto.account.BitsoWithdrawalResponse;
 import org.knowm.xchange.bitso.service.BitsoAccountServiceRaw;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.examples.bitso.BitsoDemoUtils;
 import org.knowm.xchange.service.account.AccountService;
+
+import java.io.IOException;
+import java.math.BigDecimal;
 
 /**
  * Example showing the following:
@@ -38,8 +40,9 @@ public class BitsoAccountDemo {
     AccountInfo wallet = accountService.getAccountInfo();
     System.out.println("Wallet as String: " + wallet.toString());
 
-    String depositAddress = accountService.requestDepositAddress(Currency.BTC);
-    System.out.println("Deposit address: " + depositAddress);
+    // Note: Deposit address functionality is not implemented in Bitso
+    // String depositAddress = accountService.requestDepositAddress(Currency.BTC);
+    // System.out.println("Deposit address: " + depositAddress);
 
     String withdrawResult =
         accountService.withdrawFunds(Currency.BTC, new BigDecimal(1).movePointLeft(4), "XXX");
@@ -51,11 +54,18 @@ public class BitsoAccountDemo {
     BitsoBalance bitsoBalance = accountService.getBitsoBalance();
     System.out.println("Bitso balance: " + bitsoBalance);
 
-    BitsoDepositAddress depositAddress = accountService.getBitsoBitcoinDepositAddress();
-    System.out.println("Bitcoin deposit address: " + depositAddress);
+    // Note: Deposit address functionality is not implemented in Bitso
+    // BitsoDepositAddress depositAddress = accountService.getBitsoBitcoinDepositAddress();
+    // System.out.println("Bitcoin deposit address: " + depositAddress);
 
-    String withdrawResult =
-        accountService.withdrawBitsoFunds(new BigDecimal(1).movePointLeft(4), "XXX");
+    // Example of crypto withdrawal using the new API
+    BitsoWithdrawalRequest withdrawalRequest = BitsoWithdrawalRequest.builder()
+        .currency("btc")
+        .amount(new BigDecimal(1).movePointLeft(4))
+        .address("XXX")
+        .build();
+    
+    BitsoWithdrawalResponse withdrawResult = accountService.createBitsoCryptoWithdrawal(withdrawalRequest);
     System.out.println("Bitso withdrawal response = " + withdrawResult);
   }
 }
