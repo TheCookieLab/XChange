@@ -38,10 +38,10 @@ public class BitsoRealApiResponseTest {
     // Verify book structure is correct
     BitsoAvailableBooks.BitsoBook firstBook = availableBooks.getPayload().get(0);
     assertThat(firstBook.getBook()).isNotBlank();
-    assertThat(firstBook.getMinimumAmount()).isNotBlank();
-    assertThat(firstBook.getMaximumAmount()).isNotBlank();
-    assertThat(firstBook.getMinimumPrice()).isNotBlank();
-    assertThat(firstBook.getMaximumPrice()).isNotBlank();
+    assertThat(firstBook.getMinimumAmount()).isNotNull();
+    assertThat(firstBook.getMaximumAmount()).isNotNull();
+    assertThat(firstBook.getMinimumPrice()).isNotNull();
+    assertThat(firstBook.getMaximumPrice()).isNotNull();
   }
 
   @Test
@@ -55,15 +55,15 @@ public class BitsoRealApiResponseTest {
 
     BitsoTicker.BitsoTickerData payload = ticker.getPayload();
     assertThat(payload.getBook()).isEqualTo("btc_mxn");
-    assertThat(payload.getLast()).isNotBlank();
-    assertThat(payload.getHigh()).isNotBlank();
-    assertThat(payload.getLow()).isNotBlank();
-    assertThat(payload.getVolume()).isNotBlank();
-    assertThat(payload.getVwap()).isNotBlank();
-    assertThat(payload.getAsk()).isNotBlank();
-    assertThat(payload.getBid()).isNotBlank();
+    assertThat(payload.getLast()).isNotNull();
+    assertThat(payload.getHigh()).isNotNull();
+    assertThat(payload.getLow()).isNotNull();
+    assertThat(payload.getVolume()).isNotNull();
+    assertThat(payload.getVwap()).isNotNull();
+    assertThat(payload.getAsk()).isNotNull();
+    assertThat(payload.getBid()).isNotNull();
     assertThat(payload.getCreatedAt()).isNotNull();
-    assertThat(payload.getChange24()).isNotBlank();
+    assertThat(payload.getChange24()).isNotNull();
 
     // Test legacy compatibility methods
     assertThat(ticker.getLast()).isNotNull();
@@ -99,13 +99,13 @@ public class BitsoRealApiResponseTest {
     // Test first bid/ask entry structure
     BitsoOrderBook.BitsoOrderBookEntry firstBid = payload.getBids().get(0);
     assertThat(firstBid.getBook()).isEqualTo("btc_mxn");
-    assertThat(firstBid.getPrice()).isNotBlank();
-    assertThat(firstBid.getAmount()).isNotBlank();
+    assertThat(firstBid.getPrice()).isNotNull();
+    assertThat(firstBid.getAmount()).isNotNull();
 
     BitsoOrderBook.BitsoOrderBookEntry firstAsk = payload.getAsks().get(0);
     assertThat(firstAsk.getBook()).isEqualTo("btc_mxn");
-    assertThat(firstAsk.getPrice()).isNotBlank();
-    assertThat(firstAsk.getAmount()).isNotBlank();
+    assertThat(firstAsk.getPrice()).isNotNull();
+    assertThat(firstAsk.getAmount()).isNotNull();
 
     // Test legacy compatibility methods
     assertThat(orderBook.getAsks()).isNotEmpty();
@@ -135,8 +135,8 @@ public class BitsoRealApiResponseTest {
     BitsoTrades.BitsoTrade firstTrade = trades.getPayload().get(0);
     assertThat(firstTrade.getBook()).isEqualTo("btc_mxn");
     assertThat(firstTrade.getCreatedAt()).isNotBlank();
-    assertThat(firstTrade.getAmount()).isNotBlank();
-    assertThat(firstTrade.getPrice()).isNotBlank();
+    assertThat(firstTrade.getAmount()).isNotNull();
+    assertThat(firstTrade.getPrice()).isNotNull();
     assertThat(firstTrade.getTid()).isNotNull();
     assertThat(firstTrade.getMakerSide()).isIn("buy", "sell");
 
@@ -144,14 +144,14 @@ public class BitsoRealApiResponseTest {
     for (BitsoTrades.BitsoTrade trade : trades.getPayload()) {
       assertThat(trade.getBook()).isNotBlank();
       assertThat(trade.getCreatedAt()).isNotBlank();
-      assertThat(trade.getAmount()).isNotBlank();
-      assertThat(trade.getPrice()).isNotBlank();
+      assertThat(trade.getAmount()).isNotNull();
+      assertThat(trade.getPrice()).isNotNull();
       assertThat(trade.getTid()).isNotNull();
       assertThat(trade.getMakerSide()).isIn("buy", "sell");
 
       // Verify numeric values are valid
-      assertThat(new BigDecimal(trade.getAmount())).isGreaterThan(BigDecimal.ZERO);
-      assertThat(new BigDecimal(trade.getPrice())).isGreaterThan(BigDecimal.ZERO);
+      assertThat(trade.getAmount()).isGreaterThan(BigDecimal.ZERO);
+      assertThat(trade.getPrice()).isGreaterThan(BigDecimal.ZERO);
     }
   }
 

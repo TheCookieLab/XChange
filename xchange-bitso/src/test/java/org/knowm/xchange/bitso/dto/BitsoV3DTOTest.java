@@ -8,10 +8,7 @@ import org.knowm.xchange.bitso.dto.marketdata.BitsoAvailableBooks;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoOrderBook;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTicker;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTrades;
-import org.knowm.xchange.bitso.dto.trade.BitsoOrder;
-import org.knowm.xchange.bitso.dto.trade.BitsoOrderRequest;
-import org.knowm.xchange.bitso.dto.trade.BitsoOrderResponse;
-import org.knowm.xchange.bitso.dto.trade.BitsoUserTransaction;
+import org.knowm.xchange.bitso.dto.trade.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -27,12 +24,12 @@ public class BitsoV3DTOTest {
     BitsoOrderRequest request =
         BitsoOrderRequest.builder()
             .book("btc_mxn")
-            .side("buy")
-            .type("limit")
+            .side(BitsoOrderSide.BUY)
+            .type(BitsoOrderType.LIMIT)
             .major(new BigDecimal("0.01"))
             .price(new BigDecimal("5000.00"))
             .originId("test-order-123")
-            .timeInForce("goodtillcancelled")
+            .timeInForce(BitsoTimeInForce.GOOD_TILL_CANCELLED)
             .build();
 
     String json = objectMapper.writeValueAsString(request);
@@ -80,9 +77,9 @@ public class BitsoV3DTOTest {
     assertThat(order.getBook()).isEqualTo("btc_mxn");
     assertThat(order.getOid()).isEqualTo("test-order-789");
     assertThat(order.getOriginId()).isEqualTo("client-order-123");
-    assertThat(order.getSide()).isEqualTo("buy");
-    assertThat(order.getStatus()).isEqualTo("open");
-    assertThat(order.getType()).isEqualTo("limit");
+    assertThat(order.getSide()).isEqualTo(BitsoOrderSide.BUY);
+    assertThat(order.getStatus()).isEqualTo(BitsoOrderStatus.OPEN);
+    assertThat(order.getType()).isEqualTo(BitsoOrderType.LIMIT);
     assertThat(order.getPrice()).isEqualTo(new BigDecimal("50000.00"));
     assertThat(order.getOriginalAmount()).isEqualTo(new BigDecimal("0.01000000"));
   }

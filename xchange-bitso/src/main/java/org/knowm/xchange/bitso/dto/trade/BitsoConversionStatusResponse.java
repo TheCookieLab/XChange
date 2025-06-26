@@ -4,6 +4,8 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
+import java.math.BigDecimal;
+
 /**
  * Bitso conversion status response DTO for v4 API with enhanced states
  *
@@ -19,13 +21,13 @@ public class BitsoConversionStatusResponse {
   private String id;
 
   /** The amount converted (in from_currency) */
-  private String fromAmount;
+  private BigDecimal fromAmount;
 
   /** The source currency ticker */
   private String fromCurrency;
 
   /** The amount received (in to_currency) */
-  private String toAmount;
+  private BigDecimal toAmount;
 
   /** The target currency ticker */
   private String toCurrency;
@@ -37,10 +39,10 @@ public class BitsoConversionStatusResponse {
   private Long expires;
 
   /** The conversion rate offered by Bitso (includes spread) */
-  private String rate;
+  private BigDecimal rate;
 
   /** The market rate without spread */
-  private String plainRate;
+  private BigDecimal plainRate;
 
   /** The currency in which the rate is expressed */
   private String rateCurrency;

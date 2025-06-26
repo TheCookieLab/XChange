@@ -56,7 +56,7 @@ public final class BitsoAdapters {
 
     // Convert each currency balance from the v3 API structure
     for (BitsoBalance.CurrencyBalance currencyBalance : bitsoBalance.getBalances()) {
-      Currency currency = Currency.getInstance(currencyBalance.getCurrency().toUpperCase());
+      Currency currency = Currency.getInstance(currencyBalance.getCurrency());
 
       Balance balance =
           new Balance(
@@ -143,9 +143,9 @@ public final class BitsoAdapters {
         trades.add(
             new Trade.Builder()
                 .type(type)
-                .originalAmount(new BigDecimal(trade.getAmount()))
+                .originalAmount(trade.getAmount())
                 .currencyPair(currencyPair)
-                .price(new BigDecimal(trade.getPrice()))
+                .price(trade.getPrice())
                 .timestamp(timestamp)
                 .id(String.valueOf(tradeId))
                 .build());
@@ -228,8 +228,7 @@ public final class BitsoAdapters {
               : BigDecimal.ZERO;
 
       // Fee currency is specified in the fees_currency field
-      Currency feeCurrency =
-          Currency.getInstance(bitsoUserTransaction.getFeesCurrency().toUpperCase());
+      Currency feeCurrency = Currency.getInstance(bitsoUserTransaction.getFeesCurrency());
 
       UserTrade trade =
           UserTrade.builder()
@@ -262,8 +261,8 @@ public final class BitsoAdapters {
     }
 
     try {
-      Currency base = Currency.getInstance(parts[0].toUpperCase());
-      Currency counter = Currency.getInstance(parts[1].toUpperCase());
+      Currency base = Currency.getInstance(parts[0]);
+      Currency counter = Currency.getInstance(parts[1]);
       return new CurrencyPair(base, counter);
     } catch (IllegalArgumentException e) {
       return null;

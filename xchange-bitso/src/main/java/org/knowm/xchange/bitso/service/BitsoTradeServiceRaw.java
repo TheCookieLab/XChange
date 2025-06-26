@@ -2,8 +2,10 @@ package org.knowm.xchange.bitso.service;
 
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.BitsoAuthenticated;
+import org.knowm.xchange.bitso.BitsoErrorAdapter;
 import org.knowm.xchange.bitso.BitsoJacksonObjectMapperFactory;
 import org.knowm.xchange.bitso.dto.BitsoBaseResponse;
+import org.knowm.xchange.bitso.dto.BitsoException;
 import org.knowm.xchange.bitso.dto.trade.*;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.exceptions.ExchangeException;
@@ -44,19 +46,23 @@ public class BitsoTradeServiceRaw extends BitsoBaseService {
   }
 
   public BitsoOrder[] getBitsoOpenOrders(String book, Integer limit) throws IOException {
+    try {
+      BitsoBaseResponse<BitsoOrder[]> response =
+          bitsoAuthenticated.getOpenOrders(
+              signatureCreator, exchange.getNonceFactory(), book, limit);
 
-    BitsoBaseResponse<BitsoOrder[]> response =
-        bitsoAuthenticated.getOpenOrders(signatureCreator, exchange.getNonceFactory(), book, limit);
+      if (!response.getSuccess() || response.getError() != null) {
+        String errorMessage =
+            response.getError() != null
+                ? response.getError().getMessage()
+                : "Unknown error getting open orders";
+        throw new ExchangeException("Error getting open orders. " + errorMessage);
+      }
 
-    if (!response.getSuccess() || response.getError() != null) {
-      String errorMessage =
-          response.getError() != null
-              ? response.getError().getMessage()
-              : "Unknown error getting open orders";
-      throw new ExchangeException("Error getting open orders. " + errorMessage);
+      return response.getPayload();
+    } catch (BitsoException e) {
+      throw BitsoErrorAdapter.adapt(e);
     }
-
-    return response.getPayload();
   }
 
   /** Place a limit sell order */
@@ -65,8 +71,8 @@ public class BitsoTradeServiceRaw extends BitsoBaseService {
     BitsoOrderRequest request =
         BitsoOrderRequest.builder()
             .book(book)
-            .side("sell")
-            .type("limit")
+            .side(BitsoOrderSide.SELL)
+            .type(BitsoOrderType.LIMIT)
             .major(originalAmount)
             .price(price)
             .build();
@@ -80,8 +86,8 @@ public class BitsoTradeServiceRaw extends BitsoBaseService {
     BitsoOrderRequest request =
         BitsoOrderRequest.builder()
             .book(book)
-            .side("buy")
-            .type("limit")
+            .side(BitsoOrderSide.BUY)
+            .type(BitsoOrderType.LIMIT)
             .major(originalAmount)
             .price(price)
             .build();
@@ -324,7 +330,7 @@ public class BitsoTradeServiceRaw extends BitsoBaseService {
         BitsoConversionQuoteRequest.builder()
             .from(fromCurrency)
             .to(toCurrency)
-            .amount(amount.toString())
+            .amount(amount)
             .build();
 
     return requestBitsoConversionQuote(request);

@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /** DTO for Bitso API v3 trades endpoint */
@@ -25,11 +26,11 @@ public class BitsoTrades {
 
     private String createdAt;
 
-    private String amount;
+    private BigDecimal amount;
 
     private String makerSide;
 
-    private String price;
+    private BigDecimal price;
 
     private Long tid;
   }

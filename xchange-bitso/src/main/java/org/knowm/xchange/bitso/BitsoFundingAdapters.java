@@ -1,5 +1,6 @@
 package org.knowm.xchange.bitso;
 
+import lombok.experimental.UtilityClass;
 import org.knowm.xchange.bitso.dto.funding.BitsoDepositDetails;
 import org.knowm.xchange.bitso.dto.funding.BitsoFunding;
 import org.knowm.xchange.bitso.dto.funding.BitsoWithdrawal;
@@ -11,11 +12,8 @@ import java.util.List;
 import java.util.Map;
 
 /** Adapters for converting Bitso funding DTOs to XChange DTOs */
-public final class BitsoFundingAdapters {
-
-  private BitsoFundingAdapters() {
-    // Utility class
-  }
+@UtilityClass
+public class BitsoFundingAdapters {
 
   private static String getIfExists(Map<String, Object> details, String key, String defaultValue) {
     if (details == null) {
@@ -38,7 +36,7 @@ public final class BitsoFundingAdapters {
         funding.getFundingId(),
         getIfExists(funding.getDetails(), "tx_hash", funding.getTxHash()),
         FundingRecord.Type.DEPOSIT,
-        adaptFundingStatus(funding.getStatus()),
+        adaptFundingStatus(funding.getStatus().getValue()),
         null, // balance
         funding.getFee(),
         funding.getDetails() != null ? funding.getDetails().toString() : null);

@@ -1,6 +1,5 @@
 package org.knowm.xchange.bitso.dto.trade;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
@@ -15,17 +14,16 @@ import java.math.BigDecimal;
 @Value
 @Builder
 @Jacksonized
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class BitsoOrderRequest {
 
   /** The book to use (e.g., "btc_mxn") */
   private final String book;
 
   /** The order's side. Valid values: buy and sell */
-  private final String side;
+  private final BitsoOrderSide side;
 
   /** The order's type. Valid values: market and limit */
-  private final String type;
+  private final BitsoOrderType type;
 
   /**
    * The amount in the major currency for the order Required for limit orders, optional for market
@@ -55,5 +53,5 @@ public class BitsoOrderRequest {
    * The period a limit order remains active before it is executed or expires Valid values:
    * goodtillcancelled, fillorkill, immediateorcancel, postonly
    */
-  private final String timeInForce;
+  private final BitsoTimeInForce timeInForce;
 }

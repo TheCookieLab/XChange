@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /** DTO for Bitso API v3 available books endpoint */
@@ -23,19 +24,19 @@ public class BitsoAvailableBooks {
 
     private String book;
 
-    private String minimumAmount;
+    private BigDecimal minimumAmount;
 
-    private String maximumAmount;
+    private BigDecimal maximumAmount;
 
-    private String minimumPrice;
+    private BigDecimal minimumPrice;
 
-    private String maximumPrice;
+    private BigDecimal maximumPrice;
 
-    private String minimumValue;
+    private BigDecimal minimumValue;
 
-    private String maximumValue;
+    private BigDecimal maximumValue;
 
-    private String tickSize;
+    private BigDecimal tickSize;
 
     // Additional fields that may be present in real API responses
 

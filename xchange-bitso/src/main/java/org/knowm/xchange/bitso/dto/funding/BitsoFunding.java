@@ -27,7 +27,7 @@ public class BitsoFunding {
   private final BigDecimal amount;
 
   /** Status (pending, complete, cancelled, failed) */
-  private final String status;
+  private final BitsoFundingStatus status;
 
   /** Creation timestamp */
   private final Date createdAt;

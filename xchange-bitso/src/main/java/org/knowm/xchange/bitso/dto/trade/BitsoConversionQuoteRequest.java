@@ -4,6 +4,8 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
+import java.math.BigDecimal;
+
 /**
  * Bitso conversion quote request DTO for v4 API
  *
@@ -22,7 +24,7 @@ public class BitsoConversionQuoteRequest {
   private String to;
 
   /** The amount to convert (in the source currency) */
-  private String amount;
+  private BigDecimal amount;
 
   /**
    * Optional: The type of amount. Can be "exact_in" or "exact_out" Default is "exact_in" (exact

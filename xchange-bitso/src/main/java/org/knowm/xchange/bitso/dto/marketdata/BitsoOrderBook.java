@@ -43,9 +43,9 @@ public class BitsoOrderBook {
 
     private String book;
 
-    private String price;
+    private BigDecimal price;
 
-    private String amount;
+    private BigDecimal amount;
   }
 
   // Legacy methods for backwards compatibility
@@ -54,9 +54,7 @@ public class BitsoOrderBook {
       return null;
     }
     return payload.getBids().stream()
-        .map(
-            entry ->
-                Arrays.asList(new BigDecimal(entry.getPrice()), new BigDecimal(entry.getAmount())))
+        .map(entry -> Arrays.asList(entry.getPrice(), entry.getAmount()))
         .collect(Collectors.toList());
   }
 
@@ -65,9 +63,7 @@ public class BitsoOrderBook {
       return null;
     }
     return payload.getAsks().stream()
-        .map(
-            entry ->
-                Arrays.asList(new BigDecimal(entry.getPrice()), new BigDecimal(entry.getAmount())))
+        .map(entry -> Arrays.asList(entry.getPrice(), entry.getAmount()))
         .collect(Collectors.toList());
   }
 

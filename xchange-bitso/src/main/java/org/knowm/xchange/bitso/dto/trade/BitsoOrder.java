@@ -39,16 +39,16 @@ public class BitsoOrder {
   private final BigDecimal price;
 
   /** The order's side. Possible values: buy and sell */
-  private final String side;
+  private final BitsoOrderSide side;
 
   /** The order's status. Possible values: queued, open, partially filled */
-  private final String status;
+  private final BitsoOrderStatus status;
 
   /** The period a limit order remains active before it is executed or expires */
   private final String timeInForce;
 
   /** The order's type. Possible values: market, limit */
-  private final String type;
+  private final BitsoOrderType type;
 
   /** The order's unfilled major currency amount */
   private final BigDecimal unfilledAmount;

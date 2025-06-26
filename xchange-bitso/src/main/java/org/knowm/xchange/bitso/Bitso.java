@@ -13,9 +13,6 @@ import org.knowm.xchange.bitso.dto.marketdata.BitsoTrades;
 
 import java.io.IOException;
 
-/**
- * @author Piotr Ładyżyński Updated for Bitso API v3
- */
 @Path("api/v3")
 @Produces(MediaType.APPLICATION_JSON)
 public interface Bitso {

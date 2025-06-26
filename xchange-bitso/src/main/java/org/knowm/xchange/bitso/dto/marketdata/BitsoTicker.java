@@ -27,58 +27,58 @@ public class BitsoTicker {
 
     private String book;
 
-    private String volume;
+    private BigDecimal volume;
 
-    private String high;
+    private BigDecimal high;
 
-    private String last;
+    private BigDecimal last;
 
-    private String low;
+    private BigDecimal low;
 
-    private String vwap;
+    private BigDecimal vwap;
 
-    private String ask;
+    private BigDecimal ask;
 
-    private String bid;
+    private BigDecimal bid;
 
     private Instant createdAt;
 
     @JsonProperty("change_24")
-    private String change24;
+    private BigDecimal change24;
 
     private Object rollingAverageChange;
 
     // Legacy getters for backwards compatibility
     public BigDecimal getLastAsDecimal() {
-      return last != null ? new BigDecimal(last) : null;
+      return last;
     }
 
     public BigDecimal getHighAsDecimal() {
-      return high != null ? new BigDecimal(high) : null;
+      return high;
     }
 
     public BigDecimal getLowAsDecimal() {
-      return low != null ? new BigDecimal(low) : null;
+      return low;
     }
 
     public BigDecimal getVwapAsDecimal() {
-      return vwap != null ? new BigDecimal(vwap) : null;
+      return vwap;
     }
 
     public BigDecimal getVolumeAsDecimal() {
-      return volume != null ? new BigDecimal(volume) : null;
+      return volume;
     }
 
     public BigDecimal getBidAsDecimal() {
-      return bid != null ? new BigDecimal(bid) : null;
+      return bid;
     }
 
     public BigDecimal getAskAsDecimal() {
-      return ask != null ? new BigDecimal(ask) : null;
+      return ask;
     }
 
     public BigDecimal getChange24AsDecimal() {
-      return change24 != null ? new BigDecimal(change24) : null;
+      return change24;
     }
   }
 

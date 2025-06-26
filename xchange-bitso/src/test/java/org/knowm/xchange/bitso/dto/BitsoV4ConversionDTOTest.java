@@ -8,6 +8,8 @@ import org.knowm.xchange.bitso.dto.trade.BitsoConversionQuoteRequest;
 import org.knowm.xchange.bitso.dto.trade.BitsoConversionQuoteResponse;
 import org.knowm.xchange.bitso.dto.trade.BitsoConversionStatusResponse;
 
+import java.math.BigDecimal;
+
 import static org.junit.Assert.*;
 
 /** Tests for Bitso v4 Currency Conversion DTOs */
@@ -22,14 +24,14 @@ public class BitsoV4ConversionDTOTest {
         BitsoConversionQuoteRequest.builder()
             .from("mxn")
             .to("usd")
-            .amount("1854.21860516")
+            .amount(new BigDecimal("1854.21860516"))
             .amountType("exact_in")
             .build();
 
     assertNotNull(request);
     assertEquals("mxn", request.getFrom());
     assertEquals("usd", request.getTo());
-    assertEquals("1854.21860516", request.getAmount());
+    assertEquals(new BigDecimal("1854.21860516"), request.getAmount());
     assertEquals("exact_in", request.getAmountType());
   }
 
@@ -37,12 +39,16 @@ public class BitsoV4ConversionDTOTest {
   public void testConversionQuoteRequestMinimal() {
     // Test builder pattern with minimal required fields
     BitsoConversionQuoteRequest request =
-        BitsoConversionQuoteRequest.builder().from("btc").to("mxn").amount("0.1").build();
+        BitsoConversionQuoteRequest.builder()
+            .from("btc")
+            .to("mxn")
+            .amount(new BigDecimal("0.1"))
+            .build();
 
     assertNotNull(request);
     assertEquals("btc", request.getFrom());
     assertEquals("mxn", request.getTo());
-    assertEquals("0.1", request.getAmount());
+    assertEquals(new BigDecimal("0.1"), request.getAmount());
   }
 
   @Test
@@ -67,14 +73,14 @@ public class BitsoV4ConversionDTOTest {
 
     assertNotNull(response);
     assertEquals("quote_123456", response.getId());
-    assertEquals("1854.21860516", response.getFromAmount());
+    assertEquals(new BigDecimal("1854.21860516"), response.getFromAmount());
     assertEquals("mxn", response.getFromCurrency());
-    assertEquals("100.00000000", response.getToAmount());
+    assertEquals(new BigDecimal("100.00000000"), response.getToAmount());
     assertEquals("usd", response.getToCurrency());
     assertEquals(Long.valueOf(1719862355209L), response.getCreated());
     assertEquals(Long.valueOf(1719862385209L), response.getExpires());
-    assertEquals("18.54218605", response.getRate());
-    assertEquals("18.36", response.getPlainRate());
+    assertEquals(new BigDecimal("18.54218605"), response.getRate());
+    assertEquals(new BigDecimal("18.36"), response.getPlainRate());
     assertEquals("mxn", response.getRateCurrency());
     assertEquals("usd_mxn", response.getBook());
   }
@@ -113,14 +119,14 @@ public class BitsoV4ConversionDTOTest {
 
     assertNotNull(response);
     assertEquals("7316", response.getId());
-    assertEquals("1854.21860516", response.getFromAmount());
+    assertEquals(new BigDecimal("1854.21860516"), response.getFromAmount());
     assertEquals("mxn", response.getFromCurrency());
-    assertEquals("100.00000000", response.getToAmount());
+    assertEquals(new BigDecimal("100.00000000"), response.getToAmount());
     assertEquals("usd", response.getToCurrency());
     assertEquals(Long.valueOf(1719862355209L), response.getCreated());
     assertEquals(Long.valueOf(1719862385209L), response.getExpires());
-    assertEquals("18.54218605", response.getRate());
-    assertEquals("18.36", response.getPlainRate());
+    assertEquals(new BigDecimal("18.54218605"), response.getRate());
+    assertEquals(new BigDecimal("18.36"), response.getPlainRate());
     assertEquals("mxn", response.getRateCurrency());
     assertEquals("xrp_mxn", response.getBook());
     assertEquals("completed", response.getStatus());
@@ -227,7 +233,7 @@ public class BitsoV4ConversionDTOTest {
         BitsoConversionQuoteRequest.builder()
             .from("btc")
             .to("mxn")
-            .amount("0.5")
+            .amount(new BigDecimal("0.5"))
             .amountType("exact_in")
             .build();
 
@@ -237,7 +243,7 @@ public class BitsoV4ConversionDTOTest {
 
     assertTrue(json.contains("\"from\":\"btc\""));
     assertTrue(json.contains("\"to\":\"mxn\""));
-    assertTrue(json.contains("\"amount\":\"0.5\""));
+    assertTrue(json.contains("\"amount\":0.5"));
     assertTrue(json.contains("\"amount_type\":\"exact_in\""));
   }
 
@@ -245,10 +251,18 @@ public class BitsoV4ConversionDTOTest {
   public void testLombokFunctionality() {
     // Test Lombok-generated methods
     BitsoConversionQuoteRequest request1 =
-        BitsoConversionQuoteRequest.builder().from("btc").to("mxn").amount("1.0").build();
+        BitsoConversionQuoteRequest.builder()
+            .from("btc")
+            .to("mxn")
+            .amount(new BigDecimal("1.0"))
+            .build();
 
     BitsoConversionQuoteRequest request2 =
-        BitsoConversionQuoteRequest.builder().from("btc").to("mxn").amount("1.0").build();
+        BitsoConversionQuoteRequest.builder()
+            .from("btc")
+            .to("mxn")
+            .amount(new BigDecimal("1.0"))
+            .build();
 
     // Test equals and hashCode
     assertEquals(request1, request2);

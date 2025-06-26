@@ -16,5 +16,5 @@ public class BitsoWithdrawalFee {
   private final BigDecimal amount;
 
   /** Fee type (fixed, percentage) */
-  private final String type;
+  private final BitsoWithdrawalFeeType type;
 }

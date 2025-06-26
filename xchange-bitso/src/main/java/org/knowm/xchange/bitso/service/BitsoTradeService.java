@@ -57,7 +57,8 @@ public class BitsoTradeService extends BitsoTradeServiceRaw implements TradeServ
       // Parse currency pair from book field
       CurrencyPair currencyPair = parseCurrencyPair(bitsoOrder.getBook());
       if (currencyPair == null) {
-        currencyPair = new CurrencyPair(Currency.BTC, Currency.MXN); // fallback
+        // Skip orders with unparseable book field rather than using a fallback
+        continue;
       }
 
       // Parse timestamp
@@ -78,8 +79,8 @@ public class BitsoTradeService extends BitsoTradeServiceRaw implements TradeServ
     BitsoOrderRequest request =
         BitsoOrderRequest.builder()
             .book(book)
-            .side(marketOrder.getType() == OrderType.BID ? "buy" : "sell")
-            .type("market")
+            .side(marketOrder.getType() == OrderType.BID ? BitsoOrderSide.BUY : BitsoOrderSide.SELL)
+            .type(BitsoOrderType.MARKET)
             .major(marketOrder.getOriginalAmount())
             .build();
 
@@ -94,8 +95,8 @@ public class BitsoTradeService extends BitsoTradeServiceRaw implements TradeServ
     BitsoOrderRequest request =
         BitsoOrderRequest.builder()
             .book(book)
-            .side(limitOrder.getType() == OrderType.BID ? "buy" : "sell")
-            .type("limit")
+            .side(limitOrder.getType() == OrderType.BID ? BitsoOrderSide.BUY : BitsoOrderSide.SELL)
+            .type(BitsoOrderType.LIMIT)
             .major(limitOrder.getOriginalAmount())
             .price(limitOrder.getLimitPrice())
             .build();
