@@ -1,31 +1,25 @@
 package org.knowm.xchange.bitso.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /** Order type enum */
 public enum BitsoOrderType {
-  MARKET("market"),
-  LIMIT("limit");
-
-  private final String value;
-
-  BitsoOrderType(String value) {
-    this.value = value;
-  }
-
-  @JsonValue
-  public String getValue() {
-    return value;
-  }
+  @JsonProperty("market")
+  MARKET,
+  
+  @JsonProperty("limit")
+  LIMIT;
 
   @JsonCreator
   public static BitsoOrderType fromValue(String value) {
-    for (BitsoOrderType type : values()) {
-      if (type.value.equals(value)) {
-        return type;
-      }
+    switch (value) {
+      case "market":
+        return MARKET;
+      case "limit":
+        return LIMIT;
+      default:
+        throw new IllegalArgumentException("Unknown order type: " + value);
     }
-    throw new IllegalArgumentException("Unknown order type: " + value);
   }
 }

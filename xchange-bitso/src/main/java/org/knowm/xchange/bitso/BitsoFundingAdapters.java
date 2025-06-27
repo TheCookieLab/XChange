@@ -36,7 +36,7 @@ public class BitsoFundingAdapters {
         funding.getFundingId(),
         getIfExists(funding.getDetails(), "tx_hash", funding.getTxHash()),
         FundingRecord.Type.DEPOSIT,
-        adaptFundingStatus(funding.getStatus().getValue()),
+        adaptFundingStatus(funding.getStatus().name().toLowerCase()),
         null, // balance
         funding.getFee(),
         funding.getDetails() != null ? funding.getDetails().toString() : null);

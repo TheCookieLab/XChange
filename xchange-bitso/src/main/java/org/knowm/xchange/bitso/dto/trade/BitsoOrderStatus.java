@@ -1,32 +1,30 @@
 package org.knowm.xchange.bitso.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /** Order status enum */
 public enum BitsoOrderStatus {
-  QUEUED("queued"),
-  OPEN("open"),
-  PARTIALLY_FILLED("partially filled");
-
-  private final String value;
-
-  BitsoOrderStatus(String value) {
-    this.value = value;
-  }
-
-  @JsonValue
-  public String getValue() {
-    return value;
-  }
+  @JsonProperty("queued")
+  QUEUED,
+  
+  @JsonProperty("open")
+  OPEN,
+  
+  @JsonProperty("partially filled")
+  PARTIALLY_FILLED;
 
   @JsonCreator
   public static BitsoOrderStatus fromValue(String value) {
-    for (BitsoOrderStatus status : values()) {
-      if (status.value.equals(value)) {
-        return status;
-      }
+    switch (value) {
+      case "queued":
+        return QUEUED;
+      case "open":
+        return OPEN;
+      case "partially filled":
+        return PARTIALLY_FILLED;
+      default:
+        throw new IllegalArgumentException("Unknown order status: " + value);
     }
-    throw new IllegalArgumentException("Unknown order status: " + value);
   }
 }

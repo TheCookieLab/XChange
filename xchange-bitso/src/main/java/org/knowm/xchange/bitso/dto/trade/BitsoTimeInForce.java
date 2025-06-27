@@ -1,33 +1,35 @@
 package org.knowm.xchange.bitso.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /** Time in force enum for orders */
 public enum BitsoTimeInForce {
-  GOOD_TILL_CANCELLED("goodtillcancelled"),
-  FILL_OR_KILL("fillorkill"),
-  IMMEDIATE_OR_CANCEL("immediateorcancel"),
-  POST_ONLY("postonly");
-
-  private final String value;
-
-  BitsoTimeInForce(String value) {
-    this.value = value;
-  }
-
-  @JsonValue
-  public String getValue() {
-    return value;
-  }
+  @JsonProperty("goodtillcancelled")
+  GOOD_TILL_CANCELLED,
+  
+  @JsonProperty("fillorkill")
+  FILL_OR_KILL,
+  
+  @JsonProperty("immediateorcancel")
+  IMMEDIATE_OR_CANCEL,
+  
+  @JsonProperty("postonly")
+  POST_ONLY;
 
   @JsonCreator
   public static BitsoTimeInForce fromValue(String value) {
-    for (BitsoTimeInForce tif : values()) {
-      if (tif.value.equals(value)) {
-        return tif;
-      }
+    switch (value) {
+      case "goodtillcancelled":
+        return GOOD_TILL_CANCELLED;
+      case "fillorkill":
+        return FILL_OR_KILL;
+      case "immediateorcancel":
+        return IMMEDIATE_OR_CANCEL;
+      case "postonly":
+        return POST_ONLY;
+      default:
+        throw new IllegalArgumentException("Unknown time in force: " + value);
     }
-    throw new IllegalArgumentException("Unknown time in force: " + value);
   }
 }

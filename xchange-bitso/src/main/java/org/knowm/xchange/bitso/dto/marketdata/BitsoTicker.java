@@ -48,66 +48,34 @@ public class BitsoTicker {
 
     private Object rollingAverageChange;
 
-    // Legacy getters for backwards compatibility
-    public BigDecimal getLastAsDecimal() {
-      return last;
-    }
-
-    public BigDecimal getHighAsDecimal() {
-      return high;
-    }
-
-    public BigDecimal getLowAsDecimal() {
-      return low;
-    }
-
-    public BigDecimal getVwapAsDecimal() {
-      return vwap;
-    }
-
-    public BigDecimal getVolumeAsDecimal() {
-      return volume;
-    }
-
-    public BigDecimal getBidAsDecimal() {
-      return bid;
-    }
-
-    public BigDecimal getAskAsDecimal() {
-      return ask;
-    }
-
-    public BigDecimal getChange24AsDecimal() {
-      return change24;
-    }
   }
 
   // Legacy methods for backwards compatibility
   public BigDecimal getLast() {
-    return payload != null ? payload.getLastAsDecimal() : null;
+    return payload != null ? payload.getLast() : null;
   }
 
   public BigDecimal getHigh() {
-    return payload != null ? payload.getHighAsDecimal() : null;
+    return payload != null ? payload.getHigh() : null;
   }
 
   public BigDecimal getLow() {
-    return payload != null ? payload.getLowAsDecimal() : null;
+    return payload != null ? payload.getLow() : null;
   }
 
   public BigDecimal getVwap() {
-    return payload != null ? payload.getVwapAsDecimal() : null;
+    return payload != null ? payload.getVwap() : null;
   }
 
   public BigDecimal getVolume() {
-    return payload != null ? payload.getVolumeAsDecimal() : null;
+    return payload != null ? payload.getVolume() : null;
   }
 
   public BigDecimal getBid() {
-    return payload != null ? payload.getBidAsDecimal() : null;
+    return payload != null ? payload.getBid() : null;
   }
 
   public BigDecimal getAsk() {
-    return payload != null ? payload.getAskAsDecimal() : null;
+    return payload != null ? payload.getAsk() : null;
   }
 }
