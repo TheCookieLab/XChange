@@ -29,7 +29,7 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
     String cursor = null;
     Boolean hasNext;
     do {
-      CoinbaseAccountsResponse response = coinbaseAdvancedTrade.listAccounts(authTokenCreator, 10,
+      CoinbaseAccountsResponse response = coinbaseAdvancedTrade.listAccounts(authTokenCreator, 250,
           cursor);
       cursor = response.getCursor();
       hasNext = response.getHasNext();
