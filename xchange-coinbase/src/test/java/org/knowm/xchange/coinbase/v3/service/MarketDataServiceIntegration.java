@@ -17,6 +17,7 @@ import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
@@ -123,7 +124,7 @@ public class MarketDataServiceIntegration {
   public void getETHUSDTicker() throws IOException {
     Assume.assumeNotNull(marketDataService.authTokenCreator);
 
-    Instrument instrument = CurrencyPair.BTC_USD;
+    Instrument instrument = CurrencyPair.ETH_USD;
 
     Ticker ticker = marketDataService.getTicker(instrument);
 
@@ -141,5 +142,14 @@ public class MarketDataServiceIntegration {
     assertNotNull(ticker.getHigh());
     assertNotNull(ticker.getLow());
     assertNotNull(ticker.getLast());
+  }
+
+  @Test
+  public void listSpotProducts() throws Exception {
+    Assume.assumeNotNull(marketDataService.authTokenCreator);
+
+    CoinbaseProductsResponse products = marketDataService.listProducts("SPOT");
+
+    assertFalse(products.getProducts().isEmpty());
   }
 }

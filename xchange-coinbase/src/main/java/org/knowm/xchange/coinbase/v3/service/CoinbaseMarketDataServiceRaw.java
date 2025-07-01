@@ -1,18 +1,18 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.Objects;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
-import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
 import si.mazi.rescu.ParamsDigest;
 
 class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
@@ -33,6 +33,10 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
 
   public CoinbaseProductResponse getProduct(String productId) throws IOException {
     return coinbaseAdvancedTrade.getProduct(authTokenCreator, productId, false);
+  }
+
+  public CoinbaseProductsResponse listProducts(String productType) throws Exception {
+    return coinbaseAdvancedTrade.listProducts(authTokenCreator, null, null, productType, null, null, null, null, null, null);
   }
 
   /**
