@@ -11,13 +11,13 @@
     </appender>
 
 
-    <root level="WARN">
+    <root level="TRACE">
         <appender-ref ref="CONSOLE_APPENDER"/>
     </root>
 
 
     <!-- Define logging for organization applications only -->
-<!--    <logger name="org.knowm.xchange" level="DEBUG"/>-->
+<!--    <logger name="org.knowm.xchange" level="TRACE"/>-->
 <!--    <logger name="si.mazi.rescu" level="TRACE"/>-->
 
 </configuration>

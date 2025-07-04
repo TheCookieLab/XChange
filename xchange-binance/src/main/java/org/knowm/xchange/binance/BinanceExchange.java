@@ -65,7 +65,9 @@ public class BinanceExchange extends BaseExchange implements Exchange {
       // some workaround, for different resilience registries for spot and futures
       if (isFuturesEnabled()) {
         RESILIENCE_REGISTRIES = BinanceResilience.createRegistriesFuture();
-      } else  RESILIENCE_REGISTRIES = BinanceResilience.createRegistries();
+      } else {
+        RESILIENCE_REGISTRIES = BinanceResilience.createRegistries();
+      }
     }
     return RESILIENCE_REGISTRIES;
   }
@@ -184,6 +186,9 @@ public class BinanceExchange extends BaseExchange implements Exchange {
           }
           break;
         }
+        case PORTFOLIO_MARGIN:
+          exchangeSpecification.setSslUri(PORTFOLIO_MARGIN_URL);
+          break;
       }
     }
   }

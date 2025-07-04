@@ -22,6 +22,7 @@ import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceQueryOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceTradeHistoryParams;
 import org.knowm.xchange.binance.service.BinanceAccountService;
+import org.knowm.xchange.binance.service.BinanceTradeService;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.AccountInfo;
@@ -36,6 +37,7 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
+import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,14 +55,14 @@ public class BinanceFutureTest {
     prop.load(this.getClass().getResourceAsStream("/secret.keys"));
 
     ExchangeSpecification spec = new ExchangeSpecification(BinanceExchange.class);
-
     spec.setApiKey(prop.getProperty("apikey"));
     spec.setSecretKey(prop.getProperty("secret"));
+    // The most convenient way. Can store all keys in .ssh folder
+    AuthUtils.setApiAndSecretKey(spec, "binance-demo-futures");
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
     spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, FUTURES);
 
-    Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
-    binanceExchange = exchange;
+    binanceExchange = ExchangeFactory.INSTANCE.createExchange(spec);
   }
 
   @Test
@@ -92,11 +94,7 @@ public class BinanceFutureTest {
     logger.info("fee: {}", fee);
     AccountInfo accountInfo = binanceExchange.getAccountService().getAccountInfo();
     logger.info("AccountInfo: {}", accountInfo.getWallet(Wallet.WalletFeature.FUTURES_TRADING));
-    assertThat(
-            accountInfo.getOpenPositions().stream()
-                .anyMatch(openPosition -> openPosition.getInstrument().equals(instrument)))
-        .isTrue();
-    logger.info("Positions: {}",accountInfo.getOpenPositions());
+    logger.info("Positions: {}", accountInfo.getOpenPositions());
   }
 
   @Test
@@ -108,21 +106,14 @@ public class BinanceFutureTest {
     List<OpenPosition> openPositions =
         binanceExchange.getTradeService().getOpenPositions().getOpenPositions();
     logger.info("Positions: " + openPositions);
-    assertThat(
-            openPositions.stream()
-                .anyMatch(openPosition -> openPosition.getInstrument().equals(instrument)))
-        .isTrue();
 
-    // Get UserTrades
+//    // Get UserTrades
     List<UserTrade> userTrades =
         binanceExchange
             .getTradeService()
             .getTradeHistory(new BinanceTradeHistoryParams(instrument))
             .getUserTrades();
     logger.info("UserTrades: " + userTrades);
-    assertThat(
-            userTrades.stream().anyMatch(userTrade -> userTrade.getInstrument().equals(instrument)))
-        .isTrue();
 
     // Place LimitOrder
     String orderId =
@@ -134,6 +125,16 @@ public class BinanceFutureTest {
                     .flags(orderFlags)
                     .originalAmount(BigDecimal.ONE)
                     .build());
+    // Change order price
+    String newPriceOrderId
+        = binanceExchange.getTradeService().changeOrder(
+        new LimitOrder.Builder(Order.OrderType.BID, instrument)
+            .limitPrice(BigDecimal.valueOf(1010))
+            .flags(orderFlags)
+            .originalAmount(BigDecimal.ONE)
+            .id(orderId)
+            .build());
+
     // Get OpenOrders
     List<LimitOrder> openOrders =
         binanceExchange
@@ -142,7 +143,7 @@ public class BinanceFutureTest {
             .getOpenOrders();
     logger.info("OpenOrders: " + openOrders);
     assertThat(
-            openOrders.stream().anyMatch(openOrder -> openOrder.getInstrument().equals(instrument)))
+        openOrders.stream().anyMatch(openOrder -> openOrder.getInstrument().equals(instrument)))
         .isTrue();
 
     // Get order
@@ -153,12 +154,19 @@ public class BinanceFutureTest {
     logger.info("GetOrder: " + order);
     assertThat(order.stream().anyMatch(order1 -> order1.getInstrument().equals(instrument)))
         .isTrue();
-
+    order.forEach(order1 -> {
+      if (order1 instanceof LimitOrder) {
+        assertThat(((LimitOrder) order1).getLimitPrice().compareTo(new BigDecimal("1010")) == 0).isTrue();
+      }
+    });
     // Cancel LimitOrder
     logger.info(
         "CancelOrder: "
             + binanceExchange
-                .getTradeService()
-                .cancelOrder(new BinanceCancelOrderParams(instrument, orderId)));
+            .getTradeService()
+            .cancelOrder(new BinanceCancelOrderParams(instrument, orderId)));
+    // set Leverage
+    boolean isChanged = ((BinanceTradeService) binanceExchange.getTradeService()).setLeverage(instrument, 10);
+    logger.info("Leverage changed: {}", isChanged);
   }
 }

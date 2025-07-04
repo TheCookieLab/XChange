@@ -33,6 +33,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
   public static final String USE_HIGHER_UPDATE_FREQUENCY = "Binance_Orderbook_Use_Higher_Frequency";
   public static final String USE_REALTIME_BOOK_TICKER = "Binance_Ticker_Use_Realtime";
   public static final String FETCH_ORDER_BOOK_LIMIT = "Binance_Fetch_Order_Book_Limit";
+
   private BinanceStreamingService streamingService;
   private BinanceUserDataStreamingService userDataStreamingService;
 
@@ -137,7 +138,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
             realtimeOrderBookTicker,
             oderBookFetchLimitParameter);
     streamingAccountService = new BinanceStreamingAccountService(userDataStreamingService);
-    streamingTradeService = new BinanceStreamingTradeService(userDataStreamingService);
+    streamingTradeService = new BinanceStreamingTradeService(this,userDataStreamingService);
 
     return Completable.concat(completables)
         .doOnComplete(

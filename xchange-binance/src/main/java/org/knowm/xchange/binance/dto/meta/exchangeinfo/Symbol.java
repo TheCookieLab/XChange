@@ -25,6 +25,8 @@ public class Symbol {
 
   private String status;
 
+  private String contractType;
+
   private String quotePrecision;
 
   private String quoteAssetPrecision;
