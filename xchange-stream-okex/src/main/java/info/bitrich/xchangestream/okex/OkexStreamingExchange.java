@@ -3,7 +3,6 @@ package info.bitrich.xchangestream.okex;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
-import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
@@ -33,6 +32,7 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
   private OkexStreamingService streamingService;
 
   private OkexStreamingMarketDataService streamingMarketDataService;
+
 
   private OkexStreamingTradeService streamingTradeService;
 
@@ -126,7 +126,7 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
   }
 
   @Override
-  public StreamingTradeService getStreamingTradeService() {
+  public OkexStreamingTradeService getStreamingTradeService() {
     return streamingTradeService;
   }
 

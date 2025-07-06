@@ -32,9 +32,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class OkexPrivateStreamingService extends JsonNettyStreamingService {
+
   private static final Logger LOG = LoggerFactory.getLogger(OkexPrivateStreamingService.class);
 
-  public static final String USERTRADES = "orders";
+  public static final String USER_ORDER_CHANGES = "orders";
+  public static final String USER_POSITION_CHANGES = "positions";
   private static final String LOGIN_SIGN_METHOD = "GET";
   private static final String LOGIN_SIGN_REQUEST_PATH = "/users/self/verify";
   @Getter
@@ -104,15 +106,20 @@ public class OkexPrivateStreamingService extends JsonNettyStreamingService {
   }
 
   private OkexSubscribeMessage.SubscriptionTopic getTopic(String channelName) {
-    if (channelName.contains(USERTRADES)) {
+    if (channelName.contains(USER_ORDER_CHANGES)) {
       return new OkexSubscribeMessage.SubscriptionTopic(
-          USERTRADES, OkexInstType.ANY, null, channelName.replace(USERTRADES, ""));
+          USER_ORDER_CHANGES, OkexInstType.ANY, null, channelName.replace(USER_ORDER_CHANGES, ""));
     } else {
-      throw new NotYetImplementedForExchangeException(
-          "ChannelName: "
-              + channelName
-              + " has not implemented yet on "
-              + this.getClass().getSimpleName());
+      if ((channelName.contains(USER_POSITION_CHANGES))) {
+        return new OkexSubscribeMessage.SubscriptionTopic(
+            USER_POSITION_CHANGES, OkexInstType.ANY, null, channelName.replace(USER_POSITION_CHANGES, ""));
+      } else {
+        throw new NotYetImplementedForExchangeException(
+            "ChannelName: "
+                + channelName
+                + " has not implemented yet on "
+                + this.getClass().getSimpleName());
+      }
     }
   }
 

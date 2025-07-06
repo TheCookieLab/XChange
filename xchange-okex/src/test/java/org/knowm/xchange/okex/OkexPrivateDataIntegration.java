@@ -1,5 +1,14 @@
 package org.knowm.xchange.okex;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.knowm.xchange.okex.dto.trade.OkexOrderFlags.POST_ONLY;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -12,6 +21,8 @@ import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.Wallet;
+import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
@@ -22,15 +33,6 @@ import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamInstrument
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @Ignore
 public class OkexPrivateDataIntegration {
@@ -62,8 +64,10 @@ public class OkexPrivateDataIntegration {
 
   @Test
   public void placeLimitOrderGetOpenOrderAndCancelOrder() throws IOException {
-    BigDecimal size = BigDecimal.ONE;
-    BigDecimal price = BigDecimal.valueOf(1000);
+    Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
+    InstrumentMetaData instrumentMetaData = exchange.getExchangeMetaData().getInstruments().get(instrument);
+    BigDecimal size = instrumentMetaData.getMinimumAmount();
+    BigDecimal price = ticker.getLow();
 
     String orderId =
         exchange
@@ -72,6 +76,7 @@ public class OkexPrivateDataIntegration {
                 new LimitOrder.Builder(Order.OrderType.BID, instrument)
                     .originalAmount(size)
                     .limitPrice(price)
+                    .flag(POST_ONLY)
                     .build());
     List<LimitOrder> openOrders = exchange.getTradeService().getOpenOrders().getOpenOrders();
     LOG.info(openOrders.toString());
@@ -89,6 +94,21 @@ public class OkexPrivateDataIntegration {
     assertThat(openOrdersWithParams.get(0).getInstrument()).isEqualTo(instrument);
     assertThat(openOrdersWithParams.get(0).getOriginalAmount()).isEqualTo(size);
     assertThat(openOrdersWithParams.get(0).getLimitPrice()).isEqualTo(price);
+    String changedOrderId = exchange.getTradeService().changeOrder(new LimitOrder.Builder(Order.OrderType.BID, instrument)
+        .limitPrice(price.add(BigDecimal.ONE))
+        .originalAmount(size)
+        .id(orderId)
+        .build());
+    openOrdersWithParams =
+        exchange
+            .getTradeService()
+            .getOpenOrders(new DefaultOpenOrdersParamInstrument(instrument))
+            .getOpenOrders();
+    LOG.info(openOrdersWithParams.toString());
+    assertThat(openOrdersWithParams.get(0).getId()).isEqualTo(changedOrderId);
+    assertThat(openOrdersWithParams.get(0).getInstrument()).isEqualTo(instrument);
+    assertThat(openOrdersWithParams.get(0).getOriginalAmount()).isEqualTo(size);
+    assertThat(openOrdersWithParams.get(0).getLimitPrice()).isEqualTo(price.add(BigDecimal.ONE));
     exchange
         .getTradeService()
         .cancelOrder(new DefaultCancelOrderByInstrumentAndIdParams(instrument, orderId));
@@ -157,7 +177,13 @@ public class OkexPrivateDataIntegration {
     OkexAccountService okexAccountService = ((OkexAccountService) exchange.getAccountService());
     Map<Instrument, Fee> feeMap = okexAccountService.getDynamicTradingFeesByInstrument("SWAP");
     feeMap.forEach((key, value) -> {
-        System.out.println("Key : " + key + " Value : " + value);
+      System.out.println("Key : " + key + " Value : " + value);
     });
+  }
+
+  @Test
+  public void setLeverage() throws IOException {
+    OkexAccountService okexAccountService = ((OkexAccountService) exchange.getAccountService());
+    System.out.println("Set leverage 1, for " + instrument + ", result: " + okexAccountService.setLeverage(instrument, 1));
   }
 }
