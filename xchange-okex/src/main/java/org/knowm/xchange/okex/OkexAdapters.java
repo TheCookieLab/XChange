@@ -331,6 +331,15 @@ public class OkexAdapters {
   }
 
   public static Ticker adaptTicker(OkexTicker okexTicker) {
+    BigDecimal quoteVolume = BigDecimal.ZERO;
+    // for new coins 24h volume can be zero and getLast null
+    if ((okexTicker.getInstrumentType().equals("SWAP") || okexTicker.getInstrumentType().equals("FUTURES"))) {
+      if (okexTicker.getLast() != null) {
+        quoteVolume = okexTicker.getVolumeCurrency24h().multiply(okexTicker.getLast());
+      }
+    } else {
+      quoteVolume = okexTicker.getVolumeCurrency24h();
+    }
     return new Ticker.Builder()
         .instrument(adaptOkexInstrumentId(okexTicker.getInstrumentId()))
         .open(okexTicker.getOpen24h())
@@ -345,11 +354,7 @@ public class OkexAdapters {
                 || okexTicker.getInstrumentType().equals("FUTURES"))
                 ? okexTicker.getVolumeCurrency24h()
                 : okexTicker.getVolume24h())
-        .quoteVolume(
-            (okexTicker.getInstrumentType().equals("SWAP")
-                || okexTicker.getInstrumentType().equals("FUTURES"))
-                ? okexTicker.getVolumeCurrency24h().multiply(okexTicker.getLast())
-                : okexTicker.getVolumeCurrency24h())
+        .quoteVolume(quoteVolume)
         .timestamp(okexTicker.getTimestamp())
         .bidSize(okexTicker.getBidSize())
         .askSize(okexTicker.getAskSize())
@@ -439,40 +444,40 @@ public class OkexAdapters {
       }
       instrumentMetaData.put(
           pair,
-            new InstrumentMetaData.Builder()
-                .minimumAmount(
-                    (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
-                        ? convertContractSizeToVolume(
-                        new BigDecimal(instrument.getMinSize()),
-                        pair,
-                        new BigDecimal(instrument.getContractValue()))
-                        : new BigDecimal(instrument.getMinSize()))
-                .volumeScale(
-                    (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
-                        ? convertContractSizeToVolume(
-                        new BigDecimal(instrument.getMinSize()),
-                        pair,
-                        new BigDecimal(instrument.getContractValue()))
-                        .scale()
-                        : Math.max(numberOfDecimals(new BigDecimal(instrument.getMinSize())), 0))
-                .amountStepSize(
-                    BigDecimal.ONE.movePointLeft(
-                        (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
-                            ? convertContractSizeToVolume(
-                            new BigDecimal(instrument.getLotSize()),
-                            pair,
-                            new BigDecimal(instrument.getContractValue()))
-                            .scale()
-                            : Math.max(numberOfDecimals(new BigDecimal(instrument.getLotSize())), 0)))
-                .contractValue(
-                    (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
-                        ? new BigDecimal(instrument.getContractValue())
-                        : null)
-                .priceScale(numberOfDecimals(new BigDecimal(instrument.getTickSize())))
-                .priceStepSize(BigDecimal.ONE.movePointLeft(numberOfDecimals(new BigDecimal(instrument.getTickSize()))))
-                .tradingFeeCurrency(Objects.requireNonNull(pair).getCounter())
-                .marketOrderEnabled(true)
-                .build());
+          new InstrumentMetaData.Builder()
+              .minimumAmount(
+                  (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
+                      ? convertContractSizeToVolume(
+                      new BigDecimal(instrument.getMinSize()),
+                      pair,
+                      new BigDecimal(instrument.getContractValue()))
+                      : new BigDecimal(instrument.getMinSize()))
+              .volumeScale(
+                  (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
+                      ? convertContractSizeToVolume(
+                      new BigDecimal(instrument.getMinSize()),
+                      pair,
+                      new BigDecimal(instrument.getContractValue()))
+                      .scale()
+                      : Math.max(numberOfDecimals(new BigDecimal(instrument.getMinSize())), 0))
+              .amountStepSize(
+                  BigDecimal.ONE.movePointLeft(
+                      (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
+                          ? convertContractSizeToVolume(
+                          new BigDecimal(instrument.getLotSize()),
+                          pair,
+                          new BigDecimal(instrument.getContractValue()))
+                          .scale()
+                          : Math.max(numberOfDecimals(new BigDecimal(instrument.getLotSize())), 0)))
+              .contractValue(
+                  (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
+                      ? new BigDecimal(instrument.getContractValue())
+                      : null)
+              .priceScale(numberOfDecimals(new BigDecimal(instrument.getTickSize())))
+              .priceStepSize(BigDecimal.ONE.movePointLeft(numberOfDecimals(new BigDecimal(instrument.getTickSize()))))
+              .tradingFeeCurrency(Objects.requireNonNull(pair).getCounter())
+              .marketOrderEnabled(true)
+              .build());
 
     }
 
