@@ -47,7 +47,6 @@ public class BitsoTicker {
     private BigDecimal change24;
 
     private Object rollingAverageChange;
-
   }
 
   // Legacy methods for backwards compatibility

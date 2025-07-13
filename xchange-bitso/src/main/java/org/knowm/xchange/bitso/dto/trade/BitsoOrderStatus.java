@@ -7,10 +7,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public enum BitsoOrderStatus {
   @JsonProperty("queued")
   QUEUED,
-  
+
   @JsonProperty("open")
   OPEN,
-  
+
   @JsonProperty("partially filled")
   PARTIALLY_FILLED;
 

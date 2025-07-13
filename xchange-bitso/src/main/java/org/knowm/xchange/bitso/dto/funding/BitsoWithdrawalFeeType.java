@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public enum BitsoWithdrawalFeeType {
   @JsonProperty("fixed")
   FIXED,
-  
+
   @JsonProperty("percentage")
   PERCENTAGE;
 

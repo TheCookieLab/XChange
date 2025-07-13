@@ -8,7 +8,7 @@ import org.knowm.xchange.bitso.dto.marketdata.BitsoOrderBook;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTicker;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTrades;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
-import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.instrument.Instrument;
 
 import java.io.IOException;
 
@@ -34,7 +34,7 @@ public class BitsoMarketDataServiceRaw extends BitsoBaseService {
     return bitso.getAvailableBooks();
   }
 
-  public BitsoOrderBook getBitsoOrderBook(CurrencyPair pair) throws IOException {
+  public BitsoOrderBook getBitsoOrderBook(Instrument pair) throws IOException {
     String book =
         pair.getBase().getCurrencyCode().toLowerCase()
             + "_"
@@ -42,7 +42,7 @@ public class BitsoMarketDataServiceRaw extends BitsoBaseService {
     return bitso.getOrderBook(book);
   }
 
-  public BitsoTrades getBitsoTrades(CurrencyPair pair, Object... args) throws IOException {
+  public BitsoTrades getBitsoTrades(Instrument pair, Object... args) throws IOException {
     String book =
         pair.getBase().getCurrencyCode().toLowerCase()
             + "_"
@@ -60,7 +60,7 @@ public class BitsoMarketDataServiceRaw extends BitsoBaseService {
     }
   }
 
-  public BitsoTicker getBitsoTicker(CurrencyPair pair) throws IOException {
+  public BitsoTicker getBitsoTicker(Instrument pair) throws IOException {
     String book =
         pair.getBase().getCurrencyCode().toLowerCase()
             + "_"

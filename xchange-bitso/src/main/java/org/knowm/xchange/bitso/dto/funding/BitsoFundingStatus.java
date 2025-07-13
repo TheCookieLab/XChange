@@ -7,13 +7,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public enum BitsoFundingStatus {
   @JsonProperty("pending")
   PENDING,
-  
+
   @JsonProperty("complete")
   COMPLETE,
-  
+
   @JsonProperty("cancelled")
   CANCELLED,
-  
+
   @JsonProperty("failed")
   FAILED;
 

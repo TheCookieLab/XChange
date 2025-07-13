@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public enum BitsoOrderType {
   @JsonProperty("market")
   MARKET,
-  
+
   @JsonProperty("limit")
   LIMIT;
 

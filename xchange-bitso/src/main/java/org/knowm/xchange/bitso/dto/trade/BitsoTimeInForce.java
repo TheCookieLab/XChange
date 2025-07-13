@@ -7,13 +7,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public enum BitsoTimeInForce {
   @JsonProperty("goodtillcancelled")
   GOOD_TILL_CANCELLED,
-  
+
   @JsonProperty("fillorkill")
   FILL_OR_KILL,
-  
+
   @JsonProperty("immediateorcancel")
   IMMEDIATE_OR_CANCEL,
-  
+
   @JsonProperty("postonly")
   POST_ONLY;
 

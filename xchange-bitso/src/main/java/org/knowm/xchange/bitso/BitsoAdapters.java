@@ -18,6 +18,7 @@ import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.instrument.Instrument;
 
 import java.math.BigDecimal;
 import java.text.MessageFormat;
@@ -29,6 +30,14 @@ import java.util.List;
 public final class BitsoAdapters {
 
   private BitsoAdapters() {}
+
+  public static Ticker adaptTicker(BitsoTicker t, Instrument instrument) {
+    if (instrument instanceof CurrencyPair) {
+      return adaptTicker(t, (CurrencyPair) instrument);
+    }
+    throw new IllegalArgumentException(
+        "Unsupported instrument type: " + instrument.getClass().getName());
+  }
 
   public static Ticker adaptTicker(BitsoTicker t, CurrencyPair currencyPair) {
 
@@ -72,6 +81,15 @@ public final class BitsoAdapters {
   }
 
   public static OrderBook adaptOrderBook(
+      BitsoOrderBook bitsoOrderBook, Instrument instrument, int timeScale) {
+    if (instrument instanceof CurrencyPair) {
+      return adaptOrderBook(bitsoOrderBook, (CurrencyPair) instrument, timeScale);
+    }
+    throw new IllegalArgumentException(
+        "Unsupported instrument type: " + instrument.getClass().getName());
+  }
+
+  public static OrderBook adaptOrderBook(
       BitsoOrderBook bitsoOrderBook, CurrencyPair currencyPair, int timeScale) {
 
     List<LimitOrder> asks =
@@ -102,6 +120,14 @@ public final class BitsoAdapters {
 
     return new LimitOrder(
         orderType, priceAndAmount.get(1), currencyPair, "", null, priceAndAmount.get(0));
+  }
+
+  public static Trades adaptTrades(BitsoTrades bitsoTrades, Instrument instrument) {
+    if (instrument instanceof CurrencyPair) {
+      return adaptTrades(bitsoTrades, (CurrencyPair) instrument);
+    }
+    throw new IllegalArgumentException(
+        "Unsupported instrument type: " + instrument.getClass().getName());
   }
 
   /**
