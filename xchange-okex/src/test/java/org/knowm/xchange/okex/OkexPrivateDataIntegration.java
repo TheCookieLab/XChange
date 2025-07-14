@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -27,8 +28,8 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.okex.dto.trade.OkexTradeParams.OkexCancelOrderParams;
 import org.knowm.xchange.okex.service.OkexAccountService;
-import org.knowm.xchange.service.trade.params.DefaultCancelOrderByInstrumentAndIdParams;
 import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 import org.slf4j.Logger;
@@ -58,7 +59,6 @@ public class OkexPrivateDataIntegration {
     spec.setExchangeSpecificParametersItem(
         OkexExchange.PARAM_PASSPHRASE, properties.getProperty("passphrase"));
     spec.setExchangeSpecificParametersItem(OkexExchange.PARAM_SIMULATED, "1");
-
     exchange = ExchangeFactory.INSTANCE.createExchange(spec);
   }
 
@@ -68,7 +68,7 @@ public class OkexPrivateDataIntegration {
     InstrumentMetaData instrumentMetaData = exchange.getExchangeMetaData().getInstruments().get(instrument);
     BigDecimal size = instrumentMetaData.getMinimumAmount();
     BigDecimal price = ticker.getLow();
-
+    String userReference = RandomStringUtils.randomAlphanumeric(10);
     String orderId =
         exchange
             .getTradeService()
@@ -77,6 +77,7 @@ public class OkexPrivateDataIntegration {
                     .originalAmount(size)
                     .limitPrice(price)
                     .flag(POST_ONLY)
+                    .userReference(userReference)
                     .build());
     List<LimitOrder> openOrders = exchange.getTradeService().getOpenOrders().getOpenOrders();
     LOG.info(openOrders.toString());
@@ -111,7 +112,7 @@ public class OkexPrivateDataIntegration {
     assertThat(openOrdersWithParams.get(0).getLimitPrice()).isEqualTo(price.add(BigDecimal.ONE));
     exchange
         .getTradeService()
-        .cancelOrder(new DefaultCancelOrderByInstrumentAndIdParams(instrument, orderId));
+        .cancelOrder(new OkexCancelOrderParams(instrument, orderId, userReference));
   }
 
   @Test

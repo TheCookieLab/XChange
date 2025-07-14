@@ -71,8 +71,6 @@ public class OkexStreamingPrivateDataIntegration {
     spec.setExchangeSpecificParametersItem(OkexExchange.PARAM_SIMULATED, "1");
     exchange =
         ExchangeFactory.INSTANCE.createExchangeWithoutSpecification(OkexStreamingExchange.class);
-    spec.setProxyHost("127.0.0.1");
-    spec.setProxyPort(1079);
     exchange.applySpecification(spec);
     exchange.connect().blockingAwait();
     // OPTION - wait for login message response

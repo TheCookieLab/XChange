@@ -28,9 +28,11 @@ import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.trade.OkexCancelOrderRequest;
 import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
 import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
+import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByInstrument;
+import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamInstrument;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
@@ -209,19 +211,31 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
   @Override
   public boolean cancelOrder(CancelOrderParams params) throws IOException {
-    if (params instanceof CancelOrderByIdParams && params instanceof CancelOrderByInstrument) {
-
+    if (params instanceof OkexTradeParams.OkexCancelOrderParams) {
+        Instrument instrument = ((CancelOrderByInstrument) params).getInstrument();
+        if (instrument == null) {
+          throw new UnsupportedOperationException(
+              "Instrument and (orderId or userReference) required");
+        }
+      String orderId = ((CancelOrderByIdParams) params).getOrderId();
+      String userReference = ((CancelOrderByUserReferenceParams) params).getUserReference();
+        if ((orderId == null || orderId.isEmpty())
+            && (userReference == null || userReference.isEmpty())) {
+          throw new UnsupportedOperationException("OrderId or userReference is required");
+        }
       String id = ((CancelOrderByIdParams) params).getOrderId();
       String instrumentId =
           OkexAdapters.adaptInstrument(((CancelOrderByInstrument) params).getInstrument());
 
       OkexCancelOrderRequest req =
-          OkexCancelOrderRequest.builder().instrumentId(instrumentId).orderId(id).build();
+          OkexCancelOrderRequest.builder().instrumentId(instrumentId).orderId(id)
+              .clientOrderId(userReference)
+              .build();
 
       return "0".equals(cancelOkexOrder(req).getData().get(0).getCode());
     } else {
       throw new IOException(
-          "CancelOrderParams must implement CancelOrderByIdParams and CancelOrderByInstrument interface.");
+          "CancelOrderParams must implement (CancelOrderByIdParams or CancelOrderByUserReferenceParams) and CancelOrderByInstrument interface.");
     }
   }
 
