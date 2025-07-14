@@ -30,6 +30,7 @@ public class BybitStreamOrderBookAndFeesExample {
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
+    exchange.disconnect().blockingAwait();
   }
 
   static List<Disposable> booksDisposable = new ArrayList<>();
