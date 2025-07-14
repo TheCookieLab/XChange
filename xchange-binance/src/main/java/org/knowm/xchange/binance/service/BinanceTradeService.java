@@ -35,6 +35,7 @@ import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelAllOrders;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByInstrument;
+import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamInstrument;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamLimit;
@@ -279,15 +280,17 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
   public boolean cancelOrder(CancelOrderParams params) throws IOException {
     try {
       if (!(params instanceof CancelOrderByInstrument)
-          && !(params instanceof CancelOrderByIdParams)) {
+          && !(params instanceof CancelOrderByIdParams
+          && params instanceof CancelOrderByUserReferenceParams)) {
         throw new ExchangeException(
-            "You need to provide the currency pair and the order id to cancel an order.");
+            "You need to provide the currency pair and the 'order id/user id' to cancel an order.");
       }
       assert params instanceof CancelOrderByInstrument;
       CancelOrderByInstrument paramInstrument = (CancelOrderByInstrument) params;
       CancelOrderByIdParams paramId = (CancelOrderByIdParams) params;
+      CancelOrderByUserReferenceParams paramUserReference = (CancelOrderByUserReferenceParams) params;
       cancelOrderAllProducts(
-          paramInstrument.getInstrument(), BinanceAdapters.id(paramId.getOrderId()), null, null);
+          paramInstrument.getInstrument(), BinanceAdapters.id(paramId.getOrderId()), paramUserReference.getUserReference(), null);
 
       return true;
     } catch (BinanceException e) {

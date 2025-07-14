@@ -77,7 +77,7 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
           .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 20)
           .call();
     } else {
-      return decorateApiCall(() -> binanceFutures.aggTrades(
+      return decorateApiCall(() -> binance.aggTrades(
           BinanceAdapters.toSymbol(pair), fromId, startTime, endTime, limit))
           .withRetry(retry("aggTrades"))
           .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 4)

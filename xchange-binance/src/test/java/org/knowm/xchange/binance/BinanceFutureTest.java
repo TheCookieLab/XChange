@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -107,7 +108,7 @@ public class BinanceFutureTest {
         binanceExchange.getTradeService().getOpenPositions().getOpenPositions();
     logger.info("Positions: " + openPositions);
 
-//    // Get UserTrades
+    // Get UserTrades
     List<UserTrade> userTrades =
         binanceExchange
             .getTradeService()
@@ -116,6 +117,7 @@ public class BinanceFutureTest {
     logger.info("UserTrades: " + userTrades);
 
     // Place LimitOrder
+    String userReference = RandomStringUtils.randomAlphanumeric(10);
     String orderId =
         binanceExchange
             .getTradeService()
@@ -124,6 +126,7 @@ public class BinanceFutureTest {
                     .limitPrice(BigDecimal.valueOf(1000))
                     .flags(orderFlags)
                     .originalAmount(BigDecimal.ONE)
+                    .userReference(userReference)
                     .build());
     // Change order price
     String newPriceOrderId
@@ -164,7 +167,7 @@ public class BinanceFutureTest {
         "CancelOrder: "
             + binanceExchange
             .getTradeService()
-            .cancelOrder(new BinanceCancelOrderParams(instrument, orderId)));
+            .cancelOrder(new BinanceCancelOrderParams(instrument, orderId,userReference)));
     // set Leverage
     boolean isChanged = ((BinanceTradeService) binanceExchange.getTradeService()).setLeverage(instrument, 10);
     logger.info("Leverage changed: {}", isChanged);
