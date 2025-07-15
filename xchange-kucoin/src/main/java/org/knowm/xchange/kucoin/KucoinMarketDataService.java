@@ -9,6 +9,8 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.kucoin.dto.KucoinException;
+import org.knowm.xchange.kucoin.dto.response.SymbolResponse;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
 
@@ -63,5 +65,14 @@ public class KucoinMarketDataService extends KucoinMarketDataServiceRaw
   @Override
   public Trades getTrades(CurrencyPair currencyPair, Object... args) throws IOException {
     return KucoinAdapters.adaptTrades(currencyPair, getKucoinTrades(currencyPair));
+  }
+
+  @Override
+  public List<SymbolResponse> getKucoinSymbolsV2() throws IOException {
+    try {
+      return super.getKucoinSymbolsV2();
+    } catch (KucoinException e) {
+      throw KucoinErrorAdapter.adapt(e);
+    }
   }
 }
