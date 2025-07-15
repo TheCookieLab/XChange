@@ -1,12 +1,11 @@
 package org.knowm.xchange.bitso.service;
 
+import java.math.BigDecimal;
+import java.util.Map;
 import lombok.Value;
 import lombok.experimental.SuperBuilder;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
-
-import java.math.BigDecimal;
-import java.util.Map;
 
 /**
  * Bitso-specific parameters for withdrawing funds Supports both crypto and fiat withdrawals with

@@ -1,13 +1,12 @@
 package org.knowm.xchange.examples.bitso.account;
 
+import java.io.IOException;
+import java.math.BigDecimal;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.examples.bitso.BitsoDemoUtils;
 import org.knowm.xchange.service.account.AccountService;
-
-import java.io.IOException;
-import java.math.BigDecimal;
 
 /**
  * Example showing the following:

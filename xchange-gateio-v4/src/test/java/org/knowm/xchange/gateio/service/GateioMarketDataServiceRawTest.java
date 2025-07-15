@@ -43,22 +43,23 @@ public class GateioMarketDataServiceRawTest extends GateioExchangeWiremock {
             .depositDisabled(false)
             .tradeDisabled(false)
             .mainChain("BTC")
-            .chains(Stream.of(
-                Chain.builder()
-                    .name("BTC")
-                    .address("")
-                    .depositDisabled(false)
-                    .withdrawDelayed(false)
-                    .withdrawDisabled(false)
-                    .build(),
-                Chain.builder()
-                    .name("BSC")
-                    .address("0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c")
-                    .depositDisabled(false)
-                    .withdrawDelayed(false)
-                    .withdrawDisabled(false)
-                    .build()
-            ).collect(Collectors.toList()))
+            .chains(
+                Stream.of(
+                        Chain.builder()
+                            .name("BTC")
+                            .address("")
+                            .depositDisabled(false)
+                            .withdrawDelayed(false)
+                            .withdrawDisabled(false)
+                            .build(),
+                        Chain.builder()
+                            .name("BSC")
+                            .address("0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c")
+                            .depositDisabled(false)
+                            .withdrawDelayed(false)
+                            .withdrawDisabled(false)
+                            .build())
+                    .collect(Collectors.toList()))
             .build();
 
     assertThat(actualBtc).usingRecursiveComparison().isEqualTo(expectedBtc);

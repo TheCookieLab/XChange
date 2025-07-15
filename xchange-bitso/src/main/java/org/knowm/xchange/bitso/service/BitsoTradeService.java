@@ -1,5 +1,11 @@
 package org.knowm.xchange.bitso.service;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.BitsoAdapters;
 import org.knowm.xchange.bitso.dto.BitsoException;
@@ -14,13 +20,6 @@ import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.*;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 /**
  * @author Piotr Ładyżyński

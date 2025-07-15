@@ -14,5 +14,4 @@ public class OkexTickerParams implements Params {
   private String instType;
   private String uly;
   private String instFamily;
-
 }

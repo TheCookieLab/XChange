@@ -1,10 +1,9 @@
 package org.knowm.xchange.bitso.dto.funding;
 
+import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.math.BigDecimal;
 
 /** Bitso Withdrawal Fee DTO */
 @Value

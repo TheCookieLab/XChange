@@ -1,9 +1,8 @@
 package org.knowm.xchange.bitso.dto;
 
-import si.mazi.rescu.HttpStatusExceptionSupport;
-
 import java.util.Collection;
 import java.util.Map;
+import si.mazi.rescu.HttpStatusExceptionSupport;
 
 public class BitsoException extends HttpStatusExceptionSupport {
 

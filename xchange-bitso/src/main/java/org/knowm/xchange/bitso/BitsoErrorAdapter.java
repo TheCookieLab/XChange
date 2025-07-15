@@ -1,11 +1,10 @@
 package org.knowm.xchange.bitso;
 
+import java.net.HttpURLConnection;
 import org.knowm.xchange.bitso.dto.BitsoException;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.FundsExceededException;
 import org.knowm.xchange.exceptions.RateLimitExceededException;
-
-import java.net.HttpURLConnection;
 
 public class BitsoErrorAdapter {
 

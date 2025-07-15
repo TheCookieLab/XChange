@@ -1,10 +1,9 @@
 package org.knowm.xchange.bitso.dto.funding;
 
+import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.util.List;
 
 /** Bitso Withdrawal Security DTO */
 @Value

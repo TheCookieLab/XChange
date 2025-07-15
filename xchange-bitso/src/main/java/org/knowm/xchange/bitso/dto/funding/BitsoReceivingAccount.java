@@ -1,11 +1,10 @@
 package org.knowm.xchange.bitso.dto.funding;
 
+import java.time.Instant;
+import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.time.Instant;
-import java.util.List;
 
 /** Bitso Receiving Account DTO - Represents a receiving account for fiat withdrawals */
 @Value

@@ -1,5 +1,8 @@
 package org.knowm.xchange.bitso.service;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.*;
 import org.knowm.xchange.bitso.dto.BitsoBaseResponse;
@@ -8,10 +11,6 @@ import org.knowm.xchange.bitso.dto.account.BitsoBalance;
 import org.knowm.xchange.bitso.dto.funding.*;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.exceptions.ExchangeException;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 public class BitsoAccountServiceRaw extends BitsoBaseService {
 

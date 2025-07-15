@@ -1,10 +1,9 @@
 package org.knowm.xchange.bitso.dto.trade;
 
+import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.math.BigDecimal;
 
 /**
  * Request DTO for placing orders in Bitso API v3

@@ -1,13 +1,12 @@
 package org.knowm.xchange.bitso.dto.funding;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Builder;
-import lombok.Value;
-import lombok.extern.jackson.Jacksonized;
-
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Map;
+import lombok.Builder;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 
 /** Bitso Withdrawal Transaction DTO Represents a withdrawal transaction */
 @Value

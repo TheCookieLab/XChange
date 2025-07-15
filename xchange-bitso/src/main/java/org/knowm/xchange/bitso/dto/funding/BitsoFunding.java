@@ -1,12 +1,11 @@
 package org.knowm.xchange.bitso.dto.funding;
 
-import lombok.Builder;
-import lombok.Value;
-import lombok.extern.jackson.Jacksonized;
-
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Map;
+import lombok.Builder;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 
 /** Bitso Funding Transaction DTO Represents a deposit transaction */
 @Value

@@ -66,11 +66,8 @@ import org.knowm.xchange.okex.dto.trade.OkexOrderFlags;
 import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
 import org.knowm.xchange.okex.dto.trade.OkexOrderType;
 
-/**
- * Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021
- */
+/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkexAdapters {
-
 
   private static final String TRADING_WALLET_ID = "trading";
   private static final String FOUNDING_WALLET_ID = "founding";
@@ -178,12 +175,12 @@ public class OkexAdapters {
       Order order, ExchangeMetaData exchangeMetaData) {
     return (order.getInstrument() instanceof FuturesContract)
         ? order
-        .getOriginalAmount()
-        .divide(
-            exchangeMetaData.getInstruments().get(order.getInstrument()).getContractValue(),
-            0,
-            RoundingMode.HALF_DOWN)
-        .toPlainString()
+            .getOriginalAmount()
+            .divide(
+                exchangeMetaData.getInstruments().get(order.getInstrument()).getContractValue(),
+                0,
+                RoundingMode.HALF_DOWN)
+            .toPlainString()
         : order.getOriginalAmount().toString();
   }
 
@@ -217,7 +214,7 @@ public class OkexAdapters {
             (order.hasFlag(OkexOrderFlags.POST_ONLY))
                 ? OkexOrderType.post_only.name()
                 : (order.hasFlag(OkexOrderFlags.OPTIMAL_LIMIT_IOC)
-                    && order.getInstrument() instanceof FuturesContract)
+                        && order.getInstrument() instanceof FuturesContract)
                     ? OkexOrderType.optimal_limit_ioc.name()
                     : OkexOrderType.limit.name())
         .amount(convertVolumeToContractSize(order, exchangeMetaData))
@@ -225,15 +222,23 @@ public class OkexAdapters {
         .build();
   }
 
-  public static LimitOrder adaptLimitOrder(OkexPublicOrder okexPublicOrder, Instrument instrument,
-      OrderType orderType, Date timestamp, BigDecimal contractValue) {
+  public static LimitOrder adaptLimitOrder(
+      OkexPublicOrder okexPublicOrder,
+      Instrument instrument,
+      OrderType orderType,
+      Date timestamp,
+      BigDecimal contractValue) {
     return adaptOrderbookOrder(
         convertContractSizeToVolume(okexPublicOrder.getVolume(), instrument, contractValue),
-        okexPublicOrder.getPrice(), instrument, orderType, timestamp);
+        okexPublicOrder.getPrice(),
+        instrument,
+        orderType,
+        timestamp);
   }
 
   public static OrderBook adaptOrderBook(
-      List<OkexOrderbook> okexOrderbooks, Instrument instrument,
+      List<OkexOrderbook> okexOrderbooks,
+      Instrument instrument,
       ExchangeMetaData exchangeMetaData) {
     List<LimitOrder> asks = new ArrayList<>();
     List<LimitOrder> bids = new ArrayList<>();
@@ -243,21 +248,34 @@ public class OkexAdapters {
         .get(0)
         .getAsks()
         .forEach(
-            okexAsk -> asks.add(adaptLimitOrder(okexAsk, instrument, OrderType.ASK, timeStamp,
-                exchangeMetaData.getInstruments().get(instrument).getContractValue())));
+            okexAsk ->
+                asks.add(
+                    adaptLimitOrder(
+                        okexAsk,
+                        instrument,
+                        OrderType.ASK,
+                        timeStamp,
+                        exchangeMetaData.getInstruments().get(instrument).getContractValue())));
 
     okexOrderbooks
         .get(0)
         .getBids()
         .forEach(
-            okexBid -> bids.add(adaptLimitOrder(okexBid, instrument, OrderType.BID, timeStamp,
-                exchangeMetaData.getInstruments().get(instrument).getContractValue())));
+            okexBid ->
+                bids.add(
+                    adaptLimitOrder(
+                        okexBid,
+                        instrument,
+                        OrderType.BID,
+                        timeStamp,
+                        exchangeMetaData.getInstruments().get(instrument).getContractValue())));
 
     return new OrderBook(timeStamp, asks, bids);
   }
 
   public static OrderBook adaptOrderBook(
-      OkexResponse<List<OkexOrderbook>> okexOrderbook, Instrument instrument,
+      OkexResponse<List<OkexOrderbook>> okexOrderbook,
+      Instrument instrument,
       ExchangeMetaData exchangeMetaData) {
     return adaptOrderBook(okexOrderbook.getData(), instrument, exchangeMetaData);
   }
@@ -284,12 +302,12 @@ public class OkexAdapters {
         // .vwap(null)
         .volume(
             (okexTicker.getInstrumentType().equals("SWAP")
-                || okexTicker.getInstrumentType().equals("FUTURES"))
+                    || okexTicker.getInstrumentType().equals("FUTURES"))
                 ? okexTicker.getVolumeCurrency24h()
                 : okexTicker.getVolume24h())
         .quoteVolume(
             (okexTicker.getInstrumentType().equals("SWAP")
-                || okexTicker.getInstrumentType().equals("FUTURES"))
+                    || okexTicker.getInstrumentType().equals("FUTURES"))
                 ? okexTicker.getVolumeCurrency24h().multiply(okexTicker.getLast())
                 : okexTicker.getVolumeCurrency24h())
         .timestamp(okexTicker.getTimestamp())
@@ -318,8 +336,8 @@ public class OkexAdapters {
     return instrument.toString().replace('/', '-');
   }
 
-  public static Trades adaptTrades(List<OkexTrade> okexTrades, Instrument instrument,
-      ExchangeMetaData exchangeMetaData) {
+  public static Trades adaptTrades(
+      List<OkexTrade> okexTrades, Instrument instrument, ExchangeMetaData exchangeMetaData) {
     List<Trade> trades = new ArrayList<>();
 
     okexTrades.forEach(
@@ -385,17 +403,17 @@ public class OkexAdapters {
               .minimumAmount(
                   (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
                       ? convertContractSizeToVolume(
-                      new BigDecimal(instrument.getMinSize()),
-                      pair,
-                      new BigDecimal(instrument.getContractValue()))
+                          new BigDecimal(instrument.getMinSize()),
+                          pair,
+                          new BigDecimal(instrument.getContractValue()))
                       : new BigDecimal(instrument.getMinSize()))
               .volumeScale(
                   (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
                       ? convertContractSizeToVolume(
-                      new BigDecimal(instrument.getMinSize()),
-                      pair,
-                      new BigDecimal(instrument.getContractValue()))
-                      .scale()
+                              new BigDecimal(instrument.getMinSize()),
+                              pair,
+                              new BigDecimal(instrument.getContractValue()))
+                          .scale()
                       : Math.max(numberOfDecimals(new BigDecimal(instrument.getMinSize())), 0))
               .contractValue(
                   (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
@@ -572,47 +590,54 @@ public class OkexAdapters {
         .currentLeverage(
             (totalPositionValueInUsd.compareTo(BigDecimal.ZERO) != 0)
                 ? totalPositionValueInUsd.divide(
-                accountPositionRiskData.get(0).getAdjustEquity(), 3, RoundingMode.HALF_EVEN)
+                    accountPositionRiskData.get(0).getAdjustEquity(), 3, RoundingMode.HALF_EVEN)
                 : BigDecimal.ZERO)
         .features(new HashSet<>(Collections.singletonList(Wallet.WalletFeature.FUTURES_TRADING)))
         .build();
   }
 
-  public static Fee adaptTradingFee(OkexTradeFee okexTradeFee, OkexInstType okexInstType,
-      Instrument instrument) {
+  public static Fee adaptTradingFee(
+      OkexTradeFee okexTradeFee, OkexInstType okexInstType, Instrument instrument) {
     switch (okexInstType) {
-      case SPOT: return adaptTradingFeeSPOT(okexTradeFee,instrument);
-      case SWAP: return adaptTradingFeeSWAP(okexTradeFee,instrument);
+      case SPOT:
+        return adaptTradingFeeSPOT(okexTradeFee, instrument);
+      case SWAP:
+        return adaptTradingFeeSWAP(okexTradeFee, instrument);
     }
     return null;
   }
 
   private static Fee adaptTradingFeeSWAP(OkexTradeFee okexTradeFee, Instrument instrument) {
     if (instrument.getCounter().toString().equals("USDT")) {
-      return new Fee(new BigDecimal(okexTradeFee.getMakerU()).negate(),
+      return new Fee(
+          new BigDecimal(okexTradeFee.getMakerU()).negate(),
           new BigDecimal(okexTradeFee.getTakerU()).negate());
     } else {
-        if (instrument.getCounter().toString().equals("USDC")) {
-          return new Fee(new BigDecimal(okexTradeFee.getMakerUSDC()).negate(),
-              new BigDecimal(okexTradeFee.getTakerUSDC()).negate());
-        } else
-          return new Fee(new BigDecimal(okexTradeFee.getMaker()).negate(),
-              new BigDecimal(okexTradeFee.getTaker()).negate());
-      }
+      if (instrument.getCounter().toString().equals("USDC")) {
+        return new Fee(
+            new BigDecimal(okexTradeFee.getMakerUSDC()).negate(),
+            new BigDecimal(okexTradeFee.getTakerUSDC()).negate());
+      } else
+        return new Fee(
+            new BigDecimal(okexTradeFee.getMaker()).negate(),
+            new BigDecimal(okexTradeFee.getTaker()).negate());
     }
+  }
 
   private static Fee adaptTradingFeeSPOT(OkexTradeFee okexTradeFee, Instrument instrument) {
     // https://www.okx.com/docs-v5/en/#trading-account-rest-api-get-fee-rates
     if (instrument.getCounter().toString().equals("USDT")) {
-      return new Fee(new BigDecimal(okexTradeFee.getMaker()).negate(),
+      return new Fee(
+          new BigDecimal(okexTradeFee.getMaker()).negate(),
           new BigDecimal(okexTradeFee.getTaker()).negate());
     } else {
       Fee tempFee = isContainsFiat(okexTradeFee.getFiatList(), instrument);
       if (tempFee != null) {
         return tempFee;
       } else {
-        //represent the stablecoin besides USDT and USDC
-        return new Fee(new BigDecimal(okexTradeFee.getMakerUSDC()).negate(),
+        // represent the stablecoin besides USDT and USDC
+        return new Fee(
+            new BigDecimal(okexTradeFee.getMakerUSDC()).negate(),
             new BigDecimal(okexTradeFee.getTakerUSDC()).negate());
       }
     }
@@ -621,36 +646,32 @@ public class OkexAdapters {
   private static Fee isContainsFiat(List<FiatList> fiatList, Instrument instrument) {
     for (FiatList fiat : fiatList) {
       if (fiat.getCcy().equals(instrument.getCounter().toString())) {
-        return new Fee(new BigDecimal(fiat.getMaker()).negate(), new BigDecimal(fiat.getTaker()).negate());
+        return new Fee(
+            new BigDecimal(fiat.getMaker()).negate(), new BigDecimal(fiat.getTaker()).negate());
       }
     }
     return null;
   }
 
-  public static List<OrderBookUpdate> adaptOrderBookUpdates(Instrument instrument, List<OkexPublicOrder> asks, List<OkexPublicOrder> bids, BigDecimal contractValue, Date date) {
+  public static List<OrderBookUpdate> adaptOrderBookUpdates(
+      Instrument instrument,
+      List<OkexPublicOrder> asks,
+      List<OkexPublicOrder> bids,
+      BigDecimal contractValue,
+      Date date) {
     List<OrderBookUpdate> orderBookUpdates = new ArrayList<>();
     for (OkexPublicOrder ask : asks) {
       BigDecimal volume = convertContractSizeToVolume(ask.getVolume(), instrument, contractValue);
       OrderBookUpdate o =
           new OrderBookUpdate(
-              Order.OrderType.ASK,
-              volume,
-              instrument,
-              ask.getPrice(),
-              date,
-              volume);
+              Order.OrderType.ASK, volume, instrument, ask.getPrice(), date, volume);
       orderBookUpdates.add(o);
     }
     for (OkexPublicOrder bid : bids) {
       BigDecimal volume = convertContractSizeToVolume(bid.getVolume(), instrument, contractValue);
       OrderBookUpdate o =
           new OrderBookUpdate(
-              Order.OrderType.BID,
-              volume,
-              instrument,
-              bid.getPrice(),
-              date,
-              volume);
+              Order.OrderType.BID, volume, instrument, bid.getPrice(), date, volume);
       orderBookUpdates.add(o);
     }
     return orderBookUpdates;

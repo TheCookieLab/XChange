@@ -1,10 +1,9 @@
 package org.knowm.xchange.bitso.dto.trade;
 
+import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.math.BigDecimal;
 
 /**
  * Bitso conversion status response DTO for v4 API with enhanced states

@@ -1,6 +1,10 @@
 package org.knowm.xchange.bitso.dto;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.time.Instant;
 import org.junit.Test;
 import org.knowm.xchange.bitso.BitsoJacksonObjectMapperFactory;
 import org.knowm.xchange.bitso.dto.account.BitsoBalance;
@@ -9,11 +13,6 @@ import org.knowm.xchange.bitso.dto.marketdata.BitsoOrderBook;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTicker;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTrades;
 import org.knowm.xchange.bitso.dto.trade.*;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 public class BitsoV3DTOTest {
 

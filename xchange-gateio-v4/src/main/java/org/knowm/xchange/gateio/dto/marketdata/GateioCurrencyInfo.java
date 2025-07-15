@@ -78,6 +78,5 @@ public class GateioCurrencyInfo {
     public boolean isDepositEnabled() {
       return (depositDisabled != null) && !depositDisabled;
     }
-
   }
 }

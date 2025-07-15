@@ -1,13 +1,12 @@
 package org.knowm.xchange.bitso.service;
 
 import jakarta.ws.rs.HeaderParam;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import javax.crypto.Mac;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.service.BaseParamsDigest;
 import si.mazi.rescu.RestInvocation;
-
-import javax.crypto.Mac;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Bitso API v3 authentication digest Creates HMAC-SHA256 signature following the pattern: nonce +

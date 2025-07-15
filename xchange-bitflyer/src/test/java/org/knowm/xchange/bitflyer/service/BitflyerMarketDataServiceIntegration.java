@@ -24,7 +24,6 @@ public class BitflyerMarketDataServiceIntegration extends BitflyerIntegrationTes
     }
   }
 
-
   @Test
   void valid_orderbook() throws IOException {
     OrderBook orderBook = exchange.getMarketDataService().getOrderBook(CurrencyPair.BTC_JPY);
@@ -49,5 +48,4 @@ public class BitflyerMarketDataServiceIntegration extends BitflyerIntegrationTes
               assertThat(limitOrder.getType()).isEqualTo(OrderType.ASK);
             });
   }
-
 }

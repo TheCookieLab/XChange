@@ -1,5 +1,6 @@
 package org.knowm.xchange.bitso.service;
 
+import java.io.IOException;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.Bitso;
 import org.knowm.xchange.bitso.BitsoJacksonObjectMapperFactory;
@@ -9,8 +10,6 @@ import org.knowm.xchange.bitso.dto.marketdata.BitsoTicker;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTrades;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.instrument.Instrument;
-
-import java.io.IOException;
 
 /**
  * @author Piotr Ładyżyński Updated for Bitso API v3

@@ -5,13 +5,12 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import java.io.IOException;
 import org.knowm.xchange.bitso.dto.BitsoException;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoAvailableBooks;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoOrderBook;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTicker;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTrades;
-
-import java.io.IOException;
 
 @Path("api/v3")
 @Produces(MediaType.APPLICATION_JSON)

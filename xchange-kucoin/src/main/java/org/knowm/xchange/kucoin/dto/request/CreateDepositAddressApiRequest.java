@@ -13,5 +13,4 @@ public class CreateDepositAddressApiRequest {
   String currency;
 
   String chain;
-
 }

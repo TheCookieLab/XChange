@@ -1,11 +1,10 @@
 package org.knowm.xchange.bitso.dto.marketdata;
 
+import java.math.BigDecimal;
+import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.math.BigDecimal;
-import java.util.List;
 
 /** DTO for Bitso API v3 available books endpoint */
 @Value

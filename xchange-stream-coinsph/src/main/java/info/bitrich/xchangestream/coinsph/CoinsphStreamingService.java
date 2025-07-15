@@ -1,15 +1,13 @@
 package info.bitrich.xchangestream.coinsph;
 
+import static info.bitrich.xchangestream.coinsph.CoinsphStreamingExchange.PUBLIC_API_URI;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
-import org.knowm.xchange.coinsph.service.CoinsphAccountServiceRaw;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
@@ -19,8 +17,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
-import static info.bitrich.xchangestream.coinsph.CoinsphStreamingExchange.PUBLIC_API_URI;
+import org.knowm.xchange.coinsph.service.CoinsphAccountServiceRaw;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CoinsphStreamingService extends JsonNettyStreamingService {
   private static final Logger LOG = LoggerFactory.getLogger(CoinsphStreamingService.class);

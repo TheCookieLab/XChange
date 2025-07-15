@@ -180,9 +180,11 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                 .call());
   }
 
-  public DepositAddressResponse createDepositAddress(CreateDepositAddressApiRequest request) throws IOException {
-    return decorateApiCall(() ->
-        depositAPI.createDepositAddress(apiKey, digest, nonceFactory, passphrase, request))
+  public DepositAddressResponse createDepositAddress(CreateDepositAddressApiRequest request)
+      throws IOException {
+    return decorateApiCall(
+            () ->
+                depositAPI.createDepositAddress(apiKey, digest, nonceFactory, passphrase, request))
         .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
         .call()
         .getData();

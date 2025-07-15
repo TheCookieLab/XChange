@@ -385,8 +385,9 @@ public class KucoinAdapters {
   }
 
   public static OrderCreateApiRequest adaptMarketOrder(MarketOrder marketOrder) {
-    OrderCreateApiRequest.OrderCreateApiRequestBuilder builder = ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(marketOrder))
-        .type("market");
+    OrderCreateApiRequest.OrderCreateApiRequestBuilder builder =
+        ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(marketOrder))
+            .type("market");
 
     // on buy order amount corresponds to counter currency
     if (marketOrder.getType() == BID) {

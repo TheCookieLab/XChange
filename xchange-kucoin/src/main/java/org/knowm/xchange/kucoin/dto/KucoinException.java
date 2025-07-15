@@ -15,5 +15,4 @@ public class KucoinException extends RuntimeException {
 
   @JsonProperty("msg")
   String message;
-
 }

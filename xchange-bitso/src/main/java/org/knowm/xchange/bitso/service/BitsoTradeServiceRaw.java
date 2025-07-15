@@ -1,5 +1,7 @@
 package org.knowm.xchange.bitso.service;
 
+import java.io.IOException;
+import java.math.BigDecimal;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.BitsoAuthenticated;
 import org.knowm.xchange.bitso.BitsoErrorAdapter;
@@ -9,9 +11,6 @@ import org.knowm.xchange.bitso.dto.BitsoException;
 import org.knowm.xchange.bitso.dto.trade.*;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.exceptions.ExchangeException;
-
-import java.io.IOException;
-import java.math.BigDecimal;
 
 /**
  * @author Piotr Ładyżyński

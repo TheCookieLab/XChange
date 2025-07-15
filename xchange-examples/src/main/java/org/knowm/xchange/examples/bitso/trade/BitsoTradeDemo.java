@@ -1,5 +1,8 @@
 package org.knowm.xchange.examples.bitso.trade;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Arrays;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.dto.trade.BitsoOrder;
 import org.knowm.xchange.bitso.service.BitsoTradeServiceRaw;
@@ -10,10 +13,6 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.examples.bitso.BitsoDemoUtils;
 import org.knowm.xchange.service.trade.TradeService;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Arrays;
 
 /**
  * Example showing the following:

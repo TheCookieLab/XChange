@@ -1,5 +1,6 @@
 package org.knowm.xchange.examples.bitso.trade;
 
+import java.io.IOException;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.dto.trade.BitsoUserTransaction;
 import org.knowm.xchange.bitso.service.BitsoTradeServiceRaw;
@@ -7,8 +8,6 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.examples.bitso.BitsoDemoUtils;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamPaging;
-
-import java.io.IOException;
 
 /**
  * Example showing the following:

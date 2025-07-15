@@ -1,11 +1,10 @@
 package org.knowm.xchange.bitso.dto.account;
 
+import java.math.BigDecimal;
+import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.math.BigDecimal;
-import java.util.List;
 
 /**
  * Bitso Balance DTO for API v3

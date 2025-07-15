@@ -1,5 +1,8 @@
 package org.knowm.xchange.binance;
 
+import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
+
+import java.util.Map;
 import org.apache.commons.lang3.ObjectUtils;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.Exchange;
@@ -16,10 +19,6 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.utils.AuthUtils;
 import si.mazi.rescu.SynchronizedValueFactory;
-
-import java.util.Map;
-
-import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
 
 public class BinanceExchange extends BaseExchange implements Exchange {
 
@@ -66,7 +65,7 @@ public class BinanceExchange extends BaseExchange implements Exchange {
       // some workaround, for different resilience registries for spot and futures
       if (isFuturesEnabled()) {
         RESILIENCE_REGISTRIES = BinanceResilience.createRegistriesFuture();
-      } else  RESILIENCE_REGISTRIES = BinanceResilience.createRegistries();
+      } else RESILIENCE_REGISTRIES = BinanceResilience.createRegistries();
     }
     return RESILIENCE_REGISTRIES;
   }
@@ -127,7 +126,8 @@ public class BinanceExchange extends BaseExchange implements Exchange {
         default:
           Map<String, AssetDetail> assetDetailMap = null;
           if (!usingSandbox() && isAuthenticated() && !isFuturesEnabled()) {
-            assetDetailMap = accountService.getAssetDetails(); // not available in sndbox and Futures
+            assetDetailMap =
+                accountService.getAssetDetails(); // not available in sndbox and Futures
           }
           exchangeInfo = marketDataServiceRaw.getExchangeInfo();
           exchangeMetaData = BinanceAdapters.adaptExchangeMetaData(exchangeInfo, assetDetailMap);
@@ -156,35 +156,36 @@ public class BinanceExchange extends BaseExchange implements Exchange {
         && exchangeSpecification.getSecretKey() != null;
   }
 
-  /**
-   * Adjust host parameters depending on exchange specific parameters
-   */
+  /** Adjust host parameters depending on exchange specific parameters */
   private static void concludeHostParams(ExchangeSpecification exchangeSpecification) {
     if (exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE) != null) {
       switch ((ExchangeType)
           exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE)) {
-        case SPOT: {
-          if (enabledSandbox(exchangeSpecification)) {
-            exchangeSpecification.setSslUri(SANDBOX_SPOT_URL);
+        case SPOT:
+          {
+            if (enabledSandbox(exchangeSpecification)) {
+              exchangeSpecification.setSslUri(SANDBOX_SPOT_URL);
+            }
+            break;
           }
-          break;
-        }
-        case FUTURES: {
-          if (!enabledSandbox(exchangeSpecification)) {
-            exchangeSpecification.setSslUri(FUTURES_URL);
-          } else {
-            exchangeSpecification.setSslUri(SANDBOX_FUTURES_URL);
+        case FUTURES:
+          {
+            if (!enabledSandbox(exchangeSpecification)) {
+              exchangeSpecification.setSslUri(FUTURES_URL);
+            } else {
+              exchangeSpecification.setSslUri(SANDBOX_FUTURES_URL);
+            }
+            break;
           }
-          break;
-        }
-        case INVERSE: {
-          if (!enabledSandbox(exchangeSpecification)) {
-            exchangeSpecification.setSslUri(INVERSE_FUTURES_URL);
-          } else {
-            exchangeSpecification.setSslUri(SANDBOX_INVERSE_FUTURES_URL);
+        case INVERSE:
+          {
+            if (!enabledSandbox(exchangeSpecification)) {
+              exchangeSpecification.setSslUri(INVERSE_FUTURES_URL);
+            } else {
+              exchangeSpecification.setSslUri(SANDBOX_INVERSE_FUTURES_URL);
+            }
+            break;
           }
-          break;
-        }
       }
     }
   }

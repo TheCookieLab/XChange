@@ -1,5 +1,6 @@
 package org.knowm.xchange.bitso.service;
 
+import java.io.IOException;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.BitsoAdapters;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -8,8 +9,6 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
-
-import java.io.IOException;
 
 /**
  * @author Piotr Ładyżyński Updated for Bitso API v3

@@ -22,7 +22,6 @@ public class CoinexChainInfo {
   @JsonProperty("chains")
   List<CoinexChain> chains;
 
-
   @Data
   @Builder
   @Jacksonized
@@ -43,9 +42,7 @@ public class CoinexChainInfo {
 
     @JsonProperty("is_st")
     private Boolean isSt;
-
   }
-
 
   @Data
   @Builder
@@ -93,8 +90,5 @@ public class CoinexChainInfo {
 
     @JsonProperty("explorer_asset_url")
     private URI explorerAssetUrl;
-
   }
-
-
 }

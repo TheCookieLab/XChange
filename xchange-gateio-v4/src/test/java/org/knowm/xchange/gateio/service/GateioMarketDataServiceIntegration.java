@@ -17,7 +17,8 @@ class GateioMarketDataServiceIntegration extends GateioIntegrationTestParent {
 
   @Test
   void valid_currencies() throws IOException {
-    List<Currency> actual = ((GateioMarketDataService) exchange.getMarketDataService()).getCurrencies();
+    List<Currency> actual =
+        ((GateioMarketDataService) exchange.getMarketDataService()).getCurrencies();
     assertThat(actual).isNotEmpty();
   }
 

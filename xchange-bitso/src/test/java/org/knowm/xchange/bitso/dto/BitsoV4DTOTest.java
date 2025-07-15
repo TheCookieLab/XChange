@@ -1,14 +1,13 @@
 package org.knowm.xchange.bitso.dto;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import org.junit.Test;
 import org.knowm.xchange.bitso.BitsoJacksonObjectMapperFactory;
 import org.knowm.xchange.bitso.dto.trade.BitsoModifyOrderRequest;
-
-import java.math.BigDecimal;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test Bitso API v4 DTOs

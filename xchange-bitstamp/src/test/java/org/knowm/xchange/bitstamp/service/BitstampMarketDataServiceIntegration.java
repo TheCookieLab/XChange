@@ -38,7 +38,6 @@ public class BitstampMarketDataServiceIntegration extends BitstampIntegrationTes
             });
   }
 
-
   @Test
   void valid_single_ticker() throws IOException {
     Ticker ticker = exchange.getMarketDataService().getTicker(CurrencyPair.BTC_USDT);
@@ -50,7 +49,6 @@ public class BitstampMarketDataServiceIntegration extends BitstampIntegrationTes
       assertThat(ticker.getBid()).isLessThan(ticker.getAsk());
     }
   }
-
 
   @Test
   void valid_tickers() throws IOException {
@@ -68,6 +66,4 @@ public class BitstampMarketDataServiceIntegration extends BitstampIntegrationTes
               }
             });
   }
-
-
 }

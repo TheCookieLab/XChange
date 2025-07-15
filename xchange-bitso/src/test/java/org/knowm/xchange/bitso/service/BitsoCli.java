@@ -1,5 +1,7 @@
 package org.knowm.xchange.bitso.service;
 
+import java.math.BigDecimal;
+import java.util.List;
 import lombok.SneakyThrows;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
@@ -24,9 +26,6 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.withdrawals.Address;
 import org.knowm.xchange.service.trade.params.withdrawals.Bank;
 import org.knowm.xchange.service.trade.params.withdrawals.Beneficiary;
-
-import java.math.BigDecimal;
-import java.util.List;
 
 public class BitsoCli {
   public static void main(String[] args) {

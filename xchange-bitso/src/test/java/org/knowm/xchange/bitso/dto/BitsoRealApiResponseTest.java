@@ -1,18 +1,17 @@
 package org.knowm.xchange.bitso.dto;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigDecimal;
 import org.junit.Test;
 import org.knowm.xchange.bitso.BitsoJacksonObjectMapperFactory;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoAvailableBooks;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoOrderBook;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTicker;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTrades;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigDecimal;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /** Tests DTOs against real API responses from Bitso API v3 */
 public class BitsoRealApiResponseTest {

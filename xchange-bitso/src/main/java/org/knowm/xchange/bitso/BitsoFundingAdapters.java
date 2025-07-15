@@ -1,15 +1,14 @@
 package org.knowm.xchange.bitso;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.bitso.dto.funding.BitsoDepositDetails;
 import org.knowm.xchange.bitso.dto.funding.BitsoFunding;
 import org.knowm.xchange.bitso.dto.funding.BitsoWithdrawal;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.FundingRecord;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /** Adapters for converting Bitso funding DTOs to XChange DTOs */
 @UtilityClass

@@ -1,6 +1,5 @@
 package org.knowm.xchange.bybit;
 
-
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import java.time.Duration;
 import org.knowm.xchange.client.ResilienceRegistries;

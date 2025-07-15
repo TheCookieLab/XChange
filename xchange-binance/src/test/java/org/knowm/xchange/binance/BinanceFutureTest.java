@@ -1,5 +1,13 @@
 package org.knowm.xchange.binance;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.knowm.xchange.Exchange.USE_SANDBOX;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.*;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -30,15 +38,6 @@ import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstr
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.*;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.knowm.xchange.Exchange.USE_SANDBOX;
-import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
-import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
-
 @Ignore
 public class BinanceFutureTest {
 
@@ -49,13 +48,13 @@ public class BinanceFutureTest {
 
   @Before
   public void setUp() throws IOException {
-    //Properties prop = new Properties();
-    //prop.load(this.getClass().getResourceAsStream("/secret.keys"));
+    // Properties prop = new Properties();
+    // prop.load(this.getClass().getResourceAsStream("/secret.keys"));
 
     ExchangeSpecification spec = new ExchangeSpecification(BinanceExchange.class);
 
-    //spec.setApiKey(prop.getProperty("apikey"));
-    //spec.setSecretKey(prop.getProperty("secret"));
+    // spec.setApiKey(prop.getProperty("apikey"));
+    // spec.setSecretKey(prop.getProperty("secret"));
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
     spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, FUTURES);
 
@@ -65,11 +64,11 @@ public class BinanceFutureTest {
 
   @Test
   public void kline() throws IOException {
-    BinanceMarketDataService marketDataService = (BinanceMarketDataService) binanceExchange.getMarketDataService();
+    BinanceMarketDataService marketDataService =
+        (BinanceMarketDataService) binanceExchange.getMarketDataService();
     // Get Kline data
     List<BinanceKline> klines =
-            marketDataService
-            .klines(instrument, KlineInterval.m5, 10, null, null);
+        marketDataService.klines(instrument, KlineInterval.m5, 10, null, null);
     logger.info("Klines: " + klines);
     assertThat(klines.get(0).getInstrument()).isEqualTo(instrument);
   }
@@ -98,7 +97,8 @@ public class BinanceFutureTest {
 
   @Test
   public void binanceFutureAccountService() throws IOException {
-    BinanceAccountService binanceAccountService = ((BinanceAccountService)binanceExchange.getAccountService());
+    BinanceAccountService binanceAccountService =
+        ((BinanceAccountService) binanceExchange.getAccountService());
     Fee fee = binanceAccountService.getCommissionRateByInstrument(instrument);
     logger.info("fee: {}", fee);
     AccountInfo accountInfo = binanceExchange.getAccountService().getAccountInfo();
@@ -107,7 +107,7 @@ public class BinanceFutureTest {
             accountInfo.getOpenPositions().stream()
                 .anyMatch(openPosition -> openPosition.getInstrument().equals(instrument)))
         .isTrue();
-    logger.info("Positions: {}",accountInfo.getOpenPositions());
+    logger.info("Positions: {}", accountInfo.getOpenPositions());
   }
 
   @Test

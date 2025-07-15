@@ -32,7 +32,10 @@ public class BitstampMarketDataService extends BitstampMarketDataServiceRaw
   public List<Ticker> getTickers(Params params) throws IOException {
     List<BitstampTicker> bitstampTickers = getBitstampTickers();
     return bitstampTickers.stream()
-        .map(bitstampTicker -> BitstampAdapters.adaptTicker(bitstampTicker, new CurrencyPair(bitstampTicker.getPair())))
+        .map(
+            bitstampTicker ->
+                BitstampAdapters.adaptTicker(
+                    bitstampTicker, new CurrencyPair(bitstampTicker.getPair())))
         .collect(Collectors.toList());
   }
 

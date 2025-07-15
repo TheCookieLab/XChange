@@ -2,13 +2,12 @@ package org.knowm.xchange.bitso;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import java.io.IOException;
 import org.knowm.xchange.bitso.dto.BitsoBaseResponse;
 import org.knowm.xchange.bitso.dto.BitsoException;
 import org.knowm.xchange.bitso.dto.funding.*;
 import org.knowm.xchange.bitso.service.BitsoDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
-
-import java.io.IOException;
 
 /**
  * Bitso Funding API for deposits and withdrawals

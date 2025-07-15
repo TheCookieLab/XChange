@@ -1,16 +1,15 @@
 package org.knowm.xchange.bitso.dto;
 
+import static org.junit.Assert.*;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import org.junit.Test;
 import org.knowm.xchange.bitso.BitsoJacksonObjectMapperFactory;
 import org.knowm.xchange.bitso.dto.trade.BitsoConversionExecutionResponse;
 import org.knowm.xchange.bitso.dto.trade.BitsoConversionQuoteRequest;
 import org.knowm.xchange.bitso.dto.trade.BitsoConversionQuoteResponse;
 import org.knowm.xchange.bitso.dto.trade.BitsoConversionStatusResponse;
-
-import java.math.BigDecimal;
-
-import static org.junit.Assert.*;
 
 /** Tests for Bitso v4 Currency Conversion DTOs */
 public class BitsoV4ConversionDTOTest {

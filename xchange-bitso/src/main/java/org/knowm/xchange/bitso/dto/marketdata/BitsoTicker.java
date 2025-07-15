@@ -1,12 +1,11 @@
 package org.knowm.xchange.bitso.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.math.BigDecimal;
+import java.time.Instant;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.math.BigDecimal;
-import java.time.Instant;
 
 /**
  * @author Piotr Ładyżyński Updated for Bitso API v3
