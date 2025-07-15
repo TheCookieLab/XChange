@@ -5,18 +5,26 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.knowm.xchange.Exchange.USE_SANDBOX;
 import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
+import static org.knowm.xchange.binance.dto.marketdata.KlineInterval.d1;
+import static org.knowm.xchange.binance.dto.marketdata.KlineInterval.m1;
 
 import info.bitrich.xchangestream.binance.BinanceStreamingExchange;
+import info.bitrich.xchangestream.binance.KlineSubscription;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.binance.dto.marketdata.KlineInterval;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.instrument.Instrument;
@@ -42,6 +50,30 @@ public class BinanceSpotStreamPublicTest {
     spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, SPOT);
     exchange = StreamingExchangeFactory.INSTANCE.createExchange(spec);
     binanceStreamingExchange = (BinanceStreamingExchange) exchange;
+  }
+
+  @Test
+  public void kLineSubscription() throws InterruptedException {
+    Map<Instrument, Set<KlineInterval>> klineMap = new HashMap<>();
+    Set<KlineInterval> klineSet = new HashSet<>();
+    klineSet.add(m1);
+    klineSet.add(d1);
+    klineMap.put(instrument, klineSet);
+    KlineSubscription klineSubscription = new KlineSubscription(klineMap);
+    ProductSubscription subscription =
+        ProductSubscription.create().build();
+    binanceStreamingExchange.connect(klineSubscription, subscription).blockingAwait();
+    Disposable kLineDisposable = binanceStreamingExchange.
+        getStreamingMarketDataService()
+        .getKlines(instrument, m1)
+        .subscribe(kLines -> {
+          if (logOutput) {
+            LOG.info("kLines subscribe: {}", kLines);
+          }
+        });
+    Thread.sleep(10000);
+    kLineDisposable.dispose();
+    exchange.disconnect().blockingAwait();
   }
 
   @Test
