@@ -91,7 +91,8 @@ public class BinanceTest {
   @Test
   public void binanceAccountService() throws IOException {
     // Works only on main(not demo) account
-    Map<Instrument, Fee> fees = binanceExchange.getAccountService().getDynamicTradingFeesByInstrument();
+    Map<Instrument, Fee> fees =
+        binanceExchange.getAccountService().getDynamicTradingFeesByInstrument();
     logger.info("fee: {}", fees);
     AccountInfo accountInfo = binanceExchange.getAccountService().getAccountInfo();
     logger.info("AccountInfo: {}", accountInfo.getWallet());
@@ -127,7 +128,7 @@ public class BinanceTest {
             .getOpenOrders();
     logger.info("OpenOrders: " + openOrders);
     assertThat(
-        openOrders.stream().anyMatch(openOrder -> openOrder.getInstrument().equals(instrument)))
+            openOrders.stream().anyMatch(openOrder -> openOrder.getInstrument().equals(instrument)))
         .isTrue();
 
     // Get order
@@ -146,5 +147,4 @@ public class BinanceTest {
             .getTradeService()
             .cancelOrder(new BinanceCancelOrderParams(instrument, orderId,"")));
   }
-
 }

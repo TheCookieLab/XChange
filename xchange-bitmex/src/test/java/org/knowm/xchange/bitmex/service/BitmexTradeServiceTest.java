@@ -55,7 +55,8 @@ class BitmexTradeServiceTest extends BitmexExchangeWiremock {
     MarketOrder expected =
         new MarketOrder.Builder(OrderType.BID, new CurrencyPair("FTR/USDT"))
             .id("48cd2721-f9b9-45ce-8754-eb46dd0691ea")
-            .userReference("Canceled: Order had timeInForce of ImmediateOrCancel\nSubmitted via API.")
+            .userReference(
+                "Canceled: Order had timeInForce of ImmediateOrCancel\nSubmitted via API.")
             .timestamp(Date.from(Instant.parse("2025-06-04T13:33:02.563Z")))
             .originalAmount(new BigDecimal("790.00000"))
             .orderStatus(OrderStatus.CANCELED)

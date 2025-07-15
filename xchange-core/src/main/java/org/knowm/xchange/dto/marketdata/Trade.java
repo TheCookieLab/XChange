@@ -25,8 +25,7 @@ public class Trade implements Serializable {
   protected final OrderType type;
 
   /** Amount that was traded */
-  @Setter
-  protected BigDecimal originalAmount;
+  @Setter protected BigDecimal originalAmount;
 
   /** The instrument */
   protected final Instrument instrument;

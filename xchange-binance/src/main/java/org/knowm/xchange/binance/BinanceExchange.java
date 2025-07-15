@@ -65,9 +65,7 @@ public class BinanceExchange extends BaseExchange implements Exchange {
       // some workaround, for different resilience registries for spot and futures
       if (isFuturesEnabled()) {
         RESILIENCE_REGISTRIES = BinanceResilience.createRegistriesFuture();
-      } else {
-        RESILIENCE_REGISTRIES = BinanceResilience.createRegistries();
-      }
+      } else RESILIENCE_REGISTRIES = BinanceResilience.createRegistries();
     }
     return RESILIENCE_REGISTRIES;
   }
@@ -157,9 +155,7 @@ public class BinanceExchange extends BaseExchange implements Exchange {
         && exchangeSpecification.getSecretKey() != null;
   }
 
-  /**
-   * Adjust host parameters depending on exchange specific parameters
-   */
+  /** Adjust host parameters depending on exchange specific parameters */
   private static void concludeHostParams(ExchangeSpecification exchangeSpecification) {
     if (exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE) != null) {
       switch ((ExchangeType)

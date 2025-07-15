@@ -261,7 +261,8 @@ public class KucoinAdapters {
   }
 
   public static Balance adaptBalance(AccountBalancesResponse a) {
-    return new Balance(Currency.getInstance(a.getCurrency()), a.getBalance(), a.getAvailable());
+    return new Balance(
+        Currency.getInstance(a.getCurrency()), a.getBalance(), a.getAvailable(), a.getHolds());
   }
 
   private static Trade adaptTrade(CurrencyPair currencyPair, TradeHistoryResponse trade) {
@@ -384,8 +385,9 @@ public class KucoinAdapters {
   }
 
   public static OrderCreateApiRequest adaptMarketOrder(MarketOrder marketOrder) {
-    OrderCreateApiRequest.OrderCreateApiRequestBuilder builder = ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(marketOrder))
-        .type("market");
+    OrderCreateApiRequest.OrderCreateApiRequestBuilder builder =
+        ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(marketOrder))
+            .type("market");
 
     // on buy order amount corresponds to counter currency
     if (marketOrder.getType() == BID) {

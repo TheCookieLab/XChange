@@ -21,8 +21,8 @@ import org.slf4j.LoggerFactory;
 @Ignore
 public class OkexStreamingPrivateDataIntegration {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      OkexStreamingPrivateDataIntegration.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OkexStreamingPrivateDataIntegration.class);
   StreamingExchange exchange;
   private final Instrument instrument = new FuturesContract("BTC/USDT/SWAP");
 
@@ -62,7 +62,7 @@ public class OkexStreamingPrivateDataIntegration {
     exchange.applySpecification(spec);
     exchange.connect().blockingAwait();
     // OPTION - wait for login message response
-    while(!exchange.isAlive()) {
+    while (!exchange.isAlive()) {
       try {
         TimeUnit.MILLISECONDS.sleep(100);
       } catch (InterruptedException e) {
@@ -87,16 +87,17 @@ public class OkexStreamingPrivateDataIntegration {
     Disposable dis =
         exchange
             .getStreamingMarketDataService()
-            .getOrderBook(instrument).doOnError(throwable -> LOG.error("Error: ", throwable))
+            .getOrderBook(instrument)
+            .doOnError(throwable -> LOG.error("Error: ", throwable))
             .subscribe(
                 orderBook -> {
                   LOG.info(".");
                   assertThat(orderBook.getBids().get(0).getLimitPrice())
                       .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
                   assertThat(orderBook.getBids().get(0).getInstrument()).isEqualTo(instrument);
-                }, throwable -> LOG.error("Error: ", throwable));
+                },
+                throwable -> LOG.error("Error: ", throwable));
     TimeUnit.SECONDS.sleep(3);
     dis.dispose();
   }
-
 }

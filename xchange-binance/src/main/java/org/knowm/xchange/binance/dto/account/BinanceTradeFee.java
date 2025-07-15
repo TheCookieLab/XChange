@@ -8,5 +8,4 @@ public class BinanceTradeFee {
   private String symbol;
   private String makerCommission;
   private String takerCommission;
-
 }

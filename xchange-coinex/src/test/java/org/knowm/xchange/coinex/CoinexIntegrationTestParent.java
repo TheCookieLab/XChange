@@ -14,7 +14,7 @@ public class CoinexIntegrationTestParent {
   @BeforeAll
   static void init() {
     if (exchange == null) {
-        exchange = ExchangeFactory.INSTANCE.createExchange(CoinexExchange.class);
+      exchange = ExchangeFactory.INSTANCE.createExchange(CoinexExchange.class);
     }
   }
 

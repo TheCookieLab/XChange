@@ -2,6 +2,9 @@ package org.knowm.xchange.bitget.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
@@ -9,10 +12,6 @@ import org.knowm.xchange.bitget.config.converter.StringToCurrencyConverter;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
 
 @Data
 @Builder
@@ -121,12 +120,9 @@ public class BitgetContractDto {
   @JsonProperty("openTime")
   private Instant openTime;
 
-
   public FuturesContract getFuturesContract() {
     return new FuturesContract(new CurrencyPair(base, quote), "PERP");
   }
-
-
 
   public enum SymbolType {
     @JsonProperty("perpetual")

@@ -62,14 +62,12 @@ import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.instrument.Instrument;
 
 public class BinanceAdapters {
-
   private static final DateTimeFormatter DATE_TIME_FMT =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
   private static final Map<String, CurrencyPair> SYMBOL_TO_CURRENCY_PAIR = new HashMap<>();
 
-  private BinanceAdapters() {
-  }
+  private BinanceAdapters() {}
 
   /**
    * Converts a datetime as string in time zone UTC to a Date object
@@ -328,16 +326,16 @@ public class BinanceAdapters {
       case STOP_LOSS:
         return order.getLimitPrice() == null
             ? (order.getInstrument() instanceof CurrencyPair)
-            ? org.knowm.xchange.binance.dto.trade.OrderType.STOP_LOSS
-            : org.knowm.xchange.binance.dto.trade.OrderType.STOP_MARKET
+                ? org.knowm.xchange.binance.dto.trade.OrderType.STOP_LOSS
+                : org.knowm.xchange.binance.dto.trade.OrderType.STOP_MARKET
             : (order.getInstrument() instanceof CurrencyPair)
                 ? org.knowm.xchange.binance.dto.trade.OrderType.STOP_LOSS_LIMIT
                 : org.knowm.xchange.binance.dto.trade.OrderType.STOP;
       case TAKE_PROFIT:
         return order.getLimitPrice() == null
             ? (order.getInstrument() instanceof CurrencyPair)
-            ? org.knowm.xchange.binance.dto.trade.OrderType.TAKE_PROFIT
-            : org.knowm.xchange.binance.dto.trade.OrderType.TAKE_PROFIT_MARKET
+                ? org.knowm.xchange.binance.dto.trade.OrderType.TAKE_PROFIT
+                : org.knowm.xchange.binance.dto.trade.OrderType.TAKE_PROFIT_MARKET
             : (order.getInstrument() instanceof CurrencyPair)
                 ? org.knowm.xchange.binance.dto.trade.OrderType.TAKE_PROFIT_LIMIT
                 : org.knowm.xchange.binance.dto.trade.OrderType.TAKE_PROFIT;
@@ -369,7 +367,7 @@ public class BinanceAdapters {
         .currentLeverage(
             (totalPositionsInUsd.compareTo(BigDecimal.ZERO) != 0)
                 ? totalPositionsInUsd.divide(
-                futureAccountInformation.getTotalWalletBalance(), MathContext.DECIMAL32)
+                    futureAccountInformation.getTotalWalletBalance(), MathContext.DECIMAL32)
                 : BigDecimal.ZERO)
         .features(Collections.singleton(Wallet.WalletFeature.FUTURES_TRADING))
         .build();
@@ -538,9 +536,9 @@ public class BinanceAdapters {
             }
           }
 
-          if (counterMaxQty == null) {
-            counterMaxQty = counterMaxQtyFallback;
-          }
+        if (counterMaxQty == null) {
+          counterMaxQty = counterMaxQtyFallback;
+        }
 
           exchangeMetaData
               .getInstruments()

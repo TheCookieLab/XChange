@@ -565,6 +565,7 @@ public interface BinanceFuturesAuthenticated extends BinanceFutures {
 
   /**
    * Get User Commission Rate for a Future symbol.
+   *
    * @param symbol
    * @param recvWindow optional
    * @param timestamp

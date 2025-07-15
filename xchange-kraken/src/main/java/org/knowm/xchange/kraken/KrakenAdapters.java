@@ -1,5 +1,10 @@
 package org.knowm.xchange.kraken;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -24,12 +29,6 @@ import org.knowm.xchange.kraken.dto.account.KrakenTradeVolume;
 import org.knowm.xchange.kraken.dto.account.KrakenVolumeFee;
 import org.knowm.xchange.kraken.dto.marketdata.*;
 import org.knowm.xchange.kraken.dto.trade.*;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 public class KrakenAdapters {
 

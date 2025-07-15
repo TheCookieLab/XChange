@@ -1,5 +1,8 @@
 package org.knowm.xchange.coinsph;
 
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.knowm.xchange.coinsph.dto.account.*;
 import org.knowm.xchange.coinsph.dto.marketdata.CoinsphOrderBook;
 import org.knowm.xchange.coinsph.dto.marketdata.CoinsphOrderBookEntry;
@@ -23,10 +26,6 @@ import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.*;
 import org.knowm.xchange.instrument.Instrument;
-
-import java.math.BigDecimal;
-import java.util.*;
-import java.util.stream.Collectors;
 
 public final class CoinsphAdapters {
 

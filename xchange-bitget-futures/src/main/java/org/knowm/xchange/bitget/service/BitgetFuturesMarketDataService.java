@@ -1,5 +1,11 @@
 package org.knowm.xchange.bitget.service;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import org.knowm.xchange.bitget.BitgetErrorAdapter;
 import org.knowm.xchange.bitget.BitgetFuturesAdapters;
 import org.knowm.xchange.bitget.BitgetFuturesExchange;
@@ -15,14 +21,8 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
-public class BitgetFuturesMarketDataService extends BitgetFuturesMarketDataServiceRaw implements MarketDataService {
+public class BitgetFuturesMarketDataService extends BitgetFuturesMarketDataServiceRaw
+    implements MarketDataService {
 
   public BitgetFuturesMarketDataService(BitgetFuturesExchange exchange) {
     super(exchange);
@@ -87,5 +87,4 @@ public class BitgetFuturesMarketDataService extends BitgetFuturesMarketDataServi
       throw BitgetErrorAdapter.adapt(e);
     }
   }
-
 }

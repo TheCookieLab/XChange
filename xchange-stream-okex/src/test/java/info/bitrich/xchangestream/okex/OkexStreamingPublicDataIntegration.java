@@ -87,7 +87,7 @@ public class OkexStreamingPublicDataIntegration {
             .getOrderBook(currencyPair)
             .subscribe(
                 orderBook -> {
-//                  System.out.println(orderBook);
+                  //                  System.out.println(orderBook);
                   assertThat(orderBook.getBids().get(0).getLimitPrice())
                       .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
                   assertThat(orderBook.getBids().get(0).getInstrument()).isEqualTo(currencyPair);
@@ -98,22 +98,37 @@ public class OkexStreamingPublicDataIntegration {
             .getOrderBook(instrumentSHIB)
             .subscribe(
                 orderBook -> {
-//                  System.out.println(orderBook);
+                  //                  System.out.println(orderBook);
                   assertThat(orderBook.getBids().get(0).getLimitPrice())
                       .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
                   assertThat(orderBook.getBids().get(0).getInstrument()).isEqualTo(instrumentSHIB);
                   // Min SHIB 100000
-                  assertThat(orderBook.getBids().get(0).getOriginalAmount().compareTo(new BigDecimal(100000)) >= 0).isTrue();
+                  assertThat(
+                          orderBook
+                                  .getBids()
+                                  .get(0)
+                                  .getOriginalAmount()
+                                  .compareTo(new BigDecimal(100000))
+                              >= 0)
+                      .isTrue();
                 });
     Disposable dis3 =
         exchange
             .getStreamingMarketDataService()
             .getOrderBookUpdates(instrumentSHIB)
-            .subscribe(orderBookUpdate -> {
-              System.out.println("orderBookUpdate " + orderBookUpdate);
-              // Min SHIB 100000
-              assertThat(orderBookUpdate.get(0).getLimitOrder().getOriginalAmount().compareTo(new BigDecimal(100000)) >= 0).isTrue();
-            });
+            .subscribe(
+                orderBookUpdate -> {
+                  System.out.println("orderBookUpdate " + orderBookUpdate);
+                  // Min SHIB 100000
+                  assertThat(
+                          orderBookUpdate
+                                  .get(0)
+                                  .getLimitOrder()
+                                  .getOriginalAmount()
+                                  .compareTo(new BigDecimal(100000))
+                              >= 0)
+                      .isTrue();
+                });
     TimeUnit.SECONDS.sleep(3);
     dis.dispose();
     dis2.dispose();

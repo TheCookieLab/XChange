@@ -94,7 +94,7 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
   }
 
   public List<BinanceKline> klines(
-      CurrencyPair pair, KlineInterval interval, Integer limit, Long startTime, Long endTime)
+      Instrument pair, KlineInterval interval, Integer limit, Long startTime, Long endTime)
       throws IOException {
     List<Object[]> raw =
         decorateApiCall(

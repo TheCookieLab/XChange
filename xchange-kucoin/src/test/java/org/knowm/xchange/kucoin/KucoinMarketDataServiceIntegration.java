@@ -90,7 +90,9 @@ public class KucoinMarketDataServiceIntegration extends KucoinIntegrationTestPar
   @Test
   public void testOrderBookPartialShallow() throws Exception {
     OrderBook orderBook =
-        exchange.getMarketDataService().getOrderBook(CurrencyPair.ETH_BTC, PARAM_PARTIAL_SHALLOW_ORDERBOOK);
+        exchange
+            .getMarketDataService()
+            .getOrderBook(CurrencyPair.ETH_BTC, PARAM_PARTIAL_SHALLOW_ORDERBOOK);
     checkOrderBookIntegrity(orderBook);
     assertThat(orderBook.getAsks().size()).isLessThanOrEqualTo(20);
     assertThat(orderBook.getBids().size()).isLessThanOrEqualTo(20);

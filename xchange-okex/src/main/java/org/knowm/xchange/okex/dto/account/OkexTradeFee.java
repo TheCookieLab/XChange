@@ -51,8 +51,10 @@ public class OkexTradeFee {
   public static class FiatList {
     @JsonProperty("ccy")
     private String ccy;
+
     @JsonProperty("taker")
     private String taker;
+
     @JsonProperty("maker")
     private String maker;
   }

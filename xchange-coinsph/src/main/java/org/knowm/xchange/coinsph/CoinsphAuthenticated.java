@@ -2,15 +2,14 @@ package org.knowm.xchange.coinsph;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
 import org.knowm.xchange.coinsph.dto.CoinsphException;
 import org.knowm.xchange.coinsph.dto.account.*;
 import org.knowm.xchange.coinsph.dto.trade.*;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.List;
 
 @Path("/openapi") // Base path for all endpoints of Coins.ph API
 @Produces(MediaType.APPLICATION_JSON)

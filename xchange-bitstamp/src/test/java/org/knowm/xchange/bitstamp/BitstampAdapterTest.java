@@ -258,7 +258,9 @@ public class BitstampAdapterTest {
     // Use Jackson to parse it
     ObjectMapper mapper = new ObjectMapper();
     List<BitstampTradingFee> tradingFees =
-        mapper.readValue(is, mapper.getTypeFactory().constructCollectionType(List.class, BitstampTradingFee.class));
+        mapper.readValue(
+            is,
+            mapper.getTypeFactory().constructCollectionType(List.class, BitstampTradingFee.class));
 
     // Call the adapter method
     Map<Instrument, Fee> feesMap = BitstampAdapters.adaptTradingFees(tradingFees);

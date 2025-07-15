@@ -13,10 +13,8 @@ import lombok.Getter;
 @JsonDeserialize(using = OkexPublicOrder.OkexOrderDeserializer.class)
 public class OkexPublicOrder {
 
-  @Getter
-  private final BigDecimal price;
-  @Getter
-  private final BigDecimal volume;
+  @Getter private final BigDecimal price;
+  @Getter private final BigDecimal volume;
   private final Integer liquidatedOrders;
   private final Integer activeOrders;
 

@@ -1,16 +1,15 @@
 package org.knowm.xchange.kraken.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
+import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.kraken.KrakenIntegrationTestParent;
-
-import java.io.IOException;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 public class KrakenMarketDataServiceIntegration extends KrakenIntegrationTestParent {
 
@@ -35,7 +34,8 @@ public class KrakenMarketDataServiceIntegration extends KrakenIntegrationTestPar
     Ticker ticker = exchange.getMarketDataService().getTicker(CurrencyPair.BTC_USDT);
 
     assertThat(ticker.getInstrument()).isEqualTo(CurrencyPair.BTC_USDT);
-    assertThat(ticker).hasNoNullFieldsOrPropertiesExcept("quoteVolume", "timestamp", "percentageChange");
+    assertThat(ticker)
+        .hasNoNullFieldsOrPropertiesExcept("quoteVolume", "timestamp", "percentageChange");
 
     if (ticker.getBid().signum() > 0 && ticker.getAsk().signum() > 0) {
       assertThat(ticker.getBid()).isLessThan(ticker.getAsk());

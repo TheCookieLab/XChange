@@ -44,12 +44,12 @@ public class BitsoUserTradeHistoryDemo {
 
   private static void raw(BitsoTradeServiceRaw tradeService) throws IOException {
 
-    BitsoUserTransaction[] trades = tradeService.getBitsoUserTransactions(1000L);
+    BitsoUserTransaction[] trades = tradeService.getBitsoUserTrades(1000, null, null);
     for (BitsoUserTransaction trade : trades) {
       System.out.println(trade);
     }
 
-    BitsoUserTransaction[] tradesLimitedTo17 = tradeService.getBitsoUserTransactions(17L);
+    BitsoUserTransaction[] tradesLimitedTo17 = tradeService.getBitsoUserTrades(17, null, null);
     for (BitsoUserTransaction trade : tradesLimitedTo17) {
       System.out.println(trade);
     }
