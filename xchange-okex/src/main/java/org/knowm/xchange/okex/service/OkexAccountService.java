@@ -30,9 +30,7 @@ import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
 
-/**
- * Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021
- */
+/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkexAccountService extends OkexAccountServiceRaw implements AccountService {
 
   public OkexAccountService(OkexExchange exchange, ResilienceRegistries resilienceRegistries) {
@@ -79,9 +77,9 @@ public class OkexAccountService extends OkexAccountServiceRaw implements Account
     throw new IllegalStateException("Don't know how to withdraw: " + params);
   }
 
-
   /**
-   * @param category Optional, instrument category ("SPOT" or "SWAP"). If not specified, return all instruments trading fees.
+   * @param category Optional, instrument category ("SPOT" or "SWAP"). If not specified, return all
+   *     instruments trading fees.
    */
   @Override
   public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
@@ -101,7 +99,13 @@ public class OkexAccountService extends OkexAccountServiceRaw implements Account
   }
 
   public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
-    return setLeverage(adaptInstrument(instrument), "", String.valueOf(leverage), adaptTradeMode(instrument, exchange.accountLevel), "").isSuccess();
+    return setLeverage(
+            adaptInstrument(instrument),
+            "",
+            String.valueOf(leverage),
+            adaptTradeMode(instrument, exchange.accountLevel),
+            "")
+        .isSuccess();
   }
 
   private Map<Instrument, Fee> getTradeFeesSPOT() throws IOException {
@@ -125,6 +129,4 @@ public class OkexAccountService extends OkexAccountServiceRaw implements Account
     }
     return result;
   }
-
 }
-

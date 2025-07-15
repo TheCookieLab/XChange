@@ -85,7 +85,6 @@ public class OkexExchangeIntegration {
     spec.setExchangeSpecificParametersItem(OkexExchange.PARAM_SIMULATED, "1");
     final Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
     exchange.getTradeService().getOpenPositions().getOpenPositions().forEach(System.out::println);
-
   }
 
   @Test
@@ -123,7 +122,8 @@ public class OkexExchangeIntegration {
             .originalAmount(BigDecimal.TEN)
             .limitPrice(new BigDecimal(1000))
             .id(orderId)
-            .userReference(userReferenceId).build();
+            .userReference(userReferenceId)
+            .build();
     String orderId2 = okexTradeService.changeOrder(limitOrder2);
     log.info("Amended orderId: {}", orderId2);
 
@@ -141,7 +141,8 @@ public class OkexExchangeIntegration {
     boolean result =
         exchange
             .getTradeService()
-            .cancelOrder(new OkexTradeParams.OkexCancelOrderParams(TRX_USDT, orderId2, userReferenceId));
+            .cancelOrder(
+                new OkexTradeParams.OkexCancelOrderParams(TRX_USDT, orderId2, userReferenceId));
     log.info("Cancellation result: {}", result);
 
     // Place batch orders
@@ -154,12 +155,7 @@ public class OkexExchangeIntegration {
     for (String id : orderIds) {
       amendOrders.add(
           new LimitOrder(
-              Order.OrderType.ASK,
-              BigDecimal.TEN,
-              TRX_USDT,
-              id,
-              new Date(),
-              new BigDecimal(1000)));
+              Order.OrderType.ASK, BigDecimal.TEN, TRX_USDT, id, new Date(), new BigDecimal(1000)));
     }
     List<String> amendedOrderIds = okexTradeService.changeOrder(amendOrders);
     log.info("Amended batch orderIds: {}", amendedOrderIds);

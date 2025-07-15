@@ -65,7 +65,8 @@ public class OkexPrivateDataIntegration {
   @Test
   public void placeLimitOrderGetOpenOrderAndCancelOrder() throws IOException {
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
-    InstrumentMetaData instrumentMetaData = exchange.getExchangeMetaData().getInstruments().get(instrument);
+    InstrumentMetaData instrumentMetaData =
+        exchange.getExchangeMetaData().getInstruments().get(instrument);
     BigDecimal size = instrumentMetaData.getMinimumAmount();
     BigDecimal price = ticker.getLow();
     String userReference = RandomStringUtils.randomAlphanumeric(10);
@@ -95,11 +96,15 @@ public class OkexPrivateDataIntegration {
     assertThat(openOrdersWithParams.get(0).getInstrument()).isEqualTo(instrument);
     assertThat(openOrdersWithParams.get(0).getOriginalAmount()).isEqualTo(size);
     assertThat(openOrdersWithParams.get(0).getLimitPrice()).isEqualTo(price);
-    String changedOrderId = exchange.getTradeService().changeOrder(new LimitOrder.Builder(Order.OrderType.BID, instrument)
-        .limitPrice(price.add(BigDecimal.ONE))
-        .originalAmount(size)
-        .id(orderId)
-        .build());
+    String changedOrderId =
+        exchange
+            .getTradeService()
+            .changeOrder(
+                new LimitOrder.Builder(Order.OrderType.BID, instrument)
+                    .limitPrice(price.add(BigDecimal.ONE))
+                    .originalAmount(size)
+                    .id(orderId)
+                    .build());
     openOrdersWithParams =
         exchange
             .getTradeService()
@@ -177,14 +182,19 @@ public class OkexPrivateDataIntegration {
   public void feeRates() throws IOException {
     OkexAccountService okexAccountService = ((OkexAccountService) exchange.getAccountService());
     Map<Instrument, Fee> feeMap = okexAccountService.getDynamicTradingFeesByInstrument("SWAP");
-    feeMap.forEach((key, value) -> {
-      System.out.println("Key : " + key + " Value : " + value);
-    });
+    feeMap.forEach(
+        (key, value) -> {
+          System.out.println("Key : " + key + " Value : " + value);
+        });
   }
 
   @Test
   public void setLeverage() throws IOException {
     OkexAccountService okexAccountService = ((OkexAccountService) exchange.getAccountService());
-    System.out.println("Set leverage 1, for " + instrument + ", result: " + okexAccountService.setLeverage(instrument, 1));
+    System.out.println(
+        "Set leverage 1, for "
+            + instrument
+            + ", result: "
+            + okexAccountService.setLeverage(instrument, 1));
   }
 }

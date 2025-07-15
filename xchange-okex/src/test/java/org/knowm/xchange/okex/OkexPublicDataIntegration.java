@@ -54,7 +54,8 @@ public class OkexPublicDataIntegration {
               }
             });
     // full BTC/USDT/SWAP check
-    InstrumentMetaData instrumentMetaData = exchange.getExchangeMetaData().getInstruments().get(instrument);
+    InstrumentMetaData instrumentMetaData =
+        exchange.getExchangeMetaData().getInstruments().get(instrument);
     assertEquals(0, instrumentMetaData.getContractValue().compareTo(new BigDecimal("0.01")));
     assertEquals(0, instrumentMetaData.getMinimumAmount().compareTo(new BigDecimal("0.0001")));
     assertThat(instrumentMetaData.getVolumeScale()).isEqualTo(4);
@@ -114,14 +115,14 @@ public class OkexPublicDataIntegration {
             .getHistoryCandle("BTC-USDT", null, null, null, null);
     assertTrue(Objects.nonNull(barHistDtos) && !barHistDtos.getData().isEmpty());
   }
-  
+
   @Test
   @Ignore
   public void testCandle() throws IOException {
-	  OkexResponse<List<OkexCandleStick>> barHistDtos =
-			  ((OkexMarketDataService) exchange.getMarketDataService())
-			  .getCandle("BTC-USDT", null, null, null, null);
-	  assertTrue(Objects.nonNull(barHistDtos) && !barHistDtos.getData().isEmpty());
+    OkexResponse<List<OkexCandleStick>> barHistDtos =
+        ((OkexMarketDataService) exchange.getMarketDataService())
+            .getCandle("BTC-USDT", null, null, null, null);
+    assertTrue(Objects.nonNull(barHistDtos) && !barHistDtos.getData().isEmpty());
   }
 
   @Test

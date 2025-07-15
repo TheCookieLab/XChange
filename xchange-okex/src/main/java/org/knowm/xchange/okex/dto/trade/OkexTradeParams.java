@@ -20,6 +20,7 @@ public class OkexTradeParams {
       this.orderId = orderId;
       this.userReference = userReference;
     }
+
     public OkexCancelOrderParams(Instrument instrument, String orderId) {
       this.instrument = instrument;
       this.orderId = orderId;

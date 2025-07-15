@@ -212,23 +212,25 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
   @Override
   public boolean cancelOrder(CancelOrderParams params) throws IOException {
     if (params instanceof OkexTradeParams.OkexCancelOrderParams) {
-        Instrument instrument = ((CancelOrderByInstrument) params).getInstrument();
-        if (instrument == null) {
-          throw new UnsupportedOperationException(
-              "Instrument and (orderId or userReference) required");
-        }
+      Instrument instrument = ((CancelOrderByInstrument) params).getInstrument();
+      if (instrument == null) {
+        throw new UnsupportedOperationException(
+            "Instrument and (orderId or userReference) required");
+      }
       String orderId = ((CancelOrderByIdParams) params).getOrderId();
       String userReference = ((CancelOrderByUserReferenceParams) params).getUserReference();
-        if ((orderId == null || orderId.isEmpty())
-            && (userReference == null || userReference.isEmpty())) {
-          throw new UnsupportedOperationException("OrderId or userReference is required");
-        }
+      if ((orderId == null || orderId.isEmpty())
+          && (userReference == null || userReference.isEmpty())) {
+        throw new UnsupportedOperationException("OrderId or userReference is required");
+      }
       String id = ((CancelOrderByIdParams) params).getOrderId();
       String instrumentId =
           OkexAdapters.adaptInstrument(((CancelOrderByInstrument) params).getInstrument());
 
       OkexCancelOrderRequest req =
-          OkexCancelOrderRequest.builder().instrumentId(instrumentId).orderId(id)
+          OkexCancelOrderRequest.builder()
+              .instrumentId(instrumentId)
+              .orderId(id)
               .clientOrderId(userReference)
               .build();
 
