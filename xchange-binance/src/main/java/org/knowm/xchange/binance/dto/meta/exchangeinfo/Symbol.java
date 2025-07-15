@@ -31,6 +31,10 @@ public class Symbol {
 
   private String baseAssetPrecision;
 
+  private Long deliveryDate;
+
+  private Long onboardDate;
+
   private String[] orderTypes;
 
   private Filter[] filters;

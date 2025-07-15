@@ -1,20 +1,8 @@
 package org.knowm.xchange.binance.service;
 
-import static org.knowm.xchange.binance.BinanceResilience.REQUEST_WEIGHT_RATE_LIMITER;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceExchange;
-import org.knowm.xchange.binance.dto.marketdata.BinanceAggTrades;
-import org.knowm.xchange.binance.dto.marketdata.BinanceFundingRate;
-import org.knowm.xchange.binance.dto.marketdata.BinanceKline;
-import org.knowm.xchange.binance.dto.marketdata.BinanceOrderbook;
-import org.knowm.xchange.binance.dto.marketdata.BinancePrice;
-import org.knowm.xchange.binance.dto.marketdata.BinancePriceQuantity;
-import org.knowm.xchange.binance.dto.marketdata.BinanceTicker24h;
-import org.knowm.xchange.binance.dto.marketdata.KlineInterval;
+import org.knowm.xchange.binance.dto.marketdata.*;
 import org.knowm.xchange.binance.dto.meta.BinanceTime;
 import org.knowm.xchange.binance.dto.meta.exchangeinfo.BinanceExchangeInfo;
 import org.knowm.xchange.client.ResilienceRegistries;
@@ -22,6 +10,12 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.utils.StreamUtils;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.knowm.xchange.binance.BinanceResilience.REQUEST_WEIGHT_RATE_LIMITER;
 
 public class BinanceMarketDataServiceRaw extends BinanceBaseService {
 
@@ -90,13 +84,16 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
   }
 
   public List<BinanceKline> klines(
-      CurrencyPair pair, KlineInterval interval, Integer limit, Long startTime, Long endTime)
+          Instrument pair, KlineInterval interval, Integer limit, Long startTime, Long endTime)
       throws IOException {
     List<Object[]> raw =
         decorateApiCall(
                 () ->
-                    binance.klines(
-                        BinanceAdapters.toSymbol(pair), interval.code(), limit, startTime, endTime))
+                      (pair instanceof FuturesContract)
+                          ? binanceFutures.klines(
+                          BinanceAdapters.toSymbol(pair), interval.code(), limit, startTime, endTime)
+                          : binance.klines(
+                          BinanceAdapters.toSymbol(pair), interval.code(), limit, startTime, endTime))
             .withRetry(retry("klines"))
             .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
             .call();
