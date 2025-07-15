@@ -1,11 +1,10 @@
 package org.knowm.xchange.coinsph.dto.account;
 
+import java.math.BigDecimal;
+import java.util.Date;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
-
-import java.math.BigDecimal;
-import java.util.Date;
 
 /**
  * Represents a unified funding record (deposit or withdrawal) from Coins.ph API Used for adapting

@@ -1,14 +1,14 @@
 package org.knowm.xchange.coinsph.service;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.coinsph.CoinsphAuthenticated;
 import org.knowm.xchange.coinsph.CoinsphExchange;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class CoinsphAccountServiceRawTest {
 

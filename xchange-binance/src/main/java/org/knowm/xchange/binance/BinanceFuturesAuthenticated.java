@@ -563,6 +563,7 @@ public interface BinanceFuturesAuthenticated extends BinanceFutures {
 
   /**
    * Get User Commission Rate for a Future symbol.
+   *
    * @param symbol
    * @param recvWindow optional
    * @param timestamp
@@ -581,5 +582,4 @@ public interface BinanceFuturesAuthenticated extends BinanceFutures {
       @HeaderParam(X_MBX_APIKEY) String apiKey,
       @QueryParam(SIGNATURE) ParamsDigest signature)
       throws IOException, BinanceException;
-
 }

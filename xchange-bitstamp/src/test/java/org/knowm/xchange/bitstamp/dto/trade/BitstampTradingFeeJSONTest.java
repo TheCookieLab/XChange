@@ -20,8 +20,7 @@ public class BitstampTradingFeeJSONTest {
 
     // Use Jackson to parse it
     ObjectMapper mapper = new ObjectMapper();
-    BitstampTradingFee[] result =
-        mapper.readValue(is, BitstampTradingFee[].class);
+    BitstampTradingFee[] result = mapper.readValue(is, BitstampTradingFee[].class);
 
     assertThat(result.length).isEqualTo(1);
     assertThat(result[0].getMarket()).isEqualTo("btcusd");

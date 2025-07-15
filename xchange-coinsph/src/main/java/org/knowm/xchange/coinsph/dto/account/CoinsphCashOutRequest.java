@@ -1,13 +1,12 @@
 package org.knowm.xchange.coinsph.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.math.BigDecimal;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.jackson.Jacksonized;
-
-import java.math.BigDecimal;
-import java.util.Map;
 
 /**
  * Represents a cash out request for Coins.ph API Based on POST /openapi/fiat/v1/cash-out endpoint

@@ -702,11 +702,10 @@ public class OkexAdapters {
         return new Fee(
             new BigDecimal(okexTradeFee.getMakerUSDC()).negate(),
             new BigDecimal(okexTradeFee.getTakerUSDC()).negate());
-      } else {
+      } else
         return new Fee(
             new BigDecimal(okexTradeFee.getMaker()).negate(),
             new BigDecimal(okexTradeFee.getTaker()).negate());
-      }
     }
   }
 

@@ -1,5 +1,6 @@
 package org.knowm.xchange.coinsph.service;
 
+import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -7,8 +8,6 @@ import lombok.NoArgsConstructor;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.service.trade.params.*;
-
-import java.util.Date;
 
 /** Funding history parameters for Coins.ph */
 @Data

@@ -315,8 +315,7 @@ public final class BitstampAdapters {
     return fundingRecords;
   }
 
-  public static Map<Instrument, Fee> adaptTradingFees(
-      List<BitstampTradingFee> tradingFees) {
+  public static Map<Instrument, Fee> adaptTradingFees(List<BitstampTradingFee> tradingFees) {
     Map<Instrument, Fee> result = new HashMap<>();
     if (tradingFees == null || tradingFees.isEmpty()) {
       return result;

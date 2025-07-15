@@ -33,8 +33,8 @@ import org.slf4j.LoggerFactory;
 @Ignore
 public class OkexStreamingPrivateDataIntegration {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      OkexStreamingPrivateDataIntegration.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OkexStreamingPrivateDataIntegration.class);
   StreamingExchange exchange;
   private final Instrument instrument = new FuturesContract("BTC/USDT/SWAP");
 
@@ -161,5 +161,4 @@ public class OkexStreamingPrivateDataIntegration {
     TimeUnit.SECONDS.sleep(5);
     disposables.forEach(Disposable::dispose);
   }
-
 }

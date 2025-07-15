@@ -1,10 +1,9 @@
 package org.knowm.xchange.coinsph.dto.account;
 
+import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.math.BigDecimal;
 
 /**
  * Represents a fiat channel from Coins.ph API Based on GET /openapi/fiat/v1/support-channel

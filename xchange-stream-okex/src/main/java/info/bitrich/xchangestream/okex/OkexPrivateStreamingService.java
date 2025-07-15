@@ -39,15 +39,14 @@ public class OkexPrivateStreamingService extends JsonNettyStreamingService {
   public static final String USER_POSITION_CHANGES = "positions";
   private static final String LOGIN_SIGN_METHOD = "GET";
   private static final String LOGIN_SIGN_REQUEST_PATH = "/users/self/verify";
-  @Getter
-  private volatile boolean loginDone = false;
+  @Getter private volatile boolean loginDone = false;
   private final Observable<Long> pingPongSrc = Observable.interval(15, 15, TimeUnit.SECONDS);
   private Disposable pingPongSubscription;
   private final ExchangeSpecification exchangeSpecification;
   private volatile boolean needToResubscribeChannels = false;
 
-  public OkexPrivateStreamingService(String privateApiUrl,
-      ExchangeSpecification exchangeSpecification) {
+  public OkexPrivateStreamingService(
+      String privateApiUrl, ExchangeSpecification exchangeSpecification) {
     super(privateApiUrl);
     this.exchangeSpecification = exchangeSpecification;
   }
@@ -90,11 +89,11 @@ public class OkexPrivateStreamingService extends JsonNettyStreamingService {
         Base64.getEncoder().encodeToString(mac.doFinal(toSign.getBytes(StandardCharsets.UTF_8)));
 
     OkexLoginMessage message = new OkexLoginMessage();
-    String passphrase = exchangeSpecification.getExchangeSpecificParametersItem("passphrase")
-        .toString();
+    String passphrase =
+        exchangeSpecification.getExchangeSpecificParametersItem("passphrase").toString();
     OkexLoginMessage.LoginArg loginArg =
-        new OkexLoginMessage.LoginArg(exchangeSpecification.getApiKey(), passphrase, timestamp,
-            sign);
+        new OkexLoginMessage.LoginArg(
+            exchangeSpecification.getApiKey(), passphrase, timestamp, sign);
     message.getArgs().add(loginArg);
     this.sendMessage(objectMapper.writeValueAsString(message));
   }

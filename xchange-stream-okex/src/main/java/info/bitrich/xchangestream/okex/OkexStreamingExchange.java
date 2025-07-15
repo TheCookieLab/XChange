@@ -38,19 +38,19 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
 
   private OkexPrivateStreamingService privateStreamingService;
 
-  public OkexStreamingExchange() {
-  }
+  public OkexStreamingExchange() {}
 
   @Override
   public Completable connect(ProductSubscription... args) {
     this.streamingService = new OkexStreamingService(getPublicApiUrl(), this.exchangeSpecification);
     if (isApiKeyValid()) {
-      this.privateStreamingService = new OkexPrivateStreamingService(getPrivateApiUrl(),
-          this.exchangeSpecification);
+      this.privateStreamingService =
+          new OkexPrivateStreamingService(getPrivateApiUrl(), this.exchangeSpecification);
     }
-    this.streamingMarketDataService = new OkexStreamingMarketDataService(streamingService,
-        exchangeMetaData);
-    this.streamingTradeService = new OkexStreamingTradeService(privateStreamingService, exchangeMetaData);
+    this.streamingMarketDataService =
+        new OkexStreamingMarketDataService(streamingService, exchangeMetaData);
+    this.streamingTradeService =
+        new OkexStreamingTradeService(privateStreamingService, exchangeMetaData);
     List<Completable> completableList = new ArrayList<>();
     completableList.add(streamingService.connect());
     if (isApiKeyValid()) {
@@ -60,10 +60,10 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
   }
 
   private boolean isApiKeyValid() {
-    return exchangeSpecification.getApiKey() != null && !exchangeSpecification.getApiKey().isEmpty()
-        &&
-        exchangeSpecification.getSecretKey() != null && !exchangeSpecification.getSecretKey()
-        .isEmpty();
+    return exchangeSpecification.getApiKey() != null
+        && !exchangeSpecification.getApiKey().isEmpty()
+        && exchangeSpecification.getSecretKey() != null
+        && !exchangeSpecification.getSecretKey().isEmpty();
   }
 
   private String getPublicApiUrl() {
@@ -112,7 +112,9 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
   public boolean isAlive() {
     if (streamingService != null) {
       if (privateStreamingService != null) {
-        return streamingService.isSocketOpen() && privateStreamingService.isSocketOpen() && privateStreamingService.isLoginDone();
+        return streamingService.isSocketOpen()
+            && privateStreamingService.isSocketOpen()
+            && privateStreamingService.isLoginDone();
       } else {
         return streamingService.isSocketOpen();
       }

@@ -12,14 +12,7 @@ import org.knowm.xchange.bitso.dto.marketdata.BitsoAvailableBooks;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoOrderBook;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTicker;
 import org.knowm.xchange.bitso.dto.marketdata.BitsoTrades;
-import org.knowm.xchange.bitso.dto.trade.BitsoOrder;
-import org.knowm.xchange.bitso.dto.trade.BitsoOrderRequest;
-import org.knowm.xchange.bitso.dto.trade.BitsoOrderResponse;
-import org.knowm.xchange.bitso.dto.trade.BitsoOrderSide;
-import org.knowm.xchange.bitso.dto.trade.BitsoOrderStatus;
-import org.knowm.xchange.bitso.dto.trade.BitsoOrderType;
-import org.knowm.xchange.bitso.dto.trade.BitsoTimeInForce;
-import org.knowm.xchange.bitso.dto.trade.BitsoUserTransaction;
+import org.knowm.xchange.bitso.dto.trade.*;
 
 public class BitsoV3DTOTest {
 

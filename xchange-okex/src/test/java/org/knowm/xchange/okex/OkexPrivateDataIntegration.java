@@ -59,6 +59,7 @@ public class OkexPrivateDataIntegration {
     spec.setExchangeSpecificParametersItem(
         OkexExchange.PARAM_PASSPHRASE, properties.getProperty("passphrase"));
     spec.setExchangeSpecificParametersItem(OkexExchange.PARAM_SIMULATED, "1");
+
     exchange = ExchangeFactory.INSTANCE.createExchange(spec);
   }
 

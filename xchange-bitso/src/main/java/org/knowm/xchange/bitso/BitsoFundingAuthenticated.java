@@ -1,22 +1,11 @@
 package org.knowm.xchange.bitso;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import org.knowm.xchange.bitso.dto.BitsoBaseResponse;
 import org.knowm.xchange.bitso.dto.BitsoException;
-import org.knowm.xchange.bitso.dto.funding.BitsoFunding;
-import org.knowm.xchange.bitso.dto.funding.BitsoReceivingAccount;
-import org.knowm.xchange.bitso.dto.funding.BitsoWithdrawal;
-import org.knowm.xchange.bitso.dto.funding.BitsoWithdrawalMethod;
-import org.knowm.xchange.bitso.dto.funding.BitsoWithdrawalRequest;
+import org.knowm.xchange.bitso.dto.funding.*;
 import org.knowm.xchange.bitso.service.BitsoDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 

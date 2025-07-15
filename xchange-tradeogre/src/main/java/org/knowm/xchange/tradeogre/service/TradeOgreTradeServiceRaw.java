@@ -2,7 +2,6 @@ package org.knowm.xchange.tradeogre.service;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;

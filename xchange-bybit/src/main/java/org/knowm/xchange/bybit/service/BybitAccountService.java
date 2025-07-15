@@ -1,5 +1,13 @@
 package org.knowm.xchange.bybit.service;
 
+import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitBalances;
+import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
@@ -19,16 +27,6 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitBalances;
-import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
-
 
 public class BybitAccountService extends BybitAccountServiceRaw implements AccountService {
 
@@ -109,9 +107,8 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
   }
 
   /**
-   *
-   * @param category Optional, instrument category ("SPOT" or "LINEAR").
-   *                 If not specified, return all instruments trading fees.
+   * @param category Optional, instrument category ("SPOT" or "LINEAR"). If not specified, return
+   *     all instruments trading fees.
    */
   @Override
   public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
@@ -119,13 +116,14 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
     Map<Instrument, Fee> result = new HashMap<>();
     if (category != null && category.length > 0 && category[0] != null) {
       String bybitCategory = category[0];
-      if(bybitCategory.equals(BybitCategory.OPTION.getValue()) || bybitCategory.equals(BybitCategory.INVERSE.getValue()))
+      if (bybitCategory.equals(BybitCategory.OPTION.getValue())
+          || bybitCategory.equals(BybitCategory.INVERSE.getValue()))
         throw new IllegalArgumentException("category OPTION and INVERSE not yet implemented");
       result.putAll(getFeeRates(BybitCategory.valueOf(bybitCategory.toUpperCase())));
     } else {
       // not fully supported yet
-//      result.putAll(getFeeRates(BybitCategory.OPTION));
-//      result.putAll(getFeeRates(BybitCategory.INVERSE));
+      //      result.putAll(getFeeRates(BybitCategory.OPTION));
+      //      result.putAll(getFeeRates(BybitCategory.INVERSE));
       result.putAll(getFeeRates(BybitCategory.SPOT));
       result.putAll(getFeeRates(BybitCategory.LINEAR));
     }
@@ -139,12 +137,18 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
     if (bybitCategory == BybitCategory.LINEAR) {
       clearUp(bybitFeeRates.getResult().getList().listIterator());
     }
-    bybitFeeRates.getResult().getList().forEach(bybitFeeRate -> {
-      Instrument instrument = BybitAdapters.convertBybitSymbolToInstrument(
-          bybitFeeRate.getSymbol(), bybitCategory);
-      result.put(instrument,
-          new Fee(bybitFeeRate.getMakerFeeRate(), bybitFeeRate.getTakerFeeRate()));
-    });
+    bybitFeeRates
+        .getResult()
+        .getList()
+        .forEach(
+            bybitFeeRate -> {
+              Instrument instrument =
+                  BybitAdapters.convertBybitSymbolToInstrument(
+                      bybitFeeRate.getSymbol(), bybitCategory);
+              result.put(
+                  instrument,
+                  new Fee(bybitFeeRate.getMakerFeeRate(), bybitFeeRate.getTakerFeeRate()));
+            });
     return result;
   }
 
@@ -155,8 +159,10 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
       if (feeRate.getSymbol().endsWith("USD")) {
         listIterator.remove();
       } else {
-        if (feeRate.getSymbol().contains("USDH") || feeRate.getSymbol().contains("USDM") ||
-            feeRate.getSymbol().contains("USDU") || feeRate.getSymbol().contains("USDZ")) {
+        if (feeRate.getSymbol().contains("USDH")
+            || feeRate.getSymbol().contains("USDM")
+            || feeRate.getSymbol().contains("USDU")
+            || feeRate.getSymbol().contains("USDZ")) {
           Matcher m = p.matcher(feeRate.getSymbol());
           if (m.find()) {
             listIterator.remove();
@@ -166,9 +172,7 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
     }
   }
 
-  /**
-   * Query the account information, like margin mode, account mode, etc.
-   */
+  /** Query the account information, like margin mode, account mode, etc. */
   public BybitAccountInfoResponse accountInfo() throws IOException {
     return accountInfoRaw().getResult();
   }

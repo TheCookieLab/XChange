@@ -1,11 +1,10 @@
 package org.knowm.xchange.coinsph.dto.account;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.math.BigDecimal;
-import java.time.Instant;
 
 @Value
 @Builder

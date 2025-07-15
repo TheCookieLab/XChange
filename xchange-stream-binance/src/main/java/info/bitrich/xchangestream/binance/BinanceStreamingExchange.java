@@ -120,7 +120,8 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
                   BinanceAuthenticated.class, getExchangeSpecification())
               .build();
       userDataChannel =
-          new BinanceUserDataChannel(binance, exchangeSpecification.getApiKey(), onApiCall, isFuturesEnabled());
+          new BinanceUserDataChannel(
+              binance, exchangeSpecification.getApiKey(), onApiCall, isFuturesEnabled());
       try {
         completables.add(createAndConnectUserDataService(userDataChannel.getListenKey()));
       } catch (NoActiveChannelException e) {
