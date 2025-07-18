@@ -36,7 +36,7 @@ public class OrderTradeUpdateBinanceWebSocketTransaction extends BaseBinanceWebS
     private final OrderType orderType;
     private final TimeInForce timeInForce;
     private final BigDecimal originalQuantity;
-    private final String originalPrice;
+    private final BigDecimal originalPrice;
     private final BigDecimal averagePrice;
     private final BigDecimal stopPrice;
     private final String executionType;
@@ -73,7 +73,7 @@ public class OrderTradeUpdateBinanceWebSocketTransaction extends BaseBinanceWebS
         @JsonProperty("o") OrderType orderType,
         @JsonProperty("f") TimeInForce timeInForce,
         @JsonProperty("q") BigDecimal originalQuantity,
-        @JsonProperty("p") String originalPrice,
+        @JsonProperty("p") BigDecimal originalPrice,
         @JsonProperty("ap") BigDecimal averagePrice,
         @JsonProperty("sp") BigDecimal stopPrice,
         @JsonProperty("x") String executionType,
@@ -143,7 +143,7 @@ public class OrderTradeUpdateBinanceWebSocketTransaction extends BaseBinanceWebS
               getSymbol(),
               orderId,
               clientOrderId,
-              lastFilledPrice,
+              lastFilledPrice.compareTo(BigDecimal.ZERO) == 0 ? originalPrice : lastFilledPrice,
               originalQuantity,
               filledAccumulatedQuantity,
               averagePrice,
