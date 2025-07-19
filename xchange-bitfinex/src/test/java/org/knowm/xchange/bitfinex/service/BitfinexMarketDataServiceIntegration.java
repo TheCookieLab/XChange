@@ -5,17 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.knowm.xchange.ExchangeFactory;
-import org.knowm.xchange.bitfinex.BitfinexExchange;
+import org.knowm.xchange.bitfinex.BitfinexIntegrationTestParent;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.meta.ExchangeHealth;
 
-public class BitfinexMarketDataServiceIntegration {
-
-  BitfinexExchange exchange = ExchangeFactory.INSTANCE.createExchange(BitfinexExchange.class);
+public class BitfinexMarketDataServiceIntegration extends BitfinexIntegrationTestParent {
 
   @Test
   public void exchange_health() {
