@@ -3,14 +3,13 @@ package org.knowm.xchange.bitget.dto.marketdata;
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.math.BigDecimal;
+import java.time.Instant;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
 import org.knowm.xchange.bitget.config.converter.StringToInstrumentConverter;
 import org.knowm.xchange.instrument.Instrument;
-
-import java.math.BigDecimal;
-import java.time.Instant;
 
 @Data
 @Builder

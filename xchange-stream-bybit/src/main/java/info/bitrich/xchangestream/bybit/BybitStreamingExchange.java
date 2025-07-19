@@ -6,13 +6,12 @@ import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler.WebSocketMessageHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
+import java.util.ArrayList;
+import java.util.List;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class BybitStreamingExchange extends BybitExchange implements StreamingExchange {
 
@@ -50,8 +49,9 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
 
   private boolean isApiKeyValid() {
     return exchangeSpecification.getApiKey() != null
-        && !exchangeSpecification.getApiKey().isEmpty() && exchangeSpecification.getSecretKey() != null
-            && !exchangeSpecification.getSecretKey().isEmpty();
+        && !exchangeSpecification.getApiKey().isEmpty()
+        && exchangeSpecification.getSecretKey() != null
+        && !exchangeSpecification.getSecretKey().isEmpty();
   }
 
   private String getApiUrl() {
@@ -127,7 +127,9 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
     // In a normal situation - streamingService is always runs, userDataStreamingService - depends
     if (streamingService != null) {
       if (userDataStreamingService != null) {
-        return streamingService.isSocketOpen() && userDataStreamingService.isSocketOpen() && userDataStreamingService.isAuthorized();
+        return streamingService.isSocketOpen()
+            && userDataStreamingService.isSocketOpen()
+            && userDataStreamingService.isAuthorized();
       } else {
         return streamingService.isSocketOpen();
       }

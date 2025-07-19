@@ -1,19 +1,9 @@
 package org.knowm.xchange.coinsph;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap; // For DynamicTradingFees map
-import java.util.List;
-import java.util.Map; // For DynamicTradingFees map
+import java.util.*;
 import java.util.stream.Collectors;
-import org.knowm.xchange.coinsph.dto.account.CoinsphAccount;
-import org.knowm.xchange.coinsph.dto.account.CoinsphBalance;
-import org.knowm.xchange.coinsph.dto.account.CoinsphDepositRecord;
-import org.knowm.xchange.coinsph.dto.account.CoinsphFundingRecord;
-import org.knowm.xchange.coinsph.dto.account.CoinsphTradeFee; // For trade fees
-import org.knowm.xchange.coinsph.dto.account.CoinsphWithdrawalRecord;
+import org.knowm.xchange.coinsph.dto.account.*;
 import org.knowm.xchange.coinsph.dto.marketdata.CoinsphOrderBook;
 import org.knowm.xchange.coinsph.dto.marketdata.CoinsphOrderBookEntry;
 import org.knowm.xchange.coinsph.dto.marketdata.CoinsphPublicTrade;
@@ -21,20 +11,12 @@ import org.knowm.xchange.coinsph.dto.marketdata.CoinsphTicker;
 import org.knowm.xchange.coinsph.dto.meta.CoinsphExchangeInfo;
 import org.knowm.xchange.coinsph.dto.meta.CoinsphSymbol;
 import org.knowm.xchange.coinsph.dto.trade.CoinsphOrder;
-import org.knowm.xchange.coinsph.dto.trade.CoinsphUserTrade; // For user trades
+import org.knowm.xchange.coinsph.dto.trade.CoinsphUserTrade;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
-// import org.knowm.xchange.dto.Order.OrderFlags; // Removed as OrderFlags enum is no longer in
-// xchange-core Order.java
 import org.knowm.xchange.dto.Order.OrderType;
-import org.knowm.xchange.dto.account.AccountInfo;
-import org.knowm.xchange.dto.account.Balance;
-// import org.knowm.xchange.dto.account.DynamicTradingFees; // Class not found, replaced with
-// Map<Instrument, Fee> // For adapting trade fees
-import org.knowm.xchange.dto.account.Fee;
-import org.knowm.xchange.dto.account.FundingRecord;
-import org.knowm.xchange.dto.account.Wallet;
+import org.knowm.xchange.dto.account.*;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
@@ -42,11 +24,7 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.meta.CurrencyMetaData;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
-import org.knowm.xchange.dto.trade.LimitOrder;
-import org.knowm.xchange.dto.trade.MarketOrder;
-import org.knowm.xchange.dto.trade.OpenOrders; // For adapting open orders
-import org.knowm.xchange.dto.trade.UserTrade;
-import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.dto.trade.*;
 import org.knowm.xchange.instrument.Instrument;
 
 public final class CoinsphAdapters {
@@ -533,6 +511,7 @@ public final class CoinsphAdapters {
 
     FundingRecord.Type type =
         fundingRecord.getType() == CoinsphFundingRecord.Type.DEPOSIT
+                || fundingRecord.getType() == CoinsphFundingRecord.Type.FIAT_DEPOSIT
             ? FundingRecord.Type.DEPOSIT
             : FundingRecord.Type.WITHDRAWAL;
 

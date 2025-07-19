@@ -45,7 +45,8 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
   private final Map<Instrument, PublishSubject<List<OrderBookUpdate>>>
       orderBookUpdatesSubscriptions;
 
-  public OkexStreamingMarketDataService(OkexStreamingService service,ExchangeMetaData exchangeMetaData) {
+  public OkexStreamingMarketDataService(
+      OkexStreamingService service, ExchangeMetaData exchangeMetaData) {
     this.service = service;
     this.exchangeMetaData = exchangeMetaData;
     this.orderBookUpdatesSubscriptions = new ConcurrentHashMap<>();
@@ -86,7 +87,8 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
                       jsonNode.get("data"),
                       mapper.getTypeFactory().constructCollectionType(List.class, OkexTrade.class));
               return Observable.fromIterable(
-                  OkexAdapters.adaptTrades(okexTradeList, instrument,exchangeMetaData).getTrades());
+                  OkexAdapters.adaptTrades(okexTradeList, instrument, exchangeMetaData)
+                      .getTrades());
             });
   }
 
@@ -130,7 +132,8 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
                           .getTypeFactory()
                           .constructCollectionType(List.class, OkexOrderbook.class));
               if ("snapshot".equalsIgnoreCase(action)) {
-                OrderBook orderBook = OkexAdapters.adaptOrderBook(okexOrderbooks, instrument,exchangeMetaData);
+                OrderBook orderBook =
+                    OkexAdapters.adaptOrderBook(okexOrderbooks, instrument, exchangeMetaData);
                 orderBookMap.put(instId, orderBook);
                 return Observable.just(orderBook);
               } else if ("update".equalsIgnoreCase(action)) {
@@ -140,12 +143,18 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
                   return Observable.fromIterable(new LinkedList<>());
                 }
                 Date timestamp = new Timestamp(Long.parseLong(okexOrderbooks.get(0).getTs()));
-                BigDecimal contractValue = exchangeMetaData.getInstruments().get(instrument).getContractValue();
-                List<OrderBookUpdate> orderBookUpdates = OkexAdapters.adaptOrderBookUpdates(instrument,
-                    okexOrderbooks.get(0).getAsks(), okexOrderbooks.get(0).getBids(), contractValue,timestamp);
+                BigDecimal contractValue =
+                    exchangeMetaData.getInstruments().get(instrument).getContractValue();
+                List<OrderBookUpdate> orderBookUpdates =
+                    OkexAdapters.adaptOrderBookUpdates(
+                        instrument,
+                        okexOrderbooks.get(0).getAsks(),
+                        okexOrderbooks.get(0).getBids(),
+                        contractValue,
+                        timestamp);
                 orderBookUpdates.forEach(orderBook::update);
                 if (orderBookUpdatesSubscriptions.get(instrument) != null) {
-                  orderBookUpdatesSubscriptions(instrument,orderBookUpdates);
+                  orderBookUpdatesSubscriptions(instrument, orderBookUpdates);
                 }
                 return Observable.just(orderBook);
               } else {
@@ -161,7 +170,8 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
     return orderBookUpdatesSubscriptions.computeIfAbsent(instrument, v -> PublishSubject.create());
   }
 
-  private void orderBookUpdatesSubscriptions(Instrument instrument,List<OrderBookUpdate> orderBookUpdates) {
+  private void orderBookUpdatesSubscriptions(
+      Instrument instrument, List<OrderBookUpdate> orderBookUpdates) {
     orderBookUpdatesSubscriptions.get(instrument).onNext(orderBookUpdates);
   }
 }

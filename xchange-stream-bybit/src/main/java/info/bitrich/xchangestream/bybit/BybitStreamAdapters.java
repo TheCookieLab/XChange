@@ -9,6 +9,7 @@ import dto.marketdata.BybitPublicOrder;
 import dto.trade.BybitComplexOrderChanges;
 import dto.trade.BybitComplexPositionChanges;
 import dto.trade.BybitOrderChangesResponse.BybitOrderChanges;
+import dto.trade.BybitOrderFlag;
 import dto.trade.BybitPositionChangesResponse.BybitPositionChanges;
 import dto.trade.BybitTrade;
 import java.math.BigDecimal;
@@ -121,6 +122,8 @@ public class BybitStreamAdapters {
           .originalAmount(new BigDecimal(bybitOrderChange.getQty()))
           .id(bybitOrderChange.getOrderId())
           .userReference(bybitOrderChange.getOrderLinkId());
+      if (!bybitOrderChange.getRejectReason().isEmpty())
+        builder.flag(new BybitOrderFlag(bybitOrderChange.getRejectReason()));
       orders.add(builder.build());
     }
     return orders;

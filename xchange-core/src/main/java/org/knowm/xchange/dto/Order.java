@@ -33,8 +33,7 @@ public abstract class Order implements Serializable {
   private final OrderType type;
 
   /** Amount to be ordered / amount that was ordered */
-  @Setter
-  private BigDecimal originalAmount;
+  @Setter private BigDecimal originalAmount;
 
   /** The instrument could be a currency pair of derivative */
   private final Instrument instrument;

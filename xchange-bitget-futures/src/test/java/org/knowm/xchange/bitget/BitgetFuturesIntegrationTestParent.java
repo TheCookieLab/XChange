@@ -1,11 +1,11 @@
 package org.knowm.xchange.bitget;
 
+import static org.assertj.core.api.Assumptions.assumeThat;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.dto.meta.ExchangeHealth;
-
-import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class BitgetFuturesIntegrationTestParent {
 

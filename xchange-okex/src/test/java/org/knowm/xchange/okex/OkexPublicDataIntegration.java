@@ -106,6 +106,15 @@ public class OkexPublicDataIntegration {
   }
 
   @Test
+  @Ignore
+  public void testCandle() throws IOException {
+    OkexResponse<List<OkexCandleStick>> barHistDtos =
+        ((OkexMarketDataService) exchange.getMarketDataService())
+            .getCandle("BTC-USDT", null, null, null, null);
+    assertTrue(Objects.nonNull(barHistDtos) && !barHistDtos.getData().isEmpty());
+  }
+
+  @Test
   public void checkFundingRate() throws IOException {
     FundingRate fundingRate = exchange.getMarketDataService().getFundingRate(instrument);
     System.out.println(fundingRate);

@@ -56,6 +56,7 @@ public class BinanceFutureManualExample {
             .addTicker(ETH)
             .addOrderbook(LTC)
             .addTrades(LTC)
+            .addUserTrades(ETH)
             .addFundingRates(LTC)
             .build();
 
@@ -129,7 +130,7 @@ public class BinanceFutureManualExample {
     Disposable orderbookUpdates1 = orderbooksIncremental(exchange, "one");
     Disposable orderbookUpdates2 = orderbooksIncremental(exchange, "two");
 
-    Thread.sleep(1000000);
+    Thread.sleep(10000);
 
     tickers.dispose();
     trades.dispose();
@@ -175,5 +176,4 @@ public class BinanceFutureManualExample {
             level -> LOG.info("Order Book Level update({}): {}", identifier, level),
             throwable -> LOG.error("ERROR in getting order book: ", throwable));
   }
-
 }

@@ -89,7 +89,6 @@
         <module>xchange-gateio</module>
         <module>xchange-gateio-v4</module>
         <module>xchange-gemini</module>
-        <module>xchange-globitex</module>
         <module>xchange-hitbtc</module>
         <module>xchange-huobi</module>
         <module>xchange-idex</module>
@@ -193,24 +192,24 @@
 
         <skipIntegrationTests>true</skipIntegrationTests>
         <version.assertj>3.26.3</version.assertj>
-        <version.commons.lang3>3.14.0</version.commons.lang3>
+        <version.commons.lang3>3.18.0</version.commons.lang3>
         <version.crypto>5.0.0</version.crypto>
-        <version.fasterxml>2.14.3</version.fasterxml>
-        <version.github.mmazi>3.0</version.github.mmazi>
+        <version.fasterxml>2.19.1</version.fasterxml>
+        <version.github.mmazi>3.1</version.github.mmazi>
 
         <version.java>8</version.java>
-        <version.java-jwt>4.4.0</version.java-jwt>
-        <version.junit>5.10.3</version.junit>
+        <version.java-jwt>4.5.0</version.java-jwt>
+        <version.junit>5.12.1</version.junit>
         <version.knowm.xchart>3.8.8</version.knowm.xchart>
         <version.lombok>1.18.34</version.lombok>
         <version.maven-enforcer-plugin>3.2.1</version.maven-enforcer-plugin>
         <version.maven-prerequisite>3.6.3</version.maven-prerequisite>
-        <version.mockito>5.11.0</version.mockito>
-        <version.qos.logback>1.5.13</version.qos.logback>
+        <version.mockito>5.18.0</version.mockito>
+        <version.qos.logback>1.5.18</version.qos.logback>
         <version.reflections>0.10.2</version.reflections>
         <version.resilience4j>1.7.1</version.resilience4j>
-        <version.slf4j>2.0.13</version.slf4j>
-        <version.wiremock>3.2.0</version.wiremock>
+        <version.slf4j>2.0.17</version.slf4j>
+        <version.wiremock>3.4.2</version.wiremock>
     </properties>
 
     <dependencyManagement>
@@ -274,7 +273,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>33.2.1-jre</version>
+                <version>33.4.8-jre</version>
             </dependency>
             <dependency>
                 <groupId>com.pubnub</groupId>
@@ -297,14 +296,14 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
-                <version>4.1.113.Final</version>
+                <version>4.2.2.Final</version>
             </dependency>
 
             <!-- for streaming-->
             <dependency>
                 <groupId>io.reactivex.rxjava3</groupId>
                 <artifactId>rxjava</artifactId>
-                <version>3.1.8</version>
+                <version>3.1.11</version>
             </dependency>
 
             <!--For String Joining, etc. -->
@@ -517,7 +516,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.5.3</version>
                 <configuration>
                     <skipTests>${skipIntegrationTests}</skipTests>
                     <includes>
