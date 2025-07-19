@@ -174,9 +174,9 @@ public class OkexAdapters {
               .id(okexOrder.getOrderId())
               .timestamp(new Date(Long.parseLong(okexOrder.getUpdateTime())))
               .limitPrice(
-                  !okexOrder.getLastFilledPrice().isEmpty()
-                      ? new BigDecimal(okexOrder.getLastFilledPrice())
-                      : new BigDecimal(okexOrder.getPrice()))
+                  okexOrder.getLastFilledPrice().isEmpty() || okexOrder.getLastFilledPrice().equals("0")
+                      ? new BigDecimal(okexOrder.getPrice())
+                      : new BigDecimal(okexOrder.getLastFilledPrice()))
               .averagePrice(new BigDecimal(okexOrder.getAverageFilledPrice()))
               .fee(new BigDecimal(okexOrder.getFee()).negate())
               .userReference(okexOrder.getClientOrderId())
