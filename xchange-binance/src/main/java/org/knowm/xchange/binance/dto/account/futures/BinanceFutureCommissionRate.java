@@ -8,5 +8,4 @@ public class BinanceFutureCommissionRate {
   private String symbol;
   private String makerCommissionRate;
   private String takerCommissionRate;
-
 }

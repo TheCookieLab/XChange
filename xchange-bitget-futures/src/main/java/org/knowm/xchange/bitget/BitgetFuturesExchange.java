@@ -1,5 +1,9 @@
 package org.knowm.xchange.bitget;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bitget.dto.marketdata.BitgetContractDto;
@@ -8,11 +12,6 @@ import org.knowm.xchange.bitget.service.BitgetFuturesMarketDataServiceRaw;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.instrument.Instrument;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public class BitgetFuturesExchange extends BaseExchange {
 
@@ -36,11 +35,13 @@ public class BitgetFuturesExchange extends BaseExchange {
         (BitgetFuturesMarketDataServiceRaw) marketDataService;
 
     // initialize symbol mappings
-    List<BitgetContractDto> bitgetContractDtos = bitgetFuturesMarketDataServiceRaw.getBitgetContractDtos(null);
+    List<BitgetContractDto> bitgetContractDtos =
+        bitgetFuturesMarketDataServiceRaw.getBitgetContractDtos(null);
     bitgetContractDtos.forEach(
         bitgetContractDto -> {
           BitgetAdapters.putSymbolMapping(
-              bitgetContractDto.getSymbol(), bitgetContractDto.getFuturesContract().getCurrencyPair());
+              bitgetContractDto.getSymbol(),
+              bitgetContractDto.getFuturesContract().getCurrencyPair());
         });
 
     // initialize instrument metadata
@@ -48,7 +49,8 @@ public class BitgetFuturesExchange extends BaseExchange {
         bitgetContractDtos.stream()
             .collect(
                 Collectors.toMap(
-                    BitgetContractDto::getFuturesContract, BitgetFuturesAdapters::toInstrumentMetaData));
+                    BitgetContractDto::getFuturesContract,
+                    BitgetFuturesAdapters::toInstrumentMetaData));
 
     exchangeMetaData = new ExchangeMetaData(instruments, null, null, null, null);
   }

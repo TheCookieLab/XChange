@@ -1,6 +1,11 @@
 package org.knowm.xchange.binance;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.knowm.xchange.Exchange.USE_SANDBOX;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.*;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -24,13 +29,6 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.*;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.knowm.xchange.Exchange.USE_SANDBOX;
 
 @Ignore
 public class BinanceTest {
@@ -83,7 +81,8 @@ public class BinanceTest {
   @Test
   public void binanceAccountService() throws IOException {
     // Works only on main(not demo) account
-    Map<Instrument, Fee> fees = binanceExchange.getAccountService().getDynamicTradingFeesByInstrument();
+    Map<Instrument, Fee> fees =
+        binanceExchange.getAccountService().getDynamicTradingFeesByInstrument();
     logger.info("fee: {}", fees);
     AccountInfo accountInfo = binanceExchange.getAccountService().getAccountInfo();
     logger.info("AccountInfo: {}", accountInfo.getWallet());
@@ -119,7 +118,7 @@ public class BinanceTest {
             .getOpenOrders();
     logger.info("OpenOrders: " + openOrders);
     assertThat(
-        openOrders.stream().anyMatch(openOrder -> openOrder.getInstrument().equals(instrument)))
+            openOrders.stream().anyMatch(openOrder -> openOrder.getInstrument().equals(instrument)))
         .isTrue();
 
     // Get order
@@ -135,8 +134,7 @@ public class BinanceTest {
     logger.info(
         "CancelOrder: "
             + binanceExchange
-            .getTradeService()
-            .cancelOrder(new BinanceCancelOrderParams(instrument, orderId)));
+                .getTradeService()
+                .cancelOrder(new BinanceCancelOrderParams(instrument, orderId)));
   }
-
 }

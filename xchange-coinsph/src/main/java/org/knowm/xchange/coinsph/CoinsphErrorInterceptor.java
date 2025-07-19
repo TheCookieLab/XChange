@@ -1,11 +1,10 @@
 package org.knowm.xchange.coinsph;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
 import org.knowm.xchange.coinsph.dto.CoinsphResponse;
 import org.knowm.xchange.coinsph.dto.account.CoinsphFiatResponse;
 import si.mazi.rescu.Interceptor;
-
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 
 public class CoinsphErrorInterceptor implements Interceptor {
   @Override

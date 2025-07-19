@@ -1,5 +1,9 @@
 package org.knowm.xchange.bitget;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Date;
+import java.util.Optional;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.bitget.dto.marketdata.BitgetContractDto;
 import org.knowm.xchange.bitget.dto.marketdata.BitgetFuturesTickerDto;
@@ -7,11 +11,6 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.instrument.Instrument;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.Date;
-import java.util.Optional;
 
 @UtilityClass
 public class BitgetFuturesAdapters {
@@ -27,21 +26,32 @@ public class BitgetFuturesAdapters {
   }
 
   public InstrumentMetaData toInstrumentMetaData(BitgetContractDto bitgetContractDto) {
-    InstrumentMetaData.Builder builder = new InstrumentMetaData.Builder()
+    InstrumentMetaData.Builder builder =
+        new InstrumentMetaData.Builder()
             .tradingFee(bitgetContractDto.getTakerFeeRate())
             .minimumAmount(bitgetContractDto.getMinTradeAssetAmount())
             .priceScale(bitgetContractDto.getPricePrecision())
             .volumeScale(bitgetContractDto.getAssetAmountPrecision())
             .amountStepSize(bitgetContractDto.getAssetAmountStepSize())
-            .marketOrderEnabled(bitgetContractDto.getSymbolStatus() == BitgetContractDto.SymbolStatus.NORMAL);
+            .marketOrderEnabled(
+                bitgetContractDto.getSymbolStatus() == BitgetContractDto.SymbolStatus.NORMAL);
 
     // set price step
-    if (bitgetContractDto.getPriceEndStep() != null && bitgetContractDto.getPriceEndStep() > 0 && bitgetContractDto.getPricePrecision() != null) {
-      builder.priceStepSize(BigDecimal.ONE.scaleByPowerOfTen(-bitgetContractDto.getPricePrecision()).multiply(BigDecimal.valueOf(bitgetContractDto.getPriceEndStep())));
+    if (bitgetContractDto.getPriceEndStep() != null
+        && bitgetContractDto.getPriceEndStep() > 0
+        && bitgetContractDto.getPricePrecision() != null) {
+      builder.priceStepSize(
+          BigDecimal.ONE
+              .scaleByPowerOfTen(-bitgetContractDto.getPricePrecision())
+              .multiply(BigDecimal.valueOf(bitgetContractDto.getPriceEndStep())));
     }
 
     // set min quote amount for USDT
-    if (bitgetContractDto.getFuturesContract().getCurrencyPair().getCounter().equals(Currency.USDT)) {
+    if (bitgetContractDto
+        .getFuturesContract()
+        .getCurrencyPair()
+        .getCounter()
+        .equals(Currency.USDT)) {
       builder.counterMinimumAmount(bitgetContractDto.getMinTradeUSDT());
     }
 
@@ -72,5 +82,4 @@ public class BitgetFuturesAdapters {
   public Date toDate(Instant instant) {
     return Optional.ofNullable(instant).map(Date::from).orElse(null);
   }
-
 }

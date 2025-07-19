@@ -377,11 +377,7 @@ public class BitstampAccountServiceRaw extends BitstampBaseService {
   public List<BitstampTradingFee> getTradingFees() throws IOException {
     try {
       return bitstampAuthenticatedV2.getTradingFees(
-          apiKeyForV2Requests,
-          signatureCreatorV2,
-          uuidNonceFactory,
-          timestampFactory,
-          API_VERSION);
+          apiKeyForV2Requests, signatureCreatorV2, uuidNonceFactory, timestampFactory, API_VERSION);
     } catch (BitstampException e) {
       throw handleError(e);
     }

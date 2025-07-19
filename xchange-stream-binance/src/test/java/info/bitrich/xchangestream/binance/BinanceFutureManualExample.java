@@ -176,5 +176,4 @@ public class BinanceFutureManualExample {
             level -> LOG.info("Order Book Level update({}): {}", identifier, level),
             throwable -> LOG.error("ERROR in getting order book: ", throwable));
   }
-
 }

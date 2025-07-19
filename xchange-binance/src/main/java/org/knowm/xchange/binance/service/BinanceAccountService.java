@@ -1,5 +1,13 @@
 package org.knowm.xchange.binance.service;
 
+import static org.knowm.xchange.binance.BinanceAdapters.adaptSymbol;
+import static org.knowm.xchange.binance.BinanceAdapters.toSymbol;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceErrorAdapter;
@@ -19,15 +27,6 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.account.params.RequestDepositAddressParams;
 import org.knowm.xchange.service.trade.params.*;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.*;
-
-import static org.knowm.xchange.binance.BinanceAdapters.adaptSymbol;
-import static org.knowm.xchange.binance.BinanceAdapters.toSymbol;
-import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 
 public class BinanceAccountService extends BinanceAccountServiceRaw implements AccountService {
 
@@ -117,22 +116,27 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
     }
   }
 
-  /**
-   * Results based on ExchangeSpecificParametersItem(EXCHANGE_TYPE)
-   *
-   */
+  /** Results based on ExchangeSpecificParametersItem(EXCHANGE_TYPE) */
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category) throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
+      throws IOException {
     try {
       Map<Instrument, Fee> fees = new HashMap<>();
-      if (exchange.getExchangeSpecification().getExchangeSpecificParametersItem(EXCHANGE_TYPE).equals(ExchangeType.SPOT)) {
+      if (exchange
+          .getExchangeSpecification()
+          .getExchangeSpecificParametersItem(EXCHANGE_TYPE)
+          .equals(ExchangeType.SPOT)) {
         List<BinanceTradeFee> binanceTradeFees = getTradeFee();
-        binanceTradeFees.forEach(binanceTradeFee -> {
-          Instrument instrument = adaptSymbol(binanceTradeFee.getSymbol(),false);
-          if(instrument!= null) // some deleted pair still exist in fees result
-            fees.put(instrument, new Fee(new BigDecimal(binanceTradeFee.getMakerCommission()),
-                new BigDecimal(binanceTradeFee.getTakerCommission())));
-        });
+        binanceTradeFees.forEach(
+            binanceTradeFee -> {
+              Instrument instrument = adaptSymbol(binanceTradeFee.getSymbol(), false);
+              if (instrument != null) // some deleted pair still exist in fees result
+              fees.put(
+                    instrument,
+                    new Fee(
+                        new BigDecimal(binanceTradeFee.getMakerCommission()),
+                        new BigDecimal(binanceTradeFee.getTakerCommission())));
+            });
       } else throw new UnsupportedOperationException("Only SPOT exchange type is supported");
       return fees;
     } catch (BinanceException e) {
@@ -142,12 +146,18 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
 
   public Fee getCommissionRateByInstrument(Instrument instrument) throws IOException {
     try {
-      // only 1 req per every symbol, cost 20 REQUEST_WEIGHT, did not find any other way to get all fees
-        if(exchange.getExchangeSpecification().getExchangeSpecificParametersItem(EXCHANGE_TYPE).equals(ExchangeType.FUTURES)) {
-          BinanceFutureCommissionRate binanceFutureCommissionRate = getCommissionRate(toSymbol(instrument));
-          return new Fee(new BigDecimal(binanceFutureCommissionRate.getMakerCommissionRate()),
-              new BigDecimal(binanceFutureCommissionRate.getTakerCommissionRate()));
-        } else throw new UnsupportedOperationException("Only FUTURES exchange type is supported");
+      // only 1 req per every symbol, cost 20 REQUEST_WEIGHT, did not find any other way to get all
+      // fees
+      if (exchange
+          .getExchangeSpecification()
+          .getExchangeSpecificParametersItem(EXCHANGE_TYPE)
+          .equals(ExchangeType.FUTURES)) {
+        BinanceFutureCommissionRate binanceFutureCommissionRate =
+            getCommissionRate(toSymbol(instrument));
+        return new Fee(
+            new BigDecimal(binanceFutureCommissionRate.getMakerCommissionRate()),
+            new BigDecimal(binanceFutureCommissionRate.getTakerCommissionRate()));
+      } else throw new UnsupportedOperationException("Only FUTURES exchange type is supported");
     } catch (BinanceException e) {
       throw BinanceErrorAdapter.adapt(e);
     }

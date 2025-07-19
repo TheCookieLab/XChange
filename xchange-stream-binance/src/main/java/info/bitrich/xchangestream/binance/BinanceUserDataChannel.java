@@ -44,7 +44,8 @@ class BinanceUserDataChannel implements AutoCloseable {
    * @param onApiCall A callback to perform prior to any service calls.
    * @param isFuturesEnabled Another userDataStream initialization path for futures.
    */
-  BinanceUserDataChannel(BinanceAuthenticated binance, String apiKey, Runnable onApiCall, boolean isFuturesEnabled) {
+  BinanceUserDataChannel(
+      BinanceAuthenticated binance, String apiKey, Runnable onApiCall, boolean isFuturesEnabled) {
     this.binance = binance;
     this.isFuturesEnabled = isFuturesEnabled;
     this.apiKey = apiKey;
@@ -93,10 +94,9 @@ class BinanceUserDataChannel implements AutoCloseable {
     try {
       LOG.debug("Opening new user data channel");
       onApiCall.run();
-      if(isFuturesEnabled)
+      if (isFuturesEnabled)
         this.listenKey = binance.startFutureUserDataStream(apiKey).getListenKey();
-      else
-        this.listenKey = binance.startUserDataStream(apiKey).getListenKey();
+      else this.listenKey = binance.startUserDataStream(apiKey).getListenKey();
       LOG.debug("Opened new user data channel");
     } catch (IOException e) {
       throw new RuntimeException(e);

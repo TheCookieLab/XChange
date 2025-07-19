@@ -1,5 +1,10 @@
 package org.knowm.xchange.bitget.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+import java.io.IOException;
+import java.util.List;
 import org.apache.commons.lang3.ObjectUtils;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitget.BitgetFuturesIntegrationTestParent;
@@ -8,12 +13,6 @@ import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.exceptions.InstrumentNotValidException;
 import org.knowm.xchange.instrument.Instrument;
-
-import java.io.IOException;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class BitgetFuturesMarketDataServiceIntegration extends BitgetFuturesIntegrationTestParent {
 
@@ -59,10 +58,11 @@ class BitgetFuturesMarketDataServiceIntegration extends BitgetFuturesIntegration
               assertThat(ticker.getInstrument()).isNotNull();
               assertThat(ticker.getLast()).isNotNull();
 
-              if (ObjectUtils.allNotNull(ticker.getBid(), ticker.getAsk()) && ticker.getBid().signum() > 0 && ticker.getAsk().signum() > 0) {
+              if (ObjectUtils.allNotNull(ticker.getBid(), ticker.getAsk())
+                  && ticker.getBid().signum() > 0
+                  && ticker.getAsk().signum() > 0) {
                 assertThat(ticker.getBid()).isLessThan(ticker.getAsk());
               }
             });
   }
-
 }

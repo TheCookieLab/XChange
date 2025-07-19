@@ -1,11 +1,10 @@
 package org.knowm.xchange.coinsph.service;
 
 import jakarta.ws.rs.QueryParam;
+import javax.crypto.Mac;
 import org.knowm.xchange.service.BaseParamsDigest;
 import si.mazi.rescu.Params;
 import si.mazi.rescu.RestInvocation;
-
-import javax.crypto.Mac;
 
 /**
  * Custom signature creator for Coins.ph API that directly extracts the timestamp and recvWindow

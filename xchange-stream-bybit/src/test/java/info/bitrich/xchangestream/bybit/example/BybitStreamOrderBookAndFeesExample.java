@@ -19,13 +19,14 @@ import org.slf4j.LoggerFactory;
 
 public class BybitStreamOrderBookAndFeesExample {
 
-  private static final Logger LOG = LoggerFactory.getLogger(BybitStreamOrderBookAndFeesExample.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BybitStreamOrderBookAndFeesExample.class);
 
   public static void main(String[] args) {
     // Stream orderBook and OrderBookUpdates
     try {
       getOrderBookExample();
-    // main(not demo) api only
+      // main(not demo) api only
       getFeesExample();
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -40,9 +41,10 @@ public class BybitStreamOrderBookAndFeesExample {
   private static void getFeesExample() {
     exchange = connectMainApi(BybitCategory.LINEAR, true);
     // if auth response is not received at this moment, wee get non-auth exception here
-    // var fees = exchange.getAccountService().getDynamicTradingFeesByInstrument(BybitCategory.LINEAR);
+    // var fees =
+    // exchange.getAccountService().getDynamicTradingFeesByInstrument(BybitCategory.LINEAR);
     // OPTION - wait for login message response
-    while(!exchange.isAlive()) {
+    while (!exchange.isAlive()) {
       try {
         TimeUnit.MILLISECONDS.sleep(100);
       } catch (InterruptedException e) {
@@ -51,7 +53,10 @@ public class BybitStreamOrderBookAndFeesExample {
     }
     Map<Instrument, Fee> fees;
     try {
-      fees = exchange.getAccountService().getDynamicTradingFeesByInstrument(BybitCategory.LINEAR.getValue());
+      fees =
+          exchange
+              .getAccountService()
+              .getDynamicTradingFeesByInstrument(BybitCategory.LINEAR.getValue());
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

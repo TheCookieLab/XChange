@@ -1,5 +1,7 @@
 package org.knowm.xchange.coinsph.service;
 
+import java.io.IOException;
+import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.coinsph.CoinsphAdapters;
 import org.knowm.xchange.coinsph.CoinsphExchange;
@@ -11,9 +13,6 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
-
-import java.io.IOException;
-import java.util.List;
 
 // For getTickers
 

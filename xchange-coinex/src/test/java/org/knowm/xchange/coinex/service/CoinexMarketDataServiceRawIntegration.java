@@ -21,7 +21,8 @@ class CoinexMarketDataServiceRawIntegration extends CoinexIntegrationTestParent 
             chainInfo -> {
               assertThat(chainInfo.getAsset().getCurrency()).isNotNull();
               if (!chainInfo.getChains().isEmpty()) {
-                assertThat(chainInfo.getChains()).allSatisfy(coinexChain -> assertThat(coinexChain.getName()).isNotBlank());
+                assertThat(chainInfo.getChains())
+                    .allSatisfy(coinexChain -> assertThat(coinexChain.getName()).isNotBlank());
               }
             });
   }

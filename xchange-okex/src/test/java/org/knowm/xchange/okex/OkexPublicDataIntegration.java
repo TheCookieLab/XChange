@@ -104,14 +104,14 @@ public class OkexPublicDataIntegration {
             .getHistoryCandle("BTC-USDT", null, null, null, null);
     assertTrue(Objects.nonNull(barHistDtos) && !barHistDtos.getData().isEmpty());
   }
-  
+
   @Test
   @Ignore
   public void testCandle() throws IOException {
-	  OkexResponse<List<OkexCandleStick>> barHistDtos =
-			  ((OkexMarketDataService) exchange.getMarketDataService())
-			  .getCandle("BTC-USDT", null, null, null, null);
-	  assertTrue(Objects.nonNull(barHistDtos) && !barHistDtos.getData().isEmpty());
+    OkexResponse<List<OkexCandleStick>> barHistDtos =
+        ((OkexMarketDataService) exchange.getMarketDataService())
+            .getCandle("BTC-USDT", null, null, null, null);
+    assertTrue(Objects.nonNull(barHistDtos) && !barHistDtos.getData().isEmpty());
   }
 
   @Test
