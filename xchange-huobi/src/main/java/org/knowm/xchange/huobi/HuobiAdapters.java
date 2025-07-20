@@ -170,7 +170,7 @@ public class HuobiAdapters {
             ? null
             : metadata.getMinimumAmount().setScale(pair.getAmountPrecision(), RoundingMode.DOWN);
     FeeTier[] feeTiers = metadata == null ? null : metadata.getFeeTiers();
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(fee)
         .minimumAmount(minQty)
         .priceScale(pair.getPricePrecision())
