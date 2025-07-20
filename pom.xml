@@ -79,7 +79,6 @@
         <module>xchange-coinone</module>
         <module>xchange-coinsph</module>
         <module>xchange-core</module>
-        <module>xchange-cryptowatch</module>
         <module>xchange-deribit</module>
         <module>xchange-dvchain</module>
         <module>xchange-dydx</module>
