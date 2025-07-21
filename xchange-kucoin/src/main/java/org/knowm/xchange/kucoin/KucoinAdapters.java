@@ -161,7 +161,7 @@ public class KucoinAdapters {
 
       currencyPairs.put(
           pair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .tradingFee(takerTradingFee)
               .minimumAmount(minSize)
               .maximumAmount(maxSize)
