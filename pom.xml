@@ -56,7 +56,6 @@
         <module>xchange-bity</module>
         <module>xchange-bitz</module>
         <module>xchange-bl3p</module>
-        <module>xchange-bleutrade</module>
         <module>xchange-blockchain</module>
         <module>xchange-btcc</module>
         <module>xchange-btcmarkets</module>
@@ -79,7 +78,6 @@
         <module>xchange-coinone</module>
         <module>xchange-coinsph</module>
         <module>xchange-core</module>
-        <module>xchange-cryptowatch</module>
         <module>xchange-deribit</module>
         <module>xchange-dvchain</module>
         <module>xchange-dydx</module>
@@ -103,7 +101,6 @@
         <module>xchange-latoken</module>
         <module>xchange-livecoin</module>
         <module>xchange-luno</module>
-        <module>xchange-lykke</module>
         <module>xchange-mercadobitcoin</module>
         <module>xchange-mexc</module>
         <module>xchange-okcoin</module>
@@ -191,7 +188,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <skipIntegrationTests>true</skipIntegrationTests>
-        <version.assertj>3.26.3</version.assertj>
+        <version.assertj>3.27.3</version.assertj>
         <version.commons.lang3>3.18.0</version.commons.lang3>
         <version.crypto>5.0.0</version.crypto>
         <version.fasterxml>2.19.1</version.fasterxml>
@@ -199,9 +196,9 @@
 
         <version.java>8</version.java>
         <version.java-jwt>4.5.0</version.java-jwt>
-        <version.junit>5.12.1</version.junit>
+        <version.junit>5.12.2</version.junit>
         <version.knowm.xchart>3.8.8</version.knowm.xchart>
-        <version.lombok>1.18.34</version.lombok>
+        <version.lombok>1.18.38</version.lombok>
         <version.maven-enforcer-plugin>3.2.1</version.maven-enforcer-plugin>
         <version.maven-prerequisite>3.6.3</version.maven-prerequisite>
         <version.mockito>5.18.0</version.mockito>
@@ -465,7 +462,7 @@
             <plugin>
                 <groupId>com.spotify.fmt</groupId>
                 <artifactId>fmt-maven-plugin</artifactId>
-                <version>2.25</version>
+                <version>2.27</version>
                 <configuration>
                     <filesNamePattern>.*\.java</filesNamePattern>
                     <skip>false</skip>
@@ -482,7 +479,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.14.0</version>
                 <configuration>
                     <release>${version.java}</release>
                     <showDeprecation>true</showDeprecation>
@@ -535,7 +532,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.10.1</version>
+                <version>3.11.2</version>
                 <configuration>
                     <quiet>true</quiet>
                     <doclint>none</doclint>
@@ -554,7 +551,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>3.1.1</version>
                 <configuration>
                     <autoVersionSubmodules>true</autoVersionSubmodules>
                 </configuration>
@@ -617,7 +614,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>3.10.1</version>
+                        <version>3.11.2</version>
                         <executions>
                             <execution>
                                 <id>attach-javadocs</id>

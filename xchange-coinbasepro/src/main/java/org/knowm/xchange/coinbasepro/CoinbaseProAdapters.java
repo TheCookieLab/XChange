@@ -384,7 +384,7 @@ public class CoinbaseProAdapters {
 
       currencyPairs.put(
           pair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .tradingFee(new BigDecimal("0.50"))
               .minimumAmount(product.getBaseMinSize())
               .maximumAmount(product.getBaseMaxSize())
