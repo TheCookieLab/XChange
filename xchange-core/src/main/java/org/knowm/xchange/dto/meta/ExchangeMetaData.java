@@ -5,8 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.io.Serializable;
 import java.util.Map;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Data;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.utils.ObjectMapperHelper;
@@ -22,8 +21,7 @@ import org.knowm.xchange.utils.jackson.InstrumentMapDeserializer;
  * <p>This class is used only in the API by the classes that merge metadata stored in custom JSON
  * file and online info from the remote exchange.
  */
-@Getter
-@ToString
+@Data
 public class ExchangeMetaData implements Serializable {
 
   private static final long serialVersionUID = -1495610469981534977L;
@@ -47,28 +45,6 @@ public class ExchangeMetaData implements Serializable {
    */
   @JsonProperty("share_rate_limits")
   private boolean shareRateLimits;
-
-  /**
-   * Constructor
-   *
-   * @param instruments Map of {@link Instrument} -> {@link InstrumentMetaData}
-   * @param currency Map of currency -> {@link CurrencyMetaData}
-   */
-  public ExchangeMetaData(
-      @JsonProperty("currency_pairs") Map<Instrument, InstrumentMetaData> instruments,
-      @JsonProperty("currencies") Map<Currency, CurrencyMetaData> currency,
-      @JsonProperty("public_rate_limits") RateLimit[] publicRateLimits,
-      @JsonProperty("private_rate_limits") RateLimit[] privateRateLimits,
-      @JsonProperty("share_rate_limits") Boolean shareRateLimits) {
-
-    this.instruments = instruments;
-    this.currencies = currency;
-
-    this.publicRateLimits = publicRateLimits;
-    this.privateRateLimits = privateRateLimits;
-
-    this.shareRateLimits = shareRateLimits != null ? shareRateLimits : false;
-  }
 
   /**
    * @return minimum number of milliseconds required between any two remote calls, assuming the
