@@ -82,7 +82,7 @@ public class CoinexAdapters {
   }
 
   public InstrumentMetaData toInstrumentMetaData(CoinexCurrencyPairInfo coinexCurrencyPairInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(coinexCurrencyPairInfo.getTakerFeeRate())
         .minimumAmount(coinexCurrencyPairInfo.getMinAssetAmount())
         .volumeScale(coinexCurrencyPairInfo.getBaseCurrencyPrecision())

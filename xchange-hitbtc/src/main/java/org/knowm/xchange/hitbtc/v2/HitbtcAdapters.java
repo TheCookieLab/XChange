@@ -301,7 +301,7 @@ public class HitbtcAdapters {
 
         currencyPairs.put(
             pair,
-            new InstrumentMetaData.Builder()
+            InstrumentMetaData.builder()
                 .tradingFee(tradingFee)
                 .minimumAmount(minimumAmount)
                 .maximumAmount(maximumAmount)

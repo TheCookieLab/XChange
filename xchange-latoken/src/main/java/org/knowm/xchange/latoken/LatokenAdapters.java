@@ -54,7 +54,7 @@ public class LatokenAdapters {
             .getMinOrderAmount()
             .setScale(latokenPair.getAmountPrecision(), RoundingMode.HALF_DOWN);
     int priceScale = latokenPair.getPricePrecision();
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(tradingFee)
         .minimumAmount(minAmount)
         .priceScale(priceScale)

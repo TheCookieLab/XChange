@@ -697,7 +697,7 @@ public class BitfinexAdapters {
 
                 currencyPairs.put(
                     currencyPair,
-                    new InstrumentMetaData.Builder()
+                    InstrumentMetaData.builder()
                         .tradingFee(
                             currencyPairs.get(currencyPair) == null
                                 ? null
@@ -755,7 +755,7 @@ public class BitfinexAdapters {
     // now.
     // also setting the taker_fee as the trading_fee for now.
     final InstrumentMetaData metaData =
-        new InstrumentMetaData.Builder()
+        InstrumentMetaData.builder()
             .tradingFee(bitfinexAccountInfos[0].getTakerFees().movePointLeft(2))
             .build();
     currencyPairs.keySet().parallelStream()
@@ -765,7 +765,7 @@ public class BitfinexAdapters {
                     currencyPair,
                     metaData,
                     (oldMetaData, newMetaData) ->
-                        new InstrumentMetaData.Builder()
+                        InstrumentMetaData.builder()
                             .tradingFee(newMetaData.getTradingFee())
                             .minimumAmount(oldMetaData.getMinimumAmount())
                             .maximumAmount(oldMetaData.getMaximumAmount())
