@@ -47,6 +47,28 @@ public class ExchangeMetaData implements Serializable {
   private boolean shareRateLimits;
 
   /**
+   * Constructor
+   *
+   * @param instruments Map of {@link Instrument} -> {@link InstrumentMetaData}
+   * @param currency Map of currency -> {@link CurrencyMetaData}
+   */
+  public ExchangeMetaData(
+      @JsonProperty("currency_pairs") Map<Instrument, InstrumentMetaData> instruments,
+      @JsonProperty("currencies") Map<Currency, CurrencyMetaData> currency,
+      @JsonProperty("public_rate_limits") RateLimit[] publicRateLimits,
+      @JsonProperty("private_rate_limits") RateLimit[] privateRateLimits,
+      @JsonProperty("share_rate_limits") Boolean shareRateLimits) {
+
+    this.instruments = instruments;
+    this.currencies = currency;
+
+    this.publicRateLimits = publicRateLimits;
+    this.privateRateLimits = privateRateLimits;
+
+    this.shareRateLimits = shareRateLimits != null ? shareRateLimits : false;
+  }
+
+  /**
    * @return minimum number of milliseconds required between any two remote calls, assuming the
    *     client makes consecutive calls without any bursts or breaks for an infinite period of time.
    *     Returns null if the rateLimits collection is null or empty
