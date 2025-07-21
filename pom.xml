@@ -56,7 +56,6 @@
         <module>xchange-bity</module>
         <module>xchange-bitz</module>
         <module>xchange-bl3p</module>
-        <module>xchange-bleutrade</module>
         <module>xchange-blockchain</module>
         <module>xchange-btcc</module>
         <module>xchange-btcmarkets</module>
@@ -79,7 +78,6 @@
         <module>xchange-coinone</module>
         <module>xchange-coinsph</module>
         <module>xchange-core</module>
-        <module>xchange-cryptowatch</module>
         <module>xchange-deribit</module>
         <module>xchange-dvchain</module>
         <module>xchange-dydx</module>
@@ -103,7 +101,6 @@
         <module>xchange-latoken</module>
         <module>xchange-livecoin</module>
         <module>xchange-luno</module>
-        <module>xchange-lykke</module>
         <module>xchange-mercadobitcoin</module>
         <module>xchange-mexc</module>
         <module>xchange-okcoin</module>
