@@ -103,7 +103,7 @@ public class LivecoinAdapters {
       CurrencyPair pair = adaptCurrencyPair(product);
       currencyPairs.put(
           pair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .priceScale(
                   (product.getPriceScale() == null)
                       ? FALLBACK_PRICE_SCALE

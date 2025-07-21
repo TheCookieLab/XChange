@@ -207,7 +207,7 @@ public class BybitAdapters {
 
   public static InstrumentMetaData symbolToCurrencyPairMetaData(
       BybitSpotInstrumentInfo instrumentInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .marketOrderEnabled(true)
         .minimumAmount(instrumentInfo.getLotSizeFilter().getMinOrderQty())
         .maximumAmount(instrumentInfo.getLotSizeFilter().getMaxOrderQty())
@@ -222,7 +222,7 @@ public class BybitAdapters {
 
   public static InstrumentMetaData symbolToCurrencyPairMetaData(
       BybitLinearInverseInstrumentInfo instrumentInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .marketOrderEnabled(true)
         .minimumAmount(instrumentInfo.getLotSizeFilter().getMinOrderQty())
         .maximumAmount(instrumentInfo.getLotSizeFilter().getMaxOrderQty())
@@ -236,7 +236,7 @@ public class BybitAdapters {
 
   public static InstrumentMetaData symbolToCurrencyPairMetaData(
       BybitOptionInstrumentInfo instrumentInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .marketOrderEnabled(true)
         .minimumAmount(instrumentInfo.getLotSizeFilter().getMinOrderQty())
         .maximumAmount(instrumentInfo.getLotSizeFilter().getMaxOrderQty())
