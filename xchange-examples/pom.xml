@@ -100,12 +100,6 @@
             <artifactId>xchange-bitz</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- XChange Bleutrade exchange support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-bleutrade</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <!-- XChange Blockchain support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
