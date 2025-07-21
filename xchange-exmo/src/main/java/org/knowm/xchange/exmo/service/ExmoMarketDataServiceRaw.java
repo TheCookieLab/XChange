@@ -79,7 +79,7 @@ public class ExmoMarketDataServiceRaw extends BaseExmoService {
       // min_quantity or min_amount ???
       currencyPairs.put(
           currencyPair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .tradingFee(tradingFee)
               .minimumAmount(new BigDecimal(data.get("min_quantity")))
               .maximumAmount(new BigDecimal(data.get("max_quantity")))

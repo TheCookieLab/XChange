@@ -75,7 +75,7 @@ public class GateioAdapters {
 
   public InstrumentMetaData toInstrumentMetaData(
       GateioCurrencyPairDetails gateioCurrencyPairDetails) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(gateioCurrencyPairDetails.getFee())
         .minimumAmount(gateioCurrencyPairDetails.getMinAssetAmount())
         .counterMinimumAmount(gateioCurrencyPairDetails.getMinQuoteAmount())

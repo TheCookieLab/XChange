@@ -263,7 +263,7 @@ public final class BittrexAdapters {
       InstrumentMetaData newCurrencyPairMetaData;
       if (defaultCurrencyPairMetaData != null) {
         newCurrencyPairMetaData =
-            new InstrumentMetaData.Builder()
+            InstrumentMetaData.builder()
                 .tradingFee(resultingFee)
                 .minimumAmount(defaultCurrencyPairMetaData.getMinimumAmount())
                 .maximumAmount(defaultCurrencyPairMetaData.getMaximumAmount())
@@ -273,7 +273,7 @@ public final class BittrexAdapters {
                 .tradingFeeCurrency(defaultCurrencyPairMetaData.getTradingFeeCurrency())
                 .build();
       } else {
-        newCurrencyPairMetaData = new InstrumentMetaData.Builder().tradingFee(resultingFee).build();
+        newCurrencyPairMetaData = InstrumentMetaData.builder().tradingFee(resultingFee).build();
       }
 
       metaData.getInstruments().put(currencyPair, newCurrencyPairMetaData);

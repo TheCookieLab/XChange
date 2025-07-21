@@ -132,7 +132,7 @@ public class BiboxAdapters {
     for (BiboxMarket biboxMarket : markets) {
       pairMeta.put(
           new CurrencyPair(biboxMarket.getCoinSymbol(), biboxMarket.getCurrencySymbol()),
-          new InstrumentMetaData.Builder().build());
+          InstrumentMetaData.builder().build());
     }
     return new ExchangeMetaData(pairMeta, null, null, null, null);
   }
