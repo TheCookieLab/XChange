@@ -173,7 +173,7 @@ public class BleutradeAdapters {
 
       marketMetaDataMap.put(
           currencyPair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .tradingFee(txFee)
               .minimumAmount(bleutradeMarket.getMinTradeSize())
               .volumeScale(8)

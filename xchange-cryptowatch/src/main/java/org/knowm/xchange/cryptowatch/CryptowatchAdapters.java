@@ -74,7 +74,7 @@ public class CryptowatchAdapters {
     if (currencyPairMetaData != null) {
       return currencyPairMetaData;
     } else {
-      return new InstrumentMetaData.Builder().build();
+      return InstrumentMetaData.builder().build();
     }
   }
 
