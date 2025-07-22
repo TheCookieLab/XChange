@@ -459,7 +459,7 @@ public final class BitstampAdapters {
     String[] minOrderParts = pairInfo.getMinimumOrder().split(" ");
     BigDecimal minOrder = new BigDecimal(minOrderParts[0]);
 
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .counterMinimumAmount(minOrder)
         .priceScale(pairInfo.getCounterDecimals())
         .volumeScale(pairInfo.getBaseDecimals())

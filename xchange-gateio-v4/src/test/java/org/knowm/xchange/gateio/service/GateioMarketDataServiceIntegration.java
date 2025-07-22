@@ -23,6 +23,20 @@ class GateioMarketDataServiceIntegration extends GateioIntegrationTestParent {
   }
 
   @Test
+  void valid_single_ticker() throws IOException {
+    Ticker ticker = exchange.getMarketDataService().getTicker(CurrencyPair.BTC_USDT);
+
+    assertThat(ticker.getInstrument()).isEqualTo(CurrencyPair.BTC_USDT);
+    assertThat(ticker.getLast()).isPositive();
+    assertThat(ticker.getBid()).isPositive();
+    assertThat(ticker.getBidSize()).isPositive();
+    assertThat(ticker.getAsk()).isPositive();
+    assertThat(ticker.getAskSize()).isPositive();
+
+    assertThat(ticker.getBid()).isLessThan(ticker.getAsk());
+  }
+
+  @Test
   void valid_tickers() throws IOException {
     List<Ticker> tickers = exchange.getMarketDataService().getTickers(null);
     assertThat(tickers).isNotEmpty();

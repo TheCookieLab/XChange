@@ -26,8 +26,8 @@ public class BitgetFuturesAdapters {
   }
 
   public InstrumentMetaData toInstrumentMetaData(BitgetContractDto bitgetContractDto) {
-    InstrumentMetaData.Builder builder =
-        new InstrumentMetaData.Builder()
+    InstrumentMetaData.InstrumentMetaDataBuilder builder =
+        InstrumentMetaData.builder()
             .tradingFee(bitgetContractDto.getTakerFeeRate())
             .minimumAmount(bitgetContractDto.getMinTradeAssetAmount())
             .priceScale(bitgetContractDto.getPricePrecision())

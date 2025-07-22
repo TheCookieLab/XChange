@@ -75,7 +75,7 @@ public class GateioAdapters {
 
   public InstrumentMetaData toInstrumentMetaData(
       GateioCurrencyPairDetails gateioCurrencyPairDetails) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(gateioCurrencyPairDetails.getFee())
         .minimumAmount(gateioCurrencyPairDetails.getMinAssetAmount())
         .counterMinimumAmount(gateioCurrencyPairDetails.getMinQuoteAmount())
@@ -210,7 +210,9 @@ public class GateioAdapters {
         .instrument(gateioTicker.getCurrencyPair())
         .last(gateioTicker.getLastPrice())
         .bid(gateioTicker.getHighestBid())
+        .bidSize(gateioTicker.getHighestBidSize())
         .ask(gateioTicker.getLowestAsk())
+        .askSize(gateioTicker.getLowestAskSize())
         .high(gateioTicker.getMaxPrice24h())
         .low(gateioTicker.getMinPrice24h())
         .volume(gateioTicker.getAssetVolume())

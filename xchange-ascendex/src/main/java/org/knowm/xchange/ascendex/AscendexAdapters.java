@@ -193,7 +193,7 @@ public class AscendexAdapters {
         ascendexProductDto ->
             currencyPairMetaDataMap.put(
                 CurrencyPairDeserializer.getCurrencyPairFromString(ascendexProductDto.getSymbol()),
-                new InstrumentMetaData.Builder()
+                InstrumentMetaData.builder()
                     .tradingFee(ascendexProductDto.getCommissionReserveRate())
                     .priceScale(ascendexProductDto.getTickSize().scale())
                     .volumeScale(ascendexProductDto.getLotSize().scale())

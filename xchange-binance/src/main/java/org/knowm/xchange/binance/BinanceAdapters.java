@@ -537,15 +537,15 @@ public class BinanceAdapters {
             }
           }
 
-        if (counterMaxQty == null) {
-          counterMaxQty = counterMaxQtyFallback;
-        }
+          if (counterMaxQty == null) {
+            counterMaxQty = counterMaxQtyFallback;
+          }
 
           exchangeMetaData
               .getInstruments()
               .put(
                   currentCurrencyPair,
-                  new InstrumentMetaData.Builder()
+                  InstrumentMetaData.builder()
                       .minimumAmount(minQty)
                       .maximumAmount(maxQty)
                       .counterMinimumAmount(counterMinQty)
@@ -631,7 +631,7 @@ public class BinanceAdapters {
 
         instruments.put(
             currentCurrencyPair,
-            new InstrumentMetaData.Builder()
+            InstrumentMetaData.builder()
                 .tradingFee(BigDecimal.valueOf(0.1))
                 .minimumAmount(minQty)
                 .maximumAmount(maxQty)
