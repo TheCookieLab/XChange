@@ -191,10 +191,12 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException, FundsExceededException {
-    return amendOkexOrder(OkexAdapters.adaptAmendOrder(limitOrder, exchange.getExchangeMetaData()))
-        .getData()
-        .get(0)
-        .getOrderId();
+    OkexResponse<List<OkexOrderResponse>> okexResponse = amendOkexOrder(OkexAdapters.adaptAmendOrder(limitOrder, exchange.getExchangeMetaData()));
+    if (okexResponse.isSuccess()) return okexResponse.getData().get(0).getOrderId();
+    else
+      throw new OkexException(
+          okexResponse.getData().get(0).getMessage(),
+          Integer.parseInt(okexResponse.getData().get(0).getCode()));
   }
 
   public List<String> changeOrder(List<LimitOrder> limitOrders)
@@ -233,8 +235,12 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
               .orderId(id)
               .clientOrderId(userReference)
               .build();
-
-      return "0".equals(cancelOkexOrder(req).getData().get(0).getCode());
+      OkexResponse<List<OkexOrderResponse>> okexResponse = cancelOkexOrder(req);
+      if (okexResponse.isSuccess()) return true;
+      else
+        throw new OkexException(
+            okexResponse.getData().get(0).getMessage(),
+            Integer.parseInt(okexResponse.getData().get(0).getCode()));
     } else {
       throw new IOException(
           "CancelOrderParams must implement (CancelOrderByIdParams or CancelOrderByUserReferenceParams) and CancelOrderByInstrument interface.");

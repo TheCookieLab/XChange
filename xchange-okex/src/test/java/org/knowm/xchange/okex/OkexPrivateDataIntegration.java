@@ -123,7 +123,7 @@ public class OkexPrivateDataIntegration {
 
   @Test
   public void placeOrderAndGetTradeHistory() throws IOException, InterruptedException {
-    BigDecimal size = BigDecimal.valueOf(0.1);
+    BigDecimal size = BigDecimal.valueOf(0.01);
     String bidOrderId =
         exchange
             .getTradeService()
