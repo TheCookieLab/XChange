@@ -275,7 +275,7 @@ public class BlockchainAdapters {
           BigDecimal.valueOf(Math.pow(10, (entry.getValue().getMaxOrderSizeScale()) * -1));
       BigDecimal maxAmount = entry.getValue().getMaxOrderSize().multiply(maxScale);
       InstrumentMetaData currencyPairMetaData =
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .volumeScale(entry.getValue().getBaseCurrencyScale())
               .priceScale(entry.getValue().getCounterCurrencyScale())
               .minimumAmount(minAmount)

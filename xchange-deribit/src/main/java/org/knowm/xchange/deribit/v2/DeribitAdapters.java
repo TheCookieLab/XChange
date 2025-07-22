@@ -332,7 +332,7 @@ public class DeribitAdapters {
           BigDecimal.ZERO,
           new Fee(instrument.getMakerCommission(), instrument.getTakerCommission()))
     };
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(instrument.getTakerCommission())
         .feeTiers(feeTiers)
         .minimumAmount(instrument.getMinTradeAmount())

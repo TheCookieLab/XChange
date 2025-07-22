@@ -1,9 +1,19 @@
 package org.knowm.xchange.coinsph;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
-import org.knowm.xchange.coinsph.dto.account.*;
+import org.knowm.xchange.coinsph.dto.account.CoinsphAccount;
+import org.knowm.xchange.coinsph.dto.account.CoinsphBalance;
+import org.knowm.xchange.coinsph.dto.account.CoinsphDepositRecord;
+import org.knowm.xchange.coinsph.dto.account.CoinsphFundingRecord;
+import org.knowm.xchange.coinsph.dto.account.CoinsphTradeFee;
+import org.knowm.xchange.coinsph.dto.account.CoinsphWithdrawalRecord;
 import org.knowm.xchange.coinsph.dto.marketdata.CoinsphOrderBook;
 import org.knowm.xchange.coinsph.dto.marketdata.CoinsphOrderBookEntry;
 import org.knowm.xchange.coinsph.dto.marketdata.CoinsphPublicTrade;
@@ -16,7 +26,11 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
-import org.knowm.xchange.dto.account.*;
+import org.knowm.xchange.dto.account.AccountInfo;
+import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.Fee;
+import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
@@ -24,7 +38,11 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.meta.CurrencyMetaData;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
-import org.knowm.xchange.dto.trade.*;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.dto.trade.UserTrade;
+import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.instrument.Instrument;
 
 public final class CoinsphAdapters {
@@ -103,7 +121,7 @@ public final class CoinsphAdapters {
 
       // For now, using defaults or placeholders
       InstrumentMetaData pairMetaData =
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .tradingFee(null) // tradingFee
               .minimumAmount(null) // minimumAmount
               .maximumAmount(null) // maximumAmount

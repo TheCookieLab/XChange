@@ -541,23 +541,22 @@ public class BinanceAdapters {
           counterMaxQty = counterMaxQtyFallback;
         }
 
-          exchangeMetaData
-              .getInstruments()
-              .put(
-                  currentCurrencyPair,
-                  new InstrumentMetaData.Builder()
-                      .minimumAmount(minQty)
-                      .maximumAmount(maxQty)
-                      .counterMinimumAmount(counterMinQty)
-                      .counterMaximumAmount(counterMaxQty)
-                      .volumeScale(amountPrecision)
-                      .priceScale(pairPrecision)
-                      .priceStepSize(priceStepSize)
-                      .amountStepSize(stepSize)
-                      .marketOrderEnabled(
-                          Arrays.asList(futureSymbol.getOrderTypes()).contains("MARKET"))
-                      .build());
-        }
+        exchangeMetaData
+            .getInstruments()
+            .put(
+                currentCurrencyPair,
+                InstrumentMetaData.builder()
+                    .minimumAmount(minQty)
+                    .maximumAmount(maxQty)
+                    .counterMinimumAmount(counterMinQty)
+                    .counterMaximumAmount(counterMaxQty)
+                    .volumeScale(amountPrecision)
+                    .priceScale(pairPrecision)
+                    .priceStepSize(priceStepSize)
+                    .amountStepSize(stepSize)
+                    .marketOrderEnabled(
+                        Arrays.asList(futureSymbol.getOrderTypes()).contains("MARKET"))
+                    .build());
       }
     }
   }
@@ -631,7 +630,7 @@ public class BinanceAdapters {
 
         instruments.put(
             currentCurrencyPair,
-            new InstrumentMetaData.Builder()
+            InstrumentMetaData.builder()
                 .tradingFee(BigDecimal.valueOf(0.1))
                 .minimumAmount(minQty)
                 .maximumAmount(maxQty)
