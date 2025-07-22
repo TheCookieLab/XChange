@@ -2,13 +2,11 @@ package org.knowm.xchange.okex;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 
-import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -51,7 +49,6 @@ public interface Okex {
 
   @GET
   @Path("/market/trades")
-  @Consumes(MediaType.APPLICATION_JSON)
   OkexResponse<List<OkexTrade>> getTrades(
       @QueryParam("instId") String instrument,
       @QueryParam("limit") int limit,
@@ -60,7 +57,6 @@ public interface Okex {
 
   @GET
   @Path("/market/ticker")
-  @Consumes(MediaType.APPLICATION_JSON)
   OkexResponse<List<OkexTicker>> getTicker(
       @QueryParam("instId") String instrument,
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
@@ -68,7 +64,6 @@ public interface Okex {
 
   @GET
   @Path("/market/tickers")
-  @Consumes(MediaType.APPLICATION_JSON)
   OkexResponse<List<OkexTicker>> getTickers(
       @QueryParam("instType") String instType,
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
