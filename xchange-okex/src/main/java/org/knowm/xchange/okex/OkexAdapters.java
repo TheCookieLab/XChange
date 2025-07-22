@@ -212,6 +212,7 @@ public class OkexAdapters {
     return OkexAmendOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
         .orderId(order.getId())
+        .clientOrderId(order.getUserReference())
         .amendedAmount(convertVolumeToContractSize(order, exchangeMetaData))
         .amendedPrice(order.getLimitPrice().toString())
         .build();
