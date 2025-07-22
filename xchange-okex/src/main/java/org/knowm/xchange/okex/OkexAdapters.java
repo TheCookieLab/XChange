@@ -288,7 +288,7 @@ public class OkexAdapters {
                     ? OkexOrderType.optimal_limit_ioc.name()
                     : OkexOrderType.limit.name())
         .amount(convertVolumeToContractSize(order, exchangeMetaData))
-        .price(order.getLimitPrice().toString())
+        .price(order.getLimitPrice().toPlainString())
         .build();
   }
 
