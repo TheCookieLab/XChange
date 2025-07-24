@@ -127,7 +127,7 @@ public class CCEXAdapters {
       }
       currencyPairs.put(
           pair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .minimumAmount(minSize)
               .priceScale(0)
               .feeTiers(existingFeeTiers)

@@ -16,7 +16,7 @@ class BitfinexExchangeTest extends BitfinexExchangeWiremock {
 
   @Test
   void metadata_present() {
-    InstrumentMetaData expectedInstrumentMetaData = new InstrumentMetaData.Builder()
+    InstrumentMetaData expectedInstrumentMetaData = InstrumentMetaData.builder()
         .maximumAmount(new BigDecimal("250000.0"))
         .minimumAmount(new BigDecimal("4.0"))
         .volumeScale(8)

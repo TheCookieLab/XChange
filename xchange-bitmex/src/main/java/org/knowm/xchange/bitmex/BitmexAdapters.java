@@ -526,7 +526,7 @@ public class BitmexAdapters {
       maxAssetAmount = bitmexTicker.getMaxOrderQty().divide(assetMultiplier, MathContext.DECIMAL32);
     }
 
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(bitmexTicker.getTakerFee())
         .minimumAmount(minAssetAmount)
         .maximumAmount(maxAssetAmount)

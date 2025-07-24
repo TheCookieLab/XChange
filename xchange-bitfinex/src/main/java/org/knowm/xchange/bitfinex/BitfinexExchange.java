@@ -76,7 +76,7 @@ public class BitfinexExchange extends BaseExchange {
 
       currencyPairInfos.forEach(bitfinexCurrencyPairInfo -> {
         instruments.put(bitfinexCurrencyPairInfo.getCurrencyPair(),
-            new InstrumentMetaData.Builder()
+            InstrumentMetaData.builder()
                 .minimumAmount(bitfinexCurrencyPairInfo.getInfo().getMinAssetAmount())
                 .maximumAmount(bitfinexCurrencyPairInfo.getInfo().getMaxAssetAmount())
                 .priceScale(8)

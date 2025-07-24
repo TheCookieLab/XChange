@@ -399,7 +399,7 @@ public class OkexAdapters {
       }
       instrumentMetaData.put(
           pair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .minimumAmount(
                   (instrument.getInstrumentType().equals(OkexInstType.SWAP.name()))
                       ? convertContractSizeToVolume(
