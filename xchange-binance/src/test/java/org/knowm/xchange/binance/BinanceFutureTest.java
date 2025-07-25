@@ -23,7 +23,6 @@ import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceQueryOrderParams;
 import org.knowm.xchange.binance.dto.trade.BinanceTradeHistoryParams;
 import org.knowm.xchange.binance.service.BinanceAccountService;
-import org.knowm.xchange.binance.service.BinanceTradeService;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.AccountInfo;
@@ -169,7 +168,7 @@ public class BinanceFutureTest {
             .getTradeService()
             .cancelOrder(new BinanceCancelOrderParams(instrument, orderId,userReference)));
     // set Leverage
-    boolean isChanged = ((BinanceTradeService) binanceExchange.getTradeService()).setLeverage(instrument, 10);
+    boolean isChanged = ((BinanceAccountService) binanceExchange.getAccountService()).setLeverage(instrument, 10);
     logger.info("Leverage changed: {}", isChanged);
   }
 }

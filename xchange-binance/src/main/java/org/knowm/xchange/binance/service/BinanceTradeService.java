@@ -444,12 +444,6 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
     }
   }
 
-  public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
-    if (instrument instanceof FuturesContract) {
-      return setLeverageRaw(instrument, leverage).leverage == leverage;
-    } else return false;
-  }
-
   @Override
   public Class getRequiredOrderQueryParamClass() {
     return OrderQueryParamInstrument.class;

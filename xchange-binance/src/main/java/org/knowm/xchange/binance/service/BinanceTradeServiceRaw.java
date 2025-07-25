@@ -25,7 +25,6 @@ import org.knowm.xchange.binance.dto.trade.OrderSide;
 import org.knowm.xchange.binance.dto.trade.OrderType;
 import org.knowm.xchange.binance.dto.trade.TimeInForce;
 import org.knowm.xchange.binance.dto.trade.futures.BinanceFutureNewOrder;
-import org.knowm.xchange.binance.dto.trade.futures.BinanceSetLeverage;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -636,18 +635,4 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
         .call();
   }
 
-  public BinanceSetLeverage setLeverageRaw(Instrument instrument, int leverage) throws IOException {
-    return decorateApiCall(
-        () ->
-            binanceFutures.setLeverage(
-                BinanceAdapters.toSymbol(instrument, false),
-                leverage,
-                getRecvWindow(),
-                getTimestampFactory(),
-                apiKey,
-                signatureCreator))
-        .withRetry(retry("setLeverage"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
-        .call();
-  }
 }
