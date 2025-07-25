@@ -89,12 +89,7 @@
             <artifactId>xchange-bitstamp</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- XChange Bittrex exchange support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-bittrex</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>xchange-bitz</artifactId>
