@@ -18,4 +18,4 @@ jobs:
           cache: 'maven'
 
       - name: Build with maven
-        run: mvn --projects .,${{ inputs.module-name }} -DskipTests -Dmaven.javadoc.skip -DskipIntegrationTests=false verify
+        run: mvn --projects .,xchange-core,${{ inputs.module-name }} -DskipTests -Dmaven.javadoc.skip -DskipIntegrationTests=false verify
