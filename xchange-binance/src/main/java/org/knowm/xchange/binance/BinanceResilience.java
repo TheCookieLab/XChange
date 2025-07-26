@@ -8,9 +8,13 @@ public final class BinanceResilience {
 
   public static final String REQUEST_WEIGHT_RATE_LIMITER = "requestWeight";
 
+  // Spot specified
   public static final String ORDERS_PER_SECOND_RATE_LIMITER = "ordersPerSecond";
-
   public static final String RAW_REQUESTS_RATE_LIMITER = "rawRequests";
+
+  // Futures specified
+  public static final String ORDERS_PER_10_SECONDS_RATE_LIMITER = "ordersPer10Seconds";
+  public static final String ORDERS_PER_MINUTE_RATE_LIMITER = "ordersPerMINUTE";
 
   private BinanceResilience() {}
 
@@ -58,11 +62,27 @@ public final class BinanceResilience {
                 .build());
     registries
         .rateLimiters()
+        .rateLimiter(ORDERS_PER_10_SECONDS_RATE_LIMITER,
+            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
+                .limitRefreshPeriod(Duration.ofSeconds(10))
+                .limitForPeriod(300)
+                .build());
+    registries
+        .rateLimiters()
+        .rateLimiter(ORDERS_PER_MINUTE_RATE_LIMITER,
+            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
+                .limitRefreshPeriod(Duration.ofMinutes(1))
+                .limitForPeriod(1200)
+                .build());
+
+    // configure SPOT limiters unlimit,for comparability
+    registries
+        .rateLimiters()
         .rateLimiter(
             ORDERS_PER_SECOND_RATE_LIMITER,
             RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
                 .limitRefreshPeriod(Duration.ofSeconds(1))
-                .limitForPeriod(20)
+                .limitForPeriod(Integer.MAX_VALUE)
                 .build());
     registries
         .rateLimiters()

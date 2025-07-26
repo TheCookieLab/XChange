@@ -153,7 +153,11 @@ public class BinanceAdapters {
     }
   }
 
-  public static long id(String id) {
+  // orderId can be null in some cases
+  public static Long id(String id) {
+    if (id == null || id.isEmpty()) {
+      return null;
+    }
     try {
       return Long.parseLong(id);
     } catch (Throwable e) {
@@ -234,14 +238,16 @@ public class BinanceAdapters {
         .id(Long.toString(order.orderId))
         .timestamp(order.getTime())
         .cumulativeAmount(order.executedQty);
-    if (order.executedQty != null
-        && order.cummulativeQuoteQty != null
-        && order.executedQty.signum() != 0
-        && order.cummulativeQuoteQty.signum() != 0) {
+    if (order.averagePrice != null && order.averagePrice.compareTo(BigDecimal.ZERO) != 0) {
+      builder.averagePrice(order.averagePrice);
+    }
+    if (order.executedQty != null && order.cumulativeQuoteQty != null &&
+        order.executedQty.signum() != 0 && order.cumulativeQuoteQty.signum() != 0) {
       builder.averagePrice(
-          order.cummulativeQuoteQty.divide(order.executedQty, MathContext.DECIMAL32));
+          order.cumulativeQuoteQty.divide(order.executedQty, MathContext.DECIMAL32));
     }
     if (order.clientOrderId != null) {
+      builder.userReference(order.clientOrderId);
       builder.flag(BinanceOrderFlags.withClientId(order.clientOrderId));
     }
     return builder.build();
@@ -477,79 +483,81 @@ public class BinanceAdapters {
 
     for (Symbol futureSymbol : futureSymbols) {
       if (futureSymbol.getStatus().equals("TRADING")) { // Symbols which are trading
-        int pairPrecision = 8;
-        int amountPrecision = 8;
+        if (futureSymbol.getContractType().equals("PERPETUAL")) { // leave only perpetual contractType for now
+          int pairPrecision = 8;
+          int amountPrecision = 8;
 
-        BigDecimal minQty = null;
-        BigDecimal maxQty = null;
-        BigDecimal stepSize = null;
+          BigDecimal minQty = null;
+          BigDecimal maxQty = null;
+          BigDecimal stepSize = null;
 
-        BigDecimal priceStepSize = null;
+          BigDecimal priceStepSize = null;
 
-        BigDecimal counterMinQty = null;
-        BigDecimal counterMaxQty = null;
-        BigDecimal counterMaxQtyFallback = null;
+          BigDecimal counterMinQty = null;
+          BigDecimal counterMaxQty = null;
+          BigDecimal counterMaxQtyFallback = null;
 
-        Instrument currentCurrencyPair =
-            new FuturesContract(
-                new CurrencyPair(futureSymbol.getBaseAsset() + "/" + futureSymbol.getQuoteAsset()),
-                "PERP");
+          Instrument currentCurrencyPair =
+              new FuturesContract(
+                  new CurrencyPair(futureSymbol.getBaseAsset() + "/" + futureSymbol.getQuoteAsset()),
+                  "PERP");
 
-        for (Filter filter : futureSymbol.getFilters()) {
-          switch (filter.getFilterType()) {
-            case "PRICE_FILTER":
-              priceStepSize = new BigDecimal(filter.getTickSize()).stripTrailingZeros();
-              pairPrecision = Math.min(pairPrecision, numberOfDecimals(filter.getTickSize()));
-              // why was here maxPrice as maxQty? used as fallback, but...
-              counterMaxQtyFallback = new BigDecimal(filter.getMaxPrice()).stripTrailingZeros();
-              break;
-            case "LOT_SIZE":
-              amountPrecision = Math.min(amountPrecision, numberOfDecimals(filter.getStepSize()));
-              minQty = new BigDecimal(filter.getMinQty()).stripTrailingZeros();
-              maxQty = new BigDecimal(filter.getMaxQty()).stripTrailingZeros();
-              stepSize = new BigDecimal(filter.getStepSize()).stripTrailingZeros();
-              break;
-            // US Binance
-            case "MIN_NOTIONAL":
-              counterMinQty =
-                  (filter.getMinNotional() != null)
-                      ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
-                      : null;
-              break;
-            // NOT US Binance
-            case "NOTIONAL":
-              counterMinQty =
-                  (filter.getMinNotional() != null)
-                      ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
-                      : null;
-              counterMaxQty =
-                  (filter.getMaxNotional() != null)
-                      ? new BigDecimal(filter.getMaxNotional()).stripTrailingZeros()
-                      : null;
-              break;
+          for (Filter filter : futureSymbol.getFilters()) {
+            switch (filter.getFilterType()) {
+              case "PRICE_FILTER":
+                priceStepSize = new BigDecimal(filter.getTickSize()).stripTrailingZeros();
+                pairPrecision = Math.min(pairPrecision, numberOfDecimals(filter.getTickSize()));
+                // why was here maxPrice as maxQty? used as fallback, but...
+                counterMaxQtyFallback = new BigDecimal(filter.getMaxPrice()).stripTrailingZeros();
+                break;
+              case "LOT_SIZE":
+                amountPrecision = Math.min(amountPrecision, numberOfDecimals(filter.getStepSize()));
+                minQty = new BigDecimal(filter.getMinQty()).stripTrailingZeros();
+                maxQty = new BigDecimal(filter.getMaxQty()).stripTrailingZeros();
+                stepSize = new BigDecimal(filter.getStepSize()).stripTrailingZeros();
+                break;
+              // FUTURES
+              case "MIN_NOTIONAL":
+                counterMinQty =
+                    (filter.getNotional() != null)
+                        ? new BigDecimal(filter.getNotional()).stripTrailingZeros()
+                        : null;
+                break;
+              // SPOT
+              case "NOTIONAL":
+                counterMinQty =
+                    (filter.getMinNotional() != null)
+                        ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
+                        : null;
+                counterMaxQty =
+                    (filter.getMaxNotional() != null)
+                        ? new BigDecimal(filter.getMaxNotional()).stripTrailingZeros()
+                        : null;
+                break;
+            }
           }
-        }
 
-        if (counterMaxQty == null) {
-          counterMaxQty = counterMaxQtyFallback;
-        }
+          if (counterMaxQty == null) {
+            counterMaxQty = counterMaxQtyFallback;
+          }
 
-        exchangeMetaData
-            .getInstruments()
-            .put(
-                currentCurrencyPair,
-                InstrumentMetaData.builder()
-                    .minimumAmount(minQty)
-                    .maximumAmount(maxQty)
-                    .counterMinimumAmount(counterMinQty)
-                    .counterMaximumAmount(counterMaxQty)
-                    .volumeScale(amountPrecision)
-                    .priceScale(pairPrecision)
-                    .priceStepSize(priceStepSize)
-                    .amountStepSize(stepSize)
-                    .marketOrderEnabled(
-                        Arrays.asList(futureSymbol.getOrderTypes()).contains("MARKET"))
-                    .build());
+          exchangeMetaData
+              .getInstruments()
+              .put(
+                  currentCurrencyPair,
+                  InstrumentMetaData.builder()
+                      .minimumAmount(minQty)
+                      .maximumAmount(maxQty)
+                      .counterMinimumAmount(counterMinQty)
+                      .counterMaximumAmount(counterMaxQty)
+                      .volumeScale(amountPrecision)
+                      .priceScale(pairPrecision)
+                      .priceStepSize(priceStepSize)
+                      .amountStepSize(stepSize)
+                      .marketOrderEnabled(
+                          Arrays.asList(futureSymbol.getOrderTypes()).contains("MARKET"))
+                      .build());
+        }
       }
     }
   }

@@ -1,5 +1,10 @@
-package info.bitrich.xchangestream.binance;
+package info.bitrich.xchangestream.binance.examples;
 
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
+
+import info.bitrich.xchangestream.binance.BinanceSubscriptionType;
+import info.bitrich.xchangestream.binancefuture.BinanceFutureStreamingExchange;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -7,35 +12,31 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class test the Live Subscription/Unsubscription feature of the Binance Api. See <a
- * href="https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md#live-subscribingunsubscribing-to-streams">...</a>
- *
- * <p>Before this addon, the subscription of the currency pairs required to be at the connection
- * time, so if we wanted to add new currencies to the stream, it was required to disconnect from the
- * stream and reconnect with the new ProductSubscription instance that contains all currency pairs.
- * With the new addon, we can subscribe to new currencies live without disconnecting the stream.
+ * Copied from BinanceLiveSubscriptionExample and replaced with BinanceFutureStreamingExchange from
+ * BinanceStreamingExchange.
  */
-public class BinanceLiveSubscriptionExample {
+public class BinanceLiveFutureSubscriptionExample {
 
-  private static final Logger LOG = LoggerFactory.getLogger(BinanceLiveSubscriptionExample.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BinanceLiveFutureSubscriptionExample.class);
 
   public static void main(String[] args) throws InterruptedException {
-
     ExchangeSpecification spec =
         StreamingExchangeFactory.INSTANCE
-            .createExchange(BinanceStreamingExchange.class)
+            .createExchange(BinanceFutureStreamingExchange.class)
             .getDefaultExchangeSpecification();
-    BinanceStreamingExchange exchange =
-        (BinanceStreamingExchange) StreamingExchangeFactory.INSTANCE.createExchange(spec);
+    spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, FUTURES);
+    BinanceFutureStreamingExchange exchange =
+        (BinanceFutureStreamingExchange) StreamingExchangeFactory.INSTANCE.createExchange(spec);
 
-    // First, we subscribe only for one currency pair at connection time (minimum requirement)
-    Instrument instrumentBTC = new CurrencyPair("BTC/USDT");
+    // First, we subscribe only for one instrument pair at connection time (minimum requirement)
+    Instrument instrumentBTC = new FuturesContract("BTC/USDT/PERP");
     ProductSubscription subscription =
         ProductSubscription.create().addTrades(instrumentBTC).addOrderbook(instrumentBTC).build();
     // Note: at connection time, the live subscription is disabled
@@ -80,7 +81,10 @@ public class BinanceLiveSubscriptionExample {
     // or keep the live subscription
     // feature disabled and connect your pairs at connection time only (default value).
     final List<Instrument> currencyPairs =
-        Arrays.asList(CurrencyPair.ETH_USDT, CurrencyPair.LTC_USDT, CurrencyPair.XRP_USDT);
+        Arrays.asList(
+            new FuturesContract("ETH/USDT/PERP"),
+            new FuturesContract("LTC/USDT/PERP"),
+            new FuturesContract("XRP/USDT/PERP"));
     final List<Disposable> disposableTrades = new ArrayList<>();
     for (final Instrument instrument : currencyPairs) {
       // Note: See the doOnDispose below. It's here that we will send an unsubscribe request to
@@ -114,22 +118,24 @@ public class BinanceLiveSubscriptionExample {
     Disposable xlmDisposable =
         exchange
             .getStreamingMarketDataService()
-            .getTrades((Instrument) CurrencyPair.XLM_USDT)
+            .getTrades(new FuturesContract("XLM/USDT/PERP"))
             .doOnDispose(
                 () ->
                     exchange
                         .getStreamingMarketDataService()
-                        .unsubscribe(CurrencyPair.XLM_USDT, BinanceSubscriptionType.TRADE))
+                        .unsubscribe(
+                            new FuturesContract("XLM/USDT/PERP"), BinanceSubscriptionType.TRADE))
             .subscribe(trade -> {});
     Disposable eosDisposable =
         exchange
             .getStreamingMarketDataService()
-            .getTrades((Instrument) CurrencyPair.EOS_BTC)
+            .getTrades(new FuturesContract("EOS/BTC/PERP"))
             .doOnDispose(
                 () ->
                     exchange
                         .getStreamingMarketDataService()
-                        .unsubscribe(CurrencyPair.EOS_BTC, BinanceSubscriptionType.TRADE))
+                        .unsubscribe(
+                            new FuturesContract("EOS/BTC/PERP"), BinanceSubscriptionType.TRADE))
             .subscribe(trade -> {});
 
     Thread.sleep(5000);

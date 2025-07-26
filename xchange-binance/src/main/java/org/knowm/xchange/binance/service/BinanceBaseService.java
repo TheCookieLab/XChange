@@ -46,6 +46,7 @@ public class BinanceBaseService extends BaseResilientExchangeService<BinanceExch
             break;
           }
         case FUTURES:
+        case PORTFOLIO_MARGIN:
           {
             futuresSpec = exchange.getExchangeSpecification();
             binanceFutures =
