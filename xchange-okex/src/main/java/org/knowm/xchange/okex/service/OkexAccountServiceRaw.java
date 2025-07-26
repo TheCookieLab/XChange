@@ -182,7 +182,7 @@ public class OkexAccountServiceRaw extends OkexBaseService {
                               .getExchangeSpecification()
                               .getExchangeSpecificParametersItem(PARAM_SIMULATED),
                       requestPayload))
-          .withRateLimiter(rateLimiter(OkexAuthenticated.positionsPath))
+          .withRateLimiter(rateLimiter(OkexAuthenticated.setLeveragePath))
           .call();
     } catch (OkexException e) {
       throw handleError(e);
