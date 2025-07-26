@@ -19,7 +19,7 @@ Basic usage is very simple: Create an `Exchange` instance, get the appropriate s
 
 | Exchange | Status                                                                                                                                                               |
 |----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| bitget   | [![status](https://github.com/knowm/XChange/actions/workflows/bitget.yml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitget.yml)                   |
+| bitget   | [![status](https://github.com/knowm/XChange/actions/workflows/bitget.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitget.yml)                   |
 | bitmex   | [![status](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml)       |
 | coinex   | [![status](https://github.com/knowm/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/coinex.yaml)       |
 | gate.io  | [![status](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml) |
