@@ -60,4 +60,11 @@ public class AccountServiceIntegration {
     List<CoinbasePaymentMethod> methods = accountService.getCoinbasePaymentMethods();
     Assert.assertFalse(methods.isEmpty());
   }
+
+  @Test
+  public void testGetTransactionSummary() throws Exception {
+    Assume.assumeNotNull(accountService.authTokenCreator);
+
+
+  }
 }
