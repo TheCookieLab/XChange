@@ -69,8 +69,14 @@ public class CoinexOrder {
   @JsonProperty("order_id")
   private Long orderId;
 
+  @JsonProperty("stop_id")
+  private Long stopId;
+
   @JsonProperty("price")
   private BigDecimal price;
+
+  @JsonProperty("trigger_price")
+  private BigDecimal triggerPrice;
 
   @JsonProperty("quote_fee")
   private BigDecimal quoteFee;

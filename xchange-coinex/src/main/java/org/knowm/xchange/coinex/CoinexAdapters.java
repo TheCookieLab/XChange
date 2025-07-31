@@ -27,6 +27,7 @@ import org.knowm.xchange.dto.marketdata.Ticker.Builder;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.instrument.Instrument;
 
 @UtilityClass
@@ -75,6 +76,28 @@ public class CoinexAdapters {
         .clientId(limitOrder.getUserReference())
         .amount(limitOrder.getOriginalAmount())
         .build();
+  }
+
+  public CoinexOrder toCoinexOrder(StopOrder stopOrder) {
+    CoinexOrder.CoinexOrderBuilder builder = CoinexOrder.builder()
+        .currencyPair((CurrencyPair) stopOrder.getInstrument())
+        .marketType(CoinexMarketType.SPOT)
+        .side(stopOrder.getType())
+        .triggerPrice(stopOrder.getStopPrice())
+        .clientId(stopOrder.getUserReference())
+        .amount(stopOrder.getOriginalAmount());
+
+    if (stopOrder.getLimitPrice() != null) {
+      builder
+          .type("limit")
+          .price(stopOrder.getLimitPrice());
+    }
+    else {
+      builder
+          .type("market");
+    }
+
+    return builder.build();
   }
 
   public CurrencyPair toCurrencyPair(String symbol) {
