@@ -13,6 +13,7 @@ import lombok.experimental.UtilityClass;
 import org.knowm.xchange.coinex.dto.account.CoinexBalanceInfo;
 import org.knowm.xchange.coinex.dto.account.CoinexMarketType;
 import org.knowm.xchange.coinex.dto.account.CoinexOrder;
+import org.knowm.xchange.coinex.dto.account.CoinexOrder.CoinexOrderType;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexCurrencyPairInfo;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexMarketDepth;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexTickerV1;
@@ -60,7 +61,7 @@ public class CoinexAdapters {
         .currencyPair((CurrencyPair) marketOrder.getInstrument())
         .marketType(CoinexMarketType.SPOT)
         .side(marketOrder.getType())
-        .type("market")
+        .type(CoinexOrderType.MARKET)
         .clientId(marketOrder.getUserReference())
         .amount(marketOrder.getOriginalAmount())
         .build();
@@ -71,7 +72,7 @@ public class CoinexAdapters {
         .currencyPair((CurrencyPair) limitOrder.getInstrument())
         .marketType(CoinexMarketType.SPOT)
         .side(limitOrder.getType())
-        .type("limit")
+        .type(CoinexOrderType.LIMIT)
         .price(limitOrder.getLimitPrice())
         .clientId(limitOrder.getUserReference())
         .amount(limitOrder.getOriginalAmount())
@@ -89,12 +90,12 @@ public class CoinexAdapters {
 
     if (stopOrder.getLimitPrice() != null) {
       builder
-          .type("limit")
+          .type(CoinexOrderType.LIMIT)
           .price(stopOrder.getLimitPrice());
     }
     else {
       builder
-          .type("market");
+          .type(CoinexOrderType.MARKET);
     }
 
     return builder.build();
@@ -119,10 +120,10 @@ public class CoinexAdapters {
     OrderType orderType = coinexOrder.getSide();
 
     switch (coinexOrder.getType()) {
-      case "market":
+      case MARKET:
         builder = new MarketOrder.Builder(orderType, instrument);
         break;
-      case "limit":
+      case LIMIT:
         builder = new LimitOrder.Builder(orderType, instrument).limitPrice(coinexOrder.getPrice());
         break;
       default:
