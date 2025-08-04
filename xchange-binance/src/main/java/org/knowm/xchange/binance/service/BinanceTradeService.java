@@ -148,14 +148,21 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
       throws IOException {
     try {
       String orderId;
-
+      Order.OrderType orderType = order.getType();
       if (order.getInstrument() instanceof FuturesContract) {
+        switch (orderType) {
+          case EXIT_ASK:
+          case EXIT_BID:
+            order.getOrderFlags().add(
+                org.knowm.xchange.binance.dto.trade.BinanceOrderFlags.REDUCE_ONLY);
+            break;
+        }
         if (exchange.isPortfolioMarginEnabled()) {
           if (BinanceAdapters.isInverse(order.getInstrument())) {
             orderId =
                 newPortfolioMarginInverseFutureOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -169,7 +176,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
             orderId =
                 newPortfolioMarginFutureOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -185,7 +192,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
             orderId =
                 newInverseFutureOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -204,7 +211,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
             orderId =
                 newFutureOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -225,7 +232,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
             Long.toString(
                 newOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -429,13 +436,14 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException {
     if (exchange.isFuturesEnabled()) {
-      if((limitOrder.getId()!= null && !limitOrder.getId().isEmpty()) || (limitOrder.getUserReference() != null && !limitOrder.getUserReference().isEmpty() )) {
+      if ((limitOrder.getId() != null && !limitOrder.getId().isEmpty()) || (limitOrder.getUserReference() != null && !limitOrder.getUserReference().isEmpty())) {
         Long orderIdLong = BinanceAdapters.id(limitOrder.getId());
         return modifyOrder(orderIdLong, limitOrder.getUserReference(),
             limitOrder.getInstrument(), BinanceAdapters.convert(limitOrder.getType()), limitOrder.getOriginalAmount(),
             limitOrder.getLimitPrice()).getOrderId();
-      } else
+      } else {
         throw new ExchangeException("You need to provide the orderId OR userReference to change an order.");
+      }
     } else {
       // PortfolioMargin mode and SPOT mode
       // SPOT not support change order, only cancel and place again
