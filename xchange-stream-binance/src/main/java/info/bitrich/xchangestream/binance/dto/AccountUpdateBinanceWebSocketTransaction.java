@@ -11,7 +11,7 @@ import org.knowm.xchange.dto.account.OpenPosition;
 
 @Getter
 @ToString
-public class AccountUpdateBinanceWebSocketTransaction extends BaseBinanceWebSocketTransaction{
+public class AccountUpdateBinanceWebSocketTransaction extends BaseBinanceWebSocketTransaction {
 
   private final Long transactionTime;
   private final String accountAlias;
@@ -23,7 +23,7 @@ public class AccountUpdateBinanceWebSocketTransaction extends BaseBinanceWebSock
       @JsonProperty("T") Long transactionTime,
       @JsonProperty("i") String accountAlias,
       @JsonProperty("a") AccountUpdate accountUpdate) {
-    super(eventType,eventTime);
+    super(eventType, eventTime);
     this.transactionTime = transactionTime;
     this.accountAlias = accountAlias;
     this.accountUpdate = accountUpdate;
@@ -105,9 +105,9 @@ public class AccountUpdateBinanceWebSocketTransaction extends BaseBinanceWebSock
 
     public OpenPosition toOpenPosition(boolean isFuture) {
       return new OpenPosition.Builder()
-          .instrument(adaptSymbol(symbol,isFuture))
+          .instrument(adaptSymbol(symbol, isFuture))
           .price(entryPrice)
-          .size(positionAmount)
+          .size(positionAmount.abs())
           .type(positionSide.equals("LONG") ? OpenPosition.Type.LONG : OpenPosition.Type.SHORT)
           .unRealisedPnl(unrealizedPnl)
           .build();
