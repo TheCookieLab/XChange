@@ -409,10 +409,15 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
     }
 
     Instrument instrument = ((CancelOrderByInstrument) orderParams).getInstrument();
-
-    return cancelAllOpenOrdersAllProducts(instrument).stream()
-        .map(binanceCancelledOrder -> Long.toString(binanceCancelledOrder.orderId))
-        .collect(Collectors.toList());
+    if (instrument instanceof FuturesContract) {
+      // no orderId, only retcode and simple message for futures
+      String result = cancelAllOpenOrdersAllFuturesProducts(instrument);
+      if(result.contains("\\\"code\":200"))
+        return new ArrayList<>();
+    }
+      return cancelAllOpenOrdersAllProducts(instrument).stream()
+          .map(binanceCancelledOrder -> Long.toString(binanceCancelledOrder.orderId))
+          .collect(Collectors.toList());
   }
 
   @Override

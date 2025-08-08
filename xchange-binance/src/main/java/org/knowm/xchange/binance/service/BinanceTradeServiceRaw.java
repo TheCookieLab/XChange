@@ -474,19 +474,27 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
       throws IOException, BinanceException {
     return decorateApiCall(
         () ->
-            (pair instanceof FuturesContract)
-                ? binanceFutures.cancelAllFutureOpenOrders(
-                BinanceAdapters.toSymbol(pair),
-                getRecvWindow(),
-                getTimestampFactory(),
-                super.apiKey,
-                super.signatureCreator)
-                : binance.cancelAllOpenOrders(
+            binance.cancelAllOpenOrders(
                     BinanceAdapters.toSymbol(pair),
                     getRecvWindow(),
                     getTimestampFactory(),
                     super.apiKey,
                     super.signatureCreator))
+        .withRetry(retry("cancelAllOpenOrders"))
+        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
+        .call();
+  }
+
+  public String cancelAllOpenOrdersAllFuturesProducts(Instrument pair)
+      throws IOException, BinanceException {
+    return decorateApiCall(
+        () ->
+            binanceFutures.cancelAllFutureOpenOrders(
+                BinanceAdapters.toSymbol(pair),
+                getRecvWindow(),
+                getTimestampFactory(),
+                super.apiKey,
+                super.signatureCreator))
         .withRetry(retry("cancelAllOpenOrders"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
