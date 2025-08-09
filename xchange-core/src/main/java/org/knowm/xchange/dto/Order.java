@@ -6,9 +6,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Random;
 import java.util.Set;
 import lombok.Setter;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -27,7 +27,7 @@ import org.knowm.xchange.instrument.Instrument;
 public abstract class Order implements Serializable {
 
   private static final long serialVersionUID = -8132103343647993249L;
-  private static final Random random = new Random();
+  private static final SecureRandom random = new SecureRandom();
 
   /** Order type i.e. bid or ask */
   private final OrderType type;

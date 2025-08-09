@@ -1,7 +1,7 @@
 package org.knowm.xchange.bitso.util;
 
+import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.Random;
 
 /**
  * Utility class for generating Bitso API Nonce v2 compatible values.
@@ -13,7 +13,7 @@ import java.util.Random;
  */
 public class BitsoNonceV2Utils {
 
-  private static final Random random = new Random();
+  private static final SecureRandom random = new SecureRandom();
 
   /**
    * Generates a Nonce v2 compatible value using the current timestamp and a 6-digit random salt.
