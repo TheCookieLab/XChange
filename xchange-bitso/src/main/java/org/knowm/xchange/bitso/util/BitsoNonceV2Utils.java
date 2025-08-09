@@ -13,8 +13,6 @@ import java.time.Instant;
  */
 public class BitsoNonceV2Utils {
 
-  private static final SecureRandom random = new SecureRandom();
-
   /**
    * Generates a Nonce v2 compatible value using the current timestamp and a 6-digit random salt.
    *
@@ -43,7 +41,7 @@ public class BitsoNonceV2Utils {
     // Generate random salt with specified number of digits
     int minSalt = (int) Math.pow(10, saltDigits - 1);
     int maxSalt = (int) Math.pow(10, saltDigits) - 1;
-    int salt = random.nextInt(maxSalt - minSalt + 1) + minSalt;
+    int salt = new SecureRandom().nextInt(maxSalt - minSalt + 1) + minSalt;
 
     // Concatenate timestamp and salt
     return Long.parseLong(timestamp + String.valueOf(salt));
@@ -76,7 +74,7 @@ public class BitsoNonceV2Utils {
     // Generate random salt with specified number of digits
     int minSalt = (int) Math.pow(10, saltDigits - 1);
     int maxSalt = (int) Math.pow(10, saltDigits) - 1;
-    int salt = random.nextInt(maxSalt - minSalt + 1) + minSalt;
+    int salt = new SecureRandom().nextInt(maxSalt - minSalt + 1) + minSalt;
 
     // Concatenate timestamp and salt
     return Long.parseLong(timestamp + String.valueOf(salt));
