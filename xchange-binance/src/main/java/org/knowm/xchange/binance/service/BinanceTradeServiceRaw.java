@@ -24,6 +24,7 @@ import org.knowm.xchange.binance.dto.trade.BinanceTrade;
 import org.knowm.xchange.binance.dto.trade.OrderSide;
 import org.knowm.xchange.binance.dto.trade.OrderType;
 import org.knowm.xchange.binance.dto.trade.TimeInForce;
+import org.knowm.xchange.binance.dto.trade.futures.BinanceChangeStatus;
 import org.knowm.xchange.binance.dto.trade.futures.BinanceFutureNewOrder;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -485,7 +486,7 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
         .call();
   }
 
-  public String cancelAllOpenOrdersAllFuturesProducts(Instrument pair)
+  public BinanceChangeStatus cancelAllOpenOrdersAllFuturesProducts(Instrument pair)
       throws IOException, BinanceException {
     return decorateApiCall(
         () ->

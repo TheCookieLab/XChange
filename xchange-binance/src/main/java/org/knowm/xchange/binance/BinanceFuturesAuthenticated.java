@@ -23,6 +23,7 @@ import org.knowm.xchange.binance.dto.trade.BinanceTrade;
 import org.knowm.xchange.binance.dto.trade.OrderSide;
 import org.knowm.xchange.binance.dto.trade.OrderType;
 import org.knowm.xchange.binance.dto.trade.TimeInForce;
+import org.knowm.xchange.binance.dto.trade.futures.BinanceChangeStatus;
 import org.knowm.xchange.binance.dto.trade.futures.BinanceFutureNewOrder;
 import org.knowm.xchange.binance.dto.trade.futures.BinanceSetLeverage;
 import si.mazi.rescu.ParamsDigest;
@@ -555,7 +556,7 @@ public interface BinanceFuturesAuthenticated extends BinanceFutures {
    */
   @DELETE
   @Path("fapi/v1/allOpenOrders")
-  String cancelAllFutureOpenOrders(
+  BinanceChangeStatus cancelAllFutureOpenOrders(
       @QueryParam("symbol") String symbol,
       @QueryParam("recvWindow") Long recvWindow,
       @QueryParam("timestamp") SynchronizedValueFactory<Long> timestamp,
@@ -565,7 +566,6 @@ public interface BinanceFuturesAuthenticated extends BinanceFutures {
 
   /**
    * Get User Commission Rate for a Future symbol.
-   *
    * @param symbol
    * @param recvWindow optional
    * @param timestamp

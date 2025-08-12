@@ -17,6 +17,7 @@ import org.knowm.xchange.binance.dto.trade.BinanceTradeHistoryParams;
 import org.knowm.xchange.binance.dto.trade.OrderType;
 import org.knowm.xchange.binance.dto.trade.TimeInForce;
 import org.knowm.xchange.binance.dto.trade.TrailingFlag;
+import org.knowm.xchange.binance.dto.trade.futures.BinanceChangeStatus;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -411,13 +412,16 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
     Instrument instrument = ((CancelOrderByInstrument) orderParams).getInstrument();
     if (instrument instanceof FuturesContract) {
       // no orderId, only retcode and simple message for futures
-      String result = cancelAllOpenOrdersAllFuturesProducts(instrument);
-      if(result.contains("\\\"code\":200"))
+      BinanceChangeStatus result = cancelAllOpenOrdersAllFuturesProducts(instrument);
+      if (result.getCode() == 200) {
         return new ArrayList<>();
+      } else {
+        throw new BinanceException(result.getCode(),result.getMsg());
+      }
     }
-      return cancelAllOpenOrdersAllProducts(instrument).stream()
-          .map(binanceCancelledOrder -> Long.toString(binanceCancelledOrder.orderId))
-          .collect(Collectors.toList());
+    return cancelAllOpenOrdersAllProducts(instrument).stream()
+        .map(binanceCancelledOrder -> Long.toString(binanceCancelledOrder.orderId))
+        .collect(Collectors.toList());
   }
 
   @Override
