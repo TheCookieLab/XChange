@@ -97,7 +97,7 @@ public interface BinanceFuturesAuthenticated extends BinanceFutures {
       @FormParam("type") OrderType type,
       @FormParam("timeInForce") TimeInForce timeInForce,
       @FormParam("quantity") BigDecimal quantity,
-      @FormParam("reduceOnly") boolean reduceOnly,
+      @FormParam("reduceOnly") Boolean reduceOnly,
       @FormParam("price") BigDecimal price,
       @FormParam("newClientOrderId") String newClientOrderId,
       @FormParam("stopPrice") BigDecimal stopPrice,

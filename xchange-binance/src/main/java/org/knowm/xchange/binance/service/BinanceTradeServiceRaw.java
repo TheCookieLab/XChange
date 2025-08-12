@@ -213,7 +213,7 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
       OrderType type,
       TimeInForce timeInForce,
       BigDecimal quantity,
-      boolean reduceOnly,
+      Boolean reduceOnly,
       BigDecimal price,
       String newClientOrderId,
       BigDecimal stopPrice,
