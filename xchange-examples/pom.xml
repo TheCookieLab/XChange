@@ -111,11 +111,7 @@
             <artifactId>xchange-btcturk</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-ccex</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <!-- XChange Cex.io exchange support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
