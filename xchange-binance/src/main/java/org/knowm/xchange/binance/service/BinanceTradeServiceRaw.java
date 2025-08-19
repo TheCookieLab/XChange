@@ -1,5 +1,6 @@
 package org.knowm.xchange.binance.service;
 
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 import static org.knowm.xchange.binance.BinanceResilience.ORDERS_PER_10_SECONDS_RATE_LIMITER;
 import static org.knowm.xchange.binance.BinanceResilience.ORDERS_PER_MINUTE_RATE_LIMITER;
 import static org.knowm.xchange.binance.BinanceResilience.ORDERS_PER_SECOND_RATE_LIMITER;
@@ -39,7 +40,52 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
   }
 
   public List<BinanceOrder> openOrdersAllProducts() throws BinanceException, IOException {
-    return openOrdersAllProducts(null);
+    switch (exchange.getExchangeSpecification().getExchangeSpecificParametersItem(EXCHANGE_TYPE).toString()) {
+      case "FUTURES":
+        return decorateApiCall(
+            () -> binanceFutures.futureOpenOrders(
+                null,
+                getRecvWindow(),
+                getTimestampFactory(),
+                apiKey,
+                signatureCreator))
+            .withRetry(retry("openOrders"))
+            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(null))
+            .call();
+      case "INVERSE":
+        return decorateApiCall(
+            () -> inverseBinanceFutures.futureOpenInverseOrders(
+                null,
+                getRecvWindow(),
+                getTimestampFactory(),
+                apiKey,
+                signatureCreator))
+            .withRetry(retry("openOrders"))
+            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(null))
+            .call();
+      case "PORTFOLIO_MARGIN":
+        return decorateApiCall(
+            () -> binanceFutures.futureOpenPortfolioMarginOrders(
+                null,
+                getRecvWindow(),
+                getTimestampFactory(),
+                apiKey,
+                signatureCreator))
+            .withRetry(retry("openOrders"))
+            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(null))
+            .call();
+      default: // i.e. SPOT
+        return decorateApiCall(
+            () -> binance.openOrders(
+                null,
+                getRecvWindow(),
+                getTimestampFactory(),
+                apiKey,
+                signatureCreator))
+            .withRetry(retry("openOrders"))
+            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(null))
+            .call();
+    }
   }
 
   public List<BinanceOrder> openOrdersAllProducts(Instrument pair)
@@ -607,8 +653,11 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
   }
 
   protected int openOrdersPermits(Instrument pair) {
-    return pair != null ? 1 : 40;
-  }
+    if (exchange.getExchangeSpecification().getExchangeSpecificParametersItem(EXCHANGE_TYPE).equals("SPOT"))
+        return pair != null ? 6 : 80;
+    else // FUTURES,INVERSE and MARGIN
+        return pair != null ? 1 : 40;
+    }
 
 //  protected int myTradesPermits(Integer limit) {
 //    if (limit != null && limit > 500) {
