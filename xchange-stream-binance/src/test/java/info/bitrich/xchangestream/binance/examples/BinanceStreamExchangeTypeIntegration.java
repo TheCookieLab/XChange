@@ -1,4 +1,4 @@
-package info.bitrich.xchangestream.binance;
+package info.bitrich.xchangestream.binance.examples;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.knowm.xchange.Exchange.USE_SANDBOX;
@@ -6,6 +6,7 @@ import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
 import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
 
+import info.bitrich.xchangestream.binance.BinanceStreamingExchange;
 import info.bitrich.xchangestream.binancefuture.BinanceFutureStreamingExchange;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;

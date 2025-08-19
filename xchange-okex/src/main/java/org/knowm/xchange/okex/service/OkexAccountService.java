@@ -1,5 +1,7 @@
 package org.knowm.xchange.okex.service;
 
+import static org.knowm.xchange.okex.OkexAdapters.adaptInstrument;
+import static org.knowm.xchange.okex.OkexAdapters.adaptTradeMode;
 import static org.knowm.xchange.okex.OkexAdapters.adaptTradingFee;
 import static org.knowm.xchange.okex.dto.OkexInstType.SPOT;
 import static org.knowm.xchange.okex.dto.OkexInstType.SWAP;
@@ -19,7 +21,11 @@ import org.knowm.xchange.okex.OkexExchange;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
-import org.knowm.xchange.okex.dto.account.*;
+import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
+import org.knowm.xchange.okex.dto.account.OkexAssetBalance;
+import org.knowm.xchange.okex.dto.account.OkexTradeFee;
+import org.knowm.xchange.okex.dto.account.OkexWalletBalance;
+import org.knowm.xchange.okex.dto.account.OkexWithdrawalResponse;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
@@ -90,6 +96,16 @@ public class OkexAccountService extends OkexAccountServiceRaw implements Account
       result.putAll(getTradeFeesSWAP());
     }
     return result;
+  }
+
+  public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
+    return setLeverage(
+            adaptInstrument(instrument),
+            "",
+            String.valueOf(leverage),
+            adaptTradeMode(instrument, exchange.accountLevel),
+            "")
+        .isSuccess();
   }
 
   private Map<Instrument, Fee> getTradeFeesSPOT() throws IOException {

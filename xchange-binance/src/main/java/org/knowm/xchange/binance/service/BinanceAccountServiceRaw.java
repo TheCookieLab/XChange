@@ -26,8 +26,10 @@ import org.knowm.xchange.binance.dto.account.TransferSubUserHistory;
 import org.knowm.xchange.binance.dto.account.WithdrawResponse;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureAccountInformation;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureCommissionRate;
+import org.knowm.xchange.binance.dto.trade.futures.BinanceSetLeverage;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.instrument.Instrument;
 
 public class BinanceAccountServiceRaw extends BinanceBaseService {
 
@@ -280,6 +282,21 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     super.signatureCreator))
         .withRetry(retry("commissionRate"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 20)
+        .call();
+  }
+
+  public BinanceSetLeverage setLeverageRaw(Instrument instrument, int leverage) throws IOException {
+    return decorateApiCall(
+        () ->
+            binanceFutures.setLeverage(
+                BinanceAdapters.toSymbol(instrument, false),
+                leverage,
+                getRecvWindow(),
+                getTimestampFactory(),
+                apiKey,
+                signatureCreator))
+        .withRetry(retry("setLeverage"))
+        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 }

@@ -1,11 +1,19 @@
 package org.knowm.xchange.binance;
 
+
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.knowm.xchange.Exchange.USE_SANDBOX;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -27,6 +35,7 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
+import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,11 +62,12 @@ public class BinanceTest {
         (properties.getProperty("secret") == null)
             ? System.getenv("binance-api-secret")
             : properties.getProperty("secret");
-
     ExchangeSpecification spec = new ExchangeSpecification(BinanceExchange.class);
     spec.setApiKey(apiKey);
     spec.setSecretKey(apiSecret);
+    spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, SPOT);
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
+    AuthUtils.setApiAndSecretKey(spec, "binance-demo");
     binanceExchange = ExchangeFactory.INSTANCE.createExchange(spec);
   }
 
@@ -134,7 +144,7 @@ public class BinanceTest {
     logger.info(
         "CancelOrder: "
             + binanceExchange
-                .getTradeService()
-                .cancelOrder(new BinanceCancelOrderParams(instrument, orderId)));
+            .getTradeService()
+            .cancelOrder(new BinanceCancelOrderParams(instrument, orderId,"")));
   }
 }
