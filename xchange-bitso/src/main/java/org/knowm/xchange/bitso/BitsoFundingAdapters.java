@@ -27,34 +27,34 @@ public class BitsoFundingAdapters {
 
   /** Convert BitsoFunding to FundingRecord */
   public static FundingRecord adaptFundingRecord(BitsoFunding funding) {
-    return new FundingRecord(
-        getIfExists(funding.getDetails(), "receiving_address", funding.getFundingId()),
-        funding.getCreatedAt(),
-        Currency.getInstance(BitsoAdapters.fromBitsoCurrency(funding.getCurrency())),
-        funding.getAmount(),
-        funding.getFundingId(),
-        getIfExists(funding.getDetails(), "tx_hash", funding.getTxHash()),
-        FundingRecord.Type.DEPOSIT,
-        adaptFundingStatus(funding.getStatus().name().toLowerCase()),
-        null, // balance
-        funding.getFee(),
-        funding.getDetails() != null ? funding.getDetails().toString() : null);
+    return FundingRecord.builder()
+        .address(getIfExists(funding.getDetails(), "receiving_address", funding.getFundingId()))
+        .date(funding.getCreatedAt())
+        .currency(Currency.getInstance(BitsoAdapters.fromBitsoCurrency(funding.getCurrency())))
+        .amount(funding.getAmount())
+        .internalId(funding.getFundingId())
+        .blockchainTransactionHash(getIfExists(funding.getDetails(), "tx_hash", funding.getTxHash()))
+        .type(FundingRecord.Type.DEPOSIT)
+        .status(adaptFundingStatus(funding.getStatus().name().toLowerCase()))
+        .fee(funding.getFee())
+        .description(funding.getDetails() != null ? funding.getDetails().toString() : null)
+        .build();
   }
 
   /** Convert BitsoWithdrawal to FundingRecord */
   public static FundingRecord adaptFundingRecord(BitsoWithdrawal withdrawal) {
-    return new FundingRecord(
-        getIfExists(withdrawal.getDetails(), "receiving_address", withdrawal.getWithdrawalId()),
-        withdrawal.getCreatedAt(),
-        Currency.getInstance(BitsoAdapters.fromBitsoCurrency(withdrawal.getCurrency())),
-        withdrawal.getAmount(),
-        withdrawal.getWithdrawalId(),
-        getIfExists(withdrawal.getDetails(), "tx_hash", withdrawal.getTxHash()),
-        FundingRecord.Type.WITHDRAWAL,
-        adaptFundingStatus(withdrawal.getStatus()),
-        null, // balance
-        withdrawal.getFee(),
-        withdrawal.getDetails() != null ? withdrawal.getDetails().toString() : null);
+    return FundingRecord.builder()
+        .address(getIfExists(withdrawal.getDetails(), "receiving_address", withdrawal.getWithdrawalId()))
+        .date(withdrawal.getCreatedAt())
+        .currency(Currency.getInstance(BitsoAdapters.fromBitsoCurrency(withdrawal.getCurrency())))
+        .amount(withdrawal.getAmount())
+        .internalId(withdrawal.getWithdrawalId())
+        .blockchainTransactionHash(getIfExists(withdrawal.getDetails(), "tx_hash", withdrawal.getTxHash()))
+        .type(FundingRecord.Type.WITHDRAWAL)
+        .status(adaptFundingStatus(withdrawal.getStatus()))
+        .fee(withdrawal.getFee())
+        .description(withdrawal.getDetails() != null ? withdrawal.getDetails().toString() : null)
+        .build();
   }
 
   /** Convert list of BitsoFunding to list of FundingRecord */

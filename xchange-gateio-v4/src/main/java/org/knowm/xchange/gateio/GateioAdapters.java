@@ -235,14 +235,14 @@ public class GateioAdapters {
   }
 
   public FundingRecord toFundingRecords(GateioAccountBookRecord gateioAccountBookRecord) {
-    return new FundingRecord.Builder()
-        .setInternalId(gateioAccountBookRecord.getId())
-        .setDate(Date.from(gateioAccountBookRecord.getTimestamp()))
-        .setCurrency(gateioAccountBookRecord.getCurrency())
-        .setBalance(gateioAccountBookRecord.getBalance())
-        .setType(gateioAccountBookRecord.getType())
-        .setAmount(gateioAccountBookRecord.getChange().abs())
-        .setDescription(gateioAccountBookRecord.getTypeDescription())
+    return FundingRecord.builder()
+        .internalId(gateioAccountBookRecord.getId())
+        .date(Date.from(gateioAccountBookRecord.getTimestamp()))
+        .currency(gateioAccountBookRecord.getCurrency())
+        .balance(gateioAccountBookRecord.getBalance())
+        .type(gateioAccountBookRecord.getType())
+        .amount(gateioAccountBookRecord.getChange().abs())
+        .description(gateioAccountBookRecord.getTypeDescription())
         .build();
   }
 }
