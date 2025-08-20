@@ -70,7 +70,6 @@
         <module>xchange-coinegg</module>
         <module>xchange-coinex</module>
         <module>xchange-coinfloor</module>
-        <module>xchange-coingi</module>
         <module>xchange-coinjar</module>
         <module>xchange-coinmarketcap</module>
         <module>xchange-coinmate</module>

@@ -151,12 +151,7 @@
             <artifactId>xchange-coinegg</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- Xchange Coingi exchange support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-coingi</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>xchange-coinmate</artifactId>
