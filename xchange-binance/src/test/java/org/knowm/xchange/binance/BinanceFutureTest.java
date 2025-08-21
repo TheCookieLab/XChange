@@ -148,6 +148,13 @@ public class BinanceFutureTest {
         openOrders.stream().anyMatch(openOrder -> openOrder.getInstrument().equals(instrument)))
         .isTrue();
 
+    // Get all instruments OpenOrders
+    List<LimitOrder> allOpenOrders =binanceExchange
+        .getTradeService()
+        .getOpenOrders(new DefaultOpenOrdersParamInstrument(null))
+        .getOpenOrders();
+    logger.info("All OpenOrders: " + allOpenOrders);
+
     // Get order
     Collection<Order> order =
         binanceExchange

@@ -20,12 +20,15 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPosition.Type;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.account.Wallet;
+import org.knowm.xchange.dto.account.Wallet.WalletFeature;
 import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.FundingRate;
@@ -34,6 +37,7 @@ import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
 import org.knowm.xchange.dto.meta.CurrencyMetaData;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
@@ -48,6 +52,7 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
+import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk.PositionData;
 import org.knowm.xchange.okex.dto.account.OkexAssetBalance;
 import org.knowm.xchange.okex.dto.account.OkexPosition;
 import org.knowm.xchange.okex.dto.account.OkexTradeFee;
@@ -102,13 +107,13 @@ public class OkexAdapters {
                   .build());
         });
 
-    return new UserTrades(userTradeList, Trades.TradeSortType.SortByTimestamp);
+    return new UserTrades(userTradeList, TradeSortType.SortByTimestamp);
   }
 
   public static LimitOrder adaptOrder(OkexOrderDetails order, ExchangeMetaData exchangeMetaData) {
     Instrument instrument = adaptOkexInstrumentId(order.getInstrumentId());
     return new LimitOrder(
-        "buy".equals(order.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK,
+        "buy".equals(order.getSide()) ? OrderType.BID : OrderType.ASK,
         convertContractSizeToVolume(
             new BigDecimal(order.getAmount()),
             instrument,
@@ -123,8 +128,8 @@ public class OkexAdapters {
         new BigDecimal(order.getAccumulatedFill()),
         new BigDecimal(order.getFee()),
         "live".equals(order.getState())
-            ? Order.OrderStatus.OPEN
-            : Order.OrderStatus.valueOf(order.getState().toUpperCase(Locale.ENGLISH)),
+            ? OrderStatus.OPEN
+            : OrderStatus.valueOf(order.getState().toUpperCase(Locale.ENGLISH)),
         order.getClientOrderId());
   }
 
@@ -132,7 +137,7 @@ public class OkexAdapters {
       OkexOrderDetails okexOrder, ExchangeMetaData exchangeMetaData) {
     Instrument instrument = adaptOkexInstrumentId(okexOrder.getInstrumentId());
     OrderType orderType =
-        "buy".equals(okexOrder.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK;
+        "buy".equals(okexOrder.getSide()) ? OrderType.BID : OrderType.ASK;
     Order order;
     if (okexOrder.getOrderType().equals(OkexOrderType.market.name())) {
       order =
@@ -154,8 +159,8 @@ public class OkexAdapters {
               .userReference(okexOrder.getClientOrderId())
               .orderStatus(
                   "live".equals(okexOrder.getState())
-                      ? Order.OrderStatus.OPEN
-                      : Order.OrderStatus.valueOf(okexOrder.getState().toUpperCase(Locale.ENGLISH)))
+                      ? OrderStatus.OPEN
+                      : OrderStatus.valueOf(okexOrder.getState().toUpperCase(Locale.ENGLISH)))
               .build();
     } else {
       order =
@@ -182,8 +187,8 @@ public class OkexAdapters {
               .userReference(okexOrder.getClientOrderId())
               .orderStatus(
                   "live".equals(okexOrder.getState())
-                      ? Order.OrderStatus.OPEN
-                      : Order.OrderStatus.valueOf(okexOrder.getState().toUpperCase(Locale.ENGLISH)))
+                      ? OrderStatus.OPEN
+                      : OrderStatus.valueOf(okexOrder.getState().toUpperCase(Locale.ENGLISH)))
               .build();
     }
     return order;
@@ -223,7 +228,7 @@ public class OkexAdapters {
     return OkexOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
         .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
-        .side(order.getType() == Order.OrderType.BID ? "buy" : "sell")
+        .side(getSide(order))
         .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
         // support Futures/Swap capabilities of Okex, till then it should be null to
         // perform "net" orders
@@ -274,7 +279,7 @@ public class OkexAdapters {
     return OkexOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
         .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
-        .side(order.getType() == Order.OrderType.BID ? "buy" : "sell")
+        .side(getSide(order))
         .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
         // support Futures/Swap capabilities of Okex, till then it should be null to
         // perform "net" orders
@@ -290,6 +295,27 @@ public class OkexAdapters {
         .amount(convertVolumeToContractSize(order, exchangeMetaData))
         .price(order.getLimitPrice().toPlainString())
         .build();
+  }
+
+  private static String getSide(Order order) {
+    String side= "";
+    switch (order.getType()) {
+      case BID:
+        side = "buy";
+        break;
+      case ASK:
+        side = "sell";
+        break;
+      case EXIT_ASK:
+        side = "buy";
+        order.getOrderFlags().add(OkexOrderFlags.REDUCE_ONLY);
+        break;
+      case EXIT_BID:
+        side = "sell";
+        order.getOrderFlags().add(OkexOrderFlags.REDUCE_ONLY);
+        break;
+    }
+    return side;
   }
 
   public static LimitOrder adaptLimitOrder(
@@ -354,7 +380,7 @@ public class OkexAdapters {
       BigDecimal amount,
       BigDecimal price,
       Instrument instrument,
-      Order.OrderType orderType,
+      OrderType orderType,
       Date timestamp) {
 
     return new LimitOrder(orderType, amount, instrument, "", timestamp, price);
@@ -435,9 +461,9 @@ public class OkexAdapters {
     return new Trades(trades);
   }
 
-  public static Order.OrderType adaptOkexOrderSideToOrderType(String okexOrderSide) {
+  public static OrderType adaptOkexOrderSideToOrderType(String okexOrderSide) {
 
-    return okexOrderSide.equals("buy") ? Order.OrderType.BID : Order.OrderType.ASK;
+    return okexOrderSide.equals("buy") ? OrderType.BID : OrderType.ASK;
   }
 
   private static Currency adaptCurrency(OkexCurrency currency) {
@@ -549,7 +575,7 @@ public class OkexAdapters {
 
     return Wallet.Builder.from(balances)
         .id(TRADING_WALLET_ID)
-        .features(new HashSet<>(Collections.singletonList(Wallet.WalletFeature.TRADING)))
+        .features(new HashSet<>(Collections.singletonList(WalletFeature.TRADING)))
         .build();
   }
 
@@ -569,7 +595,7 @@ public class OkexAdapters {
 
     return Wallet.Builder.from(balances)
         .id(FOUNDING_WALLET_ID)
-        .features(new HashSet<>(Collections.singletonList(Wallet.WalletFeature.FUNDING)))
+        .features(new HashSet<>(Collections.singletonList(WalletFeature.FUNDING)))
         .build();
   }
 
@@ -625,16 +651,16 @@ public class OkexAdapters {
     return new OpenPositions(openPositions);
   }
 
-  public static OpenPosition.Type adaptOpenPositionType(OkexPosition okexPosition) {
+  public static Type adaptOpenPositionType(OkexPosition okexPosition) {
     switch (okexPosition.getPositionSide()) {
       case "long":
-        return OpenPosition.Type.LONG;
+        return Type.LONG;
       case "short":
-        return OpenPosition.Type.SHORT;
+        return Type.SHORT;
       case "net":
         return (okexPosition.getPosition().compareTo(BigDecimal.ZERO) >= 0)
-            ? OpenPosition.Type.LONG
-            : OpenPosition.Type.SHORT;
+            ? Type.LONG
+            : Type.SHORT;
       default:
         throw new UnsupportedOperationException();
     }
@@ -660,7 +686,7 @@ public class OkexAdapters {
       List<OkexAccountPositionRisk> accountPositionRiskData) {
     BigDecimal totalPositionValueInUsd = BigDecimal.ZERO;
 
-    for (OkexAccountPositionRisk.PositionData positionData :
+    for (PositionData positionData :
         accountPositionRiskData.get(0).getPositionData()) {
       totalPositionValueInUsd = totalPositionValueInUsd.add(positionData.getNotionalUsdValue());
     }
@@ -678,7 +704,7 @@ public class OkexAdapters {
                 ? totalPositionValueInUsd.divide(
                     accountPositionRiskData.get(0).getAdjustEquity(), 3, RoundingMode.HALF_EVEN)
                 : BigDecimal.ZERO)
-        .features(new HashSet<>(Collections.singletonList(Wallet.WalletFeature.FUTURES_TRADING)))
+        .features(new HashSet<>(Collections.singletonList(WalletFeature.FUTURES_TRADING)))
         .build();
   }
 
@@ -750,14 +776,14 @@ public class OkexAdapters {
       BigDecimal volume = convertContractSizeToVolume(ask.getVolume(), instrument, contractValue);
       OrderBookUpdate o =
           new OrderBookUpdate(
-              Order.OrderType.ASK, volume, instrument, ask.getPrice(), date, volume);
+              OrderType.ASK, volume, instrument, ask.getPrice(), date, volume);
       orderBookUpdates.add(o);
     }
     for (OkexPublicOrder bid : bids) {
       BigDecimal volume = convertContractSizeToVolume(bid.getVolume(), instrument, contractValue);
       OrderBookUpdate o =
           new OrderBookUpdate(
-              Order.OrderType.BID, volume, instrument, bid.getPrice(), date, volume);
+              OrderType.BID, volume, instrument, bid.getPrice(), date, volume);
       orderBookUpdates.add(o);
     }
     return orderBookUpdates;

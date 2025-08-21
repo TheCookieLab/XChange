@@ -5,10 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.ToString;
 
-  @ToString
-  @Getter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public class BinanceChangeStatus {
+@ToString
+@Getter
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class BinanceChangeStatus {
     private final boolean success;
     private final int code;
     private final String msg;
@@ -20,4 +20,4 @@ import lombok.ToString;
       this.code = code;
       this.msg = msg;
     }
-  }
+}
