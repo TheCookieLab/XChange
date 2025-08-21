@@ -1,5 +1,7 @@
 package org.knowm.xchange.binance.service;
 
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -76,10 +78,19 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
       } else if (params instanceof OpenOrdersParamCurrencyPair) {
         pair = ((OpenOrdersParamCurrencyPair) params).getCurrencyPair();
       }
-
+      // based on EXCHANGE_TYPE
+      if (pair == null) {
+        switch (exchange.getExchangeSpecification().getExchangeSpecificParametersItem(EXCHANGE_TYPE).toString()) {
+          case "SPOT":
+            return BinanceAdapters.adaptOpenOrders(openOrdersAllProducts(), false);
+          case "FUTURES":
+          case "INVERSE":
+          case "PORTFOLIO_MARGIN":
+            return BinanceAdapters.adaptOpenOrders(openOrdersAllProducts(), true);
+        }
+      }// based on instrument
       return BinanceAdapters.adaptOpenOrders(
           openOrdersAllProducts(pair), pair instanceof FuturesContract);
-
     } catch (BinanceException e) {
       throw BinanceErrorAdapter.adapt(e);
     }
@@ -429,13 +440,14 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException {
     if (exchange.isFuturesEnabled()) {
-      if((limitOrder.getId()!= null && !limitOrder.getId().isEmpty()) || (limitOrder.getUserReference() != null && !limitOrder.getUserReference().isEmpty() )) {
+      if ((limitOrder.getId() != null && !limitOrder.getId().isEmpty()) || (limitOrder.getUserReference() != null && !limitOrder.getUserReference().isEmpty())) {
         Long orderIdLong = BinanceAdapters.id(limitOrder.getId());
         return modifyOrder(orderIdLong, limitOrder.getUserReference(),
             limitOrder.getInstrument(), BinanceAdapters.convert(limitOrder.getType()), limitOrder.getOriginalAmount(),
             limitOrder.getLimitPrice()).getOrderId();
-      } else
+      } else {
         throw new ExchangeException("You need to provide the orderId OR userReference to change an order.");
+      }
     } else {
       // PortfolioMargin mode and SPOT mode
       // SPOT not support change order, only cancel and place again
