@@ -9,7 +9,11 @@ public enum TimeInForce implements IOrderFlags {
   GTC, // Good Till Cancel
   GTX, // Good Till Crossing (Post Only)
   FOK, // Fill or Kill
-  IOC; // Immediate or Cancel
+  IOC, // Immediate or Cancel
+  GTE_GTC, // Good Till Expired or Canceled
+  DAY, // Day Order
+  GTD, // Good Till Date
+  ;
 
   @JsonCreator
   public static TimeInForce getTimeInForce(String s) {
