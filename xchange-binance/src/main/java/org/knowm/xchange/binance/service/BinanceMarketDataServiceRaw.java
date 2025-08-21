@@ -96,10 +96,14 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
   public List<BinanceKline> klines(
       Instrument pair, KlineInterval interval, Integer limit, Long startTime, Long endTime)
       throws IOException {
+    boolean isFutures = pair instanceof FuturesContract;
     List<Object[]> raw =
         decorateApiCall(
             () ->
-                binance.klines(
+                isFutures
+                ? binanceFutures.klines(
+                    BinanceAdapters.toSymbol(pair), interval.code(), limit, startTime, endTime)
+                : binance.klines(
                     BinanceAdapters.toSymbol(pair), interval.code(), limit, startTime, endTime))
             .withRetry(retry("klines"))
             .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
