@@ -108,7 +108,6 @@
         <module>xchange-paymium</module>
         <module>xchange-poloniex</module>
         <module>xchange-ripple</module>
-        <module>xchange-serum</module>
         <module>xchange-simulated</module>
 
         <module>xchange-stream-binance</module>
@@ -138,7 +137,6 @@
         <module>xchange-stream-okcoin</module>
         <module>xchange-stream-okex</module>
         <module>xchange-stream-poloniex2</module>
-        <module>xchange-stream-serum</module>
         <module>xchange-stream-service-core</module>
         <module>xchange-stream-service-netty</module>
         <module>xchange-stream-service-pubnub</module>
