@@ -441,19 +441,18 @@ public final class CoinsphAdapters {
         status = FundingRecord.Status.PROCESSING;
     }
 
-    return new FundingRecord.Builder()
-        .setAddress(depositRecord.getAddress())
-        .setAddressTag(depositRecord.getAddressTag())
-        .setAmount(depositRecord.getAmount())
-        .setCurrency(new Currency(depositRecord.getCoin()))
-        .setDate(new Date(depositRecord.getInsertTime()))
-        .setFee(BigDecimal.ZERO) // Deposits typically don't have fees
-        .setInternalId(depositRecord.getId())
-        .setInternalId(depositRecord.getId())
-        .setStatus(status)
-        .setType(FundingRecord.Type.DEPOSIT)
-        .setDescription("Deposit via " + depositRecord.getNetwork())
-        .setBlockchainTransactionHash(depositRecord.getTxId())
+    return FundingRecord.builder()
+        .address(depositRecord.getAddress())
+        .addressTag(depositRecord.getAddressTag())
+        .amount(depositRecord.getAmount())
+        .currency(new Currency(depositRecord.getCoin()))
+        .date(new Date(depositRecord.getInsertTime()))
+        .fee(BigDecimal.ZERO) // Deposits typically don't have fees
+        .internalId(depositRecord.getId())
+        .status(status)
+        .type(FundingRecord.Type.DEPOSIT)
+        .description("Deposit via " + depositRecord.getNetwork())
+        .blockchainTransactionHash(depositRecord.getTxId())
         .build();
   }
 
@@ -487,18 +486,18 @@ public final class CoinsphAdapters {
       description = "Withdrawal via " + withdrawalRecord.getNetwork();
     }
 
-    return new FundingRecord.Builder()
-        .setAddress(withdrawalRecord.getAddress())
-        .setAddressTag(withdrawalRecord.getAddressTag())
-        .setAmount(withdrawalRecord.getAmount())
-        .setCurrency(new Currency(withdrawalRecord.getCoin()))
-        .setDate(new Date(withdrawalRecord.getApplyTime()))
-        .setFee(withdrawalRecord.getTransactionFee())
-        .setInternalId(withdrawalRecord.getId())
-        .setStatus(status)
-        .setType(FundingRecord.Type.WITHDRAWAL)
-        .setDescription(description)
-        .setBlockchainTransactionHash(withdrawalRecord.getTxId())
+    return FundingRecord.builder()
+        .address(withdrawalRecord.getAddress())
+        .addressTag(withdrawalRecord.getAddressTag())
+        .amount(withdrawalRecord.getAmount())
+        .currency(new Currency(withdrawalRecord.getCoin()))
+        .date(new Date(withdrawalRecord.getApplyTime()))
+        .fee(withdrawalRecord.getTransactionFee())
+        .internalId(withdrawalRecord.getId())
+        .status(status)
+        .type(FundingRecord.Type.WITHDRAWAL)
+        .description(description)
+        .blockchainTransactionHash(withdrawalRecord.getTxId())
         .build();
   }
 
@@ -533,19 +532,18 @@ public final class CoinsphAdapters {
             ? FundingRecord.Type.DEPOSIT
             : FundingRecord.Type.WITHDRAWAL;
 
-    return new FundingRecord.Builder()
-        .setAddress(fundingRecord.getAddress())
-        .setAddressTag(fundingRecord.getAddressTag())
-        .setAmount(fundingRecord.getAmount())
-        .setCurrency(new Currency(fundingRecord.getCurrency()))
-        .setDate(fundingRecord.getTimestamp())
-        .setFee(fundingRecord.getFee())
-        .setInternalId(fundingRecord.getId())
-        .setInternalId(fundingRecord.getId())
-        .setStatus(status)
-        .setType(type)
-        .setDescription(fundingRecord.getDescription())
-        .setBlockchainTransactionHash(fundingRecord.getTxId())
+    return FundingRecord.builder()
+        .address(fundingRecord.getAddress())
+        .addressTag(fundingRecord.getAddressTag())
+        .amount(fundingRecord.getAmount())
+        .currency(new Currency(fundingRecord.getCurrency()))
+        .date(fundingRecord.getTimestamp())
+        .fee(fundingRecord.getFee())
+        .internalId(fundingRecord.getId())
+        .status(status)
+        .type(type)
+        .description(fundingRecord.getDescription())
+        .blockchainTransactionHash(fundingRecord.getTxId())
         .build();
   }
 

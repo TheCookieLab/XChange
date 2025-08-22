@@ -594,7 +594,7 @@ public interface BinanceAuthenticated extends Binance {
       throws IOException, BinanceException;
 
   /**
-   * Returns a listen key for websocket login.
+   * Returns a listen key for futures websocket login.
    *
    * @param apiKey the api key
    * @return
@@ -604,5 +604,33 @@ public interface BinanceAuthenticated extends Binance {
   @POST
   @Path("/fapi/v1/listenKey")
   BinanceListenKey startFutureUserDataStream(@HeaderParam(X_MBX_APIKEY) String apiKey)
+      throws IOException, BinanceException;
+
+  /**
+   * Keeps the futures authenticated websocket session alive.
+   *
+   * @param apiKey the api key
+   * @param listenKey the api secret
+   * @return
+   * @throws BinanceException
+   * @throws IOException
+   */
+  @PUT
+  @Path("/fapi/v1/listenKey")
+  Map<?, ?> keepAliveFutureUserDataStream(
+      @HeaderParam(X_MBX_APIKEY) String apiKey,
+      @FormParam("listenKey") String listenKey)
+      throws IOException, BinanceException;
+
+  /**
+   * Closes the websocket futures authenticated connection.
+   *
+   * @return
+   * @throws BinanceException
+   * @throws IOException
+   */
+  @DELETE
+  @Path("/fapi/v1/listenKey")
+  Map<?, ?> closeFutureUserDataStream()
       throws IOException, BinanceException;
 }

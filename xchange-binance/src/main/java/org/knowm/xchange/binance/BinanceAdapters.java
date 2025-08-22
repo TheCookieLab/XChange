@@ -145,8 +145,10 @@ public class BinanceAdapters {
   public static OrderSide convert(OrderType type) {
     switch (type) {
       case ASK:
+      case EXIT_BID:
         return OrderSide.SELL;
       case BID:
+      case EXIT_ASK:
         return OrderSide.BUY;
       default:
         throw new RuntimeException("Not supported order type: " + type);
