@@ -1,13 +1,13 @@
 package org.knowm.xchange.bitfinex;
 
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
-
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
+
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 
 /**
  * Sets up the wiremock for exchange

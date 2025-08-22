@@ -1,15 +1,16 @@
 package org.knowm.xchange.bitfinex.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.io.IOException;
-import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitfinex.BitfinexExchangeWiremock;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.service.account.AccountService;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class BitfinexAccountServiceTest extends BitfinexExchangeWiremock {
 
