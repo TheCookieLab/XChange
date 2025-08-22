@@ -1,23 +1,42 @@
 package org.knowm.xchange.bitfinex.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitfinex.BitfinexIntegrationTestParent;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.meta.ExchangeHealth;
-
-import java.io.IOException;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.knowm.xchange.instrument.Instrument;
 
 public class BitfinexMarketDataServiceIntegration extends BitfinexIntegrationTestParent {
 
   @Test
   public void exchange_health() {
     assertThat(exchange.getMarketDataService().getExchangeHealth()).isEqualTo(ExchangeHealth.ONLINE);
+  }
+
+  @Test
+  void valid_currencies() throws IOException {
+    List<Currency> currencies =
+        ((BitfinexMarketDataService) exchange.getMarketDataService()).getCurrencies();
+
+    assertThat(currencies).isNotEmpty();
+    assertThat(currencies.stream().distinct().count()).isEqualTo(currencies.size());
+  }
+
+  @Test
+  void valid_instruments() throws IOException {
+    List<Instrument> instruments =
+        ((BitfinexMarketDataService) exchange.getMarketDataService()).getInstruments();
+
+    assertThat(instruments).isNotEmpty();
+    assertThat(instruments.stream().distinct().count()).isEqualTo(instruments.size());
   }
 
 

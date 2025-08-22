@@ -16,6 +16,7 @@ import org.knowm.xchange.bitfinex.v2.dto.BitfinexExceptionV2;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTicker;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTickerTraidingPair;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.LoanOrderBook;
 import org.knowm.xchange.dto.marketdata.OrderBook;
@@ -271,6 +272,27 @@ public class BitfinexMarketDataService extends BitfinexMarketDataServiceRaw
       return Arrays.stream(bitfinexTickers)
           .filter(bitfinexTicker -> bitfinexTicker instanceof BitfinexTickerTraidingPair)
           .map(BitfinexAdapters::adaptTicker)
+          .collect(Collectors.toList());
+    } catch (BitfinexException e) {
+      throw BitfinexErrorAdapter.adapt(e);
+    }
+  }
+
+
+  public List<Currency> getCurrencies() throws IOException {
+    try {
+      return allCurrencies();
+
+    } catch (BitfinexException e) {
+      throw BitfinexErrorAdapter.adapt(e);
+    }
+  }
+
+  public List<Instrument> getInstruments() throws IOException {
+    try {
+
+      return getExchangeSymbols().stream()
+          .map(Instrument.class::cast)
           .collect(Collectors.toList());
     } catch (BitfinexException e) {
       throw BitfinexErrorAdapter.adapt(e);

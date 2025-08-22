@@ -367,6 +367,23 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
   }
 
 
+  public List<Currency> allCurrencies() throws IOException {
+    List<List<String>> list =
+        decorateApiCall(bitfinexV2::allCurrencies)
+        .withRetry(retry("market-allCurrencies"))
+        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
+        .call();
+
+    if (list.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    return list.get(0).stream()
+        .map(BitfinexAdapters::toCurrency)
+        .collect(Collectors.toList());
+  }
+
+
   public List<CurrencyPair> allCurrencyPairs() throws IOException {
     List<List<String>> list =
         decorateApiCall(bitfinexV2::allCurrencyPairs)
