@@ -17,7 +17,14 @@ import org.knowm.xchange.binance.dto.BinanceException;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureAccountInformation;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureCommissionRate;
 import org.knowm.xchange.binance.dto.account.futures.BinancePosition;
-import org.knowm.xchange.binance.dto.trade.*;
+import org.knowm.xchange.binance.dto.trade.BinanceCancelledOrder;
+import org.knowm.xchange.binance.dto.trade.BinanceNewOrder;
+import org.knowm.xchange.binance.dto.trade.BinanceOrder;
+import org.knowm.xchange.binance.dto.trade.BinanceTrade;
+import org.knowm.xchange.binance.dto.trade.MarginType;
+import org.knowm.xchange.binance.dto.trade.OrderSide;
+import org.knowm.xchange.binance.dto.trade.OrderType;
+import org.knowm.xchange.binance.dto.trade.TimeInForce;
 import org.knowm.xchange.binance.dto.trade.futures.BinanceChangeStatus;
 import org.knowm.xchange.binance.dto.trade.futures.BinanceFutureNewOrder;
 import org.knowm.xchange.binance.dto.trade.futures.BinanceSetLeverage;
@@ -569,7 +576,7 @@ public interface BinanceFuturesAuthenticated extends BinanceFutures {
    */
   @DELETE
   @Path("fapi/v1/allOpenOrders")
-  List<BinanceCancelledOrder> cancelAllFutureOpenOrders(
+  BinanceChangeStatus cancelAllFutureOpenOrders(
       @QueryParam("symbol") String symbol,
       @QueryParam("recvWindow") Long recvWindow,
       @QueryParam("timestamp") SynchronizedValueFactory<Long> timestamp,

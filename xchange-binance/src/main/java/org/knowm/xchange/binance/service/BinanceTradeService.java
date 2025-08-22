@@ -19,6 +19,7 @@ import org.knowm.xchange.binance.dto.trade.BinanceTradeHistoryParams;
 import org.knowm.xchange.binance.dto.trade.OrderType;
 import org.knowm.xchange.binance.dto.trade.TimeInForce;
 import org.knowm.xchange.binance.dto.trade.TrailingFlag;
+import org.knowm.xchange.binance.dto.trade.futures.BinanceChangeStatus;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -159,14 +160,21 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
       throws IOException {
     try {
       String orderId;
-
+      Order.OrderType orderType = order.getType();
       if (order.getInstrument() instanceof FuturesContract) {
+        switch (orderType) {
+          case EXIT_ASK:
+          case EXIT_BID:
+            order.getOrderFlags().add(
+                org.knowm.xchange.binance.dto.trade.BinanceOrderFlags.REDUCE_ONLY);
+            break;
+        }
         if (exchange.isPortfolioMarginEnabled()) {
           if (BinanceAdapters.isInverse(order.getInstrument())) {
             orderId =
                 newPortfolioMarginInverseFutureOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -180,7 +188,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
             orderId =
                 newPortfolioMarginFutureOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -196,7 +204,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
             orderId =
                 newInverseFutureOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -215,7 +223,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
             orderId =
                 newFutureOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -236,7 +244,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
             Long.toString(
                 newOrder(
                     order.getInstrument(),
-                    BinanceAdapters.convert(order.getType()),
+                    BinanceAdapters.convert(orderType),
                     type,
                     tif,
                     order.getOriginalAmount(),
@@ -413,7 +421,15 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
     }
 
     Instrument instrument = ((CancelOrderByInstrument) orderParams).getInstrument();
-
+    if (instrument instanceof FuturesContract) {
+      // no orderId, only retcode and simple message for futures
+      BinanceChangeStatus result = cancelAllOpenOrdersAllFuturesProducts(instrument);
+      if (result.getCode() == 200) {
+        return new ArrayList<>();
+      } else {
+        throw new BinanceException(result.getCode(),result.getMsg());
+      }
+    }
     return cancelAllOpenOrdersAllProducts(instrument).stream()
         .map(binanceCancelledOrder -> Long.toString(binanceCancelledOrder.orderId))
         .collect(Collectors.toList());

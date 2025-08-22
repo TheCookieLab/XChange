@@ -25,6 +25,7 @@ import org.knowm.xchange.binance.dto.trade.BinanceTrade;
 import org.knowm.xchange.binance.dto.trade.OrderSide;
 import org.knowm.xchange.binance.dto.trade.OrderType;
 import org.knowm.xchange.binance.dto.trade.TimeInForce;
+import org.knowm.xchange.binance.dto.trade.futures.BinanceChangeStatus;
 import org.knowm.xchange.binance.dto.trade.futures.BinanceFutureNewOrder;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -520,19 +521,27 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
       throws IOException, BinanceException {
     return decorateApiCall(
         () ->
-            (pair instanceof FuturesContract)
-                ? binanceFutures.cancelAllFutureOpenOrders(
-                BinanceAdapters.toSymbol(pair),
-                getRecvWindow(),
-                getTimestampFactory(),
-                super.apiKey,
-                super.signatureCreator)
-                : binance.cancelAllOpenOrders(
+            binance.cancelAllOpenOrders(
                     BinanceAdapters.toSymbol(pair),
                     getRecvWindow(),
                     getTimestampFactory(),
                     super.apiKey,
                     super.signatureCreator))
+        .withRetry(retry("cancelAllOpenOrders"))
+        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
+        .call();
+  }
+
+  public BinanceChangeStatus cancelAllOpenOrdersAllFuturesProducts(Instrument pair)
+      throws IOException, BinanceException {
+    return decorateApiCall(
+        () ->
+            binanceFutures.cancelAllFutureOpenOrders(
+                BinanceAdapters.toSymbol(pair),
+                getRecvWindow(),
+                getTimestampFactory(),
+                super.apiKey,
+                super.signatureCreator))
         .withRetry(retry("cancelAllOpenOrders"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();

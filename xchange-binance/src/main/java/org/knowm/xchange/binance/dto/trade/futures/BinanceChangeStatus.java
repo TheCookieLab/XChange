@@ -14,10 +14,10 @@ public class BinanceChangeStatus {
     private final String msg;
 
     public BinanceChangeStatus(
-            @JsonProperty("code") int code
-            ,@JsonProperty("code") String msg) {
-        this.success = code == 200;
-        this.code = code;
-        this.msg = msg;
+        @JsonProperty("code") int code
+        ,@JsonProperty("msg") String msg) {
+      this.success = code == 200;
+      this.code = code;
+      this.msg = msg;
     }
 }
