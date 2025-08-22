@@ -312,19 +312,19 @@ public class CoinmateAdapters {
       }
 
       FundingRecord funding =
-          new FundingRecord(
-              address,
-              addressTag,
-              new Date(entry.getTimestamp()),
-              Currency.getInstance(entry.getAmountCurrency()),
-              entry.getAmount(),
-              transactionId,
-              externalId,
-              type,
-              status,
-              null,
-              entry.getFee(),
-              description);
+          FundingRecord.builder()
+              .address(address)
+              .addressTag(addressTag)
+              .date(new Date(entry.getTimestamp()))
+              .currency(Currency.getInstance(entry.getAmountCurrency()))
+              .amount(entry.getAmount())
+              .internalId(transactionId)
+              .blockchainTransactionHash(externalId)
+              .type(type)
+              .status(status)
+              .fee(entry.getFee())
+              .description(description)
+              .build();
 
       fundings.add(funding);
     }
@@ -371,19 +371,17 @@ public class CoinmateAdapters {
     }
 
     FundingRecord funding =
-        new FundingRecord(
-            entry.getDestination(),
-            entry.getDestinationTag(),
-            new Date(entry.getTimestamp()),
-            Currency.getInstance(entry.getAmountCurrency()),
-            entry.getAmount(),
-            Long.toString(entry.getId()),
-            null,
-            type,
-            status,
-            null,
-            entry.getFee(),
-            null);
+        FundingRecord.builder()
+            .address(entry.getDestination())
+            .addressTag(entry.getDestinationTag())
+            .date(new Date(entry.getTimestamp()))
+            .currency(Currency.getInstance(entry.getAmountCurrency()))
+            .amount(entry.getAmount())
+            .internalId(Long.toString(entry.getId()))
+            .type(type)
+            .status(status)
+            .fee(entry.getFee())
+            .build();
 
     return Collections.singletonList(funding);
   }

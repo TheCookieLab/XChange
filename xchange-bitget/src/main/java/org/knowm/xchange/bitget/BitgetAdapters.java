@@ -253,17 +253,17 @@ public class BitgetAdapters {
   }
 
   public FundingRecord toFundingRecord(BitgetDepositWithdrawRecordDto record) {
-    return new FundingRecord.Builder()
-        .setInternalId(record.getOrderId())
-        .setBlockchainTransactionHash(record.getTradeId())
-        .setCurrency(record.getCurrency())
-        .setType(toFundingRecordType(record))
-        .setAmount(record.getSize())
-        .setFee(record.getFee())
-        .setStatus(record.getStatus())
-        .setAddress(record.getToAddress())
-        .setAddressTag(record.getToAddressTag())
-        .setDate(toDate(record.getUpdatedAt()))
+    return FundingRecord.builder()
+        .internalId(record.getOrderId())
+        .blockchainTransactionHash(record.getTradeId())
+        .currency(record.getCurrency())
+        .type(toFundingRecordType(record))
+        .amount(record.getSize())
+        .fee(record.getFee())
+        .status(record.getStatus())
+        .address(record.getToAddress())
+        .addressTag(record.getToAddressTag())
+        .date(toDate(record.getUpdatedAt()))
         .build();
   }
 

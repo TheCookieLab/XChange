@@ -22,6 +22,7 @@ import org.knowm.xchange.dto.account.AddressWithTag;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.dto.account.FundingRecord.Status;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.account.Wallet;
@@ -500,18 +501,16 @@ public class KrakenAdapters {
           if (type != null) {
             final String internalId = krakenLedger.getRefId(); // or ledgerEntry.getKey()?
             FundingRecord fundingRecordEntry =
-                new FundingRecord(
-                    null,
-                    timestamp,
-                    currency,
-                    krakenLedger.getTransactionAmount(),
-                    internalId,
-                    null,
-                    FundingRecord.Type.fromString(krakenLedger.getLedgerType().name()),
-                    FundingRecord.Status.COMPLETE,
-                    krakenLedger.getBalance(),
-                    krakenLedger.getFee(),
-                    null);
+                FundingRecord.builder()
+                    .date(timestamp)
+                    .currency(currency)
+                    .amount(krakenLedger.getTransactionAmount())
+                    .internalId(internalId)
+                    .type(FundingRecord.Type.fromString(krakenLedger.getLedgerType().name()))
+                    .status(Status.COMPLETE)
+                    .balance(krakenLedger.getBalance())
+                    .fee(krakenLedger.getFee())
+                    .build();
             fundingRecords.add(fundingRecordEntry);
           }
         }

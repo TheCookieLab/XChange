@@ -244,18 +244,18 @@ public final class BTCMarketsAdapters {
       }
 
       result.add(
-          new FundingRecord(
-              address,
-              transfer.getCreationTime(),
-              Currency.getInstance(transfer.getCurrency()),
-              transfer.getAmount(),
-              Long.toString(transfer.getFundTransferId()),
-              blockchainTransactionHash,
-              fundingrecordType,
-              fundingRecordStatus,
-              null,
-              transfer.getFee(),
-              transfer.getDescription()));
+          FundingRecord.builder()
+              .address(address)
+              .date(transfer.getCreationTime())
+              .currency(Currency.getInstance(transfer.getCurrency()))
+              .amount(transfer.getAmount())
+              .internalId(Long.toString(transfer.getFundTransferId()))
+              .blockchainTransactionHash(blockchainTransactionHash)
+              .type(fundingrecordType)
+              .status(fundingRecordStatus)
+              .fee(transfer.getFee())
+              .description(transfer.getDescription())
+              .build());
     }
     return result;
   }
