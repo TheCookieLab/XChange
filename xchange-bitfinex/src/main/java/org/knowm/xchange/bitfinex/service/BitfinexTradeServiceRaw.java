@@ -43,9 +43,9 @@ import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexTradeResponse;
 import org.knowm.xchange.bitfinex.v2.dto.EmptyRequest;
 import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexOpenOrdersRequest;
 import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexOrderDetails;
+import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexPosition;
+import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexTrade;
 import org.knowm.xchange.bitfinex.v2.dto.trade.OrderTrade;
-import org.knowm.xchange.bitfinex.v2.dto.trade.Position;
-import org.knowm.xchange.bitfinex.v2.dto.trade.Trade;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -543,7 +543,7 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
         .call();
   }
 
-  public List<Position> getBitfinexActivePositionsV2() throws IOException {
+  public List<BitfinexPosition> getBitfinexActivePositionsV2() throws IOException {
     return decorateApiCall(
             () ->
                 bitfinexV2.activePositions(

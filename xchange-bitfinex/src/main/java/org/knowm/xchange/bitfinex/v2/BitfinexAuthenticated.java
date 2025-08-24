@@ -22,9 +22,9 @@ import org.knowm.xchange.bitfinex.v2.dto.account.UpdateCollateralDerivativePosit
 import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexOpenOrdersRequest;
 import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexOrderDetails;
 import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexOrdersHistoryRequest;
+import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexPosition;
+import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexTrade;
 import org.knowm.xchange.bitfinex.v2.dto.trade.OrderTrade;
-import org.knowm.xchange.bitfinex.v2.dto.trade.Position;
-import org.knowm.xchange.bitfinex.v2.dto.trade.Trade;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 
@@ -40,7 +40,7 @@ public interface BitfinexAuthenticated extends Bitfinex {
   /** https://docs.bitfinex.com/v2/reference#rest-auth-positions */
   @POST
   @Path("auth/r/positions")
-  List<Position> activePositions(
+  List<BitfinexPosition> activePositions(
       @HeaderParam(BFX_NONCE) SynchronizedValueFactory<Long> nonce,
       @HeaderParam(BFX_APIKEY) String apiKey,
       @HeaderParam(BFX_SIGNATURE) ParamsDigest signature,

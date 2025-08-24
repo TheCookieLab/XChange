@@ -1,20 +1,26 @@
 package org.knowm.xchange.bitfinex.v2.dto.trade;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import java.time.Instant;
+import lombok.Builder;
+import lombok.Data;
+import lombok.extern.jackson.Jacksonized;
+import org.knowm.xchange.bitfinex.config.converter.StringToCurrencyPairConverter;
+import org.knowm.xchange.currency.CurrencyPair;
 
-/** https://docs.bitfinex.com/v2/reference#rest-auth-positions */
+@Data
+@Builder
+@Jacksonized
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
-@Setter
-@Getter
-@ToString
-public class Position {
+public class BitfinexPosition {
 
   /** Pair (tBTCUSD, …). */
-  private String symbol;
+  @JsonDeserialize(converter = StringToCurrencyPairConverter.class)
+  private CurrencyPair symbol;
 
   /** Status (ACTIVE, CLOSED). */
   private String status;
@@ -32,7 +38,7 @@ public class Position {
   private BigDecimal marginFunding;
 
   /** 0 for daily, 1 for term. */
-  private int marginFundingType;
+  private FundingType marginFundingType;
 
   /** Profit & Loss */
   private BigDecimal pl;
@@ -52,15 +58,15 @@ public class Position {
   private Integer positionId;
 
   /** Millisecond timestamp of creation */
-  private long timestampCreate;
+  private Instant createdAt;
 
   /** Millisecond timestamp of update */
-  private Long timestampUpdate;
+  private Instant updatedAt;
 
   private Object placeHolder1;
 
   /** Identifies the type of position, 0 = Margin position, 1 = Derivatives position */
-  private Integer type;
+  private PositionType type;
 
   private Object placeHolder2;
 
@@ -72,4 +78,33 @@ public class Position {
 
   /** Additional meta information about the position */
   private Object meta;
+
+  public static enum FundingType {
+    @JsonProperty("0")
+    DAILY,
+
+    @JsonProperty("1")
+    TERM
+  }
+
+  public static enum PositionType {
+    @JsonProperty("0")
+    MARGIN,
+
+    @JsonProperty("1")
+    DERIATIVES
+  }
+
+  public static enum PositionStatus {
+    @JsonProperty("ACTIVE")
+    ACTIVE,
+
+    @JsonProperty("CLOSED")
+    CLOSED,
+
+    @JsonEnumDefaultValue
+    UNKNOWN
+
+  }
+
 }
