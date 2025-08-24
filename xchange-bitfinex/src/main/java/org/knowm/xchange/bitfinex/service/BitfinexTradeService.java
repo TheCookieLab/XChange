@@ -20,7 +20,7 @@ import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexOrderStatusResponse;
 import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexReplaceOrderRequest;
 import org.knowm.xchange.bitfinex.v2.dto.BitfinexExceptionV2;
 import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexOrderDetails;
-import org.knowm.xchange.bitfinex.v2.dto.trade.Trade;
+import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexTrade;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -223,8 +223,8 @@ public class BitfinexTradeService extends BitfinexTradeServiceRaw implements Tra
         sort = tradeHistoryParamsSorted.getOrder() == TradeHistoryParamsSorted.Order.asc ? 1L : -1L;
       }
 
-      final List<Trade> trades = getBitfinexTradesV2(symbol, startTime, endTime, limit, sort);
-      return BitfinexAdapters.adaptTradeHistoryV2(trades);
+      final List<BitfinexTrade> bitfinexTrades = getBitfinexTradesV2(symbol, startTime, endTime, limit, sort);
+      return BitfinexAdapters.adaptTradeHistoryV2(bitfinexTrades);
     } catch (BitfinexException e) {
       throw BitfinexErrorAdapter.adapt(e);
     }

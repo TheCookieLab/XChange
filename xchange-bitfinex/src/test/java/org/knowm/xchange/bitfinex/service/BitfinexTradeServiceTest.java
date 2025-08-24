@@ -1,17 +1,6 @@
 package org.knowm.xchange.bitfinex.service;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.knowm.xchange.bitfinex.BitfinexExchangeWiremock;
-import org.knowm.xchange.bitfinex.service.trade.params.BitfinexOpenOrdersParams;
-import org.knowm.xchange.bitfinex.service.trade.params.BitfinexOrderQueryParams;
-import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.dto.Order;
-import org.knowm.xchange.dto.Order.OrderStatus;
-import org.knowm.xchange.dto.Order.OrderType;
-import org.knowm.xchange.dto.trade.LimitOrder;
-import org.knowm.xchange.dto.trade.OpenOrders;
-import org.knowm.xchange.service.trade.TradeService;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -20,12 +9,77 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.knowm.xchange.bitfinex.BitfinexExchangeWiremock;
+import org.knowm.xchange.bitfinex.service.trade.params.BitfinexOpenOrdersParams;
+import org.knowm.xchange.bitfinex.service.trade.params.BitfinexOrderQueryParams;
+import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.Order.OrderStatus;
+import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.dto.trade.UserTrade;
+import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.service.trade.TradeService;
+import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamCurrencyPair;
 
 class BitfinexTradeServiceTest extends BitfinexExchangeWiremock {
 
   TradeService tradeService = exchange.getTradeService();
+
+  @Test
+  void trade_history() throws IOException {
+    UserTrades userTrades = exchange.getTradeService().getTradeHistory(null);
+
+    assertThat(userTrades.getUserTrades()).hasSize(2);
+
+    UserTrade expected = UserTrade.builder()
+        .type(OrderType.ASK)
+        .currencyPair(new CurrencyPair("GOMINING/USDT"))
+        .id("1793448778")
+        .orderId("214237248399")
+        .originalAmount(new BigDecimal("59.43"))
+        .price(new BigDecimal("0.54204"))
+        .feeAmount(new BigDecimal("0.0644268744"))
+        .feeCurrency(Currency.USDT)
+        .timestamp(Date.from(Instant.parse("2025-08-09T14:37:18.579Z")))
+        .build();
+
+    assertThat(userTrades.getUserTrades())
+        .first()
+        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .usingRecursiveComparison()
+        .isEqualTo(expected);
+  }
+
+
+  @Test
+  void trade_history_by_symbol() throws IOException {
+    UserTrades userTrades = exchange.getTradeService().getTradeHistory(DefaultTradeHistoryParamCurrencyPair.builder().currencyPair(new CurrencyPair("LIFIII/USDT")).build());
+
+    assertThat(userTrades.getUserTrades()).hasSize(2);
+
+    UserTrade expected = UserTrade.builder()
+        .type(OrderType.ASK)
+        .currencyPair(new CurrencyPair("LIFIII/USDT"))
+        .id("1798130174")
+        .orderId("215550069744")
+        .originalAmount(new BigDecimal("5804.17721836"))
+        .price(new BigDecimal("0.01625"))
+        .feeAmount(new BigDecimal("0.1886357595967"))
+        .feeCurrency(Currency.USDT)
+        .timestamp(Date.from(Instant.parse("2025-08-22T19:47:39.320Z")))
+        .build();
+
+    assertThat(userTrades.getUserTrades())
+        .first()
+        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .usingRecursiveComparison()
+        .isEqualTo(expected);
+  }
 
 
   @Test

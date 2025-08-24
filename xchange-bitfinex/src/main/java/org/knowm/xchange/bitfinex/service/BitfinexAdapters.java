@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -605,32 +606,36 @@ public class BitfinexAdapters {
   }
 
   public UserTrades adaptTradeHistoryV2(
-      List<org.knowm.xchange.bitfinex.v2.dto.trade.Trade> trades) {
+      List<org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexTrade> bitfinexTrades) {
 
-    List<UserTrade> pastTrades = new ArrayList<>(trades.size());
+    List<UserTrade> pastTrades = new ArrayList<>(bitfinexTrades.size());
 
-    for (org.knowm.xchange.bitfinex.v2.dto.trade.Trade trade : trades) {
-      OrderType orderType = trade.getExecAmount().signum() >= 0 ? OrderType.BID : OrderType.ASK;
+    for (org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexTrade bitfinexTrade : bitfinexTrades) {
+      OrderType orderType = bitfinexTrade.getExecAmount().signum() >= 0 ? OrderType.BID : OrderType.ASK;
       BigDecimal amount =
-          trade.getExecAmount().signum() == -1
-              ? trade.getExecAmount().negate()
-              : trade.getExecAmount();
-      final BigDecimal fee = trade.getFee() != null ? trade.getFee().negate() : null;
+          bitfinexTrade.getExecAmount().signum() == -1
+              ? bitfinexTrade.getExecAmount().negate()
+              : bitfinexTrade.getExecAmount();
+      final BigDecimal fee = bitfinexTrade.getFee() != null ? bitfinexTrade.getFee().negate() : null;
       pastTrades.add(
           UserTrade.builder()
               .type(orderType)
               .originalAmount(amount)
-              .currencyPair(adaptCurrencyPair(trade.getSymbol()))
-              .price(trade.getExecPrice())
-              .timestamp(trade.getTimestamp())
-              .id(trade.getId())
-              .orderId(trade.getOrderId())
+              .currencyPair(bitfinexTrade.getSymbol())
+              .price(bitfinexTrade.getExecPrice())
+              .timestamp(toDate(bitfinexTrade.getTimestamp()))
+              .id(bitfinexTrade.getId())
+              .orderId(bitfinexTrade.getOrderId())
               .feeAmount(fee)
-              .feeCurrency(Currency.getInstance(trade.getFeeCurrency()))
+              .feeCurrency(bitfinexTrade.getFeeCurrency())
               .build());
     }
 
     return new UserTrades(pastTrades, TradeSortType.SortByTimestamp);
+  }
+
+  public Date toDate(Instant instant) {
+    return Optional.ofNullable(instant).map(Date::from).orElse(null);
   }
 
   private Date convertBigDecimalTimestampToDate(BigDecimal timestamp) {

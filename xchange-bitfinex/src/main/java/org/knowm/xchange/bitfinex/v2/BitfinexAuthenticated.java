@@ -67,7 +67,7 @@ public interface BitfinexAuthenticated extends Bitfinex {
    */
   @POST
   @Path("auth/r/trades/hist")
-  List<Trade> getTrades(
+  List<BitfinexTrade> getTrades(
       @HeaderParam(BFX_NONCE) SynchronizedValueFactory<Long> nonce,
       @HeaderParam(BFX_APIKEY) String apiKey,
       @HeaderParam(BFX_SIGNATURE) ParamsDigest signature,
@@ -80,7 +80,7 @@ public interface BitfinexAuthenticated extends Bitfinex {
 
   @POST
   @Path("auth/r/trades/{symbol}/hist")
-  List<Trade> getTrades(
+  List<BitfinexTrade> getTrades(
       @HeaderParam(BFX_NONCE) SynchronizedValueFactory<Long> nonce,
       @HeaderParam(BFX_APIKEY) String apiKey,
       @HeaderParam(BFX_SIGNATURE) ParamsDigest signature,

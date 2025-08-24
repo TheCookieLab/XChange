@@ -552,7 +552,7 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
         .call();
   }
 
-  public List<Trade> getBitfinexTradesV2(
+  public List<BitfinexTrade> getBitfinexTradesV2(
       String symbol, Long startTimeMillis, Long endTimeMillis, Long limit, Long sort)
       throws IOException {
     if (StringUtils.isBlank(symbol)) {
