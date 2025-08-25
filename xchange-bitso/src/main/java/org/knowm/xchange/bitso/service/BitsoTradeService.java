@@ -9,7 +9,14 @@ import java.util.List;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bitso.BitsoAdapters;
 import org.knowm.xchange.bitso.dto.BitsoException;
-import org.knowm.xchange.bitso.dto.trade.*;
+import org.knowm.xchange.bitso.dto.trade.BitsoConversionExecutionResponse;
+import org.knowm.xchange.bitso.dto.trade.BitsoConversionQuoteRequest;
+import org.knowm.xchange.bitso.dto.trade.BitsoConversionQuoteResponse;
+import org.knowm.xchange.bitso.dto.trade.BitsoConversionStatusResponse;
+import org.knowm.xchange.bitso.dto.trade.BitsoOrder;
+import org.knowm.xchange.bitso.dto.trade.BitsoOrderRequest;
+import org.knowm.xchange.bitso.dto.trade.BitsoOrderSide;
+import org.knowm.xchange.bitso.dto.trade.BitsoOrderType;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -18,7 +25,11 @@ import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.service.trade.TradeService;
-import org.knowm.xchange.service.trade.params.*;
+import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
+import org.knowm.xchange.service.trade.params.CancelOrderParams;
+import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamPaging;
+import org.knowm.xchange.service.trade.params.TradeHistoryParamPaging;
+import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 
 /**
@@ -132,8 +143,7 @@ public class BitsoTradeService extends BitsoTradeServiceRaw implements TradeServ
 
   @Override
   public TradeHistoryParams createTradeHistoryParams() {
-
-    return new DefaultTradeHistoryParamPaging(1000);
+    return DefaultTradeHistoryParamPaging.builder().pageLength(1000).build();
   }
 
   @Override
