@@ -3,16 +3,22 @@ package info.bitrich.xchangestream.bybit.example;
 import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectDemoApi;
 import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectMainApi;
 
+import info.bitrich.xchangestream.bybit.BybitStreamingTradeService;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.rxjava3.disposables.Disposable;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.bybit.dto.trade.details.BybitHedgeMode;
+import org.knowm.xchange.bybit.service.BybitAccountService;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Fee;
+import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,18 +27,48 @@ public class BybitStreamOrderBookAndFeesExample {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(BybitStreamOrderBookAndFeesExample.class);
+  static Instrument instrument = new FuturesContract("XRP/USDT/PERP");
 
   public static void main(String[] args) {
-    // Stream orderBook and OrderBookUpdates
+    // main(not demo) api only
+    websocketTradeExample();
     try {
+      // Stream orderBook and OrderBookUpdates
       getOrderBookExample();
-      // main(not demo) api only
       getFeesExample();
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
     exchange.disconnect().blockingAwait();
   }
+
+  private static void websocketTradeExample() {
+    try {
+      exchange = connectMainApi(BybitCategory.LINEAR, true);
+      while (!exchange.isAlive()) {
+        try {
+          TimeUnit.MILLISECONDS.sleep(100);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+      // switch mode to two-way
+      ((BybitAccountService) exchange.getAccountService()).switchPositionMode(BybitCategory.LINEAR, instrument, "USDT", 3);
+      BigDecimal minAmountFuture =
+          exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
+      MarketOrder marketOrder = new MarketOrder(OrderType.ASK, minAmountFuture, instrument);
+      marketOrder.addOrderFlag(BybitHedgeMode.TWOWAY);
+      Disposable disposable = ((BybitStreamingTradeService) exchange.getStreamingTradeService()).placeMarketOrder(marketOrder)
+          .subscribe(result -> {
+                LOG.info("marketOrder result: {}", result);
+              });
+      Thread.sleep(2000);
+      LOG.info("is disposed: {}", disposable.isDisposed());
+    } catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
 
   static List<Disposable> booksDisposable = new ArrayList<>();
   static Instrument XRP_PERP = new FuturesContract("XRP/USDT/PERP");

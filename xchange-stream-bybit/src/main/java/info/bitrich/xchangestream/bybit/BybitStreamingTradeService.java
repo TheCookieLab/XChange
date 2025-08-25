@@ -1,26 +1,57 @@
 package info.bitrich.xchangestream.bybit;
 
+import static org.knowm.xchange.bybit.BybitResilience.ORDER_CREATE_LINEAR_AND_INVERSE_RATE_LIMITER;
+import static org.knowm.xchange.bybit.BybitResilience.ORDER_CREATE_OPTION_LIMITER;
+import static org.knowm.xchange.bybit.BybitResilience.ORDER_CREATE_SPOT_RATE_LIMITER;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dto.trade.BybitComplexOrderChanges;
 import dto.trade.BybitComplexPositionChanges;
 import dto.trade.BybitOrderChangesResponse;
 import dto.trade.BybitPositionChangesResponse;
+import dto.trade.BybitStreamOrderResponse;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.rxjava3.ratelimiter.operator.RateLimiterOperator;
+import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Observable;
+import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class BybitStreamingTradeService implements StreamingTradeService {
 
+  private final Logger LOG = LoggerFactory.getLogger(BybitStreamingTradeService.class);
   private final BybitUserDataStreamingService streamingService;
+  private final BybitUserTradeService userTradeService;
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
+  private final ResilienceRegistries resilienceRegistries;
 
-  public BybitStreamingTradeService(BybitUserDataStreamingService streamingService) {
+  public BybitStreamingTradeService(BybitUserDataStreamingService streamingService,BybitUserTradeService userTradeService, ResilienceRegistries resilienceRegistries) {
     this.streamingService = streamingService;
+    this.userTradeService =  userTradeService;
+    this.resilienceRegistries = resilienceRegistries;
+  }
+
+  public Maybe<String> placeMarketOrder(MarketOrder order) throws JsonProcessingException {
+    BybitCategory category = BybitAdapters.getCategory(order.getInstrument());
+    Observable<String> observable = userTradeService.subscribeChannel("order.create"+System.nanoTime(), order)
+        .flatMap(node -> {
+          BybitStreamOrderResponse response = mapper.treeToValue(node, BybitStreamOrderResponse.class);
+          return Observable.just(String.valueOf(response.getRetCode()));
+        });
+    return observable.firstElement()
+        .compose(RateLimiterOperator.of(getCreateOrderRateLimiter(category)));
   }
 
   @Override
@@ -98,5 +129,17 @@ public class BybitStreamingTradeService implements StreamingTradeService {
                   BybitStreamAdapters.adaptComplexPositionChanges(
                       bybitPositionChangesResponse.getData()));
             });
+  }
+
+  private RateLimiter getCreateOrderRateLimiter(BybitCategory category) {
+    switch (category) {
+      case LINEAR:
+      case INVERSE:
+        return resilienceRegistries.rateLimiters().rateLimiter(ORDER_CREATE_LINEAR_AND_INVERSE_RATE_LIMITER);
+      case OPTION:
+        return resilienceRegistries.rateLimiters().rateLimiter(ORDER_CREATE_OPTION_LIMITER);
+      default: //SPOT
+        return resilienceRegistries.rateLimiters().rateLimiter(ORDER_CREATE_SPOT_RATE_LIMITER);
+    }
   }
 }
