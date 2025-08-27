@@ -12,16 +12,19 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.bitfinex.v1.BitfinexOrderType;
 import org.knowm.xchange.bitfinex.v1.BitfinexUtils;
 import org.knowm.xchange.bitfinex.v1.dto.account.BitfinexBalancesResponse;
@@ -35,8 +38,9 @@ import org.knowm.xchange.bitfinex.v1.dto.marketdata.BitfinexTrade;
 import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexOrderFlags;
 import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexOrderStatusResponse;
 import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexTradeResponse;
+import org.knowm.xchange.bitfinex.v2.dto.account.BitfinexLedgerEntry;
+import org.knowm.xchange.bitfinex.v2.dto.account.BitfinexMovement;
 import org.knowm.xchange.bitfinex.v2.dto.account.BitfinexWallet;
-import org.knowm.xchange.bitfinex.v2.dto.account.Movement;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexPublicTrade;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTickerFundingCurrency;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTickerTraidingPair;
@@ -50,7 +54,9 @@ import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.dto.account.FundingRecord.Type;
 import org.knowm.xchange.dto.account.Wallet;
+import org.knowm.xchange.dto.account.Wallet.Builder;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
@@ -74,6 +80,13 @@ import org.knowm.xchange.utils.jackson.CurrencyPairDeserializer;
 @Slf4j
 @UtilityClass
 public class BitfinexAdapters {
+
+  public final long CATEGORY_TRANSFER = 51L;
+  private static final Pattern WALLET_TRANSFER_PATTERN = Pattern.compile(("transfer of .* from wallet .* to .* on wallet .*"));
+  private static final Pattern SUB_ACCOUNT_TRANSFER_PATTERN = Pattern.compile(("transfer of .* from .* to exchange sa\\(.*\\).*"));
+  private static final Pattern WITHDRAWAL_PATTERN = Pattern.compile((".* withdrawal .*"));
+
+
 
   private final ObjectMapper mapper = new ObjectMapper();
 
@@ -682,25 +695,24 @@ public class BitfinexAdapters {
     return metaData;
   }
 
-  public List<FundingRecord> adaptFundingHistory(List<Movement> movementHistorys) {
+  public List<FundingRecord> adaptFundingHistory(List<BitfinexMovement> bitfinexMovementHistories) {
     final List<FundingRecord> fundingRecords = new ArrayList<>();
-    for (Movement movement : movementHistorys) {
-      Currency currency = Currency.getInstance(movement.getCurency());
+    for (BitfinexMovement bitfinexMovement : bitfinexMovementHistories) {
 
       FundingRecord.Type type =
-          movement.getAmount().compareTo(BigDecimal.ZERO) < 0
+          bitfinexMovement.getAmount().compareTo(BigDecimal.ZERO) < 0
               ? FundingRecord.Type.WITHDRAWAL
               : FundingRecord.Type.DEPOSIT;
 
-      FundingRecord.Status status = FundingRecord.Status.resolveStatus(movement.getStatus());
+      FundingRecord.Status status = FundingRecord.Status.resolveStatus(bitfinexMovement.getStatus());
       if (status == null
-          && movement
+          && bitfinexMovement
               .getStatus()
               .equalsIgnoreCase("CANCELED")) // there's a spelling mistake in the protocol
       status = FundingRecord.Status.CANCELLED;
 
-      BigDecimal amount = movement.getAmount().abs();
-      BigDecimal fee = movement.getFees().abs();
+      BigDecimal amount = bitfinexMovement.getAmount().abs();
+      BigDecimal fee = bitfinexMovement.getFees().abs();
       if (fee != null && type.isOutflowing()) {
         // The amount reported form Bitfinex on a withdrawal is without the fee, so it has to be
         // added to get the full amount withdrawn from the wallet
@@ -711,12 +723,12 @@ public class BitfinexAdapters {
 
       FundingRecord fundingRecordEntry =
           FundingRecord.builder()
-              .address(movement.getDestinationAddress())
-              .date(movement.getMtsUpdated())
-              .currency(currency)
+              .address(bitfinexMovement.getDestinationAddress())
+              .date(toDate(bitfinexMovement.getMtsUpdated()))
+              .currency(bitfinexMovement.getCurrency())
               .amount(amount)
-              .internalId(movement.getId())
-              .blockchainTransactionHash(movement.getTransactionId())
+              .internalId(bitfinexMovement.getId())
+              .blockchainTransactionHash(bitfinexMovement.getTransactionId())
               .type(type)
               .status(status)
               .fee(fee)
@@ -920,15 +932,15 @@ public class BitfinexAdapters {
 
 
   public AccountInfo toAccountInfo(List<BitfinexWallet> bitfinexWallet) {
-    Map<String, List<Balance>> balancesByWalletType = bitfinexWallet.stream()
+    Map<BitfinexWallet.Type, List<Balance>> balancesByWalletType = bitfinexWallet.stream()
         .collect(Collectors.groupingBy(
             BitfinexWallet::getWalletType,
             Collectors.mapping(BitfinexAdapters::toBalance, Collectors.toList())));
 
     List<Wallet> wallets = new ArrayList<>();
-    balancesByWalletType.forEach((key, value) -> wallets.add(Wallet.Builder
+    balancesByWalletType.forEach((key, value) -> wallets.add(Builder
         .from(value)
-        .id(key)
+        .id(key.toString().toLowerCase(Locale.ROOT))
         .build())
     );
 
@@ -1006,6 +1018,61 @@ public class BitfinexAdapters {
         .orderStatus(bitfinexOrderDetails.getStatus())
         .averagePrice(bitfinexOrderDetails.getPriceAvg())
         .build();
+  }
+
+
+  public FundingRecord toFundingRecord(BitfinexLedgerEntry bitfinexLedgerEntry) {
+    return FundingRecord.builder()
+        .internalId(String.valueOf(bitfinexLedgerEntry.getId()))
+        .currency(bitfinexLedgerEntry.getCurrency())
+        .type(toFundingRecordType(bitfinexLedgerEntry.getDescription()))
+        .balance(bitfinexLedgerEntry.getBalance())
+        .amount(bitfinexLedgerEntry.getAmount())
+        .date(toDate(bitfinexLedgerEntry.getTimestamp()))
+        .description(bitfinexLedgerEntry.getDescription())
+        .build();
+  }
+
+  public FundingRecord.Type toFundingRecordType(String description) {
+    if (StringUtils.isEmpty(description)) {
+      return null;
+    }
+
+    var value = description.toLowerCase(Locale.ROOT);
+
+    if (value.startsWith("trading fees")) {
+      return Type.ORDER_FEE;
+    }
+    if (value.startsWith("exchange")) {
+      return Type.TRADE;
+    }
+    if (value.startsWith("deposit")) {
+      return Type.DEPOSIT;
+    }
+    if (WITHDRAWAL_PATTERN.matcher(value).matches()) {
+      return Type.WITHDRAWAL;
+    }
+    if (value.startsWith("crypto withdrawal fee")) {
+      return Type.WITHDRAWAL_FEE;
+    }
+    if (SUB_ACCOUNT_TRANSFER_PATTERN.matcher(value).matches()) {
+      return Type.INTERNAL_SUB_ACCOUNT_TRANSFER;
+    }
+    if (WALLET_TRANSFER_PATTERN.matcher(value).matches()) {
+      return Type.INTERNAL_WALLET_TRANSFER;
+    }
+    return null;
+  }
+
+
+  public Long toCategory(Type fundingRecordType) {
+    switch (fundingRecordType) {
+      case INTERNAL_SUB_ACCOUNT_TRANSFER:
+      case INTERNAL_WALLET_TRANSFER:
+        return CATEGORY_TRANSFER;
+      default:
+        return null;
+    }
   }
 
 

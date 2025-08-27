@@ -1,25 +1,30 @@
 package org.knowm.xchange.bitfinex.v2.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.Instant;
 import lombok.Data;
+import org.knowm.xchange.bitfinex.config.converter.StringToCurrencyConverter;
+import org.knowm.xchange.currency.Currency;
 
 /** https://docs.bitfinex.com/reference#rest-auth-ledgers */
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
 @Data
-public class LedgerEntry {
+public class BitfinexLedgerEntry {
 
   /** Ledger identifier */
   private long id;
 
   /** The symbol of the currency (ex. "BTC") */
-  private String currency;
+  @JsonDeserialize(converter = StringToCurrencyConverter.class)
+  private Currency currency;
 
-  private Object placeHolder0;
+  /** Wallet name (exchange, margin, funding) */
+  private BitfinexWallet.Type walletType;
 
   /** Timestamp in milliseconds */
-  private long timestamp;
+  private Instant timestamp;
 
   private Object placeHolder1;
 
@@ -34,7 +39,4 @@ public class LedgerEntry {
   /** Description of ledger transaction */
   private String description;
 
-  public Date getTimestamp() {
-    return new Date(timestamp);
-  }
 }

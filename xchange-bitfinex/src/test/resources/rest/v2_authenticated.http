@@ -30,6 +30,41 @@ Content-Type: application/json
 {}
 
 
+### Ledgers
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+
+POST {{api_v2}}/auth/r/ledgers/hist
+accept: application/json
+bfx-nonce: {{nonce}}
+bfx-apikey: {{api_key}}
+bfx-signature: {{signature}}
+Content-Type: application/json
+
+{
+  "limit": 1000,
+  "category": 51
+}
+
+
+### Movements
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+
+POST {{api_v2}}/auth/r/movements/hist
+accept: application/json
+bfx-nonce: {{nonce}}
+bfx-apikey: {{api_key}}
+bfx-signature: {{signature}}
+Content-Type: application/json
+
+{}
+
+
 ### Retrieve Active Orders
 < {%
   import {gen_sign} from 'sign.js'

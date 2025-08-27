@@ -1,6 +1,8 @@
 package org.knowm.xchange.bitfinex.v2.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import lombok.Builder;
@@ -16,7 +18,7 @@ import org.knowm.xchange.currency.Currency;
 public class BitfinexWallet {
 
   /** Wallet name (exchange, margin, funding) */
-  private String walletType;
+  private Type walletType;
 
   /** Currency (e.g. USD, ...) */
   @JsonDeserialize(converter = StringToCurrencyConverter.class)
@@ -35,5 +37,22 @@ public class BitfinexWallet {
 
   /** If the last change was a trade, this object will show the trade details */
   private Object tradeDetails;
+
+
+  public static enum Type {
+    @JsonEnumDefaultValue
+    @JsonProperty("exchange")
+    EXCHANGE,
+
+    @JsonProperty("margin")
+    MARGIN,
+
+    @JsonProperty("funding")
+    FUNDING,
+
+    @JsonProperty("contribution")
+    CONTRIBUTION
+
+  }
 
 }

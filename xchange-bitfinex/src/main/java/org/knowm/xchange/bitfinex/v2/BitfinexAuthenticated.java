@@ -12,10 +12,10 @@ import java.io.IOException;
 import java.util.List;
 import org.knowm.xchange.bitfinex.v2.dto.BitfinexExceptionV2;
 import org.knowm.xchange.bitfinex.v2.dto.EmptyRequest;
+import org.knowm.xchange.bitfinex.v2.dto.account.BitfinexLedgerEntry;
+import org.knowm.xchange.bitfinex.v2.dto.account.BitfinexMovement;
 import org.knowm.xchange.bitfinex.v2.dto.account.BitfinexWallet;
-import org.knowm.xchange.bitfinex.v2.dto.account.LedgerEntry;
 import org.knowm.xchange.bitfinex.v2.dto.account.LedgerRequest;
-import org.knowm.xchange.bitfinex.v2.dto.account.Movement;
 import org.knowm.xchange.bitfinex.v2.dto.account.TransferBetweenWalletsRequest;
 import org.knowm.xchange.bitfinex.v2.dto.account.TransferBetweenWalletsResponse;
 import org.knowm.xchange.bitfinex.v2.dto.account.UpdateCollateralDerivativePositionRequest;
@@ -133,26 +133,26 @@ public interface BitfinexAuthenticated extends Bitfinex {
   /** https://docs.bitfinex.com/reference#rest-auth-ledgers */
   @POST
   @Path("auth/r/ledgers/hist")
-  List<LedgerEntry> getLedgerEntries(
+  List<BitfinexLedgerEntry> getLedgerEntries(
       @HeaderParam(BFX_NONCE) SynchronizedValueFactory<Long> nonce,
       @HeaderParam(BFX_APIKEY) String apiKey,
       @HeaderParam(BFX_SIGNATURE) ParamsDigest signature,
       @QueryParam("start") Long startTimeMillis,
       @QueryParam("end") Long endTimeMillis,
-      @QueryParam("limit") Long limit,
+      @QueryParam("limit") Integer limit,
       LedgerRequest req)
       throws IOException, BitfinexExceptionV2;
 
   @POST
   @Path("auth/r/ledgers/{currency}/hist")
-  List<LedgerEntry> getLedgerEntries(
+  List<BitfinexLedgerEntry> getLedgerEntries(
       @HeaderParam(BFX_NONCE) SynchronizedValueFactory<Long> nonce,
       @HeaderParam(BFX_APIKEY) String apiKey,
       @HeaderParam(BFX_SIGNATURE) ParamsDigest signature,
       @PathParam("currency") String currency,
       @QueryParam("start") Long startTimeMillis,
       @QueryParam("end") Long endTimeMillis,
-      @QueryParam("limit") Long limit,
+      @QueryParam("limit") Integer limit,
       LedgerRequest req)
       throws IOException, BitfinexExceptionV2;
 
@@ -170,7 +170,7 @@ public interface BitfinexAuthenticated extends Bitfinex {
 
   @POST
   @Path("/auth/r/movements/{symbol}/hist")
-  List<Movement> getMovementsHistory(
+  List<BitfinexMovement> getMovementsHistory(
       @HeaderParam(BFX_NONCE) SynchronizedValueFactory<Long> nonce,
       @HeaderParam(BFX_APIKEY) String apiKey,
       @HeaderParam(BFX_SIGNATURE) ParamsDigest signature,
@@ -183,7 +183,7 @@ public interface BitfinexAuthenticated extends Bitfinex {
 
   @POST
   @Path("/auth/r/movements/hist")
-  List<Movement> getMovementsHistory(
+  List<BitfinexMovement> getMovementsHistory(
       @HeaderParam(BFX_NONCE) SynchronizedValueFactory<Long> nonce,
       @HeaderParam(BFX_APIKEY) String apiKey,
       @HeaderParam(BFX_SIGNATURE) ParamsDigest signature,
