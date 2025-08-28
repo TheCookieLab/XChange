@@ -134,7 +134,7 @@ class BitfinexStreamingAdapters {
     }
 
     String walletType = balance.get(0).textValue();
-    String currency = balance.get(1).textValue();
+    Currency currency = BitfinexAdapters.toCurrency(balance.get(1).textValue());
     BigDecimal balanceValue = balance.get(2).decimalValue();
     BigDecimal unsettledInterest = balance.get(3).decimalValue();
     BigDecimal balanceAvailable =
@@ -276,7 +276,7 @@ class BitfinexStreamingAdapters {
 
   static Balance adaptBalance(BitfinexWebSocketAuthBalance authBalance) {
     return new Balance(
-        Currency.getInstance(authBalance.getCurrency()),
+        authBalance.getCurrency(),
         authBalance.getBalance(),
         authBalance.getBalanceAvailable());
   }
