@@ -11,8 +11,8 @@ import info.bitrich.xchangestream.bitfinex.dto.BitfinexWebSocketAuthTrade;
 import io.reactivex.rxjava3.observers.TestObserver;
 import java.io.IOException;
 import java.math.BigDecimal;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 
 public class BitfinexStreamingServiceTest {
@@ -20,7 +20,7 @@ public class BitfinexStreamingServiceTest {
   private BitfinexStreamingService service;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp() {
     service = new BitfinexStreamingService(BitfinexStreamingExchange.API_URI, null);
   }
