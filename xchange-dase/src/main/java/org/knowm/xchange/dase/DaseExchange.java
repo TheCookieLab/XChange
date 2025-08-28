@@ -1,0 +1,24 @@
+package org.knowm.xchange.dase;
+
+import org.knowm.xchange.BaseExchange;
+import org.knowm.xchange.Exchange;
+import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.dase.service.DaseMarketDataService;
+
+public class DaseExchange extends BaseExchange implements Exchange {
+
+  @Override
+  protected void initServices() {
+    this.marketDataService = new DaseMarketDataService(this);
+  }
+
+  @Override
+  public ExchangeSpecification getDefaultExchangeSpecification() {
+    ExchangeSpecification spec = new ExchangeSpecification(this.getClass());
+    spec.setSslUri("https://api.dase.com");
+    spec.setHost("api.dase.com");
+    spec.setExchangeName("Dase");
+    spec.setExchangeDescription("Dase via XChange");
+    return spec;
+  }
+}
