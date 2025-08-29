@@ -18,7 +18,7 @@ import org.knowm.xchange.dase.dto.marketdata.DaseTrade;
  */
 public class MarketDataIntegration {
 
-  private static final String MARKET = "ADA-CZK";
+  private static final String MARKET = "BTC-CZK";
 
   @Test
   public void ticker_live() throws Exception {
