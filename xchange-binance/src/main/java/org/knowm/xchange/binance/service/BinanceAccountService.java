@@ -485,6 +485,7 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
     }
   }
 
+  @Override
   public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
     if (instrument instanceof FuturesContract) {
       return setLeverageRaw(instrument, leverage).leverage == leverage;
