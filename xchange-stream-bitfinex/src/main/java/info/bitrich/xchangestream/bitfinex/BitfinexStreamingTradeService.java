@@ -3,6 +3,7 @@ package info.bitrich.xchangestream.bitfinex;
 import info.bitrich.xchangestream.bitfinex.dto.BitfinexWebSocketAuthOrder;
 import info.bitrich.xchangestream.bitfinex.dto.BitfinexWebSocketAuthPreTrade;
 import info.bitrich.xchangestream.bitfinex.dto.BitfinexWebSocketAuthTrade;
+import info.bitrich.xchangestream.bitfinex.dto.BitfinexWebSocketPosition;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import io.reactivex.rxjava3.core.Observable;
 import java.util.function.Function;
@@ -37,6 +38,11 @@ public class BitfinexStreamingTradeService implements StreamingTradeService {
     return getOrderChanges().filter(o -> currencyPair.equals(o.getCurrencyPair()));
   }
 
+
+  public Observable<BitfinexWebSocketPosition> getPositionChanges() {
+    return getRawAuthenticatedPositions();
+  }
+
   /**
    * Gets a stream of all user trades to which we are subscribed.
    *
@@ -62,6 +68,10 @@ public class BitfinexStreamingTradeService implements StreamingTradeService {
 
   public Observable<BitfinexWebSocketAuthOrder> getRawAuthenticatedOrders() {
     return withAuthenticatedService(BitfinexStreamingService::getAuthenticatedOrders);
+  }
+
+  public Observable<BitfinexWebSocketPosition> getRawAuthenticatedPositions() {
+    return withAuthenticatedService(BitfinexStreamingService::getAuthenticatedPositions);
   }
 
   public Observable<BitfinexWebSocketAuthPreTrade> getRawAuthenticatedPreTrades() {

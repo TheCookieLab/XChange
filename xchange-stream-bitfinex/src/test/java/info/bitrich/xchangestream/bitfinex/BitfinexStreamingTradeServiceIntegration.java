@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.knowm.xchange.currency.CurrencyPair.BTC_USDT;
 
+import info.bitrich.xchangestream.bitfinex.dto.BitfinexWebSocketPosition;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.observers.TestObserver;
 import java.util.List;
@@ -70,5 +71,25 @@ public class BitfinexStreamingTradeServiceIntegration extends BitfinexStreamingE
     assertThat(userTrades.get(0).getOrderId()).isNotNull();
   }
 
+  @Test
+  void position_changes() {
+    Observable<BitfinexWebSocketPosition> observable = ((BitfinexStreamingTradeService) exchange.getStreamingTradeService()).getPositionChanges();
+
+    TestObserver<BitfinexWebSocketPosition> testObserver = observable.test();
+
+    List<BitfinexWebSocketPosition> positionChanges =
+        testObserver
+            .awaitDone(5, TimeUnit.SECONDS)
+            .awaitCount(1)
+            .values();
+
+    testObserver.dispose();
+
+    log.info("Received positions: {}", positionChanges);
+
+    assumeThat(positionChanges).overridingErrorMessage("Received nothing").isNotEmpty();
+
+    assertThat(positionChanges.get(0).getCurrencyPair()).isNotNull();
+  }
 
 }
