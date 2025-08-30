@@ -23,10 +23,10 @@ public class BitfinexPosition {
   private CurrencyPair symbol;
 
   /** Status (ACTIVE, CLOSED). */
-  private String status;
+  private PositionStatus status;
 
   /**
-   * ±amount Size of the position. Positive values means a long position, negative values means a
+   * Size of the position. Positive values means a long position, negative values means a
    * short position.
    */
   private BigDecimal amount;
