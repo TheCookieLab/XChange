@@ -138,14 +138,14 @@ public class BybitStreamAdapters {
       if (!position.getLiqPrice().isEmpty()) {
         liqPrice = new BigDecimal(position.getLiqPrice());
       }
-      OpenPosition openPosition =
-          new OpenPosition(
-              convertBybitSymbolToInstrument(position.getSymbol(), position.getCategory()),
-              type,
-              new BigDecimal(position.getSize()),
-              new BigDecimal(position.getEntryPrice()),
-              liqPrice,
-              new BigDecimal(position.getUnrealisedPnl()));
+      OpenPosition openPosition = OpenPosition.builder()
+          .instrument(convertBybitSymbolToInstrument(position.getSymbol(), position.getCategory()))
+          .type(type)
+          .size(new BigDecimal(position.getSize()))
+          .price(new BigDecimal(position.getEntryPrice()))
+          .liquidationPrice(liqPrice)
+          .unRealisedPnl(new BigDecimal(position.getUnrealisedPnl()))
+          .build();
       openPositions.getOpenPositions().add(openPosition);
     }
     return openPositions;

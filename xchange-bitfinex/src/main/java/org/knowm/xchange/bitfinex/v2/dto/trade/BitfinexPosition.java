@@ -2,6 +2,7 @@ package org.knowm.xchange.bitfinex.v2.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
 import org.knowm.xchange.bitfinex.config.converter.StringToCurrencyPairConverter;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.account.OpenPosition.Type;
 
 @Data
 @Builder
@@ -20,7 +22,7 @@ public class BitfinexPosition {
 
   /** Pair (tBTCUSD, …). */
   @JsonDeserialize(converter = StringToCurrencyPairConverter.class)
-  private CurrencyPair symbol;
+  private CurrencyPair currencyPair;
 
   /** Status (ACTIVE, CLOSED). */
   private PositionStatus status;
@@ -49,13 +51,13 @@ public class BitfinexPosition {
   /** Liquidation price */
   private BigDecimal priceLiq;
 
-  /** Beta value */
+  /** Leverage used for the position */
   private BigDecimal leverage;
 
   private Object placeHolder0;
 
   /** Position ID */
-  private Integer positionId;
+  private String positionId;
 
   /** Millisecond timestamp of creation */
   private Instant createdAt;
@@ -79,6 +81,16 @@ public class BitfinexPosition {
   /** Additional meta information about the position */
   private Object meta;
 
+  @JsonIgnore
+  public Type getType() {
+    if (amount.signum() >= 0) {
+      return Type.LONG;
+    }
+    else {
+      return Type.SHORT;
+    }
+  }
+
   public static enum FundingType {
     @JsonProperty("0")
     DAILY,
@@ -88,6 +100,7 @@ public class BitfinexPosition {
   }
 
   public static enum PositionType {
+    @JsonEnumDefaultValue
     @JsonProperty("0")
     MARGIN,
 

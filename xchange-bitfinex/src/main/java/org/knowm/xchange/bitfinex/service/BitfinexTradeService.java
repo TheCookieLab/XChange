@@ -24,6 +24,7 @@ import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexTrade;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
@@ -82,6 +83,17 @@ public class BitfinexTradeService extends BitfinexTradeServiceRaw implements Tra
     } catch (BitfinexExceptionV2 e) {
       throw BitfinexErrorAdapter.adapt(e);
     }
+  }
+
+  @Override
+  public OpenPositions getOpenPositions() throws IOException {
+    var positions = getBitfinexActivePositionsV2().stream()
+        .map(BitfinexAdapters::toOpenPosition)
+        .collect(Collectors.toList());
+
+    return OpenPositions.builder()
+        .openPositions(positions)
+        .build();
   }
 
   @Override

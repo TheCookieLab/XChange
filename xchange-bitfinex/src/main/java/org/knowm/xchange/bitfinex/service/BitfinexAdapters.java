@@ -45,8 +45,10 @@ import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexPublicTrade;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTickerFundingCurrency;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexTickerTraidingPair;
 import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexOrderDetails;
+import org.knowm.xchange.bitfinex.v2.dto.trade.BitfinexPosition;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -55,6 +57,8 @@ import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.dto.account.FundingRecord.Type;
+import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPosition.MarginMode;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.account.Wallet.Builder;
 import org.knowm.xchange.dto.marketdata.OrderBook;
@@ -1075,5 +1079,20 @@ public class BitfinexAdapters {
     }
   }
 
+
+  public OpenPosition toOpenPosition(BitfinexPosition bitfinexPosition) {
+    return OpenPosition.builder()
+        .instrument(new FuturesContract(bitfinexPosition.getCurrencyPair(), "PERP"))
+        .id(bitfinexPosition.getPositionId())
+        .type(bitfinexPosition.getType())
+        .marginMode(MarginMode.CROSS)
+        .size(bitfinexPosition.getAmount().abs())
+        .price(bitfinexPosition.getBasePrice())
+        .liquidationPrice(bitfinexPosition.getPriceLiq())
+        .unRealisedPnl(bitfinexPosition.getPl())
+        .createdAt(bitfinexPosition.getCreatedAt())
+        .updatedAt(bitfinexPosition.getUpdatedAt())
+        .build();
+  }
 
 }

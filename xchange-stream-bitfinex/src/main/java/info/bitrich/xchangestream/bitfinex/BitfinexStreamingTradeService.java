@@ -9,8 +9,10 @@ import io.reactivex.rxjava3.core.Observable;
 import java.util.function.Function;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
+import org.knowm.xchange.instrument.Instrument;
 
 public class BitfinexStreamingTradeService implements StreamingTradeService {
 
@@ -39,8 +41,10 @@ public class BitfinexStreamingTradeService implements StreamingTradeService {
   }
 
 
-  public Observable<BitfinexWebSocketPosition> getPositionChanges() {
-    return getRawAuthenticatedPositions();
+  @Override
+  public Observable<OpenPosition> getPositionChanges(Instrument instrument) {
+    return getRawAuthenticatedPositions()
+        .map(BitfinexStreamingAdapters::toOpenPosition);
   }
 
   /**
