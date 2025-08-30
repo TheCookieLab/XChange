@@ -396,7 +396,7 @@ public class BinanceAdapters {
     for (BinancePosition position : binancePositions) {
       if (position.getPositionAmt().abs().compareTo(BigDecimal.ZERO) > 0) {
         openPositions.add(
-            new OpenPosition.Builder()
+            OpenPosition.builder()
                 .size(position.getPositionAmt().abs())
                 .type(
                     (position.getPositionAmt().compareTo(BigDecimal.ZERO) > 0)
