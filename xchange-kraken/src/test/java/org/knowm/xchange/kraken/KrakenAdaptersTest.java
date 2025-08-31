@@ -317,7 +317,7 @@ public class KrakenAdaptersTest {
 
     List<FundingRecord> records = KrakenAdapters.adaptFundingHistory(ledgerMap);
 
-    assertThat(records.size()).isEqualTo(3);
+    assertThat(records.size()).isEqualTo(5);
     FundingRecord fundingRecord = records.get(1);
     assertThat(fundingRecord).isInstanceOf(FundingRecord.class);
     assertThat(fundingRecord.getType()).isEqualTo(FundingRecord.Type.WITHDRAWAL);
