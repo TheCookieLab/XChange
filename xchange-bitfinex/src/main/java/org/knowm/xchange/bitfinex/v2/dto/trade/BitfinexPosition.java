@@ -68,7 +68,7 @@ public class BitfinexPosition {
   private Object placeHolder1;
 
   /** Identifies the type of position, 0 = Margin position, 1 = Derivatives position */
-  private PositionType type;
+  private PositionType positionType;
 
   private Object placeHolder2;
 
