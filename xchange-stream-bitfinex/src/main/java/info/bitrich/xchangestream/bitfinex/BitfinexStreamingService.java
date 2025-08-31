@@ -208,7 +208,6 @@ public class BitfinexStreamingService extends JsonNettyStreamingService {
   }
 
   private void processAuthenticatedMessage(JsonNode message) throws JsonProcessingException {
-    LOG.info(message.toString());
     String type = message.get(1).asText();
     JsonNode object = message.get(2);
     switch (type) {
