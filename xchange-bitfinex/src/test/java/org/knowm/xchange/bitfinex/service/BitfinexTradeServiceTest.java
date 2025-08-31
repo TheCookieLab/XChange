@@ -16,9 +16,13 @@ import org.knowm.xchange.bitfinex.service.trade.params.BitfinexOpenOrdersParams;
 import org.knowm.xchange.bitfinex.service.trade.params.BitfinexOrderQueryParams;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPosition.MarginMode;
+import org.knowm.xchange.dto.account.OpenPosition.Type;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrade;
@@ -211,6 +215,27 @@ class BitfinexTradeServiceTest extends BitfinexExchangeWiremock {
     assertThat(actual.getHiddenOrders()).isEmpty();
 
     assertThat(actual.getOpenOrders()).first().usingRecursiveComparison().isEqualTo(expected);
+  }
+
+  @Test
+  void open_positions() throws IOException {
+    var expected = OpenPosition.builder()
+        .id("185023623")
+        .instrument(new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+        .type(Type.LONG)
+        .marginMode(MarginMode.CROSS)
+        .size(new BigDecimal("0.00004"))
+        .price(new BigDecimal("108470"))
+        .liquidationPrice(new BigDecimal("54504.81225"))
+        .unRealisedPnl(new BigDecimal("0.028"))
+        .build();
+
+    var actual = exchange.getTradeService().getOpenPositions();
+
+    assertThat(actual.getOpenPositions()).hasSize(2);
+    assertThat(actual.getOpenPositions().get(1).getInstrument()).isEqualTo(new FuturesContract(new CurrencyPair("XTZ/USDT"), "PERP"));
+
+    assertThat(actual.getOpenPositions()).first().usingRecursiveComparison().isEqualTo(expected);
   }
 
 
