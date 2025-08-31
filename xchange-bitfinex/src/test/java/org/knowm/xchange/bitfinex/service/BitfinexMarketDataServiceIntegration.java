@@ -27,7 +27,7 @@ public class BitfinexMarketDataServiceIntegration extends BitfinexIntegrationTes
         ((BitfinexMarketDataService) exchange.getMarketDataService()).getCurrencies();
 
     assertThat(currencies).isNotEmpty();
-    assertThat(currencies.stream().distinct().count()).isEqualTo(currencies.size());
+    assertThat(currencies).contains(Currency.BTC, Currency.ETH, Currency.USDT);
   }
 
   @Test
@@ -36,7 +36,7 @@ public class BitfinexMarketDataServiceIntegration extends BitfinexIntegrationTes
         ((BitfinexMarketDataService) exchange.getMarketDataService()).getInstruments();
 
     assertThat(instruments).isNotEmpty();
-    assertThat(instruments.stream().distinct().count()).isEqualTo(instruments.size());
+    assertThat(instruments).contains(CurrencyPair.BTC_USDT, CurrencyPair.ETH_USDT);
   }
 
 

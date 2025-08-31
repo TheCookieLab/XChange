@@ -95,13 +95,11 @@ public class BitfinexAdapters {
   private final ObjectMapper mapper = new ObjectMapper();
 
   private final AtomicBoolean warnedStopLimit = new AtomicBoolean();
-  private final String USDT_SYMBOL_BITFINEX = "UST";
-  private final String USDT_SYMBOL_XCHANGE = "USDT";
 
-  private final Map<String, Currency> STRING_TO_CURRENCY = new HashMap<>();
+  private final Map<String, String > STRING_TO_CURRENCY = new HashMap<>();
 
-  static {
-    STRING_TO_CURRENCY.put("UST", Currency.USDT);
+  public void putCurrencyMapping(String exchangeCurrencyId, String commonCurrencyId) {
+    STRING_TO_CURRENCY.put(exchangeCurrencyId, commonCurrencyId);
   }
 
   /**
@@ -138,11 +136,22 @@ public class BitfinexAdapters {
   }
 
   public String adaptBitfinexCurrency(String bitfinexSymbol) {
-    String result = bitfinexSymbol.toUpperCase();
-    if (USDT_SYMBOL_BITFINEX.equals(result)) {
-      result = USDT_SYMBOL_XCHANGE;
+    String currentValue = bitfinexSymbol;
+
+    // mapping can be nested, e.g. USTF0 -> USDT -> USDt
+    while (STRING_TO_CURRENCY.containsKey(currentValue)) {
+      var newValue = STRING_TO_CURRENCY.get(currentValue);
+
+      // avoid infinite loop e.g. FET -> FET
+      if (newValue.equals(currentValue)) {
+        return currentValue;
+      }
+      else {
+        currentValue = newValue;
+      }
     }
-    return result;
+
+    return currentValue;
   }
 
 
@@ -202,8 +211,7 @@ public class BitfinexAdapters {
       transactionCurrency = bitfinexSymbol.substring(startIndex + 3);
     }
 
-    return new CurrencyPair(
-        adaptBitfinexCurrency(tradableIdentifier), adaptBitfinexCurrency(transactionCurrency));
+    return new CurrencyPair(toCurrency(tradableIdentifier), toCurrency(transactionCurrency));
   }
 
   public OrderStatus adaptOrderStatus(BitfinexOrderStatusResponse order) {
@@ -953,7 +961,7 @@ public class BitfinexAdapters {
 
 
   public Currency toCurrency(String bitfinexCurrency) {
-    return STRING_TO_CURRENCY.getOrDefault(bitfinexCurrency, Currency.getInstance(bitfinexCurrency));
+    return Currency.getInstance(adaptBitfinexCurrency(bitfinexCurrency));
   }
 
   public Balance toBalance(BitfinexWallet bitfinexWallet) {

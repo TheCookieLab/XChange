@@ -9,6 +9,7 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bitfinex.config.Config;
 import org.knowm.xchange.bitfinex.dto.BitfinexException;
 import org.knowm.xchange.bitfinex.service.BitfinexAccountService;
+import org.knowm.xchange.bitfinex.service.BitfinexAdapters;
 import org.knowm.xchange.bitfinex.service.BitfinexMarketDataService;
 import org.knowm.xchange.bitfinex.service.BitfinexMarketDataServiceRaw;
 import org.knowm.xchange.bitfinex.service.BitfinexTradeService;
@@ -68,7 +69,17 @@ public class BitfinexExchange extends BaseExchange {
   public void remoteInit() throws IOException, ExchangeException {
 
     try {
+
       BitfinexMarketDataServiceRaw dataService = (BitfinexMarketDataServiceRaw) marketDataService;
+
+      // ust -> usdt
+      BitfinexAdapters.putCurrencyMapping("UST", "USDT");
+
+      // put deriatives currency mappings
+      dataService.currencyDeriativesMappings().forEach(bitfinexCurrencyMapping -> {
+        BitfinexAdapters.putCurrencyMapping(bitfinexCurrencyMapping.getSource(), bitfinexCurrencyMapping.getTarget());
+      });
+
       List<BitfinexCurrencyPairInfo> currencyPairInfos = dataService.allCurrencyPairInfos();
 
       Map<Instrument, InstrumentMetaData> instruments = new HashMap<>();

@@ -19,6 +19,7 @@ import org.knowm.xchange.bitfinex.v1.dto.marketdata.BitfinexTicker;
 import org.knowm.xchange.bitfinex.v1.dto.marketdata.BitfinexTrade;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexCandle;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexCurrencyChain;
+import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexCurrencyMapping;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexCurrencyPairInfo;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexFundingOrder;
 import org.knowm.xchange.bitfinex.v2.dto.marketdata.BitfinexFundingRawOrder;
@@ -367,6 +368,17 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
   }
 
 
+  public List<BitfinexCurrencyMapping> currencyDeriativesMappings() throws IOException {
+    List<List<BitfinexCurrencyMapping>> list =
+        decorateApiCall(bitfinexV2::currencyDeriativesMappings)
+        .withRetry(retry("market-currencyDeriativesMappings"))
+        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
+        .call();
+
+    return list.isEmpty() ? Collections.emptyList() : list.get(0);
+  }
+
+
   public List<Currency> allCurrencies() throws IOException {
     List<List<String>> list =
         decorateApiCall(bitfinexV2::allCurrencies)
@@ -380,6 +392,7 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
 
     return list.get(0).stream()
         .map(BitfinexAdapters::toCurrency)
+        .distinct()
         .collect(Collectors.toList());
   }
 

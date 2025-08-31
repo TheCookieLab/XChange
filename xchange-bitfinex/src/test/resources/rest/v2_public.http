@@ -11,8 +11,11 @@ GET {{api_v2}}/conf/pub:list:currency
 ### Maps symbols to their verbose friendly name (e.g. BTC -> Bitcoin)
 GET {{api_v2}}/conf/pub:map:currency:label
 
-###
+### Map symbols to their API symbols (e.g. DSH -> DASH)
 GET {{api_v2}}/conf/pub:map:currency:sym
+
+### Maps derivatives symbols to their underlying currency (e.g. BTCF0 -> BTC)
+GET {{api_v2}}/conf/pub:map:currency:undl
 
 ### Symbols to the underlying network/protocol they operate on (e.g. BAT -> ETH)
 GET {{api_v2}}/conf/pub:map:currency:pool
@@ -32,5 +35,5 @@ GET {{api_v2}}/conf/pub:map:currency:tx:fee
 ### Platform Status
 GET {{api_v2}}/platform/status
 
-### Platform Status
+### Tickers
 GET {{api_v2}}/tickers?symbols=ALL

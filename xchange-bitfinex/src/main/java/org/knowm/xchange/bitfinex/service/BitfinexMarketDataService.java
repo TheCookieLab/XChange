@@ -291,7 +291,7 @@ public class BitfinexMarketDataService extends BitfinexMarketDataServiceRaw
   public List<Instrument> getInstruments() throws IOException {
     try {
 
-      return getExchangeSymbols().stream()
+      return allCurrencyPairs().stream()
           .map(Instrument.class::cast)
           .collect(Collectors.toList());
     } catch (BitfinexException e) {
