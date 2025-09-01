@@ -15,10 +15,11 @@ import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.rxjava3.ratelimiter.operator.RateLimiterOperator;
-import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Single;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.bybit.service.BybitException;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -43,15 +44,20 @@ public class BybitStreamingTradeService implements StreamingTradeService {
     this.resilienceRegistries = resilienceRegistries;
   }
 
-  public Maybe<String> placeMarketOrder(MarketOrder order) throws JsonProcessingException {
+  public Single<Boolean> placeMarketOrder(MarketOrder order) throws JsonProcessingException {
     BybitCategory category = BybitAdapters.getCategory(order.getInstrument());
-    Observable<String> observable = userTradeService.subscribeChannel("order.create"+System.nanoTime(), order)
+    Observable<Boolean> observable = userTradeService.subscribeChannel("order.create"+System.nanoTime(), order)
         .flatMap(node -> {
           BybitStreamOrderResponse response = mapper.treeToValue(node, BybitStreamOrderResponse.class);
-          return Observable.just(String.valueOf(response.getRetCode()));
+          if(response != null && response.getRetCode()==0){
+          return Observable.just(true);
+        } else {
+            assert response != null;
+            return Observable.error(new BybitException(response.getRetCode(),String.valueOf(response.getRetMsg()), null));
+          }
         });
     return observable.firstElement()
-        .compose(RateLimiterOperator.of(getCreateOrderRateLimiter(category)));
+        .compose(RateLimiterOperator.of(getCreateOrderRateLimiter(category))).toSingle();
   }
 
   @Override

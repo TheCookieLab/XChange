@@ -56,12 +56,12 @@ public class BybitStreamOrderBookAndFeesExample {
       ((BybitAccountService) exchange.getAccountService()).switchPositionMode(BybitCategory.LINEAR, instrument, "USDT", 3);
       BigDecimal minAmountFuture =
           exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
-      MarketOrder marketOrder = new MarketOrder(OrderType.ASK, minAmountFuture, instrument);
+      MarketOrder marketOrder = new MarketOrder(OrderType.ASK, new BigDecimal("1"), instrument);
       marketOrder.addOrderFlag(BybitHedgeMode.TWOWAY);
       Disposable disposable = ((BybitStreamingTradeService) exchange.getStreamingTradeService()).placeMarketOrder(marketOrder)
           .subscribe(result -> {
-                LOG.info("marketOrder result: {}", result);
-              });
+                LOG.info("marketOrder is send: {}", result);
+              }, throwable -> LOG.error("throwable", throwable));
       Thread.sleep(2000);
       LOG.info("is disposed: {}", disposable.isDisposed());
     } catch (IOException | InterruptedException e) {
