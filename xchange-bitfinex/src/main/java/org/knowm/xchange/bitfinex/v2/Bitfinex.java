@@ -123,7 +123,7 @@ public interface Bitfinex {
 
   @GET
   @Path("conf/pub:map:currency:undl")
-  List<List<BitfinexCurrencyMapping>> currencyDeriativesMappings() throws IOException, BitfinexExceptionV2;
+  List<List<BitfinexCurrencyMapping>> currencyDerivativesMappings() throws IOException, BitfinexExceptionV2;
 
   @GET
   @Path("conf/pub:list:pair:exchange")

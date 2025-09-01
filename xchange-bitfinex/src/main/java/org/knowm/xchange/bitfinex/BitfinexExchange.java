@@ -75,8 +75,8 @@ public class BitfinexExchange extends BaseExchange {
       // ust -> usdt
       BitfinexAdapters.putCurrencyMapping("UST", "USDT");
 
-      // put deriatives currency mappings
-      dataService.currencyDeriativesMappings().forEach(bitfinexCurrencyMapping -> {
+      // put derivatives currency mappings
+      dataService.currencyDerivativesMappings().forEach(bitfinexCurrencyMapping -> {
         BitfinexAdapters.putCurrencyMapping(bitfinexCurrencyMapping.getSource(), bitfinexCurrencyMapping.getTarget());
       });
 

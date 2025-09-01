@@ -368,10 +368,10 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
   }
 
 
-  public List<BitfinexCurrencyMapping> currencyDeriativesMappings() throws IOException {
+  public List<BitfinexCurrencyMapping> currencyDerivativesMappings() throws IOException {
     List<List<BitfinexCurrencyMapping>> list =
-        decorateApiCall(bitfinexV2::currencyDeriativesMappings)
-        .withRetry(retry("market-currencyDeriativesMappings"))
+        decorateApiCall(bitfinexV2::currencyDerivativesMappings)
+        .withRetry(retry("market-currencyDerivativesMappings"))
         .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
 

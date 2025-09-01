@@ -105,7 +105,7 @@ public class BitfinexPosition {
     MARGIN,
 
     @JsonProperty("1")
-    DERIATIVES
+    DERIVATIVES
   }
 
   public static enum PositionStatus {
