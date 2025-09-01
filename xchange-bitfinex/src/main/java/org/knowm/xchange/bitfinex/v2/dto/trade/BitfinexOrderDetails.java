@@ -104,7 +104,7 @@ public class BitfinexOrderDetails {
   private Object meta;
 
 
-  public static enum OrderType {
+  public enum OrderType {
     LIMIT,
 
     @JsonProperty("EXCHANGE LIMIT")

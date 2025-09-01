@@ -55,7 +55,7 @@ public class BitfinexTrade {
   private Currency feeCurrency;
 
 
-  public static enum OrderType {
+  public enum OrderType {
     LIMIT,
 
     @JsonProperty("EXCHANGE LIMIT")

@@ -39,7 +39,7 @@ public class BitfinexWallet {
   private Object tradeDetails;
 
 
-  public static enum Type {
+  public enum Type {
     @JsonEnumDefaultValue
     @JsonProperty("exchange")
     EXCHANGE,

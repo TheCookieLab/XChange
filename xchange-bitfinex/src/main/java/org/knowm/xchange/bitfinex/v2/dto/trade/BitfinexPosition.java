@@ -91,7 +91,7 @@ public class BitfinexPosition {
     }
   }
 
-  public static enum FundingType {
+  public enum FundingType {
     @JsonProperty("0")
     DAILY,
 
@@ -99,7 +99,7 @@ public class BitfinexPosition {
     TERM
   }
 
-  public static enum PositionType {
+  public enum PositionType {
     @JsonEnumDefaultValue
     @JsonProperty("0")
     MARGIN,
@@ -108,7 +108,7 @@ public class BitfinexPosition {
     DERIVATIVES
   }
 
-  public static enum PositionStatus {
+  public enum PositionStatus {
     @JsonProperty("ACTIVE")
     ACTIVE,
 
