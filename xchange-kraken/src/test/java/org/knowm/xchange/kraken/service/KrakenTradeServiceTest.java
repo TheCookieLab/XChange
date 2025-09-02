@@ -10,29 +10,35 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.verification.*;
-import java.math.*;
-import java.util.*;
-import java.util.stream.*;
-import org.junit.Before;
-import org.junit.Test;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.dto.*;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
-import org.knowm.xchange.kraken.dto.trade.*;
+import org.knowm.xchange.kraken.dto.trade.TimeInForce;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
 
+@WireMockTest
 public class KrakenTradeServiceTest extends BaseWiremockTest {
 
   private KrakenTradeService classUnderTest;
 
-  @Before
-  public void setup() {
-    classUnderTest = (KrakenTradeService) createExchange().getTradeService();
+  @BeforeEach
+  public void setup(WireMockRuntimeInfo wmRuntimeInfo) {
+    classUnderTest = (KrakenTradeService) createExchange(wmRuntimeInfo.getHttpPort()).getTradeService();
   }
 
   @Test
@@ -128,14 +134,14 @@ public class KrakenTradeServiceTest extends BaseWiremockTest {
   }
 
   @Test
-  public void placeOrderTest() throws Exception {
+  public void placeOrderTest(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
     stubAddOrderApi();
 
     String orderId = classUnderTest.placeLimitOrder(LIMIT_ORDER);
     assertThat(orderId).isEqualTo("OUF4EM-FRGI2-MQMWZD");
 
     List<LoggedRequest> requests =
-        wireMockRule.findAll(postRequestedFor(urlEqualTo("/0/private/AddOrder")));
+        WireMock.findAll(postRequestedFor(urlEqualTo("/0/private/AddOrder")));
     assertThat(requests).hasSize(1);
 
     Map<String, String> requestParams = parseAddOrderRequestBody(requests.get(0));
@@ -155,7 +161,7 @@ public class KrakenTradeServiceTest extends BaseWiremockTest {
     classUnderTest.placeLimitOrder(order);
 
     List<LoggedRequest> requests =
-        wireMockRule.findAll(postRequestedFor(urlEqualTo("/0/private/AddOrder")));
+        WireMock.findAll(postRequestedFor(urlEqualTo("/0/private/AddOrder")));
     assertThat(requests).hasSize(1);
 
     Map<String, String> requestParams = parseAddOrderRequestBody(requests.get(0));
@@ -173,7 +179,7 @@ public class KrakenTradeServiceTest extends BaseWiremockTest {
                     .withBody(OPEN_ORDERS_BODY)));
     classUnderTest.cancelAllOrders(null);
     List<LoggedRequest> requests =
-        wireMockRule.findAll(postRequestedFor(urlEqualTo("/0/private/CancelAll")));
+        WireMock.findAll(postRequestedFor(urlEqualTo("/0/private/CancelAll")));
     Map<String, String> requestParams = parseAddOrderRequestBody(requests.get(0));
     assertThat(requestParams.get("nonce")).isLessThan(String.valueOf(System.currentTimeMillis()));
   }

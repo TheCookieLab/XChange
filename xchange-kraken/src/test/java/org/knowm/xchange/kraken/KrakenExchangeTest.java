@@ -3,10 +3,10 @@ package org.knowm.xchange.kraken;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Map;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
@@ -16,12 +16,12 @@ import org.knowm.xchange.dto.meta.CurrencyMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.instrument.Instrument;
 
-@Ignore
+@Disabled
 public class KrakenExchangeTest {
   protected static ExchangeSpecification exchangeSpecification;
   protected static Exchange exchange;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBaseClass() {
     exchangeSpecification = new ExchangeSpecification(KrakenExchange.class);
     exchange = ExchangeFactory.INSTANCE.createExchange(exchangeSpecification);
@@ -35,18 +35,18 @@ public class KrakenExchangeTest {
 
     Map<Currency, CurrencyMetaData> currencies = exchange.getExchangeMetaData().getCurrencies();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         25, currencyPairs.get(CurrencyPair.ADA_BTC).getMinimumAmount().doubleValue(), 0.01);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         25, currencyPairs.get(CurrencyPair.ADA_ETH).getMinimumAmount().doubleValue(), 0.01);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         25, currencyPairs.get(CurrencyPair.ADA_USD).getMinimumAmount().doubleValue(), 0.01);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0.02, currencyPairs.get(CurrencyPair.BCH_USD).getMinimumAmount().doubleValue(), 0.000001);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1, currencyPairs.get(CurrencyPair.ATOM_ETH).getMinimumAmount().doubleValue(), 0.01);
 
-    Assert.assertEquals(0.3, currencies.get(Currency.ADA).getWithdrawalFee().doubleValue(), 0.01);
+    Assertions.assertEquals(0.3, currencies.get(Currency.ADA).getWithdrawalFee().doubleValue(), 0.01);
   }
 
   @Test
@@ -55,6 +55,6 @@ public class KrakenExchangeTest {
     Map<Currency, CurrencyMetaData> currencyMetadataMap =
         exchange.getExchangeMetaData().getCurrencies();
 
-    Assert.assertEquals(new BigDecimal(8), currencyMetadataMap.get(Currency.ADA).getScale());
+    Assertions.assertEquals(new BigDecimal(8), currencyMetadataMap.get(Currency.ADA).getScale());
   }
 }

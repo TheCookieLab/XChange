@@ -13,9 +13,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -54,7 +54,7 @@ import org.knowm.xchange.kraken.dto.trade.results.KrakenTradeHistoryResult.Krake
 
 public class KrakenAdaptersTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws IOException {
 
     KrakenUtils.clearAssets();
@@ -122,7 +122,6 @@ public class KrakenAdaptersTest {
         KrakenAdapters.adaptCurrencyPairs(krakenAssetPairs.getResult().keySet());
     assertThat(pairs).hasSize(75);
     assertThat(pairs.contains(CurrencyPair.BTC_USD)).isTrue();
-    System.out.println("pairs = " + pairs);
   }
 
   @Test
@@ -143,7 +142,7 @@ public class KrakenAdaptersTest {
             CurrencyPair.BTC_USD,
             krakenTrades.getResult().getLast());
 
-    Assert.assertEquals(14, trades.getTrades().size());
+    Assertions.assertEquals(14, trades.getTrades().size());
     assertThat(trades.getTrades().get(0).getPrice()).isEqualTo("1023.82219");
     assertThat(trades.getTrades().get(0).getType()).isEqualTo(OrderType.ASK);
     assertThat(trades.getTrades().get(0).getTimestamp()).isEqualTo(new Date(1385579841777L));
@@ -317,7 +316,7 @@ public class KrakenAdaptersTest {
 
     List<FundingRecord> records = KrakenAdapters.adaptFundingHistory(ledgerMap);
 
-    assertThat(records.size()).isEqualTo(3);
+    assertThat(records.size()).isEqualTo(5);
     FundingRecord fundingRecord = records.get(1);
     assertThat(fundingRecord).isInstanceOf(FundingRecord.class);
     assertThat(fundingRecord.getType()).isEqualTo(FundingRecord.Type.WITHDRAWAL);

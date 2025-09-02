@@ -10,10 +10,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AddressWithTag;
@@ -21,14 +23,15 @@ import org.knowm.xchange.exceptions.DepositAddressAmbiguousException;
 import org.knowm.xchange.service.account.params.DefaultRequestDepositAddressParams;
 
 @Slf4j
+@WireMockTest
 public class KrakenAccountServiceTest extends BaseWiremockTest {
 
   private KrakenAccountService classUnderTest;
   private Exchange exchange;
 
-  @Before
-  public void setup() {
-    exchange = createExchange();
+  @BeforeEach
+  public void setup(WireMockRuntimeInfo wmRuntimeInfo) {
+    exchange = createExchange(wmRuntimeInfo.getHttpPort());
     classUnderTest = (KrakenAccountService) exchange.getAccountService();
   }
 
