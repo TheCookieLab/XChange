@@ -43,6 +43,7 @@ import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kraken.dto.account.KrakenDepositAddress;
+import org.knowm.xchange.kraken.dto.account.KrakenExtendedBalance;
 import org.knowm.xchange.kraken.dto.account.KrakenLedger;
 import org.knowm.xchange.kraken.dto.account.KrakenTradeVolume;
 import org.knowm.xchange.kraken.dto.account.KrakenVolumeFee;
@@ -245,21 +246,33 @@ public class KrakenAdapters {
         .build();
   }
 
-  public static Wallet adaptWallet(Map<String, BigDecimal> krakenWallet) {
+  public static Wallet toWallet(Map<String, KrakenExtendedBalance> krakenExtendedBalancePositions, String walletId) {
+    var balances = krakenExtendedBalancePositions.entrySet().stream()
+        .map(e -> toBalance(e.getKey(), e.getValue()))
+        .collect(Collectors.toList());
 
-    List<Balance> balances = new ArrayList<>(krakenWallet.size());
-    for (Entry<String, BigDecimal> balancePair : krakenWallet.entrySet()) {
-      Currency currency;
-      try {
-        currency = adaptCurrency(balancePair.getKey());
-      } catch (Exception e) {
-        currency = Currency.getInstance(balancePair.getKey());
-      }
+    return new Wallet.Builder()
+        .id(walletId)
+        .balances(balances)
+        .build();
+  }
 
-      Balance balance = new Balance(currency, balancePair.getValue());
-      balances.add(balance);
+  public static Balance toBalance(String krakenCurrencyCode, KrakenExtendedBalance krakenExtendedBalance) {
+    var builder = Balance.builder()
+        .currency(adaptCurrency(krakenCurrencyCode))
+        .total(krakenExtendedBalance.getBalance());
+
+    if (krakenExtendedBalance.getCredit() != null) {
+      builder.borrowed(krakenExtendedBalance.getCredit());
     }
-    return Wallet.Builder.from(balances).id("spot").build();
+    if (krakenExtendedBalance.getCreditUsed() != null) {
+      builder.loaned(krakenExtendedBalance.getCreditUsed());
+    }
+    if (krakenExtendedBalance.getHoldTrade() != null) {
+      builder.frozen(krakenExtendedBalance.getHoldTrade());
+    }
+
+    return builder.build();
   }
 
   public static Set<CurrencyPair> adaptCurrencyPairs(Collection<String> krakenCurrencyPairs) {

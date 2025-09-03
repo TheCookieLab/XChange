@@ -7,22 +7,40 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.AddressWithTag;
+import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.exceptions.DepositAddressAmbiguousException;
 import org.knowm.xchange.kraken.KrakenExchangeWiremock;
+import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.account.params.DefaultRequestDepositAddressParams;
 
-@Slf4j
 public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
+
+  AccountService accountService = exchange.getAccountService();
 
   @Test
   void valid_balances() throws IOException {
-    AccountInfo accountInfo = exchange.getAccountService().getAccountInfo();
-    assertThat(accountInfo.getWallet("spot").getBalances().get(Currency.USDT).getAvailable()).isEqualTo(new BigDecimal("100.00000000"));
+    AccountInfo accountInfo = accountService.getAccountInfo();
+
+    var expectedBTC = new Balance.Builder()
+        .currency(Currency.BTC)
+        .total(new BigDecimal("0.0001339400"))
+        .frozen(new BigDecimal("0.00005"))
+        .build();
+
+    var actualBTC = accountInfo.getWallet("spot").getBalance(Currency.BTC);
+
+    assertThat(actualBTC.getTotal()).isEqualTo(expectedBTC.getTotal());
+    assertThat(actualBTC.getAvailable()).isEqualTo(expectedBTC.getAvailable());
+    assertThat(actualBTC.getCurrency()).isEqualTo(expectedBTC.getCurrency());
+
+    assertThat(actualBTC)
+        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .usingRecursiveComparison()
+        .isEqualTo(expectedBTC);
   }
 
 
@@ -31,7 +49,7 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
     DefaultRequestDepositAddressParams params =
         DefaultRequestDepositAddressParams.builder().currency(Currency.TRX).build();
 
-    String address = exchange.getAccountService().requestDepositAddress(params);
+    String address = accountService.requestDepositAddress(params);
 
     assertThat(address).isEqualTo("TYAnp8VW1aq5Jbtxgoai7BDo3jKSRe6VNR");
   }
@@ -42,7 +60,7 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
     var params = DefaultRequestDepositAddressParams.builder().currency(Currency.USDT).build();
 
     assertThatExceptionOfType(DepositAddressAmbiguousException.class)
-        .isThrownBy(() -> exchange.getAccountService().requestDepositAddress(params));
+        .isThrownBy(() -> accountService.requestDepositAddress(params));
   }
 
   @Test
@@ -50,7 +68,7 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
     DefaultRequestDepositAddressParams params =
         DefaultRequestDepositAddressParams.builder().currency(Currency.XRP).build();
 
-    AddressWithTag address = exchange.getAccountService().requestDepositAddressData(params);
+    AddressWithTag address = accountService.requestDepositAddressData(params);
 
     assertThat(address.getAddress()).isEqualTo("testXrpAddress");
     assertThat(address.getAddressTag()).isEqualTo("123");
@@ -67,8 +85,8 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
         DefaultRequestDepositAddressParams.builder().currency(Currency.TRX).build();
 
     wireMockServer.resetRequests();
-    exchange.getAccountService().requestDepositAddress(params);
-    exchange.getAccountService().requestDepositAddress(params);
+    accountService.requestDepositAddress(params);
+    accountService.requestDepositAddress(params);
 
     wireMockServer.verify(1, postRequestedFor(urlEqualTo("/0/private/DepositMethods")));
 
@@ -78,8 +96,8 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
         .setExchangeSpecificParametersItem("cacheDepositMethods", false);
 
     wireMockServer.resetRequests();
-    exchange.getAccountService().requestDepositAddress(params);
-    exchange.getAccountService().requestDepositAddress(params);
+    accountService.requestDepositAddress(params);
+    accountService.requestDepositAddress(params);
 
     wireMockServer.verify(2, postRequestedFor(urlEqualTo("/0/private/DepositMethods")));
   }

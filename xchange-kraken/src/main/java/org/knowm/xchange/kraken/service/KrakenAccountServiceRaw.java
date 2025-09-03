@@ -17,6 +17,7 @@ import org.knowm.xchange.kraken.KrakenUtils;
 import org.knowm.xchange.kraken.dto.account.DepostitStatus;
 import org.knowm.xchange.kraken.dto.account.KrakenDepositAddress;
 import org.knowm.xchange.kraken.dto.account.KrakenDepositMethods;
+import org.knowm.xchange.kraken.dto.account.KrakenExtendedBalance;
 import org.knowm.xchange.kraken.dto.account.KrakenLedger;
 import org.knowm.xchange.kraken.dto.account.KrakenTradeBalanceInfo;
 import org.knowm.xchange.kraken.dto.account.KrakenTradeVolume;
@@ -67,6 +68,16 @@ public class KrakenAccountServiceRaw extends KrakenBaseService {
 
     KrakenBalanceResult balanceResult =
         kraken.balance(
+            exchange.getExchangeSpecification().getApiKey(),
+            signatureCreator,
+            exchange.getNonceFactory());
+    return checkResult(balanceResult);
+  }
+
+  public Map<String, KrakenExtendedBalance> getKrakenExtendedBalance() throws IOException {
+
+    var balanceResult =
+        kraken.balanceEx(
             exchange.getExchangeSpecification().getApiKey(),
             signatureCreator,
             exchange.getNonceFactory());

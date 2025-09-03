@@ -10,7 +10,11 @@ import java.util.Map;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.dto.account.*;
+import org.knowm.xchange.dto.account.AccountInfo;
+import org.knowm.xchange.dto.account.AddressWithTag;
+import org.knowm.xchange.dto.account.Fee;
+import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.exceptions.DepositAddressCreationException;
 import org.knowm.xchange.exceptions.DepositAddressNotFoundException;
 import org.knowm.xchange.instrument.Instrument;
@@ -23,7 +27,14 @@ import org.knowm.xchange.kraken.dto.account.LedgerType;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.account.params.DefaultRequestDepositAddressParams;
 import org.knowm.xchange.service.account.params.RequestDepositAddressParams;
-import org.knowm.xchange.service.trade.params.*;
+import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamsTimeSpan;
+import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
+import org.knowm.xchange.service.trade.params.HistoryParamsFundingType;
+import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencies;
+import org.knowm.xchange.service.trade.params.TradeHistoryParamOffset;
+import org.knowm.xchange.service.trade.params.TradeHistoryParams;
+import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
+import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
 
 public class KrakenAccountService extends KrakenAccountServiceRaw implements AccountService {
 
@@ -40,8 +51,10 @@ public class KrakenAccountService extends KrakenAccountServiceRaw implements Acc
   @Override
   public AccountInfo getAccountInfo() throws IOException {
 
+    var krakenExtendedBalance = getKrakenExtendedBalance();
+    Wallet tradingWallet = KrakenAdapters.toWallet(krakenExtendedBalance, "spot");
+
     KrakenTradeBalanceInfo krakenTradeBalanceInfo = getKrakenTradeBalance();
-    Wallet tradingWallet = KrakenAdapters.adaptWallet(getKrakenBalance());
 
     Wallet marginWallet =
         Wallet.Builder.from(tradingWallet.getBalances().values())
