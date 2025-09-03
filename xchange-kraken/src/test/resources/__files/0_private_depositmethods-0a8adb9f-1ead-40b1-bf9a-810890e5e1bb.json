@@ -5,7 +5,7 @@
       "method": "Tron",
       "limit": false,
       "gen-address": true,
-      "minimum": "2.000000"
+      "minimum": "25"
     }
   ]
 }
