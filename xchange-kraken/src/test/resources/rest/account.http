@@ -1,0 +1,15 @@
+### Get Account Balance
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+POST {{base_url}}/private/Balance
+#POST https://examples.http-client.intellij.net/body-echo
+API-Key: {{api_key}}
+API-Sign: {{sign}}
+Content-Type: application/json
+
+{
+  "nonce":{{nonceValue}}
+}
+
