@@ -22,7 +22,6 @@ import org.knowm.xchange.service.trade.params.CancelAllOrders;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
-import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamsTimeSpan;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamOffset;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
@@ -159,7 +158,7 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
   @Override
   public TradeHistoryParams createTradeHistoryParams() {
 
-    return new org.knowm.xchange.kraken.service.KrakenTradeHistoryParams();
+    return new KrakenTradeHistoryParams();
   }
 
   @Override
@@ -172,43 +171,4 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
     return KrakenAdapters.adaptOrders(super.getOrders(TradeService.toOrderIds(orderQueryParams)));
   }
 
-  @Deprecated
-  // Use org.knowm.xchange.kraken.service.KrakenTradeHistoryParams.java
-  public static class KrakenTradeHistoryParams extends DefaultTradeHistoryParamsTimeSpan
-      implements TradeHistoryParamOffset, TradeHistoryParamsIdSpan {
-
-    private Long offset;
-    private String startId;
-    private String endId;
-
-    @Override
-    public Long getOffset() {
-      return offset;
-    }
-
-    @Override
-    public void setOffset(Long offset) {
-      this.offset = offset;
-    }
-
-    @Override
-    public String getStartId() {
-      return startId;
-    }
-
-    @Override
-    public String getEndId() {
-      return endId;
-    }
-
-    @Override
-    public void setStartId(String startId) {
-      this.startId = startId;
-    }
-
-    @Override
-    public void setEndId(String endId) {
-      this.endId = endId;
-    }
-  }
 }

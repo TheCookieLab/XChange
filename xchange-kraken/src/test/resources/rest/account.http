@@ -43,3 +43,33 @@ Content-Type: application/json
 }
 
 
+### Get Open Orders
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+POST {{base_url}}/private/OpenOrders
+API-Key: {{api_key}}
+API-Sign: {{sign}}
+Content-Type: application/json
+
+{
+  "nonce":{{nonceValue}}
+}
+
+
+### Get Trades History
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+POST {{base_url}}/private/TradesHistory
+API-Key: {{api_key}}
+API-Sign: {{sign}}
+Content-Type: application/json
+
+{
+  "nonce":{{nonceValue}}
+}
+
+
