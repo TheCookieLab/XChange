@@ -130,10 +130,10 @@ public class PoloniexAdapters {
         poloniexTrade.getType().equalsIgnoreCase("buy") ? OrderType.BID : OrderType.ASK;
     Date timestamp = PoloniexUtils.stringToDate(poloniexTrade.getDate());
 
-    return new Trade.Builder()
+    return Trade.builder()
         .type(type)
         .originalAmount(poloniexTrade.getAmount())
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(poloniexTrade.getRate())
         .timestamp(timestamp)
         .id(poloniexTrade.getTradeID())
@@ -238,7 +238,7 @@ public class PoloniexAdapters {
     return UserTrade.builder()
         .type(orderType)
         .originalAmount(amount)
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(price)
         .timestamp(date)
         .id(tradeId)

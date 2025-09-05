@@ -87,7 +87,7 @@ public class Bl3pAdapters {
     for (Bl3pUserTransactions.Bl3pUserTransaction t : transactions) {
       UserTrade ut =
           UserTrade.builder()
-              .currencyPair(CurrencyPair.BTC_EUR)
+              .instrument(CurrencyPair.BTC_EUR)
               .id(Integer.toString(t.id))
               .orderId(Integer.toString(t.orderId))
               .type(t.type == "credit" ? Order.OrderType.BID : Order.OrderType.ASK)

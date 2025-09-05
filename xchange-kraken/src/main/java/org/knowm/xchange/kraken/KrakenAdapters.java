@@ -235,10 +235,10 @@ public class KrakenAdapters {
     BigDecimal originalAmount = krakenPublicTrade.getVolume();
     Date timestamp = new Date((long) (krakenPublicTrade.getTime() * 1000L));
 
-    return new Trade.Builder()
+    return Trade.builder()
         .type(type)
         .originalAmount(originalAmount)
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(krakenPublicTrade.getPrice())
         .timestamp(timestamp)
         .id(String.valueOf((long) (krakenPublicTrade.getTime() * 10000L)))
@@ -320,17 +320,18 @@ public class KrakenAdapters {
     BigDecimal averagePrice = krakenTrade.getAverageClosePrice();
     BigDecimal price = (averagePrice == null) ? krakenTrade.getPrice() : averagePrice;
 
-    return new KrakenUserTrade(
-        orderType,
-        originalAmount,
-        pair,
-        price,
-        timestamp,
-        tradeId,
-        krakenTrade.getOrderTxId(),
-        krakenTrade.getFee(),
-        pair.getCounter(),
-        krakenTrade.getCost());
+    return KrakenUserTrade.builder()
+        .type(orderType)
+        .originalAmount(originalAmount)
+        .instrument(pair)
+        .price(price)
+        .timestamp(timestamp)
+        .id(tradeId)
+        .orderId(krakenTrade.getOrderTxId())
+        .feeAmount(krakenTrade.getFee())
+        .feeCurrency(pair.getCounter())
+        .cost(krakenTrade.getCost())
+        .build();
   }
 
   public static OrderType adaptOrderType(KrakenType krakenType) {

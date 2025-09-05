@@ -445,7 +445,7 @@ public class OkexAdapters {
     okexTrades.forEach(
         okexTrade ->
             trades.add(
-                new Trade.Builder()
+                Trade.builder()
                     .id(okexTrade.getTradeId())
                     .instrument(instrument)
                     .originalAmount(
