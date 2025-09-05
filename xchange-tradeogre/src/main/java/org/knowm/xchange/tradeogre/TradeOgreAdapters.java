@@ -117,7 +117,7 @@ public class TradeOgreAdapters {
         tradeHistory.stream()
             .map(
                 tradeOgreTrade ->
-                    new UserTrade.Builder()
+                    UserTrade.builder()
                         //
                         // .currencyPair(adaptTradeOgreCurrencyPair(tradeOgreTrade.getMarket()))
                         .originalAmount(tradeOgreTrade.getQuantity())

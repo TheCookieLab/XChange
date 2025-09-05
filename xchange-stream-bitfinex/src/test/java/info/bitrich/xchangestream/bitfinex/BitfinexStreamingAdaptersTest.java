@@ -282,7 +282,7 @@ public class BitfinexStreamingAdaptersTest {
             "BTC" // feeCurrency
             );
     UserTrade adapted = BitfinexStreamingAdapters.adaptUserTrade(bitfinexWebSocketAuthTrade);
-    assertEquals(CurrencyPair.BTC_USD, adapted.getCurrencyPair());
+    assertEquals(CurrencyPair.BTC_USD, adapted.getInstrument());
     assertEquals(new BigDecimal("0.00000682896"), adapted.getFeeAmount());
     assertEquals(CurrencyPair.BTC_USD.getBase(), adapted.getFeeCurrency());
     assertEquals("335015622", adapted.getId());
@@ -310,7 +310,7 @@ public class BitfinexStreamingAdaptersTest {
             "BTC" // feeCurrency
             );
     UserTrade adapted = BitfinexStreamingAdapters.adaptUserTrade(bitfinexWebSocketAuthTrade);
-    assertEquals(CurrencyPair.BTC_USD, adapted.getCurrencyPair());
+    assertEquals(CurrencyPair.BTC_USD, adapted.getInstrument());
     assertEquals(new BigDecimal("0.00000682896"), adapted.getFeeAmount());
     assertEquals(CurrencyPair.BTC_USD.getBase(), adapted.getFeeCurrency());
     assertEquals("335015622", adapted.getId());

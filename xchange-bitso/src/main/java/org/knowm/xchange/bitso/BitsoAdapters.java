@@ -166,10 +166,10 @@ public final class BitsoAdapters {
         Date timestamp = parseTimestamp(trade.getCreatedAt());
 
         trades.add(
-            new Trade.Builder()
+            Trade.builder()
                 .type(type)
                 .originalAmount(trade.getAmount())
-                .currencyPair(currencyPair)
+                .instrument(currencyPair)
                 .price(trade.getPrice())
                 .timestamp(timestamp)
                 .id(String.valueOf(tradeId))
@@ -259,7 +259,7 @@ public final class BitsoAdapters {
           UserTrade.builder()
               .type(orderType)
               .originalAmount(originalAmount)
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(price)
               .timestamp(timestamp)
               .id(tradeId)

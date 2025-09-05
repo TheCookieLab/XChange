@@ -278,17 +278,18 @@ class BitmexTradeServiceTest extends BitmexExchangeWiremock {
     assertThat(userTrades.getUserTrades()).hasSize(2);
 
     UserTrade expected =
-        new UserTrade(
-            OrderType.BID,
-            new BigDecimal("9"),
-            new CurrencyPair("TRUMP/USDT"),
-            new BigDecimal("2.15"),
-            Date.from(Instant.parse("2024-12-13T14:05:13.619Z")),
-            "00000000-006d-1000-0000-000f9656d02e",
-            "5f563ace-005c-49dd-8c44-83fdbdd2fe65",
-            new BigDecimal("0.017415"),
-            Currency.USDT,
-            "63476f42-04d6-494b-84ed-2e0ccb5edb38");
+        UserTrade.builder()
+            .type(OrderType.BID)
+            .originalAmount(new BigDecimal("9"))
+            .instrument(new CurrencyPair("TRUMP/USDT"))
+            .price(new BigDecimal("2.15"))
+            .timestamp(Date.from(Instant.parse("2024-12-13T14:05:13.619Z")))
+            .id("00000000-006d-1000-0000-000f9656d02e")
+            .orderId("5f563ace-005c-49dd-8c44-83fdbdd2fe65")
+            .feeAmount(new BigDecimal("0.017415"))
+            .feeCurrency(Currency.USDT)
+            .orderUserReference("63476f42-04d6-494b-84ed-2e0ccb5edb38")
+            .build();
 
     assertThat(userTrades.getUserTrades())
         .first()

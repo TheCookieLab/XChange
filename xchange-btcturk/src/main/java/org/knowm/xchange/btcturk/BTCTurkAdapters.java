@@ -103,9 +103,9 @@ public final class BTCTurkAdapters {
    */
   public static Trade adaptTrade(BTCTurkTrades btcTurkTrade, CurrencyPair currencyPair) {
 
-    return new Trade.Builder()
+    return Trade.builder()
         .originalAmount(btcTurkTrade.getAmount())
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(btcTurkTrade.getPrice())
         .timestamp(btcTurkTrade.getDate())
         .id(btcTurkTrade.getTid().toString())
