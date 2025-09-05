@@ -2,7 +2,6 @@ package org.knowm.xchange.kraken.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -13,6 +12,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.kraken.KrakenExchangeWiremock;
@@ -20,7 +20,6 @@ import org.knowm.xchange.kraken.dto.trade.KrakenUserTrade;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
 
-@WireMockTest
 public class KrakenTradeServiceTest extends KrakenExchangeWiremock {
 
   TradeService tradeService = exchange.getTradeService();
@@ -92,42 +91,55 @@ public class KrakenTradeServiceTest extends KrakenExchangeWiremock {
         .isEqualTo(expected);
   }
 
+  @Test
+  void place_limit_buy_order() throws IOException {
+    LimitOrder limitOrder =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.0001"))
+            .limitPrice(new BigDecimal("10000.5"))
+            .build();
 
-//  @Test
-//  public void placeOrderTest(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
-//    stubAddOrderApi();
-//
-//    String orderId = classUnderTest.placeLimitOrder(LIMIT_ORDER);
-//    assertThat(orderId).isEqualTo("OUF4EM-FRGI2-MQMWZD");
-//
-//    List<LoggedRequest> requests =
-//        WireMock.findAll(postRequestedFor(urlEqualTo("/0/private/AddOrder")));
-//    assertThat(requests).hasSize(1);
-//
-//    Map<String, String> requestParams = parseAddOrderRequestBody(requests.get(0));
-//    assertThat(requestParams.get("type")).isEqualTo("buy");
-//    assertThat(requestParams.get("volume")).isEqualTo("2.12340000");
-//    assertThat(requestParams.get("pair")).isEqualTo("XXBTZUSD");
-//    assertThat(requestParams.get("price")).isEqualTo("45000.1");
-//  }
-//
-//  @Test
-//  public void placeOrderWithTimeInForceTest() throws Exception {
-//    stubAddOrderApi();
-//
-//    LimitOrder order = LIMIT_ORDER;
-//    order.addOrderFlag(TimeInForce.IOC);
-//
-//    classUnderTest.placeLimitOrder(order);
-//
-//    List<LoggedRequest> requests =
-//        WireMock.findAll(postRequestedFor(urlEqualTo("/0/private/AddOrder")));
-//    assertThat(requests).hasSize(1);
-//
-//    Map<String, String> requestParams = parseAddOrderRequestBody(requests.get(0));
-//    assertThat(requestParams.get("timeinforce")).isEqualTo("IOC");
-//  }
-//
+    String actualResponse = tradeService.placeLimitOrder(limitOrder);
+    assertThat(actualResponse).isEqualTo("O6OP4A-ZRX3T-RBODCB");
+  }
+
+  @Test
+  void place_limit_sell_order() throws IOException {
+    LimitOrder limitOrder =
+        new LimitOrder.Builder(OrderType.ASK, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.00005"))
+            .limitPrice(new BigDecimal("130000.5"))
+            .build();
+
+    String actualResponse = tradeService.placeLimitOrder(limitOrder);
+    assertThat(actualResponse).isEqualTo("OHMFXD-DVWOT-XTF4AU");
+  }
+
+  @Test
+  void place_market_buy_order() throws IOException {
+    MarketOrder marketOrder =
+        new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            // exchange requires always asset amount for all orders
+            .originalAmount(new BigDecimal("0.00005"))
+            .build();
+
+    String actualResponse = tradeService.placeMarketOrder(marketOrder);
+    assertThat(actualResponse).isEqualTo("OYNSAY-BFTRZ-RPATWJ");
+  }
+
+  @Test
+  void place_market_sell_order() throws IOException {
+    MarketOrder marketOrder =
+        new MarketOrder.Builder(OrderType.ASK, CurrencyPair.BTC_USDT)
+            // exchange requires always asset amount for all orders
+            .originalAmount(new BigDecimal("0.00005"))
+            .build();
+
+    String actualResponse = tradeService.placeMarketOrder(marketOrder);
+    assertThat(actualResponse).isEqualTo("OSP6A7-6PRMW-6O2U6Y");
+  }
+
+
 //  @Test
 //  public void cancelAllOrdersTest() throws Exception {
 //    stubFor(
