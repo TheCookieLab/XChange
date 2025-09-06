@@ -13,6 +13,7 @@ import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kraken.KrakenAdapters;
 import org.knowm.xchange.kraken.KrakenUtils;
 import org.knowm.xchange.kraken.dto.trade.KrakenOrder;
@@ -22,13 +23,14 @@ import org.knowm.xchange.service.trade.params.CancelAllOrders;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
+import org.knowm.xchange.service.trade.params.CurrencyPairParam;
+import org.knowm.xchange.service.trade.params.InstrumentParam;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamOffset;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsIdSpan;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
-import org.knowm.xchange.service.trade.params.orders.OpenOrdersParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 import org.knowm.xchange.utils.DateUtils;
@@ -52,13 +54,18 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
-    Map<String, KrakenOrder> krakenOrders = super.getKrakenOpenOrders();
-    if (params != null && params instanceof OpenOrdersParamCurrencyPair) {
-      OpenOrdersParamCurrencyPair openOrdersParamCurrencyPair =
-          (OpenOrdersParamCurrencyPair) params;
-      Map<String, KrakenOrder> filteredKrakenOrders =
-          KrakenUtils.filterOpenOrdersByCurrencyPair(
-              krakenOrders, openOrdersParamCurrencyPair.getCurrencyPair());
+    Map<String, KrakenOrder> krakenOrders = getKrakenOpenOrders();
+    CurrencyPair currencyPair = null;
+    if (params instanceof CurrencyPairParam) {
+      currencyPair = ((CurrencyPairParam) params).getCurrencyPair();
+    }
+    if (params instanceof InstrumentParam) {
+      Instrument instrument = ((InstrumentParam) params).getInstrument();
+      currencyPair = new CurrencyPair(instrument.getBase(), instrument.getCounter());
+    }
+
+    if (currencyPair != null) {
+      Map<String, KrakenOrder> filteredKrakenOrders = KrakenUtils.filterOpenOrdersByCurrencyPair(krakenOrders, currencyPair);
       return KrakenAdapters.adaptOpenOrders(filteredKrakenOrders);
     }
     return KrakenAdapters.adaptOpenOrders(krakenOrders);
