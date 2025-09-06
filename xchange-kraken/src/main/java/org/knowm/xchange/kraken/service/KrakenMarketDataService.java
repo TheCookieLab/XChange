@@ -2,7 +2,9 @@ package org.knowm.xchange.kraken.service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -26,6 +28,13 @@ public class KrakenMarketDataService extends KrakenMarketDataServiceRaw
   public KrakenMarketDataService(Exchange exchange) {
 
     super(exchange);
+  }
+
+  public List<Currency> getCurrencies() throws IOException {
+    return getKrakenAssets().getAssetPairMap().keySet().stream()
+        .map(KrakenAdapters::adaptCurrency)
+        .distinct()
+        .collect(Collectors.toList());
   }
 
   @Override
