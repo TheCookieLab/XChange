@@ -9,7 +9,7 @@ API-Sign: {{sign}}
 Content-Type: application/json
 
 {
-  "nonce":{{nonceValue}},
+  "nonce": {{nonceValue}},
   "ordertype": "limit",
   "type": "buy",
   "volume": "0.00005",
@@ -29,7 +29,7 @@ API-Sign: {{sign}}
 Content-Type: application/json
 
 {
-  "nonce":{{nonceValue}},
+  "nonce": {{nonceValue}},
   "txid": "O4ENPT-P6KIT-NMXFE2"
 }
 

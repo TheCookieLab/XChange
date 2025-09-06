@@ -9,7 +9,7 @@ API-Sign: {{sign}}
 Content-Type: application/json
 
 {
-  "nonce":{{nonceValue}}
+  "nonce": {{nonceValue}}
 }
 
 
@@ -24,7 +24,7 @@ API-Sign: {{sign}}
 Content-Type: application/json
 
 {
-  "nonce":{{nonceValue}}
+  "nonce": {{nonceValue}}
 }
 
 
@@ -39,7 +39,7 @@ API-Sign: {{sign}}
 Content-Type: application/json
 
 {
-  "nonce":{{nonceValue}}
+  "nonce": {{nonceValue}}
 }
 
 
@@ -54,7 +54,7 @@ API-Sign: {{sign}}
 Content-Type: application/json
 
 {
-  "nonce":{{nonceValue}}
+  "nonce": {{nonceValue}}
 }
 
 
@@ -69,7 +69,22 @@ API-Sign: {{sign}}
 Content-Type: application/json
 
 {
-  "nonce":{{nonceValue}}
+  "nonce": {{nonceValue}}
+}
+
+
+### Get Open Positions
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+POST {{base_url}}/private/OpenPositions
+API-Key: {{api_key}}
+API-Sign: {{sign}}
+Content-Type: application/json
+
+{
+  "nonce": {{nonceValue}}
 }
 
 

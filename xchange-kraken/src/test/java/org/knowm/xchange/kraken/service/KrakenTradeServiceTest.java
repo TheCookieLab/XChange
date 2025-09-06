@@ -11,6 +11,8 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPosition.Type;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
@@ -56,6 +58,26 @@ public class KrakenTradeServiceTest extends KrakenExchangeWiremock {
     assertThat(actual.getHiddenOrders()).isEmpty();
 
     assertThat(actual.getAllOpenOrders().get(0).getInstrument()).isEqualTo(CurrencyPair.BTC_USDT);
+  }
+
+  @Test
+  void open_positions() throws IOException {
+    var actual = tradeService.getOpenPositions();
+
+    assertThat(actual.getOpenPositions()).hasSize(2);
+
+    var expected = OpenPosition.builder()
+        .instrument(CurrencyPair.BTC_USDT)
+        .type(Type.LONG)
+        .size(new BigDecimal("5.51"))
+        .price(new BigDecimal("110200"))
+        .build();
+
+    assertThat(actual.getOpenPositions().get(1))
+        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .usingRecursiveComparison()
+        .isEqualTo(expected);
+
   }
 
 
