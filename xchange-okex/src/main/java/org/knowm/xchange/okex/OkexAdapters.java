@@ -632,7 +632,7 @@ public class OkexAdapters {
     positions.forEach(
         okexPosition ->
             openPositions.add(
-                new OpenPosition.Builder()
+                OpenPosition.builder()
                     .instrument(adaptOkexInstrumentId(okexPosition.getInstrumentId()))
                     .liquidationPrice(okexPosition.getLiquidationPrice())
                     .price(okexPosition.getAverageOpenPrice())

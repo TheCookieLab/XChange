@@ -148,7 +148,7 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
               .filter(f -> f.getInstrument().equals(instrument))
               .findFirst().orElseGet(() ->
                   // return zero position
-                  new OpenPosition.Builder().instrument(instrument)
+                  OpenPosition.builder().instrument(instrument)
                       .size(BigDecimal.ZERO)
                       .build()));
     } else {
