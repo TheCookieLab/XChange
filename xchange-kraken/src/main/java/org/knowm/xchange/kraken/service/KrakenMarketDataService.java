@@ -8,6 +8,7 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kraken.KrakenAdapters;
 import org.knowm.xchange.kraken.dto.marketdata.KrakenDepth;
 import org.knowm.xchange.kraken.dto.marketdata.KrakenPublicTrades;
@@ -39,8 +40,8 @@ public class KrakenMarketDataService extends KrakenMarketDataServiceRaw
   }
 
   @Override
-  public OrderBook getOrderBook(CurrencyPair currencyPair, Object... args) throws IOException {
-
+  public OrderBook getOrderBook(Instrument instrument, Object... args) throws IOException {
+    var currencyPair = new CurrencyPair(instrument.getBase(), instrument.getCounter());
     long count = Long.MAX_VALUE;
 
     if (args != null && args.length > 0) {
@@ -57,6 +58,11 @@ public class KrakenMarketDataService extends KrakenMarketDataServiceRaw
     KrakenDepth krakenDepth = getKrakenDepth(currencyPair, count);
 
     return KrakenAdapters.adaptOrderBook(krakenDepth, currencyPair);
+  }
+
+  @Override
+  public OrderBook getOrderBook(CurrencyPair currencyPair, Object... args) throws IOException {
+    return getOrderBook((Instrument) currencyPair, args);
   }
 
   @Override
