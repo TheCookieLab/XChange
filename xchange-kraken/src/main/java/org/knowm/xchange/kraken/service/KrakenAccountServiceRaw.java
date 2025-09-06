@@ -275,9 +275,19 @@ public class KrakenAccountServiceRaw extends KrakenBaseService {
    * @return
    * @throws IOException
    */
-  public Map<String, KrakenLedger> getKrakenPartialLedgerInfo(
-      LedgerType ledgerType, String startTime, String endTime, Long offset, Currency... assets)
+  public Map<String, KrakenLedger> getKrakenPartialLedgerInfo(LedgerType ledgerType, Date start, Date end, Long offset, Currency... assets)
       throws IOException {
+
+    String startTime = null;
+    String endTime = null;
+
+    if (start != null) {
+      startTime = String.valueOf(DateUtils.toUnixTime(start));
+    }
+    if (end != null) {
+      endTime = String.valueOf(DateUtils.toUnixTime(end));
+    }
+
     String ledgerTypeString = (ledgerType == null) ? "all" : ledgerType.toString().toLowerCase();
     KrakenLedgerResult ledgerResult =
         kraken.ledgers(
@@ -310,28 +320,17 @@ public class KrakenAccountServiceRaw extends KrakenBaseService {
       LedgerType ledgerType, Date start, Date end, Long offset, Currency... assets)
       throws IOException {
 
-    String startTime = null;
-    String endTime = null;
-    long longOffset = 0;
+    Map<String, KrakenLedger> fullLedgerMap = getKrakenPartialLedgerInfo(ledgerType, start, end, offset, assets);
+    Map<String, KrakenLedger> lastLedgerMap = fullLedgerMap;
 
-    if (start != null) {
-      startTime = String.valueOf(DateUtils.toUnixTime(start));
-    }
-    if (end != null) {
-      endTime = String.valueOf(DateUtils.toUnixTime(end));
-    }
+    long longOffset = 0;
     if (offset != null) {
       longOffset = offset;
     }
 
-    Map<String, KrakenLedger> fullLedgerMap =
-        getKrakenPartialLedgerInfo(ledgerType, startTime, endTime, offset, assets);
-    Map<String, KrakenLedger> lastLedgerMap = fullLedgerMap;
-
     while (!lastLedgerMap.isEmpty()) {
       longOffset += lastLedgerMap.size();
-      lastLedgerMap =
-          getKrakenPartialLedgerInfo(ledgerType, startTime, endTime, longOffset, assets);
+      lastLedgerMap = getKrakenPartialLedgerInfo(ledgerType, start, end, longOffset, assets);
       if (lastLedgerMap.size() == 1 && fullLedgerMap.keySet().containsAll(lastLedgerMap.keySet())) {
         break;
       }

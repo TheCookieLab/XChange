@@ -7,11 +7,16 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Date;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.AddressWithTag;
 import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.dto.account.FundingRecord.Status;
+import org.knowm.xchange.dto.account.FundingRecord.Type;
 import org.knowm.xchange.exceptions.DepositAddressAmbiguousException;
 import org.knowm.xchange.kraken.KrakenExchangeWiremock;
 import org.knowm.xchange.service.account.AccountService;
@@ -20,6 +25,32 @@ import org.knowm.xchange.service.account.params.DefaultRequestDepositAddressPara
 public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
 
   AccountService accountService = exchange.getAccountService();
+
+  @Test
+  void funding_history() throws IOException {
+    var actual = accountService.getFundingHistory(null);
+
+    assertThat(actual).hasSize(1);
+
+    var expected = FundingRecord.builder()
+        .type(Type.DEPOSIT)
+        .status(Status.COMPLETE)
+        .currency(Currency.USDT)
+        .balance(new BigDecimal("100"))
+        .amount(new BigDecimal("100"))
+        .fee(BigDecimal.ZERO)
+        .internalId("FTJ4ZXN-YRWqyo1No6Wqt3vzBVgNMf")
+        .date(Date.from(Instant.parse("2025-09-02T15:11:18.456Z")))
+        .build();
+
+    assertThat(actual)
+        .first()
+        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .usingRecursiveComparison()
+        .isEqualTo(expected);
+
+  }
+
 
   @Test
   void valid_balances() throws IOException {

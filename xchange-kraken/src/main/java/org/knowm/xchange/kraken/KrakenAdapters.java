@@ -47,6 +47,7 @@ import org.knowm.xchange.kraken.dto.account.KrakenExtendedBalance;
 import org.knowm.xchange.kraken.dto.account.KrakenLedger;
 import org.knowm.xchange.kraken.dto.account.KrakenTradeVolume;
 import org.knowm.xchange.kraken.dto.account.KrakenVolumeFee;
+import org.knowm.xchange.kraken.dto.account.LedgerType;
 import org.knowm.xchange.kraken.dto.marketdata.KrakenAsset;
 import org.knowm.xchange.kraken.dto.marketdata.KrakenAssetPair;
 import org.knowm.xchange.kraken.dto.marketdata.KrakenDepth;
@@ -545,6 +546,24 @@ public class KrakenAdapters {
         return OrderStatus.CANCELED;
       case EXPIRED:
         return OrderStatus.EXPIRED;
+      default:
+        return null;
+    }
+  }
+
+  public static LedgerType toLedgerType(FundingRecord.Type fundingRecordType) {
+    if (fundingRecordType == null) {
+      return null;
+    }
+
+    switch (fundingRecordType) {
+      case DEPOSIT:
+        return LedgerType.DEPOSIT;
+      case WITHDRAWAL:
+        return LedgerType.WITHDRAWAL;
+      case INTERNAL_WITHDRAWAL:
+      case INTERNAL_DEPOSIT:
+        return LedgerType.TRANSFER;
       default:
         return null;
     }

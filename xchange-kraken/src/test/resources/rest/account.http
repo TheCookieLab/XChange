@@ -88,3 +88,19 @@ Content-Type: application/json
 }
 
 
+### Get Ledgers Info
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+POST {{base_url}}/private/Ledgers
+API-Key: {{api_key}}
+API-Sign: {{sign}}
+Content-Type: application/json
+
+{
+  "nonce": {{nonceValue}},
+  "type": "deposit"
+}
+
+
