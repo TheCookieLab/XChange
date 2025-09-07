@@ -1,4 +1,4 @@
-package info.bitrich.xchangestream.binance.dto;
+package info.bitrich.xchangestream.binance.dto.market;
 
 import java.math.BigDecimal;
 

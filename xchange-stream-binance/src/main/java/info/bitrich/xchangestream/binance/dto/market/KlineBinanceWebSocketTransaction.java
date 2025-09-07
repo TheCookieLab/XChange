@@ -1,8 +1,9 @@
-package info.bitrich.xchangestream.binance.dto;
+package info.bitrich.xchangestream.binance.dto.market;
 
 import static org.knowm.xchange.utils.StreamUtils.singletonCollector;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransaction;
 import java.util.Arrays;
 import java.util.Map;
 import lombok.Getter;

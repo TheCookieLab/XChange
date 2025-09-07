@@ -1,5 +1,6 @@
 package info.bitrich.xchangestream.binance.examples;
 
+import static info.bitrich.xchangestream.binance.BinanceStreamingExchange.USE_REALTIME_BOOK_TICKER;
 import static info.bitrich.xchangestream.binance.examples.Util.printOrderBookShortInfo;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.knowm.xchange.Exchange.USE_SANDBOX;
@@ -31,6 +32,7 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 @Ignore
 public class BinanceFutureStreamPublicTest {
 
@@ -116,18 +118,22 @@ public class BinanceFutureStreamPublicTest {
           if (logOutput) {
             LOG.info("orderBookUpdates subscribe: {}", orderBookUpdates);
           }
-
         }));
     disposables.add(exchange
         .getStreamingMarketDataService().getTicker(instrument)
         .subscribe(ticker -> {
-          if (logOutput) {
-            LOG.info("ticker subscribe: {}", ticker);
-          }
-          assertThat(ticker.getInstrument().equals(instrument)).isTrue();
-          assertThat(ticker.getBid()).isLessThan(ticker.getAsk());
-
-        }));
+              if (logOutput) {
+                LOG.info("ticker subscribe: {}", ticker);
+              }
+              assertThat(ticker.getInstrument().equals(instrument)).isTrue();
+              if (Boolean.TRUE.equals(
+                  exchange.getExchangeSpecification().getExchangeSpecificParametersItem(USE_REALTIME_BOOK_TICKER))) {
+                assertThat(ticker.getBid()).isLessThan(ticker.getAsk());
+              } else {
+                assertThat(ticker.getHigh()).isGreaterThan(ticker.getLow());
+              }
+            },
+            throwable -> LOG.error("ticker subscribe error", throwable)));
     disposables.add(exchange
         .getStreamingMarketDataService().getTrades(instrument)
         .subscribe(trade -> {

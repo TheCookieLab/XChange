@@ -36,7 +36,7 @@ public class BinanceFutureStreamPrivateTest {
   BinanceFutureStreamingExchange binanceFutureStreamingExchange;
   private static final Instrument instrument = new FuturesContract("ETH/USDT/PERP");
   private static final Instrument instrument2 = new FuturesContract("SOL/USDT/PERP");
-  private static final boolean logOutput = false;
+  private static final boolean logOutput = true;
 
 
   @Before

@@ -136,5 +136,4 @@ public class BinanceSpotStreamPublicTest {
     exchange.disconnect().blockingAwait();
   }
 
-
 }

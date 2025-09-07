@@ -1,6 +1,7 @@
-package info.bitrich.xchangestream.binance.dto;
+package info.bitrich.xchangestream.binance.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransaction;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
