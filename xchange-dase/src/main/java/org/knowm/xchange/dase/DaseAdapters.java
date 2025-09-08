@@ -26,10 +26,10 @@ public final class DaseAdapters {
   public static CurrencyPair toCurrencyPair(String market) {
     if (market == null)
       return null;
-    String[] parts = market.split("-");
+    String[] parts = market.trim().split("-");
     if (parts.length != 2)
       return null;
-    return new CurrencyPair(parts[0], parts[1]);
+    return new CurrencyPair(parts[0].toUpperCase(), parts[1].toUpperCase());
   }
 
   public static Ticker adaptTicker(DaseTicker t, CurrencyPair pair) {
@@ -50,28 +50,39 @@ public final class DaseAdapters {
   }
 
   public static Trades adaptTrades(List<DaseTrade> trades, CurrencyPair pair) {
-    List<org.knowm.xchange.dto.marketdata.Trade> out = new ArrayList<>(trades.size());
-    for (DaseTrade tr : trades) {
-      out.add(
-          new org.knowm.xchange.dto.marketdata.Trade.Builder()
-              .type(
-                  "buy".equalsIgnoreCase(tr.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK)
-              .originalAmount(tr.getSize())
-              .price(tr.getPrice())
-              .instrument(pair)
-              .timestamp(new Date(tr.getTime()))
-              .id(tr.getId())
-              .build());
+    List<org.knowm.xchange.dto.marketdata.Trade> out = new ArrayList<>(trades == null ? 0 : trades.size());
+    if (trades != null) {
+      for (DaseTrade tr : trades) {
+        out.add(
+            new org.knowm.xchange.dto.marketdata.Trade.Builder()
+                .type(
+                    "buy".equalsIgnoreCase(tr.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK)
+                .originalAmount(tr.getSize())
+                .price(tr.getPrice())
+                .instrument(pair)
+                .timestamp(new Date(tr.getTime()))
+                .id(tr.getId())
+                .build());
+      }
     }
     return new Trades(out, Trades.TradeSortType.SortByTimestamp);
   }
 
   private static List<LimitOrder> createOrders(
       CurrencyPair pair, Order.OrderType side, List<List<BigDecimal>> levels) {
-    List<LimitOrder> out = new ArrayList<>(levels.size());
+    List<LimitOrder> out = new ArrayList<>(levels == null ? 0 : levels.size());
+    if (levels == null) {
+      return out;
+    }
     for (List<BigDecimal> l : levels) {
+      if (l == null || l.size() != 2) {
+        continue;
+      }
       BigDecimal price = l.get(0);
       BigDecimal amount = l.get(1);
+      if (price == null || amount == null) {
+        continue;
+      }
       out.add(new LimitOrder(side, amount, pair, null, null, price));
     }
     return out;

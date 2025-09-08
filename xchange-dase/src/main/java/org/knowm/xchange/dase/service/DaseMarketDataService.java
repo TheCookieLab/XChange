@@ -31,7 +31,18 @@ public class DaseMarketDataService extends DaseMarketDataServiceRaw implements M
 
   @Override
   public Trades getTrades(CurrencyPair currencyPair, Object... args) throws IOException {
-    List<DaseTrade> raw = getTrades(DaseAdapters.toMarketString(currencyPair), null, null);
+    Integer limit = null;
+    String before = null;
+    if (args != null && args.length > 0) {
+      Object a0 = args[0];
+      if (a0 instanceof Number) {
+        limit = ((Number) a0).intValue();
+      }
+    }
+    if (args != null && args.length > 1 && args[1] != null) {
+      before = String.valueOf(args[1]);
+    }
+    List<DaseTrade> raw = getTrades(DaseAdapters.toMarketString(currencyPair), limit, before);
     return DaseAdapters.adaptTrades(raw, currencyPair);
   }
 

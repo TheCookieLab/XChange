@@ -3,6 +3,7 @@ package org.knowm.xchange.dase.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -30,7 +31,7 @@ public class DaseMarketDataServiceRaw extends BaseExchangeService<Exchange> impl
 
   public List<DaseMarketConfig> getMarkets() throws IOException {
     DaseMarketsResponse resp = dase.getMarkets();
-    return resp.markets;
+    return resp == null || resp.markets == null ? Collections.emptyList() : resp.markets;
   }
 
   public DaseMarketConfig getMarket(String market) throws IOException {
@@ -47,7 +48,7 @@ public class DaseMarketDataServiceRaw extends BaseExchangeService<Exchange> impl
 
   public List<DaseTrade> getTrades(String market, Integer limit, String before) throws IOException {
     DaseTradesResponse resp = dase.getTrades(market, limit, before);
-    return resp.trades;
+    return resp == null || resp.trades == null ? Collections.emptyList() : resp.trades;
   }
 
   public DaseCandlesResponse getCandles(String market) throws IOException {
@@ -57,6 +58,9 @@ public class DaseMarketDataServiceRaw extends BaseExchangeService<Exchange> impl
   public List<CurrencyPair> getExchangeSymbols() throws IOException {
     List<CurrencyPair> out = new ArrayList<>();
     for (DaseMarketConfig mc : getMarkets()) {
+      if (mc == null || mc.market == null) {
+        continue;
+      }
       String[] parts = mc.market.split("-");
       if (parts.length == 2) {
         out.add(new CurrencyPair(parts[0], parts[1]));
