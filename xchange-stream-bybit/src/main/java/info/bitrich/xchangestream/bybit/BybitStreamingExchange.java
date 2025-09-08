@@ -49,7 +49,9 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
 
   private boolean isApiKeyValid() {
     return exchangeSpecification.getApiKey() != null
-        && !exchangeSpecification.getApiKey().isEmpty();
+        && !exchangeSpecification.getApiKey().isEmpty()
+        && exchangeSpecification.getSecretKey() != null
+        && !exchangeSpecification.getSecretKey().isEmpty();
   }
 
   private String getApiUrl() {
@@ -122,15 +124,17 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
 
   @Override
   public boolean isAlive() {
-    // In normal situation - streamingService is always runs, userDataStreamingService - depends
-    if (streamingService != null && streamingService.isSocketOpen()) {
-      if (isApiKeyValid()) {
-        return userDataStreamingService != null && userDataStreamingService.isSocketOpen();
+    // In a normal situation - streamingService is always runs, userDataStreamingService - depends
+    if (streamingService != null) {
+      if (userDataStreamingService != null) {
+        return streamingService.isSocketOpen()
+            && userDataStreamingService.isSocketOpen()
+            && userDataStreamingService.isAuthorized();
+      } else {
+        return streamingService.isSocketOpen();
       }
-      return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
   @Override

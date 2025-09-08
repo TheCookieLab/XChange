@@ -125,9 +125,14 @@ public class BybitAdapters {
             && instrument.getCounter().getSymbol().equals("USDC")) {
           // eg. contractType: LINEAR_PERPETUAL, symbol: ETHPERP, base: ETH, quote: USDC
           return String.format("%sPERP", instrument.getBase());
-        } else {
-          // eg. contractType: LINEAR_FUTURES, symbol: ETH-02FEB24, base: ETH, quote: USDC
-          return String.format("%s-%s", instrument.getBase(), futuresContract.getPrompt());
+        } else { // USDT FUTURES, symbol: ETH-USDT-02FEB24, base: ETH, quote: USDT
+          if (instrument.getCounter().getSymbol().equals("USDT")) {
+            return String.format("%sUSDT-%s", instrument.getBase(), futuresContract.getPrompt());
+          }
+          // eg. contractType: USDC FUTURES, symbol: ETH-02FEB24, base: ETH, quote: USDC
+          else {
+            return String.format("%s-%s", instrument.getBase(), futuresContract.getPrompt());
+          }
         }
       case INVERSE:
         futuresContract = (FuturesContract) instrument;
@@ -202,7 +207,7 @@ public class BybitAdapters {
 
   public static InstrumentMetaData symbolToCurrencyPairMetaData(
       BybitSpotInstrumentInfo instrumentInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .marketOrderEnabled(true)
         .minimumAmount(instrumentInfo.getLotSizeFilter().getMinOrderQty())
         .maximumAmount(instrumentInfo.getLotSizeFilter().getMaxOrderQty())
@@ -217,7 +222,7 @@ public class BybitAdapters {
 
   public static InstrumentMetaData symbolToCurrencyPairMetaData(
       BybitLinearInverseInstrumentInfo instrumentInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .marketOrderEnabled(true)
         .minimumAmount(instrumentInfo.getLotSizeFilter().getMinOrderQty())
         .maximumAmount(instrumentInfo.getLotSizeFilter().getMaxOrderQty())
@@ -231,7 +236,7 @@ public class BybitAdapters {
 
   public static InstrumentMetaData symbolToCurrencyPairMetaData(
       BybitOptionInstrumentInfo instrumentInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .marketOrderEnabled(true)
         .minimumAmount(instrumentInfo.getLotSizeFilter().getMinOrderQty())
         .maximumAmount(instrumentInfo.getLotSizeFilter().getMaxOrderQty())
@@ -404,9 +409,15 @@ public class BybitAdapters {
             return new FuturesContract(
                 new CurrencyPair(symbol.substring(0, splitIndex), "USDC"), "PERP");
           }
-          // USDC Futures
+          // USDT & USDC Futures
           int splitIndex = symbol.lastIndexOf("-");
-          return new FuturesContract(
+          if (symbol.contains("USDT")) // USDT
+          {
+            return new FuturesContract(
+                new CurrencyPair(symbol.substring(0, splitIndex - 4), "USDT"),
+                symbol.substring(splitIndex + 1));
+          }
+          return new FuturesContract( // USDC
               new CurrencyPair(symbol.substring(0, splitIndex), "USDC"),
               symbol.substring(splitIndex + 1));
         }

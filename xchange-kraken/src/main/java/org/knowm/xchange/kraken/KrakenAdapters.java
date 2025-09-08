@@ -22,6 +22,7 @@ import org.knowm.xchange.dto.account.AddressWithTag;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.dto.account.FundingRecord.Status;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.account.Wallet;
@@ -194,6 +195,8 @@ public class KrakenAdapters {
     builder.open(krakenTicker.getOpen());
     builder.ask(krakenTicker.getAsk().getPrice());
     builder.bid(krakenTicker.getBid().getPrice());
+    builder.askSize(krakenTicker.getAsk().getVolume());
+    builder.bidSize(krakenTicker.getBid().getVolume());
     builder.last(krakenTicker.getClose().getPrice());
     builder.high(krakenTicker.get24HourHigh());
     builder.low(krakenTicker.get24HourLow());
@@ -208,7 +211,9 @@ public class KrakenAdapters {
     List<Ticker> tickers = new ArrayList<>();
     for (Entry<String, KrakenTicker> ticker : krakenTickers.entrySet()) {
       CurrencyPair pair = KrakenUtils.translateKrakenCurrencyPair(ticker.getKey());
-      tickers.add(adaptTicker(ticker.getValue(), pair));
+      if (pair != null) {
+        tickers.add(adaptTicker(ticker.getValue(), pair));
+      }
     }
     return tickers;
   }
@@ -469,7 +474,7 @@ public class KrakenAdapters {
 
   private static InstrumentMetaData adaptPair(
       KrakenAssetPair krakenPair, InstrumentMetaData OriginalMeta) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(krakenPair.getFees().get(0).getPercentFee().divide(new BigDecimal(100)))
         .minimumAmount(krakenPair.getOrderMin())
         .priceScale(krakenPair.getPairScale())
@@ -496,18 +501,16 @@ public class KrakenAdapters {
           if (type != null) {
             final String internalId = krakenLedger.getRefId(); // or ledgerEntry.getKey()?
             FundingRecord fundingRecordEntry =
-                new FundingRecord(
-                    null,
-                    timestamp,
-                    currency,
-                    krakenLedger.getTransactionAmount(),
-                    internalId,
-                    null,
-                    FundingRecord.Type.fromString(krakenLedger.getLedgerType().name()),
-                    FundingRecord.Status.COMPLETE,
-                    krakenLedger.getBalance(),
-                    krakenLedger.getFee(),
-                    null);
+                FundingRecord.builder()
+                    .date(timestamp)
+                    .currency(currency)
+                    .amount(krakenLedger.getTransactionAmount())
+                    .internalId(internalId)
+                    .type(FundingRecord.Type.fromString(krakenLedger.getLedgerType().name()))
+                    .status(Status.COMPLETE)
+                    .balance(krakenLedger.getBalance())
+                    .fee(krakenLedger.getFee())
+                    .build();
             fundingRecords.add(fundingRecordEntry);
           }
         }

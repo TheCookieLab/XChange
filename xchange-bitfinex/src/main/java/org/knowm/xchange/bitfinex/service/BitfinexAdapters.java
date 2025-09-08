@@ -697,7 +697,7 @@ public class BitfinexAdapters {
 
                 currencyPairs.put(
                     currencyPair,
-                    new InstrumentMetaData.Builder()
+                    InstrumentMetaData.builder()
                         .tradingFee(
                             currencyPairs.get(currencyPair) == null
                                 ? null
@@ -755,7 +755,7 @@ public class BitfinexAdapters {
     // now.
     // also setting the taker_fee as the trading_fee for now.
     final InstrumentMetaData metaData =
-        new InstrumentMetaData.Builder()
+        InstrumentMetaData.builder()
             .tradingFee(bitfinexAccountInfos[0].getTakerFees().movePointLeft(2))
             .build();
     currencyPairs.keySet().parallelStream()
@@ -765,7 +765,7 @@ public class BitfinexAdapters {
                     currencyPair,
                     metaData,
                     (oldMetaData, newMetaData) ->
-                        new InstrumentMetaData.Builder()
+                        InstrumentMetaData.builder()
                             .tradingFee(newMetaData.getTradingFee())
                             .minimumAmount(oldMetaData.getMinimumAmount())
                             .maximumAmount(oldMetaData.getMaximumAmount())
@@ -804,19 +804,17 @@ public class BitfinexAdapters {
       }
 
       FundingRecord fundingRecordEntry =
-          new FundingRecord(
-              movement.getDestinationAddress(),
-              null,
-              movement.getMtsUpdated(),
-              currency,
-              amount,
-              movement.getId(),
-              movement.getTransactionId(),
-              type,
-              status,
-              null,
-              fee,
-              null);
+          FundingRecord.builder()
+              .address(movement.getDestinationAddress())
+              .date(movement.getMtsUpdated())
+              .currency(currency)
+              .amount(amount)
+              .internalId(movement.getId())
+              .blockchainTransactionHash(movement.getTransactionId())
+              .type(type)
+              .status(status)
+              .fee(fee)
+              .build();
 
       fundingRecords.add(fundingRecordEntry);
     }
@@ -867,18 +865,17 @@ public class BitfinexAdapters {
       }
 
       FundingRecord fundingRecordEntry =
-          new FundingRecord(
-              address,
-              responseEntry.getTimestamp(),
-              currency,
-              responseEntry.getAmount(),
-              String.valueOf(responseEntry.getId()),
-              txnId,
-              responseEntry.getType(),
-              status,
-              null,
-              null,
-              description);
+          FundingRecord.builder()
+              .address(address)
+              .date(responseEntry.getTimestamp())
+              .currency(currency)
+              .amount(responseEntry.getAmount())
+              .internalId(String.valueOf(responseEntry.getId()))
+              .blockchainTransactionHash(txnId)
+              .type(responseEntry.getType())
+              .status(status)
+              .description(description)
+              .build();
 
       fundingRecords.add(fundingRecordEntry);
     }

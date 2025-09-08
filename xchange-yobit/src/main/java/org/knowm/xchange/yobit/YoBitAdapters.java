@@ -71,7 +71,7 @@ public class YoBitAdapters {
       Integer priceScale = value.getDecimal_places();
       currencyPairs.put(
           pair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .tradingFee(value.getFee())
               .minimumAmount(minSize)
               .priceScale(priceScale)

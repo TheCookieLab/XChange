@@ -170,7 +170,7 @@ public class HuobiAdapters {
             ? null
             : metadata.getMinimumAmount().setScale(pair.getAmountPrecision(), RoundingMode.DOWN);
     FeeTier[] feeTiers = metadata == null ? null : metadata.getFeeTiers();
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(fee)
         .minimumAmount(minQty)
         .priceScale(pair.getPricePrecision())
@@ -408,18 +408,17 @@ public class HuobiAdapters {
 
   public static FundingRecord adaptFundingRecord(HuobiFundingRecord r) {
 
-    return new FundingRecord(
-        r.getAddress(),
-        r.getCreatedAt(),
-        Currency.getInstance(r.getCurrency()),
-        r.getAmount(),
-        Long.toString(r.getId()),
-        r.getTxhash(),
-        r.getType(),
-        adaptFundingStatus(r),
-        null,
-        r.getFee(),
-        null);
+    return FundingRecord.builder()
+        .address(r.getAddress())
+        .date(r.getCreatedAt())
+        .currency(Currency.getInstance(r.getCurrency()))
+        .amount(r.getAmount())
+        .internalId(Long.toString(r.getId()))
+        .blockchainTransactionHash(r.getTxhash())
+        .type(r.getType())
+        .status(adaptFundingStatus(r))
+        .fee(r.getFee())
+        .build();
   }
 
   private static Status adaptFundingStatus(HuobiFundingRecord record) {

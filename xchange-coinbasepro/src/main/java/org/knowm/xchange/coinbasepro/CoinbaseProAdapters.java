@@ -384,7 +384,7 @@ public class CoinbaseProAdapters {
 
       currencyPairs.put(
           pair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .tradingFee(new BigDecimal("0.50"))
               .minimumAmount(product.getBaseMinSize())
               .maximumAmount(product.getBaseMaxSize())
@@ -522,19 +522,17 @@ public class CoinbaseProAdapters {
     String cryptoTransactionHash = coinbaseProTransfer.getDetails().getCryptoTransactionHash();
     String transactionHash = adaptTransactionHash(currency.getSymbol(), cryptoTransactionHash);
 
-    return new FundingRecord(
-        address,
-        coinbaseProTransfer.getDetails().getDestinationTag(),
-        coinbaseProTransfer.createdAt(),
-        currency,
-        coinbaseProTransfer.amount(),
-        coinbaseProTransfer.getId(),
-        transactionHash,
-        coinbaseProTransfer.type(),
-        status,
-        null,
-        null,
-        null);
+    return FundingRecord.builder()
+        .address(address)
+        .addressTag(coinbaseProTransfer.getDetails().getDestinationTag())
+        .date(coinbaseProTransfer.createdAt())
+        .currency(currency)
+        .amount(coinbaseProTransfer.amount())
+        .internalId(coinbaseProTransfer.getId())
+        .blockchainTransactionHash(transactionHash)
+        .type(coinbaseProTransfer.type())
+        .status(status)
+        .build();
   }
 
   // crypto_transaction_link: "https://etherscan.io/tx/0x{{txId}}"

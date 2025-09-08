@@ -136,7 +136,8 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
                   BinanceAuthenticated.class, getExchangeSpecification())
               .build();
       userDataChannel =
-          new BinanceUserDataChannel(binance, exchangeSpecification.getApiKey(), onApiCall);
+          new BinanceUserDataChannel(
+              binance, exchangeSpecification.getApiKey(), onApiCall, isFuturesEnabled());
       try {
         completables.add(createAndConnectUserDataService(userDataChannel.getListenKey()));
       } catch (NoActiveChannelException e) {
@@ -153,7 +154,7 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
             realtimeOrderBookTicker,
             oderBookFetchLimitParameter);
     streamingAccountService = new BinanceStreamingAccountService(userDataStreamingService);
-    streamingTradeService = new BinanceStreamingTradeService(userDataStreamingService);
+    streamingTradeService = new BinanceStreamingTradeService(this, userDataStreamingService);
 
     return Completable.concat(completables)
         .doOnComplete(

@@ -29,10 +29,11 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceStreamingExchange.class);
   private static final String WS_API_BASE_URI = "wss://stream.binance.com:9443/";
-  private static final String WS_SANDBOX_API_BASE_URI = "wss://testnet.binance.vision/";
+  private static final String WS_SANDBOX_API_BASE_URI = "wss://stream.testnet.binance.vision:9443/";
   public static final String USE_HIGHER_UPDATE_FREQUENCY = "Binance_Orderbook_Use_Higher_Frequency";
   public static final String USE_REALTIME_BOOK_TICKER = "Binance_Ticker_Use_Realtime";
   public static final String FETCH_ORDER_BOOK_LIMIT = "Binance_Fetch_Order_Book_Limit";
+
   private BinanceStreamingService streamingService;
   private BinanceUserDataStreamingService userDataStreamingService;
 
@@ -120,7 +121,8 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
                   BinanceAuthenticated.class, getExchangeSpecification())
               .build();
       userDataChannel =
-          new BinanceUserDataChannel(binance, exchangeSpecification.getApiKey(), onApiCall);
+          new BinanceUserDataChannel(
+              binance, exchangeSpecification.getApiKey(), onApiCall, isFuturesEnabled());
       try {
         completables.add(createAndConnectUserDataService(userDataChannel.getListenKey()));
       } catch (NoActiveChannelException e) {
@@ -137,7 +139,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
             realtimeOrderBookTicker,
             oderBookFetchLimitParameter);
     streamingAccountService = new BinanceStreamingAccountService(userDataStreamingService);
-    streamingTradeService = new BinanceStreamingTradeService(userDataStreamingService);
+    streamingTradeService = new BinanceStreamingTradeService(this,userDataStreamingService);
 
     return Completable.concat(completables)
         .doOnComplete(

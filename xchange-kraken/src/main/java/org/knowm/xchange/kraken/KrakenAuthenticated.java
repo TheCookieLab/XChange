@@ -153,6 +153,14 @@ public interface KrakenAuthenticated extends Kraken {
       throws IOException;
 
   @POST
+  @Path("private/CancelAll")
+  @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+  KrakenCancelOrderResult cancelAllOrders(
+      @HeaderParam("API-Key") String apiKey,
+      @HeaderParam("API-Sign") ParamsDigest signer,
+      @FormParam("nonce") SynchronizedValueFactory<Long> nonce);
+
+  @POST
   @Path("private/OpenOrders")
   @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
   KrakenOpenOrdersResult openOrders(
