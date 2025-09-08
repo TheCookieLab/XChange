@@ -19,7 +19,6 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.dto.BybitCategory;
-import org.knowm.xchange.bybit.service.BybitException;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -44,16 +43,16 @@ public class BybitStreamingTradeService implements StreamingTradeService {
     this.resilienceRegistries = resilienceRegistries;
   }
 
-  public Single<Boolean> placeMarketOrder(MarketOrder order) throws JsonProcessingException {
+  public Single<Integer> placeMarketOrder(MarketOrder order) throws JsonProcessingException {
     BybitCategory category = BybitAdapters.getCategory(order.getInstrument());
-    Observable<Boolean> observable = userTradeService.subscribeChannel("order.create"+System.nanoTime(), order)
+    Observable<Integer> observable = userTradeService.subscribeChannel("order.create"+System.nanoTime(), order)
         .flatMap(node -> {
           BybitStreamOrderResponse response = mapper.treeToValue(node, BybitStreamOrderResponse.class);
           if(response != null && response.getRetCode()==0){
-          return Observable.just(true);
+          return Observable.just(0);
         } else {
             assert response != null;
-            return Observable.error(new BybitException(response.getRetCode(),String.valueOf(response.getRetMsg()), null));
+            return Observable.just(response.getRetCode());
           }
         });
     return observable.firstElement()

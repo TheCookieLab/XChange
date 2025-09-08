@@ -60,7 +60,7 @@ public class BybitStreamOrderBookAndFeesExample {
       marketOrder.addOrderFlag(BybitHedgeMode.TWOWAY);
       Disposable disposable = ((BybitStreamingTradeService) exchange.getStreamingTradeService()).placeMarketOrder(marketOrder)
           .subscribe(result -> {
-                LOG.info("marketOrder is send: {}", result);
+                LOG.info("marketOrder is send, retCode: {}", result);
               }, throwable -> LOG.error("throwable", throwable));
       Thread.sleep(2000);
       LOG.info("is disposed: {}", disposable.isDisposed());
