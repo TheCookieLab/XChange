@@ -1,11 +1,10 @@
 package org.knowm.xchange.dase;
 
 import org.knowm.xchange.BaseExchange;
-import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.dase.service.DaseMarketDataService;
 
-public class DaseExchange extends BaseExchange implements Exchange {
+public class DaseExchange extends BaseExchange {
 
   @Override
   protected void initServices() {
