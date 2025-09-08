@@ -16,10 +16,20 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 
 public final class DaseAdapters {
 
-  private DaseAdapters() {}
+  private DaseAdapters() {
+  }
 
   public static String toMarketString(CurrencyPair pair) {
     return pair.getBase().getCurrencyCode() + "-" + pair.getCounter().getCurrencyCode();
+  }
+
+  public static CurrencyPair toCurrencyPair(String market) {
+    if (market == null)
+      return null;
+    String[] parts = market.split("-");
+    if (parts.length != 2)
+      return null;
+    return new CurrencyPair(parts[0], parts[1]);
   }
 
   public static Ticker adaptTicker(DaseTicker t, CurrencyPair pair) {

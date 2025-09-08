@@ -8,6 +8,8 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.List;
+import org.knowm.xchange.dase.dto.marketdata.DaseCandlesResponse;
+import org.knowm.xchange.dase.dto.marketdata.DaseMarketConfig;
 import org.knowm.xchange.dase.dto.marketdata.DaseMarketsResponse;
 import org.knowm.xchange.dase.dto.marketdata.DaseOrderBookSnapshot;
 import org.knowm.xchange.dase.dto.marketdata.DaseTicker;
@@ -20,6 +22,10 @@ public interface DaseV1 {
   @GET
   @Path("/markets")
   DaseMarketsResponse getMarkets() throws IOException;
+
+  @GET
+  @Path("/markets/{market}")
+  DaseMarketConfig getMarket(@PathParam("market") String market) throws IOException;
 
   @GET
   @Path("/markets/{market}/ticker")
@@ -36,6 +42,10 @@ public interface DaseV1 {
       @QueryParam("limit") Integer limit,
       @QueryParam("before") String before)
       throws IOException;
+
+  @GET
+  @Path("/markets/{market}/candles")
+  DaseCandlesResponse getCandles(@PathParam("market") String market) throws IOException;
 
   class DaseTradesResponse {
     public List<DaseTrade> trades;

@@ -34,4 +34,9 @@ public class DaseMarketDataService extends DaseMarketDataServiceRaw implements M
     List<DaseTrade> raw = getTrades(DaseAdapters.toMarketString(currencyPair), null, null);
     return DaseAdapters.adaptTrades(raw, currencyPair);
   }
+
+  @Override
+  public List<CurrencyPair> getExchangeSymbols() throws IOException {
+    return super.getExchangeSymbols();
+  }
 }
