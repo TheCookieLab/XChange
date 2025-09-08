@@ -16,7 +16,6 @@
             <artifactId>resilience4j-rxjava3</artifactId>
             <version>${version.resilience4j}</version>
         </dependency>
-
         <dependency>
             <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-core</artifactId>

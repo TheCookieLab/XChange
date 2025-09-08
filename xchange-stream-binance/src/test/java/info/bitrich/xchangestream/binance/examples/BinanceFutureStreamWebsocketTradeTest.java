@@ -34,7 +34,7 @@ public class BinanceFutureStreamWebsocketTradeTest {
   BinanceFutureStreamingExchange binanceFutureStreamingExchange;
   private static final Instrument instrument = new FuturesContract("ETH/USDT/PERP");
   private static final Instrument instrument2 = new FuturesContract("SOL/USDT/PERP");
-  private final boolean logOutput = false;
+  private final boolean logOutput = true;
 
   @Before
   public void setUp() {
@@ -52,9 +52,9 @@ public class BinanceFutureStreamWebsocketTradeTest {
     ProductSubscription subscription =
         ProductSubscription.create()
             // workaround to connect to userDataStream
-            .addUserTrades(instrument)
+            .addUserTrades(instrument2)
             // workaround to connect to BinanceStreamingService
-            .addTicker(instrument)
+            .addTicker(instrument2)
             .build();
     exchange.connect(subscription).blockingAwait();
     //wait for authorization

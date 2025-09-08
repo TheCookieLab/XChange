@@ -153,7 +153,6 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
         }
       }
       case "order.place": {
-        LOG.info("loginDisposable isDisposed: {}", loginDisposable.isDisposed());
         BinanceWebsocketPlaceOrderPayload orderPayload = null;
         if (args[1] instanceof MarketOrder) {
           MarketOrder marketOrder = (MarketOrder) args[1];
