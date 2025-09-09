@@ -236,6 +236,7 @@ public class OkexAdapters {
         .clientOrderId(order.getUserReference())
         .orderType(OkexOrderType.market.name())
         .amount(convertVolumeToContractSize(order, exchangeMetaData))
+        .tradeQuoteCcy(order.getInstrument().getCounter().getCurrencyCode())
         .build();
   }
 
@@ -294,6 +295,7 @@ public class OkexAdapters {
                     : OkexOrderType.limit.name())
         .amount(convertVolumeToContractSize(order, exchangeMetaData))
         .price(order.getLimitPrice().toPlainString())
+        .tradeQuoteCcy(order.getInstrument().getCounter().getCurrencyCode())
         .build();
   }
 
@@ -435,7 +437,13 @@ public class OkexAdapters {
   }
 
   public static String adaptInstrument(Instrument instrument) {
-    return instrument.toString().replace('/', '-');
+    String result = instrument.toString();
+    if (Arrays.asList("USDT", "USDC").contains(instrument.getCounter().getCurrencyCode())) {
+      if (result != null && result.length() > 0) {
+        result = result.substring(0, result.length() - 1);
+      }
+    }
+    return result.replace('/', '-');
   }
 
   public static Trades adaptTrades(
@@ -445,7 +453,7 @@ public class OkexAdapters {
     okexTrades.forEach(
         okexTrade ->
             trades.add(
-                new Trade.Builder()
+                Trade.builder()
                     .id(okexTrade.getTradeId())
                     .instrument(instrument)
                     .originalAmount(

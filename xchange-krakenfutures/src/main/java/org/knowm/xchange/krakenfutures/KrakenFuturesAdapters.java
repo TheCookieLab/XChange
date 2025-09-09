@@ -295,7 +295,7 @@ public class KrakenFuturesAdapters {
 
     for (KrakenFuturesPublicFill fill : krakenFuturesTrades.getFills()) {
       trades.add(
-          new Trade.Builder()
+          Trade.builder()
               .id(fill.getTradeId())
               .type(adaptOrderType(fill.getSide()))
               .price(fill.getPrice())

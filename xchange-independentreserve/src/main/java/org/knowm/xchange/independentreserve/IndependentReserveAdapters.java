@@ -200,7 +200,7 @@ public class IndependentReserveAdapters {
           UserTrade.builder()
               .type(adapeOrderType(trade.getOrderType()))
               .originalAmount(trade.getVolumeTraded())
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(trade.getPrice())
               .timestamp(trade.getTradeTimestamp())
               .id(trade.getTradeGuid())

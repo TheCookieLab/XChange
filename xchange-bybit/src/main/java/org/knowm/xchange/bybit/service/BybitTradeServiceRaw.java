@@ -12,13 +12,9 @@ import static org.knowm.xchange.bybit.BybitResilience.ORDER_CANCEL_SPOT_RATE_LIM
 import static org.knowm.xchange.bybit.BybitResilience.ORDER_CREATE_LINEAR_AND_INVERSE_RATE_LIMITER;
 import static org.knowm.xchange.bybit.BybitResilience.ORDER_CREATE_OPTION_LIMITER;
 import static org.knowm.xchange.bybit.BybitResilience.ORDER_CREATE_SPOT_RATE_LIMITER;
-import static org.knowm.xchange.bybit.dto.trade.BybitOrder.TpslMode.FULL;
-import static org.knowm.xchange.bybit.dto.trade.BybitOrder.TpslMode.PARTIAL;
-import static org.knowm.xchange.bybit.dto.trade.BybitOrderType.MARKET;
 
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import java.io.IOException;
-import java.math.BigDecimal;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
@@ -26,14 +22,10 @@ import org.knowm.xchange.bybit.dto.account.BybitCancelAllOrdersPayload;
 import org.knowm.xchange.bybit.dto.account.BybitCancelAllOrdersResponse;
 import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
-import org.knowm.xchange.bybit.dto.trade.BybitOrder.SlTriggerBy;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderResponse;
-import org.knowm.xchange.bybit.dto.trade.BybitOrderType;
 import org.knowm.xchange.bybit.dto.trade.BybitPlaceOrderPayload;
-import org.knowm.xchange.bybit.dto.trade.BybitSide;
 import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetail;
 import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetails;
-import org.knowm.xchange.bybit.dto.trade.details.BybitTimeInForce;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.instrument.Instrument;
 
@@ -116,43 +108,7 @@ public class BybitTradeServiceRaw extends BybitBaseService {
     return amendOrder;
   }
 
-  BybitResult<BybitOrderResponse> placeOrder(
-      BybitCategory category,
-      String symbol,
-      BybitSide side,
-      BybitOrderType orderType,
-      BigDecimal qty,
-      BigDecimal limitPrice,
-      String orderLinkId,
-      BigDecimal stopLoss,
-      SlTriggerBy slTriggerBy,
-      BigDecimal slLimitPrice,
-      BybitOrderType slOrderType,
-      boolean reduceOnly,
-      int positionIdx,
-      BybitTimeInForce timeInForce)
-      throws IOException {
-
-    BybitPlaceOrderPayload payload =
-        new BybitPlaceOrderPayload(
-            category, symbol, side, orderType, qty, orderLinkId, positionIdx, limitPrice);
-    if (stopLoss != null && slTriggerBy != null && slLimitPrice != null && slOrderType != null) {
-      payload.setStopLoss(stopLoss.toString());
-      payload.setSlTriggerBy(slTriggerBy.getValue());
-      payload.setSlLimitPrice(slLimitPrice.toString());
-      payload.setSlOrderType(slOrderType.getValue());
-      if (slOrderType.equals(MARKET)) {
-        payload.setTpslMode(FULL.getValue());
-      } else {
-        payload.setTpslMode(PARTIAL.getValue());
-      }
-    }
-    if (reduceOnly) {
-      payload.setReduceOnly("true");
-    }
-    if (timeInForce != null) {
-      payload.setTimeInForce(timeInForce.getValue());
-    }
+  BybitResult<BybitOrderResponse> placeOrder(BybitPlaceOrderPayload payload,BybitCategory category) throws IOException {
     BybitResult<BybitOrderResponse> placeOrder =
         decorateApiCall(
                 () ->

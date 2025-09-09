@@ -42,7 +42,7 @@ class BitfinexTradeServiceTest extends BitfinexExchangeWiremock {
 
     UserTrade expected = UserTrade.builder()
         .type(OrderType.ASK)
-        .currencyPair(new CurrencyPair("GOMINING/USDT"))
+        .instrument(new CurrencyPair("GOMINING/USDT"))
         .id("1793448778")
         .orderId("214237248399")
         .originalAmount(new BigDecimal("59.43"))
@@ -68,7 +68,7 @@ class BitfinexTradeServiceTest extends BitfinexExchangeWiremock {
 
     UserTrade expected = UserTrade.builder()
         .type(OrderType.ASK)
-        .currencyPair(new CurrencyPair("LIFIII/USDT"))
+        .instrument(new CurrencyPair("LIFIII/USDT"))
         .id("1798130174")
         .orderId("215550069744")
         .originalAmount(new BigDecimal("5804.17721836"))
