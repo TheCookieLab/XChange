@@ -17,9 +17,9 @@
 
 
     <!-- Define logging for organization applications only -->
-    <logger name="org.knowm.xchange" level="DEBUG"/>
-    <logger name="si.mazi.rescu" level="TRACE"/>
-    <Logger name="info.bitrich.xchangestream.service.netty" level="TRACE"/>
-    <Logger name="info.bitrich.xchangestream.binance" level="TRACE"/>
+<!--    <logger name="org.knowm.xchange" level="DEBUG"/>-->
+<!--    <logger name="si.mazi.rescu" level="TRACE"/>-->
+<!--    <Logger name="info.bitrich.xchangestream.service.netty" level="TRACE"/>-->
+<!--    <Logger name="info.bitrich.xchangestream.binance" level="TRACE"/>-->
 
 </configuration>

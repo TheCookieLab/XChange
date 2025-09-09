@@ -15,7 +15,6 @@ import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trade;
-import org.knowm.xchange.dto.marketdata.Trade.Builder;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
@@ -23,7 +22,7 @@ import org.knowm.xchange.instrument.Instrument;
 public class BinanceStreamingAdapters {
 
   public static Trade adaptRawTrade(BinanceRawTrade rawTrade, Instrument instrument) {
-    return new Builder()
+    return Trade.builder()
         .type(BinanceAdapters.convertType(rawTrade.isBuyerMarketMaker()))
         .originalAmount(rawTrade.getQuantity())
         .instrument(instrument)
