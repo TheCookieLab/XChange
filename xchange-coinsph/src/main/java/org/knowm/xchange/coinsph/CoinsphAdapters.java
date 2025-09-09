@@ -435,7 +435,11 @@ public final class CoinsphAdapters {
         status = FundingRecord.Status.PROCESSING;
         break;
       case 1:
+      case 3:
         status = FundingRecord.Status.COMPLETE;
+        break;
+      case 2:
+        status = FundingRecord.Status.FAILED;
         break;
       default:
         status = FundingRecord.Status.PROCESSING;
@@ -474,9 +478,6 @@ public final class CoinsphAdapters {
       case 2:
         status = FundingRecord.Status.FAILED;
         break;
-      case 3:
-        status = FundingRecord.Status.CANCELLED;
-        break;
       default:
         status = FundingRecord.Status.PROCESSING;
     }
@@ -510,17 +511,15 @@ public final class CoinsphAdapters {
   public static FundingRecord adaptFundingRecord(CoinsphFundingRecord fundingRecord) {
     FundingRecord.Status status;
     switch (fundingRecord.getStatus()) {
-      case 0:
+      case 0: // 0 - PROCESSING
         status = FundingRecord.Status.PROCESSING;
         break;
-      case 1:
+      case 1: // 1 - SUCCESS
+      case 3: // 3 - NEED_FILL_DATA(travel rule info), however money is available to user
         status = FundingRecord.Status.COMPLETE;
         break;
-      case 2:
+      case 2: // 2 - FAILED
         status = FundingRecord.Status.FAILED;
-        break;
-      case 3:
-        status = FundingRecord.Status.CANCELLED;
         break;
       default:
         status = FundingRecord.Status.PROCESSING;

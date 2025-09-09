@@ -227,4 +227,15 @@ public interface AccountService extends BaseService {
       throws IOException {
     throw new NotYetImplementedForExchangeException("getDynamicTradingFeesByInstrument");
   }
+
+  /**
+   * Change user's initial leverage of specific symbol market.
+   * @param instrument symbol to change leverage
+   * @param leverage leverage
+   * @return true, if success
+   */
+  default boolean setLeverage(Instrument instrument, int leverage)
+      throws IOException {
+    throw new NotYetImplementedForExchangeException("setLeverage");
+  }
 }
