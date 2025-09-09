@@ -26,7 +26,7 @@ public class BybitExchange extends BaseExchange implements Exchange {
   private static final String DEMO_URL = "https://api-demo.bybit.com";
   private static final String TESTNET_URL = "https://api-testnet.bybit.com";
 
-  // enable DEMO mode
+  // enable TEST_NET
   public static final String SPECIFIC_PARAM_TESTNET = "test_net";
 
   private static ResilienceRegistries RESILIENCE_REGISTRIES;

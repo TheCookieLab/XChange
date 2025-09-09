@@ -329,10 +329,10 @@ public class BitfinexAdapters {
     Date date =
         DateUtils.fromMillisUtc(trade.getTimestamp() * 1000L); // Bitfinex uses Unix timestamps
     final String tradeId = String.valueOf(trade.getTradeId());
-    return new Trade.Builder()
+    return Trade.builder()
         .type(orderType)
         .originalAmount(amount)
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(price)
         .timestamp(date)
         .id(tradeId)
@@ -367,7 +367,7 @@ public class BitfinexAdapters {
     Date timestamp = DateUtils.fromMillisUtc((long) (bitfinexTicker.getTimestamp() * 1000L));
 
     return new Ticker.Builder()
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .last(last)
         .bid(bid)
         .bidSize(bidSize)
@@ -583,7 +583,7 @@ public class BitfinexAdapters {
           UserTrade.builder()
               .type(orderType)
               .originalAmount(trade.getAmount())
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(trade.getPrice())
               .timestamp(timestamp)
               .id(trade.getTradeId())
@@ -612,7 +612,7 @@ public class BitfinexAdapters {
           UserTrade.builder()
               .type(orderType)
               .originalAmount(amount)
-              .currencyPair(adaptCurrencyPair(trade.getSymbol()))
+              .instrument(adaptCurrencyPair(trade.getSymbol()))
               .price(trade.getExecPrice())
               .timestamp(trade.getTimestamp())
               .id(trade.getId())
@@ -940,7 +940,7 @@ public class BitfinexAdapters {
         CurrencyPairDeserializer.getCurrencyPairFromString(bitfinexTicker.getSymbol().substring(1));
 
     return new Ticker.Builder()
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .last(last)
         .bid(bid)
         .ask(ask)
@@ -960,10 +960,10 @@ public class BitfinexAdapters {
     BigDecimal price = trade.getPrice();
     Date date = DateUtils.fromMillisUtc(trade.getTimestamp());
     final String tradeId = String.valueOf(trade.getTradeId());
-    return new Trade.Builder()
+    return Trade.builder()
         .type(orderType)
         .originalAmount(amount == null ? null : amount.abs())
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(price)
         .timestamp(date)
         .id(tradeId)

@@ -120,7 +120,7 @@ public class DeribitAdapters {
   }
 
   public static Trade adaptTrade(DeribitTrade deribitTrade, Instrument instrument) {
-    return new Trade.Builder()
+    return Trade.builder()
         .type(adapt(deribitTrade.getDirection()))
         .originalAmount(deribitTrade.getAmount())
         .instrument(instrument)

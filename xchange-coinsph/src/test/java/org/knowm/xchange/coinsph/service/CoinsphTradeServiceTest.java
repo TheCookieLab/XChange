@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinsph.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -27,9 +28,10 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.CancelOrderByCurrencyPair;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
+import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 
@@ -319,10 +321,58 @@ public class CoinsphTradeServiceTest {
   }
 
   @Test
-  public void testGetTradeHistory() throws IOException {
+  public void testGetTradeHistoryCurrencyPairParamsScenario() throws IOException {
     // given
-    CurrencyPair currencyPair = CurrencyPair.BTC_PHP;
+    List<CoinsphUserTrade> mockTrades = getCoinsphUserTrades();
 
+    when(coinsphAuthenticated.getMyTrades(
+            anyString(), any(), any(), eq("BTCPHP"), any(), any(), any(), any(), any(), anyLong()))
+        .thenReturn(mockTrades);
+
+    // Create trade history params
+    TradeHistoryParams params = new CoinsphTradeHistoryParams(CurrencyPair.BTC_PHP);
+
+    // when
+    UserTrades userTrades = tradeService.getTradeHistory(params);
+
+    // then
+    assertCoinsphUserTrades(userTrades);
+  }
+
+  @Test
+  public void testGetTradeHistoryInstrumentParamsScenario() throws IOException {
+    // given
+    List<CoinsphUserTrade> mockTrades = getCoinsphUserTrades();
+
+    when(coinsphAuthenticated.getMyTrades(
+        anyString(), any(), any(), eq("BTCPHP"), any(), any(), any(), any(), any(), anyLong()))
+        .thenReturn(mockTrades);
+
+    // Create trade history params
+    TradeHistoryParams params = new CoinsphTradeHistoryParams((Instrument) CurrencyPair.BTC_PHP);
+
+    // when
+    UserTrades userTrades = tradeService.getTradeHistory(params);
+
+    // then
+    assertCoinsphUserTrades(userTrades);
+  }
+
+  @Test
+  public void testGetTradeHistoryInvalidParamsScenario() {
+    // given
+    TradeHistoryParams params = new CoinsphTradeHistoryParams();
+
+    // when
+    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> tradeService.getTradeHistory(params)
+    );
+
+    // then
+    assertThat(exception.getMessage()).contains("TradeHistoryParams must include either CurrencyPair or Instrument for Coins.ph");
+  }
+
+  private static List<CoinsphUserTrade> getCoinsphUserTrades() {
     List<CoinsphUserTrade> mockTrades = new ArrayList<>();
 
     CoinsphUserTrade trade1 =
@@ -339,7 +389,7 @@ public class CoinsphTradeServiceTest {
             true, // isBuyer
             false, // isMaker
             true // isBestMatch
-            );
+        );
     mockTrades.add(trade1);
 
     CoinsphUserTrade trade2 =
@@ -356,21 +406,12 @@ public class CoinsphTradeServiceTest {
             false, // isBuyer
             true, // isMaker
             true // isBestMatch
-            );
+        );
     mockTrades.add(trade2);
+    return mockTrades;
+  }
 
-    // Create trade history params
-    TradeHistoryParamCurrencyPair params = new CoinsphTradeHistoryParams();
-    params.setCurrencyPair(currencyPair);
-
-    // when
-    when(coinsphAuthenticated.getMyTrades(
-            anyString(), any(), any(), eq("BTCPHP"), any(), any(), any(), any(), any(), anyLong()))
-        .thenReturn(mockTrades);
-
-    // then
-    UserTrades userTrades = tradeService.getTradeHistory(params);
-
+  private static void assertCoinsphUserTrades(UserTrades userTrades) {
     assertThat(userTrades).isNotNull();
     assertThat(userTrades.getUserTrades()).hasSize(2);
 

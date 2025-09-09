@@ -24,7 +24,6 @@ import org.knowm.xchange.dto.account.OpenPosition.Type;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trade;
-import org.knowm.xchange.dto.marketdata.Trade.Builder;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
@@ -59,7 +58,7 @@ public class BybitStreamAdapters {
     bybitTrades.forEach(
         bybitTrade ->
             trades.add(
-                new Builder()
+                Trade.builder()
                     .id(bybitTrade.getTradeId())
                     .instrument(instrument)
                     .originalAmount(bybitTrade.getTradeSize())

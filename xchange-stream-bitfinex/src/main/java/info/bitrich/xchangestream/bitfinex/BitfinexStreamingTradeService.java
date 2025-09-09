@@ -49,15 +49,15 @@ public class BitfinexStreamingTradeService implements StreamingTradeService {
         .doOnNext(
             t -> {
               service.scheduleCalculatedBalanceFetch(
-                  t.getCurrencyPair().getBase().getCurrencyCode());
+                  t.getInstrument().getBase().getCurrencyCode());
               service.scheduleCalculatedBalanceFetch(
-                  t.getCurrencyPair().getCounter().getCurrencyCode());
+                  t.getInstrument().getCounter().getCurrencyCode());
             });
   }
 
   @Override
   public Observable<UserTrade> getUserTrades(CurrencyPair currencyPair, Object... args) {
-    return getUserTrades().filter(t -> currencyPair.equals(t.getCurrencyPair()));
+    return getUserTrades().filter(t -> currencyPair.equals(t.getInstrument()));
   }
 
   public Observable<BitfinexWebSocketAuthOrder> getRawAuthenticatedOrders() {

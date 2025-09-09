@@ -130,9 +130,9 @@ public class LatokenAdapters {
   }
 
   public static Trade adaptTrade(LatokenTrade latokenTrade, CurrencyPair pair) {
-    return new Trade.Builder()
+    return Trade.builder()
         .type(adaptOrderType(latokenTrade.getSide()))
-        .currencyPair(pair)
+        .instrument(pair)
         .originalAmount(latokenTrade.getAmount())
         .price(latokenTrade.getPrice())
         .timestamp(latokenTrade.getTimestamp())
@@ -207,7 +207,7 @@ public class LatokenAdapters {
     return UserTrade.builder()
         .type(adaptOrderType(latokenUserTrade.getSide()))
         .originalAmount(latokenUserTrade.getAmount())
-        .currencyPair(pair)
+        .instrument(pair)
         .price(latokenUserTrade.getPrice())
         .timestamp(latokenUserTrade.getTime())
         .id(latokenUserTrade.getId())

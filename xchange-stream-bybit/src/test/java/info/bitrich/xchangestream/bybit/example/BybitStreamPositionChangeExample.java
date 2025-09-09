@@ -55,7 +55,7 @@ public class BybitStreamPositionChangeExample {
         "switch mode to one-way, result {}",
         bybitAccountService.switchPositionMode(BybitCategory.LINEAR, null, "USDT", 0));
     //    set leverage to 1.1
-    bybitAccountService.setLeverage(ETH_PERP, 1.1);
+    bybitAccountService.setLeverage(ETH_PERP, 1);
     Disposable positionChangesDisposable =
         ((BybitStreamingTradeService) exchange.getStreamingTradeService())
             .getBybitPositionChanges(BybitCategory.LINEAR)

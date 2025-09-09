@@ -97,7 +97,7 @@ public final class CoinsphStreamingAdapters {
   }
 
   public static Trade adaptTrade(CoinsphWebSocketAggTrade wsTrade) {
-    return new Trade.Builder()
+    return Trade.builder()
         .id(String.valueOf(wsTrade.getAggregateTradeId()))
         .instrument(CoinsphAdapters.toCurrencyPair(wsTrade.getSymbol().toUpperCase()))
         .price(wsTrade.getPrice())
@@ -203,7 +203,7 @@ public final class CoinsphStreamingAdapters {
     return UserTrade.builder()
         .type(orderType)
         .originalAmount(executionReport.getLastExecutedQuantity())
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(executionReport.getLastExecutedPrice())
         .timestamp(timestamp)
         .id(tradeId)
