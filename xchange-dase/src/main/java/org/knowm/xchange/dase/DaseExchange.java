@@ -3,12 +3,14 @@ package org.knowm.xchange.dase;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.dase.service.DaseMarketDataService;
+import org.knowm.xchange.dase.service.DaseTradeService;
 
 public class DaseExchange extends BaseExchange {
 
   @Override
   protected void initServices() {
     this.marketDataService = new DaseMarketDataService(this);
+    this.tradeService = new DaseTradeService(this);
   }
 
   @Override
