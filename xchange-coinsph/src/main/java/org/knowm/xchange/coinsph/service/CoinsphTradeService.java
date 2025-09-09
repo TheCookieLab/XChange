@@ -18,9 +18,11 @@ import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
+import org.knowm.xchange.service.trade.params.TradeHistoryParamInstrument;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
@@ -94,17 +96,25 @@ public class CoinsphTradeService extends CoinsphTradeServiceRaw implements Trade
   }
 
   @Override
-  public UserTrades getTradeHistory(TradeHistoryParams params)
-      throws IOException, CoinsphException {
-    if (!(params instanceof TradeHistoryParamCurrencyPair)) {
+  public UserTrades getTradeHistory(TradeHistoryParams params) throws IOException, CoinsphException {
+    // Mandatory param: either currencyPair or instrument
+    String symbol = null;
+    if (params instanceof TradeHistoryParamCurrencyPair) {
+      CurrencyPair currencyPair = ((TradeHistoryParamCurrencyPair) params).getCurrencyPair();
+      if (currencyPair != null) {
+        symbol = CoinsphAdapters.toSymbol(currencyPair);
+      }
+    }
+    if (params instanceof TradeHistoryParamInstrument) {
+      Instrument instrument = ((TradeHistoryParamInstrument) params).getInstrument();
+      if (instrument != null) {
+        symbol = CoinsphAdapters.toSymbol(instrument);
+      }
+    }
+    if (symbol == null) {
       throw new IllegalArgumentException(
-          "TradeHistoryParams must implement TradeHistoryParamCurrencyPair for Coins.ph");
+          "TradeHistoryParams must include either CurrencyPair or Instrument for Coins.ph");
     }
-    CurrencyPair currencyPair = ((TradeHistoryParamCurrencyPair) params).getCurrencyPair();
-    if (currencyPair == null) {
-      throw new IllegalArgumentException("CurrencyPair cannot be null for Coins.ph trade history");
-    }
-    String symbol = CoinsphAdapters.toSymbol(currencyPair);
 
     Long startTime = null;
     if (params instanceof org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan) {

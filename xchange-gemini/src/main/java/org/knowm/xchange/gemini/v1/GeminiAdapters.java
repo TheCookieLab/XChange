@@ -285,10 +285,10 @@ public final class GeminiAdapters {
     Date date =
         DateUtils.fromMillisUtc(trade.getTimestamp() * 1000L); // Gemini uses Unix timestamps
     final String tradeId = String.valueOf(trade.getTradeId());
-    return new Trade.Builder()
+    return Trade.builder()
         .type(orderType)
         .originalAmount(amount)
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(price)
         .timestamp(date)
         .id(tradeId)
@@ -420,7 +420,7 @@ public final class GeminiAdapters {
           UserTrade.builder()
               .type(orderType)
               .originalAmount(trade.getAmount())
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(trade.getPrice())
               .timestamp(timestamp)
               .id(trade.getTradeId())

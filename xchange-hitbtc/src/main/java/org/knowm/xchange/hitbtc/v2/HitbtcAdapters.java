@@ -170,10 +170,10 @@ public class HitbtcAdapters {
       }
       OrderType orderType = adaptSide(hitbtcTrade.getSide());
       Trade trade =
-          new Trade.Builder()
+          Trade.builder()
               .type(orderType)
               .originalAmount(amount)
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(price)
               .timestamp(timestamp)
               .id(tid)
@@ -234,18 +234,18 @@ public class HitbtcAdapters {
       String clientOrderId = hitbtcOwnTrade.getClientOrderId();
 
       UserTrade trade =
-          new HitbtcUserTrade(
-              type,
-              originalAmount,
-              pair,
-              hitbtcOwnTrade.getPrice(),
-              timestamp,
-              id,
-              orderId,
-              hitbtcOwnTrade.getFee(),
-              pair.getCounter(),
-              clientOrderId);
-
+          HitbtcUserTrade.builder()
+              .type(type)
+              .originalAmount(originalAmount)
+              .instrument(pair)
+              .price(hitbtcOwnTrade.getPrice())
+              .timestamp(timestamp)
+              .id(id)
+              .orderId(orderId)
+              .feeAmount(hitbtcOwnTrade.getFee())
+              .feeCurrency(pair.getCounter())
+              .orderUserReference(clientOrderId)
+              .build();
       trades.add(trade);
     }
 

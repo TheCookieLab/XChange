@@ -193,18 +193,19 @@ public class GateioAdapters {
   }
 
   public UserTrade toUserTrade(GateioUserTradeRaw gateioUserTradeRaw) {
-    return new GateioUserTrade(
-        gateioUserTradeRaw.getSide(),
-        gateioUserTradeRaw.getAmount(),
-        gateioUserTradeRaw.getCurrencyPair(),
-        gateioUserTradeRaw.getPrice(),
-        Date.from(gateioUserTradeRaw.getTimeMs()),
-        String.valueOf(gateioUserTradeRaw.getId()),
-        String.valueOf(gateioUserTradeRaw.getOrderId()),
-        gateioUserTradeRaw.getFee(),
-        gateioUserTradeRaw.getFeeCurrency(),
-        gateioUserTradeRaw.getRemark(),
-        gateioUserTradeRaw.getRole());
+    return GateioUserTrade.builder()
+        .type(gateioUserTradeRaw.getSide())
+        .originalAmount(gateioUserTradeRaw.getAmount())
+        .instrument(gateioUserTradeRaw.getCurrencyPair())
+        .price(gateioUserTradeRaw.getPrice())
+        .timestamp(Date.from(gateioUserTradeRaw.getTimeMs()))
+        .id(String.valueOf(gateioUserTradeRaw.getId()))
+        .orderId(String.valueOf(gateioUserTradeRaw.getOrderId()))
+        .feeAmount(gateioUserTradeRaw.getFee())
+        .feeCurrency(gateioUserTradeRaw.getFeeCurrency())
+        .orderUserReference(gateioUserTradeRaw.getRemark())
+        .role(gateioUserTradeRaw.getRole())
+        .build();
   }
 
   public GateioWithdrawalRequest toGateioWithdrawalRequest(GateioWithdrawFundsParams p) {

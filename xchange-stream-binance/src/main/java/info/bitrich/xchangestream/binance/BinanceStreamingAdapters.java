@@ -16,7 +16,7 @@ import org.knowm.xchange.instrument.Instrument;
 public class BinanceStreamingAdapters {
 
   public static Trade adaptRawTrade(BinanceRawTrade rawTrade, Instrument instrument) {
-    return new Trade.Builder()
+    return Trade.builder()
         .type(BinanceAdapters.convertType(rawTrade.isBuyerMarketMaker()))
         .originalAmount(rawTrade.getQuantity())
         .instrument(instrument)

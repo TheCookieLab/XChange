@@ -119,7 +119,7 @@ public final class UpbitAdapters {
     OrderType orderType = OrderType.BID;
     if (OrderType.ASK.toString().equals(trade.getAskBid())) orderType = OrderType.ASK;
 
-    return new Trade.Builder()
+    return Trade.builder()
         .type(orderType)
         .originalAmount(trade.getTradeVolume())
         .instrument(currencyPair)

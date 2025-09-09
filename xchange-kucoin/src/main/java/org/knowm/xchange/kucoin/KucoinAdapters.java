@@ -190,7 +190,7 @@ public class KucoinAdapters {
   }
 
   private static Trade adaptTrade(CurrencyPair currencyPair, TradeHistoryResponse trade) {
-    return new Trade.Builder()
+    return Trade.builder()
         .instrument(currencyPair)
         .originalAmount(trade.getSize())
         .price(trade.getPrice())
@@ -263,7 +263,7 @@ public class KucoinAdapters {
 
   public static UserTrade adaptUserTrade(TradeResponse trade) {
     return UserTrade.builder()
-        .currencyPair(adaptCurrencyPair(trade.getSymbol()))
+        .instrument(adaptCurrencyPair(trade.getSymbol()))
         .feeAmount(trade.getFee())
         .feeCurrency(Currency.getInstance(trade.getFeeCurrency()))
         .id(trade.getTradeId())
@@ -278,7 +278,7 @@ public class KucoinAdapters {
   public static UserTrade adaptHistOrder(HistOrdersResponse histOrder) {
     CurrencyPair currencyPair = adaptCurrencyPair(histOrder.getSymbol());
     return UserTrade.builder()
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .feeAmount(histOrder.getFee())
         .feeCurrency(currencyPair.getBase())
         .id(histOrder.getId())

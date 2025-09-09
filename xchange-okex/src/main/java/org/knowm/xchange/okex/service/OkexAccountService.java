@@ -98,6 +98,7 @@ public class OkexAccountService extends OkexAccountServiceRaw implements Account
     return result;
   }
 
+  @Override
   public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
     return setLeverage(
             adaptInstrument(instrument),
