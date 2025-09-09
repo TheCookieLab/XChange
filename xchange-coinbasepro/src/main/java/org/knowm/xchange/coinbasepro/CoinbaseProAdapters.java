@@ -312,7 +312,7 @@ public class CoinbaseProAdapters {
           UserTrade.builder()
               .type("buy".equals(fill.getSide()) ? OrderType.BID : OrderType.ASK)
               .originalAmount(fill.getSize())
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(fill.getPrice())
               .timestamp(parseDate(fill.getCreatedAt()))
               .id(String.valueOf(fill.getTradeId()))
@@ -332,7 +332,7 @@ public class CoinbaseProAdapters {
       // yes, sell means buy for coinbasePro reported trades..
       OrderType type = "sell".equals(trade.getSide()) ? OrderType.BID : OrderType.ASK;
       trades.add(
-          new Trade.Builder()
+          Trade.builder()
               .type(type)
               .originalAmount(trade.getSize())
               .price(trade.getPrice())

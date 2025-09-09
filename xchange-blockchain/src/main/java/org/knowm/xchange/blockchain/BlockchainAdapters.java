@@ -245,7 +245,7 @@ public class BlockchainAdapters {
                     UserTrade.builder()
                         .type(blockchainTrade.getOrderType())
                         .originalAmount(blockchainTrade.getCumQty())
-                        .currencyPair(blockchainTrade.getSymbol())
+                        .instrument(blockchainTrade.getSymbol())
                         .price(blockchainTrade.getPrice())
                         .timestamp(blockchainTrade.getTimestamp())
                         .id(Long.toString(blockchainTrade.getExOrdId()))

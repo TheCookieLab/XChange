@@ -61,7 +61,7 @@ public class HuobiAdapters {
     builder.low(huobiTicker.getLow());
     builder.quoteVolume(huobiTicker.getVol());
     builder.timestamp(huobiTicker.getTs());
-    builder.currencyPair(currencyPair);
+    builder.instrument(currencyPair);
     return builder.build();
   }
 
@@ -316,7 +316,7 @@ public class HuobiAdapters {
     return UserTrade.builder()
         .type(order.getType())
         .originalAmount(order.getCumulativeAmount())
-        .currencyPair(order.getCurrencyPair())
+        .instrument(order.getCurrencyPair())
         .price(order.getLimitPrice())
         .timestamp(order.getTimestamp())
         .id("") // Trade id

@@ -262,7 +262,7 @@ class BitfinexStreamingAdapters {
 
   static UserTrade adaptUserTrade(BitfinexWebSocketAuthTrade authTrade) {
     return UserTrade.builder()
-        .currencyPair(BitfinexAdapters.adaptCurrencyPair(adaptV2SymbolToV1(authTrade.getPair())))
+        .instrument(BitfinexAdapters.adaptCurrencyPair(adaptV2SymbolToV1(authTrade.getPair())))
         .feeAmount(authTrade.getFee().abs())
         .feeCurrency(Currency.getInstance(authTrade.getFeeCurrency()))
         .id(Long.toString(authTrade.getId()))

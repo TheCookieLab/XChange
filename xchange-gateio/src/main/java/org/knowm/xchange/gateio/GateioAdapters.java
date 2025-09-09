@@ -149,10 +149,10 @@ public final class GateioAdapters {
     OrderType orderType = adaptOrderType(trade.getType());
     Date timestamp = DateUtils.fromMillisUtc(trade.getDate() * 1000);
 
-    return new Trade.Builder()
+    return Trade.builder()
         .type(orderType)
         .originalAmount(trade.getAmount())
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(trade.getPrice())
         .timestamp(timestamp)
         .id(trade.getTradeId())
@@ -218,7 +218,7 @@ public final class GateioAdapters {
     return UserTrade.builder()
         .type(orderType)
         .originalAmount(gateioTrade.getAmount())
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(gateioTrade.getRate())
         .timestamp(timestamp)
         .id(gateioTrade.getTradeID())

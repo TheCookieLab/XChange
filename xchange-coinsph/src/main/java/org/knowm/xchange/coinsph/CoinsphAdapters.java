@@ -202,7 +202,7 @@ public final class CoinsphAdapters {
   }
 
   public static Trade adaptTrade(CoinsphPublicTrade coinsphTrade, CurrencyPair currencyPair) {
-    return new Trade.Builder()
+    return Trade.builder()
         .instrument(currencyPair)
         .originalAmount(coinsphTrade.getQty())
         .price(coinsphTrade.getPrice())
@@ -385,7 +385,7 @@ public final class CoinsphAdapters {
     String tradeId = String.valueOf(coinsphTrade.getId());
     String orderId = String.valueOf(coinsphTrade.getOrderId());
 
-    return new UserTrade.Builder()
+    return UserTrade.builder()
         .instrument(currencyPair)
         .id(tradeId)
         .orderId(orderId)
