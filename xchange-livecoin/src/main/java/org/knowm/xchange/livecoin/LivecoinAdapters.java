@@ -129,10 +129,10 @@ public class LivecoinAdapters {
     for (LivecoinTrade trade : tradesRaw) {
       OrderType type = trade.getType().equals("SELL") ? OrderType.BID : OrderType.ASK;
       Trade t =
-          new Trade.Builder()
+          Trade.builder()
               .type(type)
               .originalAmount(trade.getQuantity())
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(trade.getPrice())
               .timestamp(parseDate(trade.getTime()))
               .id(String.valueOf(trade.getId()))
@@ -240,7 +240,7 @@ public class LivecoinAdapters {
     return UserTrade.builder()
         .type(type)
         .originalAmount(amountA)
-        .currencyPair(new CurrencyPair(ccyA, ccyB))
+        .instrument(new CurrencyPair(ccyA, ccyB))
         .price(price)
         .timestamp(DateUtils.fromMillisUtc(Long.parseLong(map.get("date").toString())))
         .id(id)

@@ -149,7 +149,7 @@ public class BiboxAdapters {
     return UserTrade.builder()
         .orderId(order.getId())
         .id(order.getId())
-        .currencyPair(new CurrencyPair(order.getCoinSymbol(), order.getCurrencySymbol()))
+        .instrument(new CurrencyPair(order.getCoinSymbol(), order.getCurrencySymbol()))
         .price(order.getPrice())
         .originalAmount(order.getAmount())
         .timestamp(new Date(order.getCreatedAt()))
@@ -213,10 +213,10 @@ public class BiboxAdapters {
         biboxDeals.stream()
             .map(
                 d ->
-                    new Trade.Builder()
+                    Trade.builder()
                         .type(convertSide(d.getSide()))
                         .originalAmount(d.getAmount())
-                        .currencyPair(currencyPair)
+                        .instrument(currencyPair)
                         .price(d.getPrice())
                         .timestamp(new Date(d.getTime()))
                         .id(d.getId())

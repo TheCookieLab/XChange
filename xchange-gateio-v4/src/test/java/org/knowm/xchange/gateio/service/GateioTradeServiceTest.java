@@ -223,18 +223,19 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
     assertThat(userTrades.getUserTrades()).hasSize(2);
 
     GateioUserTrade expected =
-        new GateioUserTrade(
-            OrderType.ASK,
-            new BigDecimal("0.00005"),
-            CurrencyPair.BTC_USDT,
-            new BigDecimal("29447.2"),
-            Date.from(Instant.ofEpochMilli(1691702286356L)),
-            "6068789332",
-            "381064942553",
-            new BigDecimal("0.00294472"),
-            Currency.USDT,
-            "-",
-            Role.TAKER);
+        GateioUserTrade.builder()
+            .type(OrderType.ASK)
+            .originalAmount(new BigDecimal("0.00005"))
+            .instrument(CurrencyPair.BTC_USDT)
+            .price(new BigDecimal("29447.2"))
+            .timestamp(Date.from(Instant.ofEpochMilli(1691702286356L)))
+            .id("6068789332")
+            .orderId("381064942553")
+            .feeAmount(new BigDecimal("0.00294472"))
+            .feeCurrency(Currency.USDT)
+            .orderUserReference("-")
+            .role(Role.TAKER)
+            .build();
 
     UserTrade actual = userTrades.getUserTrades().get(0);
 

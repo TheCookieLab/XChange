@@ -438,7 +438,7 @@ public class BinanceAdapters {
         aggTrades.stream()
             .map(
                 at ->
-                    new Trade.Builder()
+                    Trade.builder()
                         .type(BinanceAdapters.convertType(at.buyerMaker))
                         .originalAmount(at.quantity)
                         .instrument(instrument)
