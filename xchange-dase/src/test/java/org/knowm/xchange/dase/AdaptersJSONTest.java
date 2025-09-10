@@ -5,14 +5,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import org.junit.Test;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dase.dto.account.ApiAccountTxn;
 import org.knowm.xchange.dase.dto.marketdata.DaseOrderBookSnapshot;
 import org.knowm.xchange.dase.dto.marketdata.DaseTicker;
 import org.knowm.xchange.dase.dto.marketdata.DaseTrade;
+import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
@@ -63,5 +67,34 @@ public class AdaptersJSONTest {
 
     assertThat(tr.getTrades()).hasSize(2);
     assertThat(tr.getTrades().get(0).getInstrument()).isEqualTo(PAIR);
+  }
+
+  @Test
+  public void adaptFundingRecords_mapping() {
+    ApiAccountTxn deposit =
+        new ApiAccountTxn(
+            "id1",
+            "EUR",
+            "deposit",
+            new BigDecimal("50.00"),
+            1719354237834L,
+            null,
+            null);
+    ApiAccountTxn fee =
+        new ApiAccountTxn(
+            "id2",
+            "BTC",
+            "trade_fill_fee_base",
+            new BigDecimal("0.0001"),
+            1719354237835L,
+            null,
+            null);
+
+    List<FundingRecord> out = DaseAdapters.adaptFundingRecords(Arrays.asList(deposit, fee));
+    assertThat(out).hasSize(2);
+    assertThat(out.get(0).getType()).isEqualTo(FundingRecord.Type.DEPOSIT);
+    assertThat(out.get(0).getCurrency().getCurrencyCode()).isEqualTo("EUR");
+    assertThat(out.get(1).getType()).isEqualTo(FundingRecord.Type.OTHER_OUTFLOW);
+    assertThat(out.get(1).getCurrency().getCurrencyCode()).isEqualTo("BTC");
   }
 }

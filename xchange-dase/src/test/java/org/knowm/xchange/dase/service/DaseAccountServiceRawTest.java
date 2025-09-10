@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.dase.dto.account.ApiAccountTxn;
+import org.knowm.xchange.dase.dto.account.ApiGetAccountTxnsOutput;
 import org.knowm.xchange.dase.dto.user.DaseUserProfile;
 
 public class DaseAccountServiceRawTest {
@@ -14,6 +16,32 @@ public class DaseAccountServiceRawTest {
     ObjectMapper mapper = new ObjectMapper();
     DaseUserProfile dto = mapper.readValue(json, DaseUserProfile.class);
     assertThat(dto.getPortfolioId()).isEqualTo("cbd1e8f4-8b94-4e90-a2b0-20d3a2a2b11f");
+  }
+
+  @Test
+  public void deserialize_account_transactions_stub() throws Exception {
+    String json = "{\n" +
+        "  \"transactions\": [\n" +
+        "    {\n" +
+        "      \"id\": \"6a0b7c40-1e16-4e1c-a4c5-1d9fdf7e9d21\",\n" +
+        "      \"currency\": \"EUR\",\n" +
+        "      \"txn_type\": \"deposit\",\n" +
+        "      \"amount\": \"100.00\",\n" +
+        "      \"created_at\": 1719354237834,\n" +
+        "      \"trade_id\": null,\n" +
+        "      \"funding_id\": \"f123\"\n" +
+        "    }\n" +
+        "  ]\n" +
+        "}";
+    ObjectMapper mapper = new ObjectMapper();
+    ApiGetAccountTxnsOutput dto = mapper.readValue(json, ApiGetAccountTxnsOutput.class);
+    assertThat(dto.getTransactions()).hasSize(1);
+    ApiAccountTxn t = dto.getTransactions().get(0);
+    assertThat(t.getId()).isEqualTo("6a0b7c40-1e16-4e1c-a4c5-1d9fdf7e9d21");
+    assertThat(t.getCurrency()).isEqualTo("EUR");
+    assertThat(t.getTxnType()).isEqualTo("deposit");
+    assertThat(t.getAmount().toPlainString()).isEqualTo("100.00");
+    assertThat(t.getCreatedAt()).isEqualTo(1719354237834L);
   }
 }
 
