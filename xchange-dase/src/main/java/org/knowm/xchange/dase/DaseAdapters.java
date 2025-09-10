@@ -91,7 +91,10 @@ public final class DaseAdapters {
     } else if ("canceled".equalsIgnoreCase(o.getStatus())) {
       status = Order.OrderStatus.CANCELED;
     } else if ("closed".equalsIgnoreCase(o.getStatus())) {
-      status = hasPartial ? Order.OrderStatus.PARTIALLY_FILLED : Order.OrderStatus.FILLED;
+      boolean isFullyFilled = originalAmount != null
+          && cumulativeAmount != null
+          && cumulativeAmount.compareTo(originalAmount) >= 0;
+      status = isFullyFilled ? Order.OrderStatus.FILLED : Order.OrderStatus.CANCELED;
     } else {
       status = Order.OrderStatus.UNKNOWN;
     }
