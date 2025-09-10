@@ -205,14 +205,16 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
       if (lo.getOriginalAmount() == null) {
         throw new IllegalArgumentException("LimitOrder size is required");
       }
-      if (new BigDecimal(cfg.minOrderSize).compareTo(lo.getOriginalAmount()) > 0) {
+      BigDecimal minOrderSize = parseDecimalOrNull(cfg.minOrderSize);
+      if (minOrderSize != null && minOrderSize.compareTo(lo.getOriginalAmount()) > 0) {
         throw new IllegalArgumentException("size below min_order_size");
       }
     } else if (order instanceof MarketOrder) {
       MarketOrder mo = (MarketOrder) order;
       if (mo.getOriginalAmount() != null) {
         requirePrecision("size", mo.getOriginalAmount(), cfg.sizePrecision);
-        if (new BigDecimal(cfg.minOrderSize).compareTo(mo.getOriginalAmount()) > 0) {
+        BigDecimal minOrderSize = parseDecimalOrNull(cfg.minOrderSize);
+        if (minOrderSize != null && minOrderSize.compareTo(mo.getOriginalAmount()) > 0) {
           throw new IllegalArgumentException("size below min_order_size");
         }
       }
@@ -241,6 +243,16 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
       scale = 0;
     if (scale > precision) {
       throw new IllegalArgumentException(field + " exceeds precision " + precision);
+    }
+  }
+
+  private static BigDecimal parseDecimalOrNull(String s) {
+    if (s == null)
+      return null;
+    try {
+      return new BigDecimal(s);
+    } catch (Exception e) {
+      return null;
     }
   }
 }
