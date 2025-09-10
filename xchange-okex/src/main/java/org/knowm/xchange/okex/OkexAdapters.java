@@ -437,13 +437,16 @@ public class OkexAdapters {
   }
 
   public static String adaptInstrument(Instrument instrument) {
-    String result = instrument.toString();
-    if (Arrays.asList("USDT", "USDC").contains(instrument.getCounter().getCurrencyCode())) {
-      if (result != null && result.length() > 0) {
-        result = result.substring(0, result.length() - 1);
-      }
+    CurrencyPair pair = (CurrencyPair) instrument;
+    String base = pair.getBase().getCurrencyCode();
+    String counter = pair.getCounter().getCurrencyCode();
+
+    // Normalize stablecoin quotes
+    if ("USDT".equals(counter) || "USDC".equals(counter)) {
+      counter = "USD";
     }
-    return result.replace('/', '-');
+
+    return base + "-" + counter; // OKX expects DASH, not slash
   }
 
   public static Trades adaptTrades(
