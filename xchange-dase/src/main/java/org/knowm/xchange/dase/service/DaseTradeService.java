@@ -65,8 +65,9 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
     validateOrderLimits(limitOrder);
+    CurrencyPair pair = requireCurrencyPairInstrument(limitOrder);
     DasePlaceOrderInput body = new DasePlaceOrderInput();
-    body.market = DaseAdapters.toMarketString((CurrencyPair) limitOrder.getInstrument());
+    body.market = DaseAdapters.toMarketString(pair);
     body.type = "limit";
     body.side = limitOrder.getType() == Order.OrderType.BID ? "buy" : "sell";
     body.size = toStringOrNull(limitOrder.getOriginalAmount());
@@ -85,11 +86,13 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
     validateOrderLimits(marketOrder);
+    CurrencyPair pair = requireCurrencyPairInstrument(marketOrder);
     DasePlaceOrderInput body = new DasePlaceOrderInput();
-    body.market = DaseAdapters.toMarketString((CurrencyPair) marketOrder.getInstrument());
+    body.market = DaseAdapters.toMarketString(pair);
     body.type = "market";
     body.side = marketOrder.getType() == Order.OrderType.BID ? "buy" : "sell";
-    // DASE allows size or funds. Prefer size (XChange markets specify amount in base).
+    // DASE allows size or funds. Prefer size (XChange markets specify amount in
+    // base).
     body.size = toStringOrNull(marketOrder.getOriginalAmount());
     body.funds = null;
     body.clientId = marketOrder.getUserReference();
@@ -188,8 +191,8 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
   }
 
   protected void validateOrderLimits(Order order) throws IOException {
-    Objects.requireNonNull(order.getInstrument(), "Instrument required");
-    CurrencyPair pair = (CurrencyPair) order.getInstrument();
+    Objects.requireNonNull(order, "Order required");
+    CurrencyPair pair = requireCurrencyPairInstrument(order);
     String market = DaseAdapters.toMarketString(pair);
     DaseMarketConfig cfg = marketDataRaw.getMarket(market);
     if (cfg == null) {
@@ -213,19 +216,31 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
           throw new IllegalArgumentException("size below min_order_size");
         }
       }
-      // funds path is not exposed explicitly; if needed, users should pass MarketOrder with amount.
+      // funds path is not exposed explicitly; if needed, users should pass
+      // MarketOrder with amount.
     }
   }
 
+  private static CurrencyPair requireCurrencyPairInstrument(Order order) {
+    Objects.requireNonNull(order, "Order required");
+    Objects.requireNonNull(order.getInstrument(), "Instrument required");
+    if (!(order.getInstrument() instanceof CurrencyPair)) {
+      throw new IllegalArgumentException(
+          "Instrument must be CurrencyPair, got: " + order.getInstrument().getClass().getName());
+    }
+    return (CurrencyPair) order.getInstrument();
+  }
+
   private static void requirePrecision(String field, BigDecimal v, Integer precision) {
-    if (v == null) return;
-    if (precision == null) return;
+    if (v == null)
+      return;
+    if (precision == null)
+      return;
     int scale = v.stripTrailingZeros().scale();
-    if (scale < 0) scale = 0;
+    if (scale < 0)
+      scale = 0;
     if (scale > precision) {
       throw new IllegalArgumentException(field + " exceeds precision " + precision);
     }
   }
 }
-
-
