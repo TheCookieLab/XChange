@@ -119,7 +119,12 @@ public final class DaseAdapters {
     // market: use core MarketOrder DTO
     return new org.knowm.xchange.dto.trade.MarketOrder(
         side,
-        originalAmount != null ? originalAmount : cumulativeAmount,
+        // Prefer original amount; if unknown and the order is FILLED, fall back to
+        // cumulative.
+        // Otherwise leave null to avoid misrepresenting size.
+        originalAmount != null
+            ? originalAmount
+            : (status == Order.OrderStatus.FILLED && cumulativeAmount != null ? cumulativeAmount : null),
         pair,
         o.getId(),
         ts,
