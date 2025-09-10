@@ -437,13 +437,7 @@ public class OkexAdapters {
   }
 
   public static String adaptInstrument(Instrument instrument) {
-    String result = instrument.toString();
-    if (Arrays.asList("USDT", "USDC").contains(instrument.getCounter().getCurrencyCode())) {
-      if (result != null && result.length() > 0) {
-        result = result.substring(0, result.length() - 1);
-      }
-    }
-    return result.replace('/', '-');
+    return instrument.toString().replace('/', '-');
   }
 
   public static Trades adaptTrades(
