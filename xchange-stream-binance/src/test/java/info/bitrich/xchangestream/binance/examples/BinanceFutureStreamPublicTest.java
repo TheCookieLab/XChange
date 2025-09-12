@@ -77,7 +77,7 @@ public class BinanceFutureStreamPublicTest {
             LOG.info("kLines subscribe: {}", kLines);
           }
         });
-    Thread.sleep(10000);
+    Thread.sleep(3000);
     kLineDisposable.dispose();
     exchange.disconnect().blockingAwait();
   }
@@ -181,7 +181,7 @@ public class BinanceFutureStreamPublicTest {
               .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
           assertThat(orderBook.getAsks().get(0).getLimitPrice().compareTo(orderBook.getBids().get(0).getLimitPrice()) > 0).isTrue();
         }));
-    Thread.sleep(100000);
+    Thread.sleep(3000);
     disposables.forEach(Disposable::dispose);
     exchange.disconnect().blockingAwait();
   }

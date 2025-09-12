@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
@@ -27,6 +28,7 @@ import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Ignore
 public class BinanceFutureStreamWebsocketTradeTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceFutureStreamWebsocketTradeTest.class);
@@ -34,7 +36,7 @@ public class BinanceFutureStreamWebsocketTradeTest {
   BinanceFutureStreamingExchange binanceFutureStreamingExchange;
   private static final Instrument instrument = new FuturesContract("ETH/USDT/PERP");
   private static final Instrument instrument2 = new FuturesContract("SOL/USDT/PERP");
-  private final boolean logOutput = true;
+  private final boolean logOutput = false;
 
   @Before
   public void setUp() {

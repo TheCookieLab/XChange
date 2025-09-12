@@ -1,18 +1,14 @@
 package info.bitrich.xchangestream.binance.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Value;
 
-@Getter
-@ToString
-@AllArgsConstructor
+@Value
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BinanceWebsocketPayload<T> {
 
-  private String id;
-  private String method;
-  private T params;
+  String id;
+  String method;
+  T params;
 
 }
