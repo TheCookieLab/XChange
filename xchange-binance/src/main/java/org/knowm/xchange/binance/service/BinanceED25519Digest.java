@@ -5,11 +5,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Arrays;
 import java.util.Base64;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.crypto.CryptoException;
 import org.bouncycastle.crypto.Signer;
@@ -86,20 +82,4 @@ public class BinanceED25519Digest implements ParamsDigest {
     return null;
   }
 
-  private String sort(String input) {
-    Map<String, String> keyValueMap = Arrays.stream(input.split("&"))
-        // For each key-value pair, split by '='
-        .map(kv -> kv.split("="))
-        // Filter out any malformed pairs (not having exactly two parts)
-        .filter(kvArray -> kvArray.length == 2)
-        // Collect into a Map, using the first part as key and second as value
-        .collect(Collectors.toMap(kv -> kv[0], kv -> kv[1]));
-    LOG.info("keyValueMap: {}", keyValueMap);
-
-    Map<String, String> sortedMap = new TreeMap<>(keyValueMap);
-    String mapAsString = sortedMap.keySet().stream()
-        .map(key -> key + "=" + sortedMap.get(key))
-        .collect(Collectors.joining("&"));
-    return mapAsString;
-  }
 }
