@@ -17,6 +17,7 @@ import lombok.extern.jackson.Jacksonized;
     visible = true,
     defaultImpl = KrakenControlMessage.class)
 @JsonSubTypes({
+    @Type(value = KrakenExecutionsMessage.class, name = "executions"),
     @Type(value = KrakenHeartbeatMessage.class, name = "heartbeat"),
     @Type(value = KrakenStatusMessage.class, name = "status"),
     @Type(value = KrakenTickerMessage.class, name = "ticker"),
@@ -28,11 +29,23 @@ import lombok.extern.jackson.Jacksonized;
 public class KrakenMessage {
 
   @JsonProperty("channel")
-  String channel;
+  private String channel;
+
+  @JsonProperty("type")
+  private KrakenMessageType type;
 
 
   public String getChannelId() {
     return channel;
+  }
+
+
+  public enum KrakenMessageType {
+    @JsonProperty("update")
+    UPDATE,
+
+    @JsonProperty("snapshot")
+    SNAPSHOT
   }
 
 }

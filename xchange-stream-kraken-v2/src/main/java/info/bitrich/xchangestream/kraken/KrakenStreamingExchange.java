@@ -14,33 +14,41 @@ import org.knowm.xchange.ExchangeSpecification;
 @Getter
 public class KrakenStreamingExchange extends BaseExchange implements StreamingExchange {
 
-  private KrakenStreamingService publicStreamingService;
+  private KrakenStreamingService krakenStreamingService;
+  private KrakenPrivateStreamingService krakenPrivateStreamingService;
   private StreamingMarketDataService streamingMarketDataService;
   private StreamingTradeService streamingTradeService;
   private StreamingAccountService streamingAccountService;
 
   @Override
   public Completable connect(ProductSubscription... args) {
-    publicStreamingService = new KrakenStreamingService(Config.V2_PUBLIC_WS_URL);
-    applyStreamingSpecification(exchangeSpecification, publicStreamingService);
+    krakenStreamingService = new KrakenStreamingService(Config.V2_PUBLIC_WS_URL);
+    krakenPrivateStreamingService = new KrakenPrivateStreamingService(Config.V2_PRIVATE_WS_URL, this);
 
-    streamingMarketDataService = new KrakenStreamingMarketDataService(publicStreamingService);
+    streamingTradeService = new KrakenStreamingTradeService(krakenPrivateStreamingService);
 
-    return publicStreamingService.connect();
+    applyStreamingSpecification(exchangeSpecification, krakenStreamingService);
+
+    streamingMarketDataService = new KrakenStreamingMarketDataService(krakenStreamingService);
+
+    krakenPrivateStreamingService.connect().blockingAwait();
+
+    return krakenStreamingService.connect();
   }
 
   @Override
   public ExchangeSpecification getDefaultExchangeSpecification() {
     var specification = new ExchangeSpecification(getClass());
     specification.setExchangeName("Kraken");
+    specification.setSslUri("https://api.kraken.com");
     specification.setShouldLoadRemoteMetaData(false);
     return specification;
   }
 
   @Override
   public Completable disconnect() {
-    KrakenStreamingService service = publicStreamingService;
-    publicStreamingService = null;
+    KrakenStreamingService service = krakenStreamingService;
+    krakenStreamingService = null;
     streamingMarketDataService = null;
     streamingTradeService = null;
     streamingAccountService = null;
@@ -49,12 +57,12 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
 
   @Override
   public boolean isAlive() {
-    return publicStreamingService != null && publicStreamingService.isSocketOpen();
+    return krakenStreamingService != null && krakenStreamingService.isSocketOpen();
   }
 
   @Override
   public void useCompressedMessages(boolean compressedMessages) {
-    publicStreamingService.useCompressedMessages(compressedMessages);
+    krakenStreamingService.useCompressedMessages(compressedMessages);
   }
 
   @Override

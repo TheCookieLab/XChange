@@ -4,10 +4,18 @@ package info.bitrich.xchangestream.kraken;
 import info.bitrich.xchangestream.kraken.dto.request.KrakenSubscribeMessage;
 import info.bitrich.xchangestream.kraken.dto.request.KrakenUnsubscribeMessage;
 import info.bitrich.xchangestream.kraken.dto.request.KrakenUnsubscribeMessage.Params;
+import info.bitrich.xchangestream.kraken.dto.response.KrakenExecutionsMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenTickerMessage;
+import java.time.Instant;
+import java.util.Date;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.trade.UserTrade;
 
 @UtilityClass
 public class KrakenStreamingAdapters {
@@ -30,7 +38,10 @@ public class KrakenStreamingAdapters {
 
   /** Returns unique subscription id. Can be used as key for subscriptions caching */
   public String toSubscriptionUniqueId(String channelName, CurrencyPair currencyPair) {
-    return channelName + "_" + currencyPair;
+    return Stream.of(channelName, currencyPair)
+        .filter(Objects::nonNull)
+        .map(Objects::toString)
+        .collect(Collectors.joining("_"));
   }
 
   public KrakenSubscribeMessage toSubscribeMessage(String channelName, CurrencyPair currencyPair) {
@@ -45,7 +56,7 @@ public class KrakenStreamingAdapters {
   public KrakenUnsubscribeMessage toUnsubscribeMessage(String subscriptionUniqueId) {
     var splitted = subscriptionUniqueId.split("_");
     var channelName = splitted[0];
-    var currencyPair = new CurrencyPair(splitted[1]);
+    var currencyPair = splitted.length > 1 ? new CurrencyPair(splitted[1]) : null;
 
     return KrakenUnsubscribeMessage.builder()
         .params(Params.builder()
@@ -54,5 +65,25 @@ public class KrakenStreamingAdapters {
             .build())
         .build();
   }
+
+  public UserTrade toUserTrade(KrakenExecutionsMessage.Payload payload) {
+    return UserTrade.builder()
+        .type(payload.getOrderSide())
+        .originalAmount(payload.getAssetAmount())
+        .instrument(payload.getCurrencyPair())
+        .price(payload.getAverageTradePrice())
+        .timestamp(toDate(payload.getCreatedAt()))
+        .id(payload.getTradeId())
+        .orderId(payload.getOrderId())
+        .feeAmount(payload.getFeeAmount())
+        .feeCurrency(payload.getFeeCurrency())
+        .orderUserReference(payload.getClientOid())
+        .build();
+  }
+
+  public Date toDate(Instant instant) {
+    return Optional.ofNullable(instant).map(Date::from).orElse(null);
+  }
+
 
 }

@@ -7,7 +7,9 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum ChannelType {
-  TICKER("ticker");
+  TICKER("ticker"),
+
+  USER_TRADES("executions");
 
   @JsonValue
   private final String value;

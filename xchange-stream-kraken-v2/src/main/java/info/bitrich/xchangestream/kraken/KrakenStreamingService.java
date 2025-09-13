@@ -10,6 +10,7 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensio
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.utils.ArrayUtils;
 
 @Slf4j
 public class KrakenStreamingService extends NettyStreamingService<KrakenMessage> {
@@ -27,7 +28,9 @@ public class KrakenStreamingService extends NettyStreamingService<KrakenMessage>
 
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
-    var message = KrakenStreamingAdapters.toSubscribeMessage(channelName, (CurrencyPair) args[0]);
+    CurrencyPair currencyPair = ArrayUtils.getElement(0, args, CurrencyPair.class, null);
+    var message = KrakenStreamingAdapters.toSubscribeMessage(channelName, currencyPair);
+
     return objectMapper.writeValueAsString(message);
   }
 
@@ -39,7 +42,8 @@ public class KrakenStreamingService extends NettyStreamingService<KrakenMessage>
 
   @Override
   public String getSubscriptionUniqueId(String channelName, Object... args) {
-    return KrakenStreamingAdapters.toSubscriptionUniqueId(channelName, (CurrencyPair) args[0]);
+    CurrencyPair currencyPair = ArrayUtils.getElement(0, args, CurrencyPair.class, null);
+    return KrakenStreamingAdapters.toSubscriptionUniqueId(channelName, currencyPair);
   }
 
   @Override
