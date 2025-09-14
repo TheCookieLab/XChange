@@ -20,6 +20,8 @@ class KrakenMessageTest {
         .isInstanceOf(KrakenHeartbeatMessage.class);
     assertThat(om.readValue(getClass().getResource("/sample-messages/trade.json"), KrakenMessage.class))
         .isInstanceOf(KrakenTradeMessage.class);
+    assertThat(om.readValue(getClass().getResource("/sample-messages/usertrade.json"), KrakenMessage.class))
+        .isInstanceOf(KrakenExecutionsMessage.class);
   }
 
 }

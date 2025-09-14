@@ -21,7 +21,6 @@ public class KrakenStreamingExchangeIT {
             .getDefaultExchangeSpecification();
     spec.setApiKey(System.getProperty("apiKey"));
     spec.setSecretKey(System.getProperty("secretKey"));
-    spec.setPassword(System.getProperty("passphrase"));
 
     exchange = StreamingExchangeFactory.INSTANCE.createExchange(spec);
 
