@@ -10,7 +10,7 @@ Content-Type: application/json
       "BTC/USDT",
       "BTC/USD"
     ],
-    "snapshot": true
+    "snapshot": false
   }
 }
 

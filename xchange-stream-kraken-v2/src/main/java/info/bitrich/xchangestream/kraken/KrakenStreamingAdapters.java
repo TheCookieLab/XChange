@@ -6,6 +6,7 @@ import info.bitrich.xchangestream.kraken.dto.request.KrakenUnsubscribeMessage;
 import info.bitrich.xchangestream.kraken.dto.request.KrakenUnsubscribeMessage.Params;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenExecutionsMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenTickerMessage;
+import info.bitrich.xchangestream.kraken.dto.response.KrakenTradeMessage;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Objects;
@@ -15,12 +16,16 @@ import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.UserTrade;
 
 @UtilityClass
 public class KrakenStreamingAdapters {
 
   public Ticker toTicker(KrakenTickerMessage.Payload payload) {
+    if (payload == null) {
+      return null;
+    }
 
     return new Ticker.Builder()
         .instrument(payload.getCurrencyPair())
@@ -33,6 +38,21 @@ public class KrakenStreamingAdapters {
         .low(payload.getLow24h())
         .volume(payload.getAssetVolume24h())
         .percentageChange(payload.getChangePercentage24h())
+        .build();
+  }
+
+  public Trade toTrade(KrakenTradeMessage.Payload payload) {
+    if (payload == null) {
+      return null;
+    }
+
+    return Trade.builder()
+        .type(payload.getOrderSide())
+        .originalAmount(payload.getAssetAmount())
+        .instrument(payload.getCurrencyPair())
+        .price(payload.getPrice())
+        .timestamp(toDate(payload.getCreatedAt()))
+        .id(payload.getId())
         .build();
   }
 
@@ -67,6 +87,10 @@ public class KrakenStreamingAdapters {
   }
 
   public UserTrade toUserTrade(KrakenExecutionsMessage.Payload payload) {
+    if (payload == null) {
+      return null;
+    }
+
     return UserTrade.builder()
         .type(payload.getOrderSide())
         .originalAmount(payload.getAssetAmount())

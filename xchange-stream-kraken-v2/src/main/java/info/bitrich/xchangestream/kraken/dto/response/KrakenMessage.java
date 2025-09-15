@@ -8,7 +8,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
-import lombok.extern.jackson.Jacksonized;
 
 @JsonTypeInfo(
     use = Id.NAME,
@@ -25,8 +24,7 @@ import lombok.extern.jackson.Jacksonized;
 })
 @Data
 @SuperBuilder(toBuilder = true)
-@Jacksonized
-public class KrakenMessage {
+public abstract class KrakenMessage {
 
   @JsonProperty("channel")
   private String channel;

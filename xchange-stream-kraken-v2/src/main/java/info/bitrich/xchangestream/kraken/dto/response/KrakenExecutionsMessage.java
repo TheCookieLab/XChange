@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import info.bitrich.xchangestream.kraken.config.converters.StringToCurrencyConverter;
 import info.bitrich.xchangestream.kraken.config.converters.StringToCurrencyPairConverter;
 import info.bitrich.xchangestream.kraken.config.converters.StringToOrderTypeConverter;
+import info.bitrich.xchangestream.kraken.dto.response.KrakenExecutionsMessage.Payload;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -21,10 +22,7 @@ import org.knowm.xchange.dto.Order.OrderType;
 @Data
 @SuperBuilder(toBuilder = true)
 @Jacksonized
-public class KrakenExecutionsMessage extends KrakenMessage {
-
-  @JsonProperty("data")
-  private List<Payload> data;
+public class KrakenExecutionsMessage extends KrakenDataMessage<Payload> {
 
   @Data
   @Builder

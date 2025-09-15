@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import info.bitrich.xchangestream.kraken.config.converters.StringToCurrencyPairConverter;
 import info.bitrich.xchangestream.kraken.dto.common.ChannelMessageType;
+import info.bitrich.xchangestream.kraken.dto.response.KrakenTickerMessage.Payload;
 import java.math.BigDecimal;
-import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
@@ -15,17 +15,14 @@ import org.knowm.xchange.currency.CurrencyPair;
 @Data
 @SuperBuilder(toBuilder = true)
 @Jacksonized
-public class KrakenTickerMessage extends KrakenMessage {
+public class KrakenTickerMessage extends KrakenDataMessage<Payload> {
 
   @JsonProperty("type")
   private ChannelMessageType channelMessageType;
 
-  @JsonProperty("data")
-  private List<Payload> data;
-
   @Override
   public String getChannelId() {
-    return super.getChannelId() + "_" + data.get(0).getCurrencyPair();
+    return super.getChannelId() + "_" + getPayload().getCurrencyPair();
   }
 
   @Data

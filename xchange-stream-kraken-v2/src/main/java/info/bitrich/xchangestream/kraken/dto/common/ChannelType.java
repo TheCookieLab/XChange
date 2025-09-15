@@ -8,6 +8,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ChannelType {
   TICKER("ticker"),
+  TRADE("trade"),
 
   USER_TRADES("executions");
 

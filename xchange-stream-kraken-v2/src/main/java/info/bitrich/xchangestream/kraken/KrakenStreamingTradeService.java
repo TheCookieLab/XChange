@@ -2,6 +2,7 @@ package info.bitrich.xchangestream.kraken;
 
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.kraken.dto.common.ChannelType;
+import info.bitrich.xchangestream.kraken.dto.response.KrakenDataMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenExecutionsMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenExecutionsMessage.KrakenExecutionType;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenMessage.KrakenMessageType;
@@ -23,7 +24,7 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
         .filter(krakenMessage -> krakenMessage.getType() == KrakenMessageType.UPDATE)
         .map(KrakenExecutionsMessage.class::cast)
         .filter(krakenExecutionsMessage -> !krakenExecutionsMessage.getData().isEmpty())
-        .map(krakenExecutionsMessage -> krakenExecutionsMessage.getData().get(0))
+        .map(KrakenDataMessage::getPayload)
         .filter(payload -> payload.getKrakenExecutionType() == KrakenExecutionType.TRADE)
         .map(KrakenStreamingAdapters::toUserTrade);
   }
