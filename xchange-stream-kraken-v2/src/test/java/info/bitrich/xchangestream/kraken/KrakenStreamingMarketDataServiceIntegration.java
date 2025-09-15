@@ -48,7 +48,7 @@ class KrakenStreamingMarketDataServiceIntegration extends KrakenStreamingExchang
 
     testObserver.dispose();
 
-    log.info("Received usertrades: {}", trades);
+    log.info("Received trades: {}", trades);
 
     assumeThat(trades).overridingErrorMessage("No trades happened").isNotEmpty();
 

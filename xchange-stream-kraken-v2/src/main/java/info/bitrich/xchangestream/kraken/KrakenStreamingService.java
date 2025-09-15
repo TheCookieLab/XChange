@@ -3,11 +3,13 @@ package info.bitrich.xchangestream.kraken;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.kraken.config.Config;
+import info.bitrich.xchangestream.kraken.dto.response.KrakenDataMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenMessage;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextHandler;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import java.io.IOException;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.utils.ArrayUtils;
@@ -59,7 +61,24 @@ public class KrakenStreamingService extends NettyStreamingService<KrakenMessage>
     try {
       KrakenMessage krakenMessage = objectMapper.readValue(message, KrakenMessage.class);
 
-      handleMessage(krakenMessage);
+      // if there are several data entries split them and process separately
+      if (krakenMessage instanceof KrakenDataMessage && ((KrakenDataMessage) krakenMessage).getData() != null
+          && ((KrakenDataMessage) krakenMessage).getData().size() > 1) {
+
+        KrakenDataMessage krakenDataMessage = (KrakenDataMessage) krakenMessage;
+
+        for (int i = 0; i < krakenDataMessage.getData().size(); i++) {
+          var currentDataEntry = krakenDataMessage.getData().get(i);
+          var copiedDataMessage = krakenDataMessage.toBuilder()
+              .data(List.of(currentDataEntry))
+              .build();
+          handleMessage(copiedDataMessage);
+        }
+
+      }
+      else {
+        handleMessage(krakenMessage);
+      }
 
     } catch (JsonProcessingException e) {
       log.error("Error parsing incoming message to JSON: {}", message);
