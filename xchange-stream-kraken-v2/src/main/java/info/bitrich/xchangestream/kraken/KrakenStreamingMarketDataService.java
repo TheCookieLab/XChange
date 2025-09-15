@@ -20,12 +20,17 @@ public class KrakenStreamingMarketDataService implements StreamingMarketDataServ
   }
 
   @Override
-  public Observable<Ticker> getTicker(CurrencyPair currencyPair, Object... args) {
+  public Observable<Ticker> getTicker(Instrument instrument, Object... args) {
     return service
-        .subscribeChannel(ChannelType.TICKER.getValue(), currencyPair)
+        .subscribeChannel(ChannelType.TICKER.getValue(), instrument)
         .map(KrakenTickerMessage.class::cast)
         .map(KrakenDataMessage::getPayload)
         .map(KrakenStreamingAdapters::toTicker);
+  }
+
+  @Override
+  public Observable<Ticker> getTicker(CurrencyPair currencyPair, Object... args) {
+    return getTicker((Instrument) currencyPair, args);
   }
 
   @Override
