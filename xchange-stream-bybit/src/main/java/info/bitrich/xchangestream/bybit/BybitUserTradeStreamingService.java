@@ -1,13 +1,19 @@
 package info.bitrich.xchangestream.bybit;
 
+import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptBatchAmendOrder;
+import static org.knowm.xchange.bybit.BybitAdapters.adaptChangeOrder;
+import static org.knowm.xchange.bybit.BybitAdapters.adaptLimitOrder;
 import static org.knowm.xchange.bybit.BybitAdapters.adaptMarketOrder;
+import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 import static org.knowm.xchange.utils.DigestUtils.bytesToHex;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import dto.BybitSubscribeMessage;
 import dto.trade.BybitOrderMessage;
 import dto.trade.BybitOrderMessage.Header;
+import dto.trade.BybitStreamBatchAmendOrdersPayload;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextHandler;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
@@ -18,10 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.crypto.Mac;
@@ -29,9 +32,12 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.Getter;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
+import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderParams;
+import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitPlaceOrderPayload;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.service.BaseParamsDigest;
@@ -39,14 +45,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class BybitUserTradeService extends JsonNettyStreamingService {
-  private static final Logger LOG = LoggerFactory.getLogger(BybitUserTradeService.class);
+public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
+
+  private static final Logger LOG = LoggerFactory.getLogger(BybitUserTradeStreamingService.class);
   private final ExchangeSpecification spec;
+  public static final String ORDER_CREATE = "order.create";
+  public static final String ORDER_CHANGE = "order.amend";
+  public static final String BATCH_ORDER_CHANGE = "order.amend-batch";
+  public static final String ORDER_CANCEL = "order.cancel";
   @Getter
   private boolean isAuthorized = false;
   private String connId;
 
-  public BybitUserTradeService(String apiUrl, ExchangeSpecification spec) {
+  public BybitUserTradeStreamingService(String apiUrl, ExchangeSpecification spec) {
     super(apiUrl);
     this.spec = spec;
   }
@@ -115,31 +126,53 @@ public class BybitUserTradeService extends JsonNettyStreamingService {
 
   @Override
   protected String getChannelNameFromMessage(JsonNode message) throws IOException {
-    return message.get("op").asText()+message.get("reqId").asText();
+    return message.get("reqId").asText();
   }
 
   @Override
   public String getSubscriptionUniqueId(String channelName, Object... args) {
-      return channelName;
+    return args[1].toString();
   }
-
-  Pattern p = Pattern.compile("[a-z.]+|\\d+");
 
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
-    MarketOrder marketOrders = (MarketOrder) args[0];
     Header header = new Header(String.valueOf(System.currentTimeMillis()), "5000", "");
-    BybitCategory category = BybitAdapters.getCategory(marketOrders.getInstrument());
-    List<BybitPlaceOrderPayload> bybitPlaceOrderPayload = List.of(adaptMarketOrder(marketOrders, category));
-    // split to reqId and channelName
-    Matcher m = p.matcher(channelName);
-    ArrayList<String> allMatches = new ArrayList<>();
-    while (m.find()) {
-      allMatches.add(m.group());
+    BybitCategory category = (BybitCategory) args[2];
+    List<BybitPlaceOrderPayload> bybitPlaceOrderPayload = null;
+    BybitOrderMessage<?> bybitOrderMessage = null;
+    String reqId = args[1].toString();
+    switch (channelName) {
+      case ORDER_CREATE: {
+        if (args[0] instanceof LimitOrder) {
+          LimitOrder limitOrder = (LimitOrder) args[0];
+          bybitPlaceOrderPayload = List.of(adaptLimitOrder(limitOrder, category));
+        } else if (args[0] instanceof MarketOrder) {
+          MarketOrder marketOrders = (MarketOrder) args[0];
+          bybitPlaceOrderPayload = List.of(adaptMarketOrder(marketOrders, category));
+        }
+        bybitOrderMessage = new BybitOrderMessage<>(reqId, header, channelName, bybitPlaceOrderPayload);
+        break;
+      }
+      case ORDER_CHANGE: {
+        LimitOrder limitOrder = (LimitOrder) args[0];
+        List<BybitAmendOrderPayload> bybitAmendOrderPayload = List.of(adaptChangeOrder(limitOrder, category));
+        bybitOrderMessage = new BybitOrderMessage<>(reqId, header, channelName, bybitAmendOrderPayload);
+        break;
+      }
+      case BATCH_ORDER_CHANGE: {
+        LimitOrder[] limitOrders = objectMapper.readValue(args[0].toString(), new TypeReference<>() {});
+        List<BybitStreamBatchAmendOrdersPayload> bybitStreamBatchAmendOrdersPayload = List.of(adaptBatchAmendOrder(limitOrders, category));
+        bybitOrderMessage = new BybitOrderMessage<>(reqId, header, channelName, bybitStreamBatchAmendOrdersPayload);
+        break;
+      }
+      case ORDER_CANCEL: {
+        BybitCancelOrderParams params = (BybitCancelOrderParams) args[0];
+        List<BybitCancelOrderPayload> bybitCancelOrderPayload = List.of(new BybitCancelOrderPayload(category,convertToBybitSymbol(params.getInstrument()),
+            params.getOrderId(), params.getUserReference()));
+        bybitOrderMessage = new BybitOrderMessage<>(reqId, header, channelName, bybitCancelOrderPayload);
+        break;
+      }
     }
-    channelName =  allMatches.get(0);
-    String reqId = allMatches.get(1);
-    BybitOrderMessage bybitOrderMessage = new BybitOrderMessage(reqId, header, channelName, bybitPlaceOrderPayload);
     return objectMapper.writeValueAsString(bybitOrderMessage);
   }
 

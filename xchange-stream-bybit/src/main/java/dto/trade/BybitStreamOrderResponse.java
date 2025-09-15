@@ -3,6 +3,7 @@ package dto.trade;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.jackson.Jacksonized;
@@ -18,6 +19,7 @@ public class BybitStreamOrderResponse {
   private final String retMsg;
   private final String op;
   private final BybitOrderResponse data;
+  private final RetExtInfo retExtInfo;
   private final Header header;
   private final String connId;
 
@@ -37,4 +39,20 @@ public class BybitStreamOrderResponse {
     private final String xBapiLimitResetTimestamp;
   }
 
+  @Getter
+  @Builder
+  @Jacksonized
+  public static  class RetExtInfo {
+    @JsonProperty("list")
+    private final List<RetExtInfoList> list;
+  }
+  @Getter
+  @Builder
+  @Jacksonized
+  public static  class RetExtInfoList {
+    @JsonProperty("code")
+    private final String code;
+    @JsonProperty("msg")
+    private final String msg;
+  }
 }
