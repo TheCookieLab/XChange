@@ -4,6 +4,7 @@ package info.bitrich.xchangestream.kraken;
 import info.bitrich.xchangestream.kraken.dto.request.KrakenSubscribeMessage;
 import info.bitrich.xchangestream.kraken.dto.request.KrakenUnsubscribeMessage;
 import info.bitrich.xchangestream.kraken.dto.request.KrakenUnsubscribeMessage.Params;
+import info.bitrich.xchangestream.kraken.dto.response.KrakenBalancesMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenExecutionsMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenTickerMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenTradeMessage;
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.UserTrade;
@@ -103,6 +105,14 @@ public class KrakenStreamingAdapters {
         .feeCurrency(payload.getFeeCurrency())
         .orderUserReference(payload.getClientOid())
         .build();
+  }
+
+  public Balance toBalance(KrakenBalancesMessage.Payload payload) {
+    if (payload == null) {
+      return null;
+    }
+
+    return new Balance(payload.getCurrency(), payload.getBalance());
   }
 
   public Date toDate(Instant instant) {

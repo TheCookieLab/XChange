@@ -10,6 +10,7 @@ public enum ChannelType {
   TICKER("ticker"),
   TRADE("trade"),
 
+  BALANCES("balances"),
   USER_TRADES("executions");
 
   @JsonValue

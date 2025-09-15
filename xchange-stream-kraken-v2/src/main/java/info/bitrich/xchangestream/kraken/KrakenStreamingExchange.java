@@ -26,6 +26,7 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
     krakenPrivateStreamingService = new KrakenPrivateStreamingService(Config.V2_PRIVATE_WS_URL, this);
 
     streamingTradeService = new KrakenStreamingTradeService(krakenPrivateStreamingService);
+    streamingAccountService = new KrakenStreamingAccountService(krakenPrivateStreamingService);
 
     applyStreamingSpecification(exchangeSpecification, krakenStreamingService);
 
