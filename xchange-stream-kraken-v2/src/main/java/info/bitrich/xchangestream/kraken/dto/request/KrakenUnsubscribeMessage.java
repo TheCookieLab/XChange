@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import info.bitrich.xchangestream.kraken.dto.common.Method;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenMessage;
+import java.util.Collections;
 import java.util.List;
 import lombok.Builder;
 import lombok.Data;
@@ -34,9 +35,12 @@ public class KrakenUnsubscribeMessage extends KrakenMessage {
     @JsonIgnore
     private CurrencyPair currencyPair;
 
+    @JsonProperty("token")
+    private String token;
+
     @JsonProperty("symbol")
     public List<CurrencyPair> getSymbol() {
-      return List.of(currencyPair);
+      return currencyPair == null ? Collections.emptyList() : List.of(currencyPair);
     }
 
   }

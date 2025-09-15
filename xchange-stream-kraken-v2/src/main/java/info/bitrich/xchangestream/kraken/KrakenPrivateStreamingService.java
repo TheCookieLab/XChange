@@ -54,4 +54,26 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
     }
     return objectMapper.writeValueAsString(message);
   }
+
+
+  /**
+   * @return unsubscribe message containing a websocket token needed for private channels
+   */
+  @Override
+  public String getUnsubscribeMessage(String subscriptionUniqueId, Object... args) throws IOException {
+    var message = KrakenStreamingAdapters.toUnsubscribeMessage(subscriptionUniqueId);
+
+    // get token for private channels
+    if (Config.PRIVATE_CHANNELS.contains(message.getParams().getChannel())) {
+      var tokenResult =
+          krakenAuthenticated.getWebsocketToken(
+              krakenStreamingExchange.getExchangeSpecification().getApiKey(),
+              signatureCreator,
+              nonceFactory);
+
+      message.getParams().setToken(tokenResult.getResult().getToken());
+
+    }
+    return objectMapper.writeValueAsString(message);
+  }
 }
