@@ -23,6 +23,7 @@ Basic usage is very simple: Create an `Exchange` instance, get the appropriate s
 | bitmex       | [![status](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml)             |
 | coinex       | [![status](https://github.com/knowm/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/coinex.yaml)             |
 | gate.io      | [![status](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml)       |
+| mexc         | [![status](https://github.com/knowm/XChange/actions/workflows/mexc.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/mexc.yaml)                 |
 | kraken-ws-v2 | [![status](https://github.com/knowm/XChange/actions/workflows/kraken-ws-v2.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/kraken-ws-v2.yaml) |
 
 ## REST API
