@@ -157,12 +157,12 @@ Add the following dependencies in your pom.xml file. You will need at least xcha
 
 ```xml
 <dependency>
-  <groupId>org.knowm.xchange.fork</groupId>
+  <groupId>org.knowm.xchange</groupId>
   <artifactId>xchange-core</artifactId>
   <version>5.2.2</version>
 </dependency>
 <dependency>
-  <groupId>org.knowm.xchange.fork</groupId>
+  <groupId>org.knowm.xchange</groupId>
   <artifactId>xchange-XYZ</artifactId>
   <version>5.2.2</version>
 </dependency>
@@ -172,7 +172,7 @@ If it is available for your exchange, you may also want to use the streaming API
 
 ```xml
 <dependency>
-  <groupId>org.knowm.xchange.fork</groupId>
+  <groupId>org.knowm.xchange</groupId>
   <artifactId>xchange-stream-XYZ</artifactId>
   <version>5.2.2</version>
 </dependency>
