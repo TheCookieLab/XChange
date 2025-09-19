@@ -160,14 +160,15 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
         break;
       }
       case BATCH_ORDER_CHANGE: {
-        LimitOrder[] limitOrders = objectMapper.readValue(args[0].toString(), new TypeReference<>() {});
+        LimitOrder[] limitOrders = objectMapper.readValue(args[0].toString(), new TypeReference<>() {
+        });
         List<BybitStreamBatchAmendOrdersPayload> bybitStreamBatchAmendOrdersPayload = List.of(adaptBatchAmendOrder(limitOrders, category));
         bybitOrderMessage = new BybitOrderMessage<>(reqId, header, channelName, bybitStreamBatchAmendOrdersPayload);
         break;
       }
       case ORDER_CANCEL: {
         BybitCancelOrderParams params = (BybitCancelOrderParams) args[0];
-        List<BybitCancelOrderPayload> bybitCancelOrderPayload = List.of(new BybitCancelOrderPayload(category,convertToBybitSymbol(params.getInstrument()),
+        List<BybitCancelOrderPayload> bybitCancelOrderPayload = List.of(new BybitCancelOrderPayload(category, convertToBybitSymbol(params.getInstrument()),
             params.getOrderId(), params.getUserReference()));
         bybitOrderMessage = new BybitOrderMessage<>(reqId, header, channelName, bybitCancelOrderPayload);
         break;
@@ -179,5 +180,11 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
   @Override
   public String getUnsubscribeMessage(String channelName, Object... args) throws IOException {
     return null;
+  }
+
+  @Override
+  public void sendMessage(String message) {
+    LOG.debug("Sending message: {}", message);
+    super.sendMessage(message);
   }
 }

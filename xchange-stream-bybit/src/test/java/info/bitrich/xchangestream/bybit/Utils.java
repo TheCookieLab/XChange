@@ -10,7 +10,7 @@ public class Utils {
       // minimal trade size - 5 USDT
       if (amount.multiply(ticker.getLast()).compareTo(usdtMin) <= 0) {
         amount =
-            new BigDecimal("5")
+            usdtMin
                 .divide(
                     ticker.getLast(),
                     volumeScale,
