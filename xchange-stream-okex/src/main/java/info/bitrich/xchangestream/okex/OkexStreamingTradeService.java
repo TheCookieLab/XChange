@@ -113,7 +113,7 @@ public class OkexStreamingTradeService implements StreamingTradeService {
         if (response.getCode().equals("0")) {
           return Observable.just(0);
         } else {
-          return Observable.just(Integer.parseInt(response.getCode()));
+          return Observable.just(Integer.parseInt(response.getData().get(0).getCode()));
         }
       });
       return observable.firstOrError().compose(RateLimiterOperator.of(resilienceRegistries.rateLimiters().rateLimiter(OkexAuthenticated.placeOrderPath)));
@@ -131,7 +131,7 @@ public class OkexStreamingTradeService implements StreamingTradeService {
         if (response.getCode().equals("0")) {
           return Observable.just(0);
         } else {
-          return Observable.just(Integer.parseInt(response.getCode()));
+          return Observable.just(Integer.parseInt(response.getData().get(0).getCode()));
         }
       });
       return observable.firstOrError().compose(RateLimiterOperator.of(resilienceRegistries.rateLimiters().rateLimiter(OkexAuthenticated.placeOrderPath)));
@@ -149,7 +149,7 @@ public class OkexStreamingTradeService implements StreamingTradeService {
         if (response.getCode().equals("0")) {
           return Observable.just(0);
         } else {
-          return Observable.just(Integer.parseInt(response.getCode()));
+          return Observable.just(Integer.parseInt(response.getData().get(0).getCode()));
         }
       });
       return observable.firstOrError().compose(RateLimiterOperator.of(resilienceRegistries.rateLimiters().rateLimiter(OkexAuthenticated.amendOrderPath)));
@@ -167,7 +167,7 @@ public class OkexStreamingTradeService implements StreamingTradeService {
         if (response.getCode().equals("0")) {
           return Observable.just(0);
         } else {
-          return Observable.just(Integer.parseInt(response.getCode()));
+          return Observable.just(Integer.parseInt(response.getData().get(0).getCode()));
         }
       });
       return observable.firstOrError().compose(RateLimiterOperator.of(resilienceRegistries.rateLimiters().rateLimiter(OkexAuthenticated.cancelOrderPath)));
