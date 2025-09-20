@@ -473,17 +473,31 @@ public class KrakenAdapters {
   }
 
   private static InstrumentMetaData adaptPair(
-      KrakenAssetPair krakenPair, InstrumentMetaData OriginalMeta) {
+          KrakenAssetPair krakenPair, InstrumentMetaData originalMeta) {
+    // Normalize order minimum into base units
+    BigDecimal minimumAmount = krakenPair.getOrderMin()
+            .multiply(krakenPair.getVolumeMultiplier());
+    // effective step size in base units
+    // stepSize = lot_multiplier × 10^(-lot_decimals)
+    BigDecimal volumeStepSize = BigDecimal.ONE
+            .divide(BigDecimal.TEN.pow(krakenPair.getVolumeLotScale()))
+            .multiply(krakenPair.getVolumeMultiplier());
+    // --- Trading fee: first tier as default ---
+    BigDecimal tradingFee = krakenPair.getFees().isEmpty()
+            ? BigDecimal.ZERO
+            : krakenPair.getFees().get(0).getPercentFee().divide(BigDecimal.valueOf(100));
+
     return InstrumentMetaData.builder()
-        .tradingFee(krakenPair.getFees().get(0).getPercentFee().divide(new BigDecimal(100)))
-        .minimumAmount(krakenPair.getOrderMin())
-        .priceScale(krakenPair.getPairScale())
-        .volumeScale(krakenPair.getVolumeLotScale())
-        .feeTiers(adaptFeeTiers(krakenPair.getFees_maker(), krakenPair.getFees()))
-        .tradingFeeCurrency(
-            KrakenUtils.translateKrakenCurrencyCode(krakenPair.getFeeVolumeCurrency()))
-        .marketOrderEnabled(true)
-        .build();
+            .tradingFee(tradingFee)
+            .feeTiers(adaptFeeTiers(krakenPair.getFees_maker(), krakenPair.getFees()))
+            .tradingFeeCurrency(
+                    KrakenUtils.translateKrakenCurrencyCode(krakenPair.getFeeVolumeCurrency()))
+            .minimumAmount(minimumAmount)
+            .priceScale(krakenPair.getPairScale())
+            .volumeScale(krakenPair.getVolumeLotScale())
+            .amountStepSize(volumeStepSize)
+            .marketOrderEnabled(true)
+            .build();
   }
 
   public static List<FundingRecord> adaptFundingHistory(
