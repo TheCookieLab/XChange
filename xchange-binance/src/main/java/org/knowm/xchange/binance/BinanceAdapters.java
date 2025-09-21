@@ -258,10 +258,7 @@ public class BinanceAdapters {
   }
 
   public static Ticker toTicker(BinanceTicker24h binanceTicker24h, boolean isFuture) {
-    Instrument instrument =
-        (isFuture)
-            ? new FuturesContract(binanceTicker24h.getCurrencyPair(), "PERP")
-            : binanceTicker24h.getCurrencyPair();
+    Instrument instrument = adaptSymbol(binanceTicker24h.getSymbol(), isFuture);
     return new Ticker.Builder()
         .instrument(instrument)
         .open(binanceTicker24h.getOpenPrice())

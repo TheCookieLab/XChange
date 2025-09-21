@@ -30,6 +30,7 @@ import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.option.BybitOptionTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.spot.BybitSpotTicker;
+import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderStatus;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderType;
 import org.knowm.xchange.bybit.dto.trade.BybitPlaceOrderPayload;
@@ -530,4 +531,24 @@ public class BybitAdapters {
             .filter(flag -> clazz.isAssignableFrom(flag.getClass()))
             .findFirst();
   }
+
+  public static BybitAmendOrderPayload adaptChangeOrder(LimitOrder order,  BybitCategory category) {
+    return new BybitAmendOrderPayload(
+            category,
+            convertToBybitSymbol(order.getInstrument()),
+            order.getId(),
+            order.getUserReference(),
+            null,
+            order.getOriginalAmount().toPlainString(),
+            order.getLimitPrice().toPlainString(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+  }
+
 }

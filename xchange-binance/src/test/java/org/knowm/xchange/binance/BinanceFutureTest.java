@@ -67,15 +67,17 @@ public class BinanceFutureTest {
 
   @Test
   public void binanceFutureMarketDataService() throws IOException {
-    // Get OrderBook
-    OrderBook orderBook = binanceExchange.getMarketDataService().getOrderBook(instrument);
-    logger.info("OrderBook: " + orderBook);
-    assertThat(orderBook.getBids().get(0).getInstrument()).isEqualTo(instrument);
     // Get Ticker
     Ticker ticker = binanceExchange.getMarketDataService().getTicker(instrument);
     logger.info("Ticker: " + ticker);
     assertThat(ticker.getInstrument()).isEqualTo(instrument);
-
+    // Get Tickers
+    List<Ticker> tickers= binanceExchange.getMarketDataService().getTickers(null);
+    logger.info("Tickers: " + tickers);
+    // Get OrderBook
+    OrderBook orderBook = binanceExchange.getMarketDataService().getOrderBook(instrument);
+    logger.info("OrderBook: " + orderBook);
+    assertThat(orderBook.getBids().get(0).getInstrument()).isEqualTo(instrument);
     // Get Trades
     Trades trades = binanceExchange.getMarketDataService().getTrades(instrument);
     logger.info("Trades: " + trades);

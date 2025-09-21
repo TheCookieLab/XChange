@@ -1,6 +1,7 @@
 package org.knowm.xchange.bybit.service;
 
 import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitOrderDetails;
+import static org.knowm.xchange.bybit.BybitAdapters.adaptChangeOrder;
 import static org.knowm.xchange.bybit.BybitAdapters.adaptLimitOrder;
 import static org.knowm.xchange.bybit.BybitAdapters.adaptMarketOrder;
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
@@ -106,22 +107,7 @@ public class BybitTradeService extends BybitTradeServiceRaw implements TradeServ
   public String changeOrder(LimitOrder order) throws IOException {
     BybitCategory category = BybitAdapters.getCategory(order.getInstrument());
     BybitResult<BybitOrderResponse> response =
-        amendOrder(
-            category,
-            convertToBybitSymbol(order.getInstrument()),
-            order.getId(),
-            order.getUserReference(),
-            null,
-            order.getOriginalAmount().toString(),
-            order.getLimitPrice().toString(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        amendOrder(adaptChangeOrder(order,category),category);
     if (response != null) {
       return response.getResult().getOrderId();
     }
