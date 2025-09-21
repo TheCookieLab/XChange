@@ -18,6 +18,7 @@ import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.OpenPosition;
@@ -75,7 +76,7 @@ public class OkexPrivateDataIntegration {
         exchange
             .getTradeService()
             .placeLimitOrder(
-                new LimitOrder.Builder(Order.OrderType.BID, instrument)
+                new LimitOrder.Builder(OrderType.BID, instrument)
                     .originalAmount(size)
                     .limitPrice(price)
                     .flag(POST_ONLY)
