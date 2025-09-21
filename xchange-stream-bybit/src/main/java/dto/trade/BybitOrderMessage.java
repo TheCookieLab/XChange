@@ -4,15 +4,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.knowm.xchange.bybit.dto.trade.BybitPlaceOrderPayload;
 
 @AllArgsConstructor
 @Getter
-public class BybitOrderMessage {
+public class BybitOrderMessage<T> {
   private final String reqId;
   private final Header header;
   private final String op;
-  private final List<BybitPlaceOrderPayload> args;
+  private final List<T> args;
 
   @Getter
   @AllArgsConstructor
