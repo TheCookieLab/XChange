@@ -136,7 +136,7 @@ public class BinanceFutureTest {
             .limitPrice(BigDecimal.valueOf(1010))
             .flags(orderFlags)
             .originalAmount(BigDecimal.ONE)
-            .id(orderId)
+            .id(orderId.toString())
             .build());
 
     // Get OpenOrders

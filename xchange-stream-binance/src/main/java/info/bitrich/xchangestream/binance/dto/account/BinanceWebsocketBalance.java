@@ -1,4 +1,4 @@
-package info.bitrich.xchangestream.binance.dto;
+package info.bitrich.xchangestream.binance.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;

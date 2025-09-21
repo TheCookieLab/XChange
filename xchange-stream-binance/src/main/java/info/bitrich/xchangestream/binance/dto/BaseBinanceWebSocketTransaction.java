@@ -64,7 +64,7 @@ BaseBinanceWebSocketTransaction {
         new Date(Long.parseLong(_eventTime)));
   }
 
-  BaseBinanceWebSocketTransaction(BinanceWebSocketTypes eventType, Date eventTime) {
+  protected BaseBinanceWebSocketTransaction(BinanceWebSocketTypes eventType, Date eventTime) {
     this.eventType = eventType;
     this.eventTime = eventTime;
   }

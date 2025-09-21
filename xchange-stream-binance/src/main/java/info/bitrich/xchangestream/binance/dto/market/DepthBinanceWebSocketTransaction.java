@@ -1,7 +1,8 @@
-package info.bitrich.xchangestream.binance.dto;
+package info.bitrich.xchangestream.binance.dto.market;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import info.bitrich.xchangestream.binance.dto.ProductBinanceWebSocketTransaction;
 import java.util.List;
 import lombok.Getter;
 import org.knowm.xchange.binance.dto.marketdata.BinanceOrderbook;

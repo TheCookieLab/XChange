@@ -1,8 +1,9 @@
-package info.bitrich.xchangestream.binance.dto;
+package info.bitrich.xchangestream.binance.dto.account;
 
 import static org.knowm.xchange.binance.BinanceAdapters.adaptSymbol;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransaction;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;

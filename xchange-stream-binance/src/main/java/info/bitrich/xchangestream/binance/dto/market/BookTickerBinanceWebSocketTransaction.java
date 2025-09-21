@@ -1,10 +1,13 @@
-package info.bitrich.xchangestream.binance.dto;
+package info.bitrich.xchangestream.binance.dto.market;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransaction;
 import java.math.BigDecimal;
 import java.util.Date;
+import lombok.Getter;
 import org.knowm.xchange.binance.dto.marketdata.BinanceBookTicker;
 
+@Getter
 public class BookTickerBinanceWebSocketTransaction extends BaseBinanceWebSocketTransaction {
 
   private final BinanceBookTicker ticker;
@@ -21,7 +24,4 @@ public class BookTickerBinanceWebSocketTransaction extends BaseBinanceWebSocketT
     ticker.setUpdateId(updateId);
   }
 
-  public BinanceBookTicker getTicker() {
-    return ticker;
-  }
 }
