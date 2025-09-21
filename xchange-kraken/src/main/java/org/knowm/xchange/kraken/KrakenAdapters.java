@@ -494,6 +494,7 @@ public class KrakenAdapters {
                     KrakenUtils.translateKrakenCurrencyCode(krakenPair.getFeeVolumeCurrency()))
             .minimumAmount(minimumAmount)
             .priceScale(krakenPair.getPairScale())
+            .priceStepSize(krakenPair.getTickSize())
             .volumeScale(krakenPair.getVolumeLotScale())
             .amountStepSize(volumeStepSize)
             .marketOrderEnabled(true)
