@@ -17,6 +17,12 @@
         <version>${version.resilience4j}</version>
       </dependency>
         <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-rxjava3</artifactId>
+            <version>${version.resilience4j}</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-core</artifactId>
             <version>${project.parent.version}</version>
@@ -27,7 +33,7 @@
             <version>${project.parent.version}</version>
         </dependency>
 
-      <dependency>
+        <dependency>
             <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-stream-service-netty</artifactId>
             <version>${project.parent.version}</version>
