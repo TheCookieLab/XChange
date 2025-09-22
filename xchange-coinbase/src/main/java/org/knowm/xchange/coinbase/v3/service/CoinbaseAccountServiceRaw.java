@@ -8,7 +8,7 @@ import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethod;
-import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
+import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 
 public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
 
@@ -64,6 +64,16 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    */
   public List<CoinbasePaymentMethod> getCoinbasePaymentMethods() throws IOException {
     return coinbaseAdvancedTrade.getPaymentMethods(authTokenCreator).getPaymentMethods();
+  }
+
+  public CoinbaseTransactionSummaryResponse getTransactionSummary(String productType,
+      String contractExpiryType, String productVenue) throws IOException {
+    return coinbaseAdvancedTrade.getTransactionSummary(authTokenCreator, productType,
+        contractExpiryType, productVenue);
+  }
+
+  public CoinbaseTransactionSummaryResponse getTransactionSummary() throws IOException {
+    return this.getTransactionSummary(null, null, null);
   }
 
 }

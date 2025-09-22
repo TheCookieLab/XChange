@@ -21,8 +21,4 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
       ParamsDigest authTokenCreator) {
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
   }
-
-  public CoinbaseTransactionSummaryResponse getTransactionSummary() throws IOException {
-    return this.getTransactionSummary(null, null, null);
-  }
 }

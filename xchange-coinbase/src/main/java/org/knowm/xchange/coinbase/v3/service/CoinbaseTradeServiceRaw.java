@@ -20,8 +20,4 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
       ParamsDigest authTokenCreator) {
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
   }
-
-  public CoinbaseTransactionSummaryResponse getTransactionSummary(String productType, String contractExpiryType, String productVenue) throws IOException {
-    return coinbaseAdvancedTrade.getTransactionSummary(authTokenCreator, productType, contractExpiryType, productVenue);
-  }
 }

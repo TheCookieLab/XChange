@@ -2,18 +2,27 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.AbstractMap;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
+import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseFeeTier;
 import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
@@ -58,4 +67,33 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
   public TradeHistoryParams createFundingHistoryParams() {
     throw new NotAvailableFromExchangeException();
   }
+
+  @Override
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+    CoinbaseTransactionSummaryResponse response = getTransactionSummary();
+    CoinbaseFeeTier feeTier = response.getFeeTier();
+
+    final Fee globalFee = new Fee(feeTier.getMakerFeeRate(), feeTier.getTakerFeeRate());
+
+    // Return a Map that provides the same fee for any Instrument key without enumerating pairs
+    return Collections.unmodifiableMap(new AbstractMap<Instrument, Fee>() {
+      private final Instrument representativeKey = CurrencyPair.BTC_USD; // arbitrary representative
+
+      @Override
+      public Fee get(Object key) {
+        return globalFee;
+      }
+
+      @Override
+      public Set<Map.Entry<Instrument, Fee>> entrySet() {
+        return Collections.singleton(new AbstractMap.SimpleImmutableEntry<>(representativeKey, globalFee));
+      }
+
+      @Override
+      public int size() {
+        return 1;
+      }
+    });
+  }
+
 }
