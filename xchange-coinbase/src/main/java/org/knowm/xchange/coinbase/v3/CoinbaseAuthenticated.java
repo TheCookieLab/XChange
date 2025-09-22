@@ -77,9 +77,9 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseOrdersResponse listFills(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      @QueryParam("order_ids") String[] orderIds,
-      @QueryParam("trade_ids") String[] tradeIds,
-      @QueryParam("product_ids") String[] productIds,
+      @QueryParam("order_ids") java.util.List<String> orderIds,
+      @QueryParam("trade_ids") java.util.List<String> tradeIds,
+      @QueryParam("product_ids") java.util.List<String> productIds,
       @QueryParam("start_sequence_timestamp") String startSequenceTimestamp,
       @QueryParam("end_sequence_timestamp") String endSequenceTimestamp,
       @QueryParam("retail_portfolio_id") String retailPortfolioId,

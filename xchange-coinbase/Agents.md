@@ -78,12 +78,11 @@ Key mapping notes:
 - Integration tests live under `xchange-coinbase/src/test/java/.../service`
 - Use `Assume.assumeNotNull(service.authTokenCreator)` to skip when no creds
 - Favor assertions that are robust across accounts/time (e.g., non‑null and basic structure)
+- Run the appropriate unit tests and/or integration tests each time the code is appreciably changed. They must pass for the change to be considered done.
 
 ### Coding conventions and style
 - Use existing indentation and formatting (no reflows of unrelated code)
-- Keep imports minimal; prefer utility methods in `CoinbaseAdapters`
 - DTOs: avoid business logic; small helpers (e.g., converting side to `OrderType`) are fine
-- Prefer `final` fields and immutability for DTOs
 - Prefer adding imports over using fully qualified class names to keep the code concise
 - Order imports, declarations, etc first on logical grouping and then in reverse christmas tree order
 
@@ -101,6 +100,6 @@ Key mapping notes:
 - [ ] Handle pagination if applicable
 - [ ] Add integration test with minimal stable assertions
 - [ ] Run lints; keep imports clean
-- [ ] Keep his Agents.md file up to date with any new changes, references, and information that would be useful for future reference / agentic work. 
+- [ ] Keep this Agents.md file up to date with any new changes, references, and information that would be useful for future reference / agentic work. 
 
 

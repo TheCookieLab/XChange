@@ -1,6 +1,8 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
@@ -25,16 +27,19 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   }
 
   public CoinbaseOrdersResponse listFills(CoinbaseTradeHistoryParams params) throws IOException {
-    String[] productIds = null;
+    java.util.List<String> productIds = null;
     if (params.getCurrencyPairs() != null && !params.getCurrencyPairs().isEmpty()) {
-      productIds = params.getCurrencyPairs().stream()
+      List<String> pids = params.getCurrencyPairs().stream()
           .map(CoinbaseAdapters::adaptProductId)
-          .toArray(String[]::new);
+          .collect(Collectors.toList());
+      // Only allow at most one product_id
+      productIds = java.util.Collections.singletonList(pids.get(0));
     }
 
-    String[] orderIds = params.getOrderId() == null ? null : new String[] {params.getOrderId()};
-    String[] tradeIds = params.getTransactionId() == null ? null
-        : new String[] {params.getTransactionId()};
+    java.util.List<String> orderIds = params.getOrderId() == null ? null
+        : java.util.Collections.singletonList(params.getOrderId());
+    java.util.List<String> tradeIds = params.getTransactionId() == null ? null
+        : java.util.Collections.singletonList(params.getTransactionId());
 
     String startTs = params.getStartTime() == null ? null
         : params.getStartTime().toInstant().toString();
