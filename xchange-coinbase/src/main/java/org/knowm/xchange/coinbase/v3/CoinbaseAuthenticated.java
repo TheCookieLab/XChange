@@ -75,7 +75,17 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @GET
   @Path("orders/historical/fills")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrdersResponse listFills(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
+  CoinbaseOrdersResponse listFills(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @QueryParam("order_ids") String[] orderIds,
+      @QueryParam("trade_ids") String[] tradeIds,
+      @QueryParam("product_ids") String[] productIds,
+      @QueryParam("start_sequence_timestamp") String startSequenceTimestamp,
+      @QueryParam("end_sequence_timestamp") String endSequenceTimestamp,
+      @QueryParam("retail_portfolio_id") String retailPortfolioId,
+      @QueryParam("limit") Integer limit,
+      @QueryParam("cursor") String cursor,
+      @QueryParam("sort_by") String sortBy)
       throws IOException, CoinbaseException;
 
   @GET

@@ -125,7 +125,7 @@ public final class CoinbaseAdapters {
         priceBookEntry -> CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.ASK,
             instrument)).collect(Collectors.toList());
 
-    List<LimitOrder> bids = priceBook.getAsks().stream().map(
+    List<LimitOrder> bids = priceBook.getBids().stream().map(
         priceBookEntry -> CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.BID,
             instrument)).collect(Collectors.toList());
 
