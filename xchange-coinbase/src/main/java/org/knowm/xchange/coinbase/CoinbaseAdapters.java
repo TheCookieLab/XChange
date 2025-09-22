@@ -237,7 +237,7 @@ public final class CoinbaseAdapters {
           .volume(product.getVolume24H()).quoteVolume(product.getApproximateQuoteVolume24H());
     }
 
-    if (priceBook != null) {
+    if (priceBook != null && !priceBook.getAsks().isEmpty() && !priceBook.getBids().isEmpty()) {
       builder = builder.ask(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getPrice())
           .askSize(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getSize())
           .bid(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getPrice())
@@ -246,7 +246,7 @@ public final class CoinbaseAdapters {
               Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)));
     }
 
-    if (candle != null) {
+    if (candle != null && !candle.getCandles().isEmpty()) {
       builder = builder.low(candle.getCandles().get(0).getLow())
           .high(candle.getCandles().get(0).getHigh())
           .open(candle.getCandles().get(0).getOpen())

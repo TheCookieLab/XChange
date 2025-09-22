@@ -1,6 +1,6 @@
 ## Coinbase Advanced Trade (v3) implementation guide
 
-This module integrates Coinbase Advanced Trade v3 REST via a JAX‑RS proxy and the XChange service APIs. Use this guide to quickly add new endpoints in a consistent, tested way.
+This module integrates Coinbase Advanced Trade v3 REST via a JAX‑RS proxy and the XChange service APIs. Use this guide to quickly add new endpoints in a consistent, tested way. Coinbase's Advanced Trade API documentation can be found at https://docs.cdp.coinbase.com/api-reference/advanced-trade-api/rest-api
 
 ### Architecture at a glance
 - **HTTP interface**: `org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated`
@@ -84,6 +84,8 @@ Key mapping notes:
 - Keep imports minimal; prefer utility methods in `CoinbaseAdapters`
 - DTOs: avoid business logic; small helpers (e.g., converting side to `OrderType`) are fine
 - Prefer `final` fields and immutability for DTOs
+- Prefer adding imports over using fully qualified class names to keep the code concise
+- Order imports, declarations, etc first on logical grouping and then in reverse christmas tree order
 
 ### Gotchas
 - Do not reuse response DTOs across endpoints if the JSON shape differs; define dedicated response types
@@ -99,5 +101,6 @@ Key mapping notes:
 - [ ] Handle pagination if applicable
 - [ ] Add integration test with minimal stable assertions
 - [ ] Run lints; keep imports clean
+- [ ] Keep his Agents.md file up to date with any new changes, references, and information that would be useful for future reference / agentic work. 
 
 

@@ -49,6 +49,9 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   }
 
   public void addCurrencyPair(CurrencyPair currencyPair) {
+    if (this.currencyPairs == null) {
+      this.currencyPairs = new HashSet<>();
+    }
     this.currencyPairs.add(currencyPair);
   }
 
