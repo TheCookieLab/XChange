@@ -276,6 +276,10 @@ public final class CoinbaseAdapters {
   }
 
   public static String adaptProductCandleGranularity(Long candleIntervalSeconds) {
+    if (candleIntervalSeconds == null) {
+      return null;
+    }
+    
     switch (candleIntervalSeconds.intValue()) {
       case 60:
         return "ONE_MINUTE";

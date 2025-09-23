@@ -107,6 +107,13 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   }
 
   /**
+   * Preview an order request without placing it.
+   */
+  public CoinbaseOrdersResponse previewOrder(Object payload) throws IOException {
+    return coinbaseAdvancedTrade.previewOrder(authTokenCreator, payload);
+  }
+
+  /**
    * Cancels orders by id and/or client order id via Advanced Trade batch_cancel endpoint.
    */
   public CoinbaseOrdersResponse cancelOrders(List<String> orderIds, List<String> clientOrderIds)

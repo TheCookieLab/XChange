@@ -162,6 +162,26 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   }
 
   @Override
+  public void verifyOrder(LimitOrder limitOrder) {
+    try {
+      Object request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
+      super.previewOrder(request);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to preview limit order", e);
+    }
+  }
+
+  @Override
+  public void verifyOrder(MarketOrder marketOrder) {
+    try {
+      Object request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
+      super.previewOrder(request);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to preview market order", e);
+    }
+  }
+
+  @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException {
     Object request = CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
     super.editOrder(request);
