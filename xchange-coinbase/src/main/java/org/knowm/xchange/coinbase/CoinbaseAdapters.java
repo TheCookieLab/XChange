@@ -41,6 +41,7 @@ import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.instrument.Instrument;
@@ -56,6 +57,13 @@ public final class CoinbaseAdapters {
   private static final int PRICE_SCALE = 10;
 
   private CoinbaseAdapters() {
+  }
+
+  /**
+   * Extract newly created order id from Coinbase createOrder response.
+   */
+  public static String adaptCreatedOrderId(CoinbaseCreateOrderResponse response) {
+    return response == null ? null : response.getOrderId();
   }
 
   public static AccountInfo adaptAccountInfo(CoinbaseUser user) {

@@ -1,0 +1,58 @@
+package org.knowm.xchange.coinbase.v3.dto.orders;
+
+import java.util.HashMap;
+import java.util.Map;
+import org.knowm.xchange.coinbase.CoinbaseAdapters;
+import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.StopOrder;
+
+public final class CoinbaseV3OrderRequests {
+
+  private CoinbaseV3OrderRequests() {}
+
+  public static Object marketOrderRequest(MarketOrder order) {
+    Map<String, Object> root = commonRoot(order);
+    Map<String, Object> config = new HashMap<>();
+    Map<String, Object> market = new HashMap<>();
+    market.put("quote_size", order.getOriginalAmount());
+    config.put("market_market_ioc", market);
+    root.put("order_configuration", config);
+    return root;
+  }
+
+  public static Object limitOrderRequest(LimitOrder order) {
+    Map<String, Object> root = commonRoot(order);
+    Map<String, Object> config = new HashMap<>();
+    Map<String, Object> limit = new HashMap<>();
+    limit.put("base_size", order.getOriginalAmount());
+    limit.put("limit_price", order.getLimitPrice());
+    limit.put("post_only", Boolean.FALSE);
+    config.put("limit_limit_gtc", limit);
+    root.put("order_configuration", config);
+    return root;
+  }
+
+  public static Object stopOrderRequest(StopOrder order) {
+    Map<String, Object> root = commonRoot(order);
+    Map<String, Object> config = new HashMap<>();
+    Map<String, Object> stop = new HashMap<>();
+    stop.put("base_size", order.getOriginalAmount());
+    stop.put("limit_price", order.getLimitPrice());
+    stop.put("stop_price", order.getStopPrice());
+    config.put("stop_limit_stop_limit_gtc", stop);
+    root.put("order_configuration", config);
+    return root;
+  }
+
+  private static Map<String, Object> commonRoot(Order order) {
+    Map<String, Object> root = new HashMap<>();
+    root.put("client_order_id", order.getUserReference());
+    root.put("product_id", CoinbaseAdapters.adaptProductId(order.getInstrument()));
+    root.put("side", order.getType() == Order.OrderType.BID ? "BUY" : "SELL");
+    return root;
+  }
+}
+
+

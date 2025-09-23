@@ -10,11 +10,15 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseV3OrderRequests;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
@@ -133,6 +137,24 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   public CoinbaseOrderDetailResponse getOrder(String orderId)
       throws IOException {
     return super.getOrder(orderId);
+  }
+
+  @Override
+  public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
+    Object request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
+    return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
+  }
+
+  @Override
+  public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
+    Object request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
+    return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
+  }
+
+  @Override
+  public String placeStopOrder(StopOrder stopOrder) throws IOException {
+    Object request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder);
+    return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
 }

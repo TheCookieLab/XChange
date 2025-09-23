@@ -12,6 +12,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import si.mazi.rescu.ParamsDigest;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 
 public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
 
@@ -85,6 +86,14 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseListOrdersResponse listOrders() throws IOException {
     return coinbaseAdvancedTrade.listOrders(authTokenCreator);
+  }
+
+  /**
+   * Creates an order (market/limit/stop) by forwarding the payload as-is to Coinbase.
+   * Caller is responsible for constructing the correct payload per Coinbase Advanced Trade.
+   */
+  public CoinbaseCreateOrderResponse createOrder(Object payload) throws IOException {
+    return coinbaseAdvancedTrade.createOrder(authTokenCreator, payload);
   }
 
 }
