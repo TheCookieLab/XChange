@@ -13,6 +13,8 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import si.mazi.rescu.ParamsDigest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import java.util.HashMap;
+import java.util.Map;
 
 public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
 
@@ -94,6 +96,26 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseCreateOrderResponse createOrder(Object payload) throws IOException {
     return coinbaseAdvancedTrade.createOrder(authTokenCreator, payload);
+  }
+
+  /**
+   * Cancels orders by id and/or client order id via Advanced Trade batch_cancel endpoint.
+   */
+  public CoinbaseOrdersResponse cancelOrders(List<String> orderIds, List<String> clientOrderIds)
+      throws IOException {
+    Map<String, Object> payload = new HashMap<>();
+    if (orderIds != null && !orderIds.isEmpty()) {
+      payload.put("order_ids", orderIds);
+    }
+    if (clientOrderIds != null && !clientOrderIds.isEmpty()) {
+      payload.put("client_order_ids", clientOrderIds);
+    }
+    return coinbaseAdvancedTrade.cancelOrders(authTokenCreator, payload);
+  }
+
+  /** Convenience overload to cancel a single order id. */
+  public CoinbaseOrdersResponse cancelOrderById(String orderId) throws IOException {
+    return cancelOrders(Collections.singletonList(orderId), null);
   }
 
 }

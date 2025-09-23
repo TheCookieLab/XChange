@@ -3,6 +3,7 @@ package org.knowm.xchange.coinbase.v3.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
@@ -26,6 +27,9 @@ import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 
 import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
+import org.knowm.xchange.service.trade.params.CancelOrderParams;
+import org.knowm.xchange.service.trade.params.CancelAllOrders;
+import org.knowm.xchange.service.trade.params.DefaultCancelOrderParamId;
 import si.mazi.rescu.ParamsDigest;
 
 public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements TradeService {
@@ -155,6 +159,37 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   public String placeStopOrder(StopOrder stopOrder) throws IOException {
     Object request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
+  }
+
+  @Override
+  public String changeOrder(LimitOrder limitOrder) throws IOException {
+    // Advanced Trade does not expose a direct modify; emulate via cancel+place as default behavior
+    cancelOrder(limitOrder.getId());
+    return placeLimitOrder(limitOrder);
+  }
+
+  @Override
+  public boolean cancelOrder(CancelOrderParams orderParams) throws IOException {
+    if (orderParams instanceof DefaultCancelOrderParamId) {
+      DefaultCancelOrderParamId byId = (DefaultCancelOrderParamId) orderParams;
+      super.cancelOrderById(byId.getOrderId());
+      return true;
+    }
+    // If other param types are added later (e.g., by clientOrderId), extend here
+    return false;
+  }
+
+  @Override
+  public Collection<String> cancelAllOrders(CancelAllOrders orderParams)
+      throws IOException {
+    OpenOrders openOrders = getOpenOrders();
+    List<String> ids = new ArrayList<>();
+    for (Order o : openOrders.getAllOpenOrders()) {
+      if (o.getId() != null && !o.getId().isEmpty()) ids.add(o.getId());
+    }
+    if (ids.isEmpty()) return Collections.emptyList();
+    super.cancelOrders(ids, null);
+    return ids;
   }
 
 }

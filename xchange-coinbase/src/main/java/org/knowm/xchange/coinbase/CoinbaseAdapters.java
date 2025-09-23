@@ -6,7 +6,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -73,9 +73,8 @@ public final class CoinbaseAdapters {
     final Balance balance = new Balance(Currency.getInstance(money.getCurrency()),
         money.getAmount());
 
-    final AccountInfo accountInfoTemporaryName = new AccountInfo(username,
-        Wallet.Builder.from(Arrays.asList(balance)).build());
-    return accountInfoTemporaryName;
+    return new AccountInfo(username,
+        Wallet.Builder.from(Collections.singletonList(balance)).build());
   }
 
   public static UserTrades adaptTrades(List<CoinbaseBuySell> transactions, OrderType orderType) {
@@ -318,10 +317,10 @@ public final class CoinbaseAdapters {
     }
 
     if (priceBook != null && !priceBook.getAsks().isEmpty() && !priceBook.getBids().isEmpty()) {
-      builder = builder.ask(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getPrice())
-          .askSize(priceBook.getAsks().isEmpty() ? null : priceBook.getAsks().get(0).getSize())
-          .bid(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getPrice())
-          .bidSize(priceBook.getBids().isEmpty() ? null : priceBook.getBids().get(0).getSize())
+      builder = builder.ask(priceBook.getAsks().get(0).getPrice())
+          .askSize(priceBook.getAsks().get(0).getSize())
+          .bid(priceBook.getBids().get(0).getPrice())
+          .bidSize(priceBook.getBids().get(0).getSize())
           .instrument(adaptInstrument(priceBook.getProductId())).timestamp(
               Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)));
     }
@@ -340,7 +339,7 @@ public final class CoinbaseAdapters {
       final CoinbasePrice sellPrice, final CoinbaseMoney spotRate,
       final CoinbaseSpotPriceHistory coinbaseSpotPriceHistory) {
 
-    final Ticker.Builder tickerBuilder = new Ticker.Builder().currencyPair(currencyPair)
+    final Ticker.Builder tickerBuilder = new Builder().instrument(currencyPair)
         .ask(buyPrice.getSubTotal().getAmount()).bid(sellPrice.getSubTotal().getAmount())
         .last(spotRate.getAmount());
 
