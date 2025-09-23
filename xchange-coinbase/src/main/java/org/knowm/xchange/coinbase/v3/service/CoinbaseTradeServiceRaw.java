@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import si.mazi.rescu.ParamsDigest;
@@ -64,6 +65,17 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
 
     return coinbaseAdvancedTrade.listFills(authTokenCreator, orderIds, tradeIds, productIds,
         startTs, endTs, null, limit, cursor, null);
+  }
+
+  /**
+   * Retrieves a historical order by its id using Coinbase Advanced Trade.
+   *
+   * @param orderId the Coinbase Advanced Trade order id
+   * @return the detailed order response from Coinbase
+   * @throws IOException if a network or serialization error occurs
+   */
+  public CoinbaseOrderDetailResponse getOrder(String orderId) throws IOException {
+    return coinbaseAdvancedTrade.getOrder(authTokenCreator, orderId);
   }
 
 }

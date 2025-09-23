@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -11,6 +12,7 @@ import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
 import org.knowm.xchange.utils.AuthUtils;
 
 public class TradeServiceIntegration {
@@ -50,5 +52,18 @@ public class TradeServiceIntegration {
     UserTrades tradeHistory = tradeService.getTradeHistory(params);
 
     assertFalse(tradeHistory.getTrades().isEmpty());
+  }
+
+  @Test
+  public void testGetOrderByIdIntegration() throws Exception {
+    Assume.assumeNotNull(tradeService.authTokenCreator);
+
+    // Smoke: call getOrder with a dummy id; only assert no exceptions and non-null structure when available
+    // In real runs, replace with a known recent order id if available via env config
+    String maybeOrderId = System.getProperty("COINBASE_V3_TEST_ORDER_ID");
+    org.junit.Assume.assumeTrue(maybeOrderId != null && !maybeOrderId.isEmpty());
+
+    DefaultQueryOrderParam param = new DefaultQueryOrderParam(maybeOrderId);
+    assertNotNull(tradeService.getOrder(param));
   }
 }

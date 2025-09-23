@@ -16,6 +16,7 @@ import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
@@ -90,9 +91,10 @@ public interface CoinbaseAuthenticated extends Coinbase {
       throws IOException, CoinbaseException;
 
   @GET
-  @Path("orders/historical/{order_id}}")
+  @Path("orders/historical/{order_id}")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrdersResponse getOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+  CoinbaseOrderDetailResponse getOrder(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("order_id") String orderId) throws IOException, CoinbaseException;
 
   @POST

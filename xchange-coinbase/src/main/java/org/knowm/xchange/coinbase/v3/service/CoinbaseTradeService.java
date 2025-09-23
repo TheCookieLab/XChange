@@ -2,18 +2,23 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
+import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 
+import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 import si.mazi.rescu.ParamsDigest;
 
 public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements TradeService {
@@ -29,6 +34,25 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   public CoinbaseTradeService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade,
       ParamsDigest authTokenCreator) {
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
+  }
+
+  @Override
+  public TradeHistoryParams createTradeHistoryParams() {
+    return new CoinbaseTradeHistoryParams();
+  }
+
+  @Override
+  public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {
+    List<Order> orders = new ArrayList<>(orderQueryParams.length);
+    for (OrderQueryParams param : orderQueryParams) {
+      String orderId = param.getOrderId();
+      if (orderId == null && param instanceof DefaultQueryOrderParam) {
+        orderId = ((DefaultQueryOrderParam) param).getOrderId();
+      }
+      if (orderId == null) continue;
+      orders.add(CoinbaseAdapters.adaptOrder(getOrder(orderId).getOrder()));
+    }
+    return orders;
   }
 
   /**
@@ -81,4 +105,17 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     return new UserTrades(trades,
         Trades.TradeSortType.SortByTimestamp);
   }
+
+  /**
+   * Retrieves a historical order by its id and adapts it to XChange {@link Order}.
+   *
+   * @param orderId the Coinbase Advanced Trade order id
+   * @return the adapted order
+   * @throws IOException if a network or serialization error occurs
+   */
+  public org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse getOrder(String orderId)
+      throws IOException {
+    return super.getOrder(orderId);
+  }
+
 }

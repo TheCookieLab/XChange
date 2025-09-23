@@ -40,6 +40,7 @@ import org.knowm.xchange.dto.marketdata.Ticker.Builder;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.instrument.Instrument;
@@ -160,6 +161,58 @@ public final class CoinbaseAdapters {
         return OrderType.BID;
     }
     return null;
+  }
+
+  /**
+   * Adapt a Coinbase Advanced Trade order detail to XChange Order (as a LimitOrder when price is present).
+   */
+  public static Order adaptOrder(CoinbaseOrderDetail detail) {
+    if (detail == null) return null;
+    Order.OrderType orderType = adaptOrderType(detail.getSide());
+    if (detail.getPrice() != null) {
+      return new LimitOrder(
+          orderType,
+          detail.getSize(),
+          detail.getInstrument(),
+          detail.getOrderId(),
+          detail.getCreatedTime(),
+          detail.getPrice(),
+          detail.getAverageFilledPrice(),
+          detail.getFilledSize(),
+          detail.getTotalFees(),
+          adaptOrderStatus(detail.getStatus()));
+    }
+    // Fallback to generic Order without limit price
+    return new org.knowm.xchange.dto.trade.MarketOrder(
+        orderType,
+        detail.getSize(),
+        detail.getInstrument(),
+        detail.getOrderId(),
+        detail.getCreatedTime());
+  }
+
+  private static Order.OrderStatus adaptOrderStatus(String status) {
+    if (status == null) return Order.OrderStatus.UNKNOWN;
+    switch (status.toUpperCase()) {
+      case "OPEN":
+      case "PENDING":
+      case "NEW":
+        return Order.OrderStatus.OPEN;
+      case "FILLED":
+      case "DONE":
+        return Order.OrderStatus.FILLED;
+      case "CANCELLED":
+      case "CANCELED":
+        return Order.OrderStatus.CANCELED;
+      case "EXPIRED":
+        return Order.OrderStatus.EXPIRED;
+      case "REJECTED":
+        return Order.OrderStatus.REJECTED;
+      case "PARTIALLY_FILLED":
+        return Order.OrderStatus.PARTIALLY_FILLED;
+      default:
+        return Order.OrderStatus.UNKNOWN;
+    }
   }
 
   /**
