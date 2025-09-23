@@ -7,11 +7,14 @@ import java.util.List;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
@@ -47,7 +50,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     for (OrderQueryParams param : orderQueryParams) {
       String orderId = param.getOrderId();
       if (orderId == null && param instanceof DefaultQueryOrderParam) {
-        orderId = ((DefaultQueryOrderParam) param).getOrderId();
+        orderId = param.getOrderId();
       }
       if (orderId == null) continue;
       orders.add(CoinbaseAdapters.adaptOrder(getOrder(orderId).getOrder()));
@@ -107,13 +110,27 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   }
 
   /**
+   * Returns open orders by listing historical orders and selecting those in an open status.
+   * Note: Advanced Trade historical orders include current open ones; we filter accordingly.
+   */
+  @Override
+  public OpenOrders getOpenOrders() throws IOException {
+    return CoinbaseAdapters.adaptOpenOrders(super.listOrders());
+  }
+
+  /** Convenience delegator to fetch raw list orders response. */
+  public CoinbaseListOrdersResponse listOrders()
+      throws IOException {
+    return super.listOrders();
+  }
+  /**
    * Retrieves a historical order by its id and adapts it to XChange {@link Order}.
    *
    * @param orderId the Coinbase Advanced Trade order id
    * @return the adapted order
    * @throws IOException if a network or serialization error occurs
    */
-  public org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse getOrder(String orderId)
+  public CoinbaseOrderDetailResponse getOrder(String orderId)
       throws IOException {
     return super.getOrder(orderId);
   }

@@ -44,6 +44,8 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
+import org.knowm.xchange.dto.trade.OpenOrders;
 
 /**
  * jamespedwards42
@@ -213,6 +215,23 @@ public final class CoinbaseAdapters {
       default:
         return Order.OrderStatus.UNKNOWN;
     }
+  }
+
+  /**
+   * Adapt Coinbase Advanced Trade list orders response into XChange OpenOrders (LimitOrders only),
+   * filtering to orders in an open state.
+   */
+  public static OpenOrders adaptOpenOrders(CoinbaseListOrdersResponse response) {
+    List<LimitOrder> open = response.getOrders().stream()
+        .filter(detail -> {
+          Order.OrderStatus s = adaptOrderStatus(detail.getStatus());
+          return s != null && s.isOpen();
+        })
+        .map(CoinbaseAdapters::adaptOrder)
+        .filter(o -> o instanceof LimitOrder)
+        .map(o -> (LimitOrder) o)
+        .collect(Collectors.toList());
+    return new OpenOrders(open);
   }
 
   /**

@@ -12,6 +12,7 @@ import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
 import org.knowm.xchange.utils.AuthUtils;
 
@@ -52,6 +53,14 @@ public class TradeServiceIntegration {
     UserTrades tradeHistory = tradeService.getTradeHistory(params);
 
     assertFalse(tradeHistory.getTrades().isEmpty());
+  }
+
+  @Test
+  public void testGetOpenOrders() throws Exception {
+    Assume.assumeNotNull(tradeService.authTokenCreator);
+
+    OpenOrders oo = tradeService.getOpenOrders();
+    assertNotNull(oo);
   }
 
   @Test
