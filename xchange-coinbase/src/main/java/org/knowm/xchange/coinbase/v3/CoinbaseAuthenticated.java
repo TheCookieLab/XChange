@@ -10,6 +10,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.util.List;
 import org.knowm.xchange.coinbase.v2.Coinbase;
 import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
@@ -77,9 +78,9 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseOrdersResponse listFills(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      @QueryParam("order_ids") java.util.List<String> orderIds,
-      @QueryParam("trade_ids") java.util.List<String> tradeIds,
-      @QueryParam("product_ids") java.util.List<String> productIds,
+      @QueryParam("order_ids") List<String> orderIds,
+      @QueryParam("trade_ids") List<String> tradeIds,
+      @QueryParam("product_ids") List<String> productIds,
       @QueryParam("start_sequence_timestamp") String startSequenceTimestamp,
       @QueryParam("end_sequence_timestamp") String endSequenceTimestamp,
       @QueryParam("retail_portfolio_id") String retailPortfolioId,

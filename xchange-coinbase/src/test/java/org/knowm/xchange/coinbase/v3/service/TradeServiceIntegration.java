@@ -45,6 +45,7 @@ public class TradeServiceIntegration {
     CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
     // Allow only one product_id for now to avoid repeated param encoding
     params.addCurrencyPair(CurrencyPair.BTC_USD);
+    params.addCurrencyPair(CurrencyPair.ETH_USD);
 
     UserTrades tradeHistory = tradeService.getTradeHistory(params);
 

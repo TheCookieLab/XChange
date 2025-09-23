@@ -31,6 +31,25 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
   }
 
+  /**
+   * Retrieves the user's trade history using the Coinbase Advanced Trade API.
+   *
+   * <p>Gotcha: If {@code params} contains multiple {@link org.knowm.xchange.currency.CurrencyPair}
+   * entries, only the first pair is forwarded to the underlying {@code listFills} call. While the
+   * Coinbase REST endpoint supports multi-value filters, this implementation currently forwards at
+   * most one value per filter to avoid repeated parameter encoding. The resulting history therefore
+   * reflects only the first currency pair (and at most one order/trade id) provided.
+   *
+   * <p>Pagination is handled automatically via the response cursor until it is exhausted or the
+   * optional {@code limit} in {@link CoinbaseTradeHistoryParams} is reached.
+   *
+   * @param params expected to be {@link CoinbaseTradeHistoryParams}; includes optional time span,
+   *     limit and next-page cursor
+   * @return the user's trades sorted by timestamp
+   * @throws IOException if a network or serialization error occurs
+   * @throws IllegalArgumentException if {@code params} is not an instance of
+   *     {@link CoinbaseTradeHistoryParams}
+   */
   @Override
   public UserTrades getTradeHistory(TradeHistoryParams params) throws IOException {
     if (!(params instanceof CoinbaseTradeHistoryParams)) {

@@ -99,6 +99,7 @@ Key mapping notes:
 - [ ] Implement high‑level service mapping to XChange DTOs
 - [ ] Handle pagination if applicable
 - [ ] Add integration test with minimal stable assertions
+- [ ] Create/update Javadoc for all new and changed public APIs with an eye toward maximizing usefulness for other devs
 - [ ] Run lints; keep imports clean
 - [ ] Keep this Agents.md file up to date with any new changes, references, and information that would be useful for future reference / agentic work. 
 
