@@ -13,6 +13,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import si.mazi.rescu.ParamsDigest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -96,6 +97,13 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseCreateOrderResponse createOrder(Object payload) throws IOException {
     return coinbaseAdvancedTrade.createOrder(authTokenCreator, payload);
+  }
+
+  /**
+   * Edit an existing order natively via Advanced Trade.
+   */
+  public CoinbaseOrdersResponse editOrder(Object payload) throws IOException {
+    return coinbaseAdvancedTrade.editOrder(authTokenCreator, payload);
   }
 
   /**

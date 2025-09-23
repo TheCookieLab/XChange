@@ -34,6 +34,22 @@ public final class CoinbaseV3OrderRequests {
     return root;
   }
 
+  public static Object editLimitOrderRequest(LimitOrder order) {
+    Map<String, Object> root = new HashMap<>();
+    root.put("order_id", order.getId());
+    Map<String, Object> editConfig = new HashMap<>();
+    Map<String, Object> limit = new HashMap<>();
+    if (order.getOriginalAmount() != null) {
+      limit.put("base_size", order.getOriginalAmount());
+    }
+    if (order.getLimitPrice() != null) {
+      limit.put("limit_price", order.getLimitPrice());
+    }
+    editConfig.put("limit_limit_gtc", limit);
+    root.put("order_configuration", editConfig);
+    return root;
+  }
+
   public static Object stopOrderRequest(StopOrder order) {
     Map<String, Object> root = commonRoot(order);
     Map<String, Object> config = new HashMap<>();

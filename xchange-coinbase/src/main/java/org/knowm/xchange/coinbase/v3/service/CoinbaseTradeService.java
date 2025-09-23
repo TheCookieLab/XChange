@@ -163,9 +163,9 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
 
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException {
-    // Advanced Trade does not expose a direct modify; emulate via cancel+place as default behavior
-    cancelOrder(limitOrder.getId());
-    return placeLimitOrder(limitOrder);
+    Object request = CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
+    super.editOrder(request);
+    return limitOrder.getId();
   }
 
   @Override
