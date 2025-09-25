@@ -73,10 +73,20 @@ public final class DaseAdapters {
     List<org.knowm.xchange.dto.marketdata.Trade> out = new ArrayList<>(trades == null ? 0 : trades.size());
     if (trades != null) {
       for (DaseTrade tr : trades) {
+        // maker_side indicates the maker's side; taker side is the opposite and maps to Trade type
+        String makerSide = tr.getMakerSide();
+        Order.OrderType takerType;
+        if ("buy".equalsIgnoreCase(makerSide)) {
+          takerType = Order.OrderType.ASK; // maker buy -> taker sell (ASK)
+        } else if ("sell".equalsIgnoreCase(makerSide)) {
+          takerType = Order.OrderType.BID; // maker sell -> taker buy (BID)
+        } else {
+          takerType = null; // unknown; let builder handle null if allowed
+        }
+
         out.add(
             new org.knowm.xchange.dto.marketdata.Trade.Builder()
-                .type(
-                    "buy".equalsIgnoreCase(tr.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK)
+                .type(takerType)
                 .originalAmount(tr.getSize())
                 .price(tr.getPrice())
                 .instrument(pair)
