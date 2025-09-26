@@ -33,7 +33,10 @@ public class DaseDigest extends BaseParamsDigest {
 
     final String path = "/" + restInvocation.getPath();
     final String query = restInvocation.getQueryString();
-    final String pathWithQuery = query == null || query.isEmpty() ? path : path + query;
+    final String pathWithQuery =
+        (query == null || query.isEmpty())
+            ? path
+            : (query.startsWith("?") ? path + query : path + "?" + query);
 
     final String body = restInvocation.getRequestBody() == null ? "" : restInvocation.getRequestBody();
 

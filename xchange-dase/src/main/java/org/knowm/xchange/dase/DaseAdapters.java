@@ -5,11 +5,17 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.dase.dto.account.DaseBalanceItem;
+import org.knowm.xchange.dase.dto.account.DaseBalancesResponse;
 import org.knowm.xchange.dase.dto.marketdata.DaseOrderBookSnapshot;
 import org.knowm.xchange.dase.dto.marketdata.DaseTicker;
 import org.knowm.xchange.dase.dto.marketdata.DaseTrade;
 import org.knowm.xchange.dase.dto.trade.DaseOrder;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.account.AccountInfo;
+import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
@@ -24,6 +30,20 @@ public final class DaseAdapters {
 
   public static String toMarketString(CurrencyPair pair) {
     return pair.getBase().getCurrencyCode() + "-" + pair.getCounter().getCurrencyCode();
+  }
+
+  public static AccountInfo adaptAccountInfo(
+      String portfolioId, DaseBalancesResponse balancesResponse) {
+    List<Balance> balances = new ArrayList<>();
+    if (balancesResponse != null && balancesResponse.getBalances() != null) {
+      for (DaseBalanceItem b : balancesResponse.getBalances()) {
+        Currency currency = Currency.getInstance(b.getCurrency());
+        Balance xchgBalance = new Balance(currency, b.getTotal(), b.getAvailable(), b.getBlocked());
+        balances.add(xchgBalance);
+      }
+    }
+    Wallet wallet = Wallet.Builder.from(balances).build();
+    return new AccountInfo(portfolioId, null, List.of(wallet));
   }
 
   public static CurrencyPair toCurrencyPair(String market) {
@@ -56,10 +76,20 @@ public final class DaseAdapters {
     List<org.knowm.xchange.dto.marketdata.Trade> out = new ArrayList<>(trades == null ? 0 : trades.size());
     if (trades != null) {
       for (DaseTrade tr : trades) {
+        // maker_side indicates the maker's side; taker side is the opposite and maps to Trade type
+        String makerSide = tr.getMakerSide();
+        Order.OrderType takerType;
+        if ("buy".equalsIgnoreCase(makerSide)) {
+          takerType = Order.OrderType.ASK; // maker buy -> taker sell (ASK)
+        } else if ("sell".equalsIgnoreCase(makerSide)) {
+          takerType = Order.OrderType.BID; // maker sell -> taker buy (BID)
+        } else {
+          takerType = null; // unknown; let builder handle null if allowed
+        }
+
         out.add(
             new org.knowm.xchange.dto.marketdata.Trade.Builder()
-                .type(
-                    "buy".equalsIgnoreCase(tr.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK)
+                .type(takerType)
                 .originalAmount(tr.getSize())
                 .price(tr.getPrice())
                 .instrument(pair)

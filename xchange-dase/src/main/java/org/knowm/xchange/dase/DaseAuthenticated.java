@@ -11,6 +11,8 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
+import org.knowm.xchange.dase.dto.account.DaseBalancesResponse;
+import org.knowm.xchange.dase.dto.account.DaseSingleBalance;
 import org.knowm.xchange.dase.dto.user.DaseUserProfile;
 import org.knowm.xchange.dase.dto.trade.DaseBatchCancelOrdersRequest;
 import org.knowm.xchange.dase.dto.trade.DaseBatchGetOrdersRequest;
@@ -36,7 +38,6 @@ public interface DaseAuthenticated {
       throws IOException;
 
   // Orders
-
   @GET
   @Path("/orders")
   DaseOrdersListResponse getOrders(
@@ -105,6 +106,22 @@ public interface DaseAuthenticated {
       @HeaderParam("ex-api-sign") ParamsDigest signer,
       @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
       DaseBatchGetOrdersRequest body)
+    
+  @GET
+  @Path("/balances")
+  DaseBalancesResponse getBalances(
+      @HeaderParam("ex-api-key") String apiKey,
+      @HeaderParam("ex-api-sign") ParamsDigest signer,
+      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp)
+      throws IOException;
+
+  @GET
+  @Path("/balances/{currency}")
+  DaseSingleBalance getBalance(
+      @PathParam("currency") String currency,
+      @HeaderParam("ex-api-key") String apiKey,
+      @HeaderParam("ex-api-sign") ParamsDigest signer,
+      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp)
       throws IOException;
 }
 
