@@ -10,7 +10,6 @@ public class DaseTrade {
   private final String id;
   private final BigDecimal price;
   private final BigDecimal size;
-  private final String side;
   private final String makerSide;
 
   @JsonCreator
@@ -19,13 +18,11 @@ public class DaseTrade {
       @JsonProperty("id") String id,
       @JsonProperty("price") BigDecimal price,
       @JsonProperty("size") BigDecimal size,
-      @JsonProperty("side") String side,
       @JsonProperty("maker_side") String makerSide) {
     this.time = time == null ? 0L : time.longValue();
     this.id = id;
     this.price = price;
     this.size = size;
-    this.side = side;
     this.makerSide = makerSide;
   }
 
@@ -43,10 +40,6 @@ public class DaseTrade {
 
   public BigDecimal getSize() {
     return size;
-  }
-
-  public String getSide() {
-    return side;
   }
 
   public String getMakerSide() {

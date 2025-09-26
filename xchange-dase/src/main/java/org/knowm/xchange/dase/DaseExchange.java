@@ -9,6 +9,7 @@ public class DaseExchange extends BaseExchange {
   @Override
   protected void initServices() {
     this.marketDataService = new DaseMarketDataService(this);
+    this.accountService = new org.knowm.xchange.dase.service.DaseAccountService(this);
   }
 
   @Override
