@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dase.DaseAdapters;
@@ -73,7 +74,7 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
     body.size = toStringOrNull(limitOrder.getOriginalAmount());
     body.price = toStringOrNull(limitOrder.getLimitPrice());
     body.postOnly = limitOrder.hasFlag(DaseOrderFlags.POST_ONLY);
-    body.clientId = limitOrder.getUserReference();
+    body.clientId = isUuid(limitOrder.getUserReference()) ? limitOrder.getUserReference() : null;
     try {
       return placeOrder(body).getOrderId();
     } catch (IOException e) {
@@ -98,7 +99,7 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
       body.size = toStringOrNull(marketOrder.getOriginalAmount());
       body.funds = null;
     }
-    body.clientId = marketOrder.getUserReference();
+    body.clientId = isUuid(marketOrder.getUserReference()) ? marketOrder.getUserReference() : null;
     try {
       return placeOrder(body).getOrderId();
     } catch (IOException e) {
@@ -272,6 +273,17 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
       return new BigDecimal(s);
     } catch (Exception e) {
       return null;
+    }
+  }
+
+  private static boolean isUuid(String s) {
+    if (s == null)
+      return false;
+    try {
+      UUID.fromString(s);
+      return true;
+    } catch (Exception e) {
+      return false;
     }
   }
 }
