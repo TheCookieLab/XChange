@@ -11,6 +11,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
+import org.knowm.xchange.dase.dto.account.ApiGetAccountTxnsOutput;
 import org.knowm.xchange.dase.dto.account.DaseBalancesResponse;
 import org.knowm.xchange.dase.dto.account.DaseSingleBalance;
 import org.knowm.xchange.dase.dto.user.DaseUserProfile;
@@ -35,6 +36,16 @@ public interface DaseAuthenticated {
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
       @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp)
+      throws IOException;
+
+  @GET
+  @Path("/accounts/transactions")
+  ApiGetAccountTxnsOutput getAccountTransactions(
+      @HeaderParam("ex-api-key") String apiKey,
+      @HeaderParam("ex-api-sign") ParamsDigest signer,
+      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
+      @QueryParam("limit") Integer limit,
+      @QueryParam("before") String before)
       throws IOException;
 
   // Orders

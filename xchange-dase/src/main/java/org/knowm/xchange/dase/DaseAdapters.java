@@ -4,8 +4,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.dase.dto.account.ApiAccountTxn;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dase.dto.account.DaseBalanceItem;
 import org.knowm.xchange.dase.dto.account.DaseBalancesResponse;
 import org.knowm.xchange.dase.dto.marketdata.DaseOrderBookSnapshot;
@@ -21,6 +22,7 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.exceptions.ExchangeException;
 
 public final class DaseAdapters {
@@ -193,5 +195,67 @@ public final class DaseAdapters {
       out.add(new LimitOrder(side, amount, pair, null, null, price));
     }
     return out;
+  }
+
+  public static List<FundingRecord> adaptFundingRecords(List<ApiAccountTxn> txns) {
+    List<FundingRecord> out = new ArrayList<>(txns == null ? 0 : txns.size());
+    if (txns == null) {
+      return out;
+    }
+    for (ApiAccountTxn t : txns) {
+      if (t == null) {
+        continue;
+      }
+      Currency currency = t.getCurrency() == null ? null : Currency.getInstance(t.getCurrency());
+      Date date = new Date(t.getCreatedAt());
+
+      FundingRecord.Type type = mapTxnTypeToFundingType(t.getTxnType());
+      FundingRecord.Status status = FundingRecord.Status.COMPLETE;
+      String description = t.getTxnType();
+
+      FundingRecord fr =
+          FundingRecord.builder()
+              .date(date)
+              .currency(currency)
+              .amount(t.getAmount())
+              .internalId(t.getId())
+              .type(type)
+              .status(status)
+              .description(description)
+              .build();
+      out.add(fr);
+    }
+    return out;
+  }
+
+  private static FundingRecord.Type mapTxnTypeToFundingType(String txnType) {
+    if (txnType == null) {
+      throw new IllegalArgumentException("txnType is null");
+    }
+    switch (txnType) {
+      case "deposit":
+        return FundingRecord.Type.DEPOSIT;
+      case "withdrawal_commit":
+        return FundingRecord.Type.WITHDRAWAL;
+      case "withdrawal_block":
+        return FundingRecord.Type.OTHER_OUTFLOW;
+      case "withdrawal_unblock":
+        return FundingRecord.Type.OTHER_INFLOW;
+      case "trade_fill_fee_base":
+      case "trade_fill_fee_quote":
+        return FundingRecord.Type.OTHER_OUTFLOW;
+      case "trade_fill_credit_base":
+      case "trade_fill_credit_quote":
+        return FundingRecord.Type.OTHER_INFLOW;
+      case "trade_fill_debit_base":
+      case "trade_fill_debit_quote":
+        return FundingRecord.Type.OTHER_OUTFLOW;
+      case "portfolio_transfer_credit":
+        return FundingRecord.Type.INTERNAL_DEPOSIT;
+      case "portfolio_transfer_debit":
+        return FundingRecord.Type.INTERNAL_WITHDRAWAL;
+      default:
+        throw new IllegalArgumentException("Unknown txnType: " + txnType);
+    }
   }
 }
