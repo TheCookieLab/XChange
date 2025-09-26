@@ -26,6 +26,6 @@ public class TradesJSONTest {
 
     assertThat(trades).hasSize(2);
     assertThat(trades.get(0).getPrice()).isEqualByComparingTo("18.51");
-    assertThat(trades.get(1).getSide()).isEqualToIgnoringCase("sell");
+    assertThat(trades.get(1).getMakerSide()).isEqualToIgnoringCase("buy");
   }
 }

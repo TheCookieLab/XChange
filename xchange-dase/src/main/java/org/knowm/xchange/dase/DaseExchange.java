@@ -4,6 +4,7 @@ import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.dase.service.DaseAccountService;
 import org.knowm.xchange.dase.service.DaseMarketDataService;
+import org.knowm.xchange.dase.service.DaseTradeService;
 
 public class DaseExchange extends BaseExchange {
 
@@ -11,6 +12,8 @@ public class DaseExchange extends BaseExchange {
   protected void initServices() {
     this.marketDataService = new DaseMarketDataService(this);
     this.accountService = new DaseAccountService(this);
+    this.tradeService = new DaseTradeService(this);
+    this.accountService = new org.knowm.xchange.dase.service.DaseAccountService(this);
   }
 
   @Override

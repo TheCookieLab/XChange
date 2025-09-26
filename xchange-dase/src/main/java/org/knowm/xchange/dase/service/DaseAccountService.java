@@ -8,8 +8,10 @@ import org.knowm.xchange.dase.dto.account.ApiGetAccountTxnsOutput;
 import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
+import org.knowm.xchange.dase.dto.account.DaseBalancesResponse;
+import org.knowm.xchange.dase.dto.user.DaseUserProfile;
+import org.knowm.xchange.dto.account.AccountInfo;
 
-/** AccountService implementation providing funding history via DASE account transactions. */
 public class DaseAccountService extends DaseAccountServiceRaw implements AccountService {
 
   public DaseAccountService(Exchange exchange) {
@@ -53,6 +55,13 @@ public class DaseAccountService extends DaseAccountServiceRaw implements Account
     public void setBefore(String before) {
       this.before = before;
     }
+  }
+    
+  public AccountInfo getAccountInfo() throws IOException {
+    DaseUserProfile profile = getUserProfile();
+    DaseBalancesResponse balances = getDaseBalances();
+    return DaseAdapters.adaptAccountInfo(
+        profile == null ? null : profile.getPortfolioId(), balances);
   }
 }
 
