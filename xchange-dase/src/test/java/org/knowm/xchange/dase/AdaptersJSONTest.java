@@ -73,7 +73,7 @@ public class AdaptersJSONTest {
   public void adaptFundingRecords_mapping() {
     ApiAccountTxn deposit =
         new ApiAccountTxn(
-            "id1",
+            "6a0b7c40-1e16-4e1c-a4c5-1d9fdf7e9d21",
             "EUR",
             "deposit",
             new BigDecimal("50.00"),
@@ -82,7 +82,7 @@ public class AdaptersJSONTest {
             null);
     ApiAccountTxn fee =
         new ApiAccountTxn(
-            "id2",
+            "7e2f8c91-4d5e-4a6b-9c8d-2e3f4a5b6c7d",
             "BTC",
             "trade_fill_fee_base",
             new BigDecimal("0.0001"),

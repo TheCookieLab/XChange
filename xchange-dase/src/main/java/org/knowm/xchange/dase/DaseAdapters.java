@@ -124,7 +124,7 @@ public final class DaseAdapters {
 
   private static FundingRecord.Type mapTxnTypeToFundingType(String txnType) {
     if (txnType == null) {
-      return FundingRecord.Type.OTHER_OUTFLOW;
+      throw new IllegalArgumentException("txnType is null");
     }
     switch (txnType) {
       case "deposit":
@@ -149,7 +149,7 @@ public final class DaseAdapters {
       case "portfolio_transfer_debit":
         return FundingRecord.Type.INTERNAL_WITHDRAWAL;
       default:
-        return FundingRecord.Type.OTHER_OUTFLOW;
+        throw new IllegalArgumentException("Unknown txnType: " + txnType);
     }
   }
 }
