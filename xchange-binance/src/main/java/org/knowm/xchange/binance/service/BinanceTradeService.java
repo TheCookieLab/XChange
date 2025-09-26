@@ -1,5 +1,6 @@
 package org.knowm.xchange.binance.service;
 
+import static org.knowm.xchange.binance.BinanceAdapters.getOrderFlag;
 import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 
 import java.io.IOException;
@@ -7,7 +8,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.Value;
 import org.knowm.xchange.binance.BinanceAdapters;
@@ -141,12 +141,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
         tif);
   }
 
-  private <T extends IOrderFlags> Optional<T> getOrderFlag(Order order, Class<T> clazz) {
-    return (Optional<T>)
-        order.getOrderFlags().stream()
-            .filter(flag -> clazz.isAssignableFrom(flag.getClass()))
-            .findFirst();
-  }
+
 
   private String placeOrderAllProducts(
       OrderType type,

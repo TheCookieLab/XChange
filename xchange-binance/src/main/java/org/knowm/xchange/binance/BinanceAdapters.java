@@ -15,6 +15,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.knowm.xchange.binance.dto.account.AssetDetail;
@@ -38,6 +39,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.Order.IOrderFlags;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.OpenPosition;
@@ -256,10 +258,7 @@ public class BinanceAdapters {
   }
 
   public static Ticker toTicker(BinanceTicker24h binanceTicker24h, boolean isFuture) {
-    Instrument instrument =
-        (isFuture)
-            ? new FuturesContract(binanceTicker24h.getCurrencyPair(), "PERP")
-            : binanceTicker24h.getCurrencyPair();
+    Instrument instrument = adaptSymbol(binanceTicker24h.getSymbol(), isFuture);
     return new Ticker.Builder()
         .instrument(instrument)
         .open(binanceTicker24h.getOpenPrice())
@@ -693,5 +692,12 @@ public class BinanceAdapters {
                 binanceFundingRate.getNextFundingTime().getTime()
                     - binanceFundingRate.getTime().getTime()))
         .build();
+  }
+
+  public static <T extends IOrderFlags> Optional<T> getOrderFlag(Order order, Class<T> clazz) {
+    return (Optional<T>)
+        order.getOrderFlags().stream()
+            .filter(flag -> clazz.isAssignableFrom(flag.getClass()))
+            .findFirst();
   }
 }

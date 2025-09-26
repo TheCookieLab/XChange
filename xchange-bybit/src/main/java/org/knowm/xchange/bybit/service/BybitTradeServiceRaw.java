@@ -3,15 +3,6 @@ package org.knowm.xchange.bybit.service;
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 import static org.knowm.xchange.bybit.BybitAdapters.createBybitExceptionFromResult;
 import static org.knowm.xchange.bybit.BybitResilience.GLOBAL_RATE_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.ORDER_AMEND_LINEAR_AND_INVERSE_RATE_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.ORDER_AMEND_OPTION_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.ORDER_AMEND_SPOT_RATE_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.ORDER_CANCEL_LINEAR_AND_INVERSE_RATE_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.ORDER_CANCEL_OPTION_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.ORDER_CANCEL_SPOT_RATE_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.ORDER_CREATE_LINEAR_AND_INVERSE_RATE_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.ORDER_CREATE_OPTION_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.ORDER_CREATE_SPOT_RATE_LIMITER;
 
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import java.io.IOException;
@@ -58,42 +49,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
     return bybitOrder;
   }
 
-  BybitResult<BybitOrderResponse> amendOrder(
-      BybitCategory category,
-      String symbol,
-      String orderId,
-      String orderLinkId,
-      String triggerPrice,
-      String qty,
-      String price,
-      String tpslMode,
-      String takeProfit,
-      String stopLoss,
-      String tpTriggerBy,
-      String slTriggerBy,
-      String triggerBy,
-      String tpLimitPrice,
-      String slLimitPrice)
-      throws IOException {
-
+  BybitResult<BybitOrderResponse> amendOrder(BybitAmendOrderPayload payload,  BybitCategory category) throws IOException {
     RateLimiter rateLimiter = getAmendOrderRateLimiter(category);
-    BybitAmendOrderPayload payload =
-        new BybitAmendOrderPayload(
-            category,
-            symbol,
-            orderId,
-            orderLinkId,
-            triggerPrice,
-            qty,
-            price,
-            tpslMode,
-            takeProfit,
-            stopLoss,
-            tpTriggerBy,
-            slTriggerBy,
-            triggerBy,
-            tpLimitPrice,
-            slLimitPrice);
     BybitResult<BybitOrderResponse> amendOrder =
         decorateApiCall(
                 () ->
@@ -158,42 +115,4 @@ public class BybitTradeServiceRaw extends BybitBaseService {
     return response;
   }
 
-  private RateLimiter getCreateOrderRateLimiter(BybitCategory category) {
-    switch (category) {
-      case LINEAR:
-      case INVERSE:
-        return rateLimiter(ORDER_CREATE_LINEAR_AND_INVERSE_RATE_LIMITER);
-      case SPOT:
-        return rateLimiter(ORDER_CREATE_SPOT_RATE_LIMITER);
-      case OPTION:
-        return rateLimiter(ORDER_CREATE_OPTION_LIMITER);
-    }
-    return null;
-  }
-
-  private RateLimiter getCancelOrderRateLimiter(BybitCategory category) {
-    switch (category) {
-      case LINEAR:
-      case INVERSE:
-        return rateLimiter(ORDER_CANCEL_LINEAR_AND_INVERSE_RATE_LIMITER);
-      case SPOT:
-        return rateLimiter(ORDER_CANCEL_SPOT_RATE_LIMITER);
-      case OPTION:
-        return rateLimiter(ORDER_CANCEL_OPTION_LIMITER);
-    }
-    return null;
-  }
-
-  private RateLimiter getAmendOrderRateLimiter(BybitCategory category) {
-    switch (category) {
-      case LINEAR:
-      case INVERSE:
-        return rateLimiter(ORDER_AMEND_LINEAR_AND_INVERSE_RATE_LIMITER);
-      case SPOT:
-        return rateLimiter(ORDER_AMEND_SPOT_RATE_LIMITER);
-      case OPTION:
-        return rateLimiter(ORDER_AMEND_OPTION_LIMITER);
-    }
-    return null;
-  }
 }

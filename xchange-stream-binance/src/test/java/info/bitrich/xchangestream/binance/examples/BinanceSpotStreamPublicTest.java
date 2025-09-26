@@ -71,7 +71,7 @@ public class BinanceSpotStreamPublicTest {
             LOG.info("kLines subscribe: {}", kLines);
           }
         });
-    Thread.sleep(10000);
+    Thread.sleep(3000);
     kLineDisposable.dispose();
     exchange.disconnect().blockingAwait();
   }
@@ -131,10 +131,9 @@ public class BinanceSpotStreamPublicTest {
           }
           assertThat(trade.getInstrument().equals(instrument)).isTrue();
         }));
-    Thread.sleep(10000);
+    Thread.sleep(3000);
     disposables.forEach(Disposable::dispose);
     exchange.disconnect().blockingAwait();
   }
-
 
 }
