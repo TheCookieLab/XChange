@@ -91,10 +91,13 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
     body.market = DaseAdapters.toMarketString(pair);
     body.type = "market";
     body.side = marketOrder.getType() == Order.OrderType.BID ? "buy" : "sell";
-    // DASE allows size or funds. Prefer size (XChange markets specify amount in
-    // base).
-    body.size = toStringOrNull(marketOrder.getOriginalAmount());
-    body.funds = null;
+    if (marketOrder.getType() == Order.OrderType.BID) {
+      body.size = null;
+      body.funds = toStringOrNull(marketOrder.getOriginalAmount());
+    } else {
+      body.size = toStringOrNull(marketOrder.getOriginalAmount());
+      body.funds = null;
+    }
     body.clientId = marketOrder.getUserReference();
     try {
       return placeOrder(body).getOrderId();
@@ -202,6 +205,12 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
       LimitOrder lo = (LimitOrder) order;
       requirePrecision("size", lo.getOriginalAmount(), cfg.sizePrecision);
       requirePrecision("price", lo.getLimitPrice(), cfg.pricePrecision);
+      if (lo.getLimitPrice() == null) {
+        throw new IllegalArgumentException("LimitOrder price is required");
+      }
+      if (lo.getLimitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+        throw new IllegalArgumentException("price must be positive");
+      }
       if (lo.getOriginalAmount() == null) {
         throw new IllegalArgumentException("LimitOrder size is required");
       }
@@ -211,15 +220,25 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
       }
     } else if (order instanceof MarketOrder) {
       MarketOrder mo = (MarketOrder) order;
-      if (mo.getOriginalAmount() != null) {
+      if (mo.getType() == Order.OrderType.BID) {
+        if (mo.getOriginalAmount() == null) {
+          throw new IllegalArgumentException("MarketOrder funds are required for buy");
+        }
+        requirePrecision("funds", mo.getOriginalAmount(), cfg.pricePrecision);
+        BigDecimal minFunds = parseDecimalOrNull(cfg.minFunds);
+        if (minFunds != null && minFunds.compareTo(mo.getOriginalAmount()) > 0) {
+          throw new IllegalArgumentException("funds below min_funds");
+        }
+      } else {
+        if (mo.getOriginalAmount() == null) {
+          throw new IllegalArgumentException("MarketOrder size is required for sell");
+        }
         requirePrecision("size", mo.getOriginalAmount(), cfg.sizePrecision);
         BigDecimal minOrderSize = parseDecimalOrNull(cfg.minOrderSize);
         if (minOrderSize != null && minOrderSize.compareTo(mo.getOriginalAmount()) > 0) {
           throw new IllegalArgumentException("size below min_order_size");
         }
       }
-      // funds path is not exposed explicitly; if needed, users should pass
-      // MarketOrder with amount.
     }
   }
 
