@@ -117,7 +117,8 @@ public interface DaseAuthenticated {
       @HeaderParam("ex-api-sign") ParamsDigest signer,
       @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
       DaseBatchGetOrdersRequest body)
-    
+      throws IOException;
+
   @GET
   @Path("/balances")
   DaseBalancesResponse getBalances(
