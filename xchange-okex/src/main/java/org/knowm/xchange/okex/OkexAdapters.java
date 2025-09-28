@@ -437,13 +437,20 @@ public class OkexAdapters {
   }
 
   public static String adaptInstrument(Instrument instrument) {
-    String result = instrument.toString();
-    if (Arrays.asList("USDT", "USDC").contains(instrument.getCounter().getCurrencyCode())) {
-      if (result != null && result.length() > 0) {
-        result = result.substring(0, result.length() - 1);
+    if (instrument instanceof CurrencyPair) {
+      CurrencyPair pair = (CurrencyPair) instrument;
+      String base = pair.getBase().getCurrencyCode();
+      String counter = pair.getCounter().getCurrencyCode();
+      // Adapt for USDC after delist: https://www.okx.com/docs-v5/log_en/#2025-08-20-unified-usd-orderbook-revamp
+      if ("USDC".equals(counter)) {
+        counter = "USD";
       }
+
+      return base + "-" + counter;
+    } else {
+      // OKX expects DASH, not slash
+      return instrument.toString().replace("/", "-");
     }
-    return result.replace('/', '-');
   }
 
   public static Trades adaptTrades(

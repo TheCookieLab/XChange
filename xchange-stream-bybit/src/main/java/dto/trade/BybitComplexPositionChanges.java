@@ -6,12 +6,18 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.jackson.Jacksonized;
 import org.knowm.xchange.dto.account.OpenPosition;
 
 @Data
 @SuperBuilder
-@NoArgsConstructor
+@Jacksonized
 @AllArgsConstructor
+@NoArgsConstructor
 public class BybitComplexPositionChanges extends OpenPosition {
 
   private int positionIdx;
