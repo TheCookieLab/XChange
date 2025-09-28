@@ -1,14 +1,5 @@
 package org.knowm.xchange.kraken.service;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.Date;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
@@ -22,6 +13,16 @@ import org.knowm.xchange.kraken.KrakenExchangeWiremock;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.account.params.DefaultRequestDepositAddressParams;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Date;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
 public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
 
   AccountService accountService = exchange.getAccountService();
@@ -30,7 +31,7 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
   void funding_history() throws IOException {
     var actual = accountService.getFundingHistory(null);
 
-    assertThat(actual).hasSize(1);
+    assertThat(actual).hasSize(2);
 
     var expected = FundingRecord.builder()
         .type(Type.DEPOSIT)
@@ -43,8 +44,7 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
         .date(Date.from(Instant.parse("2025-09-02T15:11:18.456Z")))
         .build();
 
-    assertThat(actual)
-        .first()
+    assertThat(actual.get(1))
         .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
         .usingRecursiveComparison()
         .isEqualTo(expected);
