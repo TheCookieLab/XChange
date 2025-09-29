@@ -16,23 +16,23 @@ public class DaseAccountServiceRaw extends DaseBaseService {
 
   public DaseUserProfile getUserProfile() throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getUserProfile(apiKey, signatureCreator, timestampFactory);
+    return daseAuth.getUserProfile(apiKey, signatureCreator, timestampFactory.createValue());
   }
 
   public ApiGetAccountTxnsOutput getAccountTransactions(Integer limit, String before)
       throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getAccountTransactions(apiKey, signatureCreator, timestampFactory, limit, before);
+    return daseAuth.getAccountTransactions(apiKey, signatureCreator, timestampFactory.createValue(), limit, before);
   }
 
   public DaseBalancesResponse getDaseBalances() throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getBalances(apiKey, signatureCreator, timestampFactory);
+    return daseAuth.getBalances(apiKey, signatureCreator, timestampFactory.createValue());
   }
 
   public DaseSingleBalance getDaseBalance(String currency) throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getBalance(currency, apiKey, signatureCreator, timestampFactory);
+    return daseAuth.getBalance(currency, apiKey, signatureCreator, timestampFactory.createValue());
   }
 }
 

@@ -24,7 +24,6 @@ import org.knowm.xchange.dase.dto.trade.DaseOrdersListResponse;
 import org.knowm.xchange.dase.dto.trade.DasePlaceOrderInput;
 import org.knowm.xchange.dase.dto.trade.DasePlaceOrderResponse;
 import si.mazi.rescu.ParamsDigest;
-import si.mazi.rescu.SynchronizedValueFactory;
 
 @Path("/v1")
 @Produces(MediaType.APPLICATION_JSON)
@@ -35,7 +34,7 @@ public interface DaseAuthenticated {
   DaseUserProfile getUserProfile(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp)
+      @HeaderParam("ex-api-timestamp") String timestamp)
       throws IOException;
 
   @GET
@@ -43,7 +42,7 @@ public interface DaseAuthenticated {
   ApiGetAccountTxnsOutput getAccountTransactions(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
+      @HeaderParam("ex-api-timestamp") String timestamp,
       @QueryParam("limit") Integer limit,
       @QueryParam("before") String before)
       throws IOException;
@@ -54,7 +53,7 @@ public interface DaseAuthenticated {
   DaseOrdersListResponse getOrders(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
+      @HeaderParam("ex-api-timestamp") String timestamp,
       @QueryParam("market") String market,
       @QueryParam("status") String status,
       @QueryParam("limit") Integer limit,
@@ -67,7 +66,7 @@ public interface DaseAuthenticated {
   DasePlaceOrderResponse placeOrder(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
+      @HeaderParam("ex-api-timestamp") String timestamp,
       DasePlaceOrderInput body)
       throws IOException;
 
@@ -76,7 +75,7 @@ public interface DaseAuthenticated {
   DaseOrder getOrder(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
+      @HeaderParam("ex-api-timestamp") String timestamp,
       @PathParam("order_id") String orderId)
       throws IOException;
 
@@ -85,7 +84,7 @@ public interface DaseAuthenticated {
   Void cancelOrder(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
+      @HeaderParam("ex-api-timestamp") String timestamp,
       @PathParam("order_id") String orderId)
       throws IOException;
 
@@ -95,7 +94,7 @@ public interface DaseAuthenticated {
   Void batchCancelOrders(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
+      @HeaderParam("ex-api-timestamp") String timestamp,
       DaseBatchCancelOrdersRequest body)
       throws IOException;
 
@@ -105,7 +104,7 @@ public interface DaseAuthenticated {
   Void cancelAllOrders(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
+      @HeaderParam("ex-api-timestamp") String timestamp,
       DaseCancelAllOrdersQuery body)
       throws IOException;
 
@@ -115,7 +114,7 @@ public interface DaseAuthenticated {
   DaseBatchGetOrdersResponse batchGetOrders(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp,
+      @HeaderParam("ex-api-timestamp") String timestamp,
       DaseBatchGetOrdersRequest body)
       throws IOException;
 
@@ -124,7 +123,7 @@ public interface DaseAuthenticated {
   DaseBalancesResponse getBalances(
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp)
+      @HeaderParam("ex-api-timestamp") String timestamp)
       throws IOException;
 
   @GET
@@ -133,7 +132,7 @@ public interface DaseAuthenticated {
       @PathParam("currency") String currency,
       @HeaderParam("ex-api-key") String apiKey,
       @HeaderParam("ex-api-sign") ParamsDigest signer,
-      @HeaderParam("ex-api-timestamp") SynchronizedValueFactory<String> timestamp)
+      @HeaderParam("ex-api-timestamp") String timestamp)
       throws IOException;
 }
 

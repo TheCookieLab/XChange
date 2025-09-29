@@ -41,6 +41,11 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
   }
 
   @Override
+  public OpenOrdersParams createOpenOrdersParams() {
+    return new DefaultOpenOrdersParamCurrencyPair(CurrencyPair.BTC_EUR);
+  }
+
+  @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
     String market = null;
     if (params instanceof DefaultOpenOrdersParamCurrencyPair) {

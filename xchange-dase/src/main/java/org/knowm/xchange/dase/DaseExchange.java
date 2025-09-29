@@ -13,14 +13,15 @@ public class DaseExchange extends BaseExchange {
     this.marketDataService = new DaseMarketDataService(this);
     this.accountService = new DaseAccountService(this);
     this.tradeService = new DaseTradeService(this);
-    this.accountService = new org.knowm.xchange.dase.service.DaseAccountService(this);
   }
 
   @Override
   public ExchangeSpecification getDefaultExchangeSpecification() {
     ExchangeSpecification spec = new ExchangeSpecification(this.getClass());
-    spec.setSslUri("https://api.dase.com");
-    spec.setHost("api.dase.com");
+    // spec.setSslUri("https://api.dase.com");
+    // spec.setHost("api.dase.com");
+    spec.setSslUri("https://api.staging.dase.com");
+    spec.setHost("api.staging.dase.com");
     spec.setExchangeName("Dase");
     spec.setExchangeDescription("Dase via XChange");
     return spec;
