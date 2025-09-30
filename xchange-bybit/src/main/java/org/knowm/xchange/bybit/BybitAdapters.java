@@ -239,6 +239,7 @@ public class BybitAdapters {
         .tradingFee(instrumentInfo.getDeliveryFeeRate())
         .volumeScale(instrumentInfo.getLotSizeFilter().getQtyStep().scale())
         .amountStepSize(instrumentInfo.getLotSizeFilter().getQtyStep())
+        .counterMinimumAmount(instrumentInfo.getLotSizeFilter().getMinNotionalValue())
         .build();
   }
 
