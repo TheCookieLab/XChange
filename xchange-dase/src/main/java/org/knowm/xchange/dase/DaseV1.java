@@ -45,7 +45,12 @@ public interface DaseV1 {
 
   @GET
   @Path("/markets/{market}/candles")
-  DaseCandlesResponse getCandles(@PathParam("market") String market) throws IOException;
+  DaseCandlesResponse getCandles(
+      @PathParam("market") String market,
+      @QueryParam("granularity") String granularity,
+      @QueryParam("from") Long from,
+      @QueryParam("to") Long to)
+      throws IOException;
 
   class DaseTradesResponse {
     public List<DaseTrade> trades;

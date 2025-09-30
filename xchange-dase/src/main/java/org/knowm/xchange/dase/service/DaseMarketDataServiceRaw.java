@@ -52,7 +52,13 @@ public class DaseMarketDataServiceRaw extends BaseExchangeService<Exchange> impl
   }
 
   public DaseCandlesResponse getCandles(String market) throws IOException {
-    return dase.getCandles(market);
+    // default granularity and full range left to server if unspecified
+    return dase.getCandles(market, null, null, null);
+  }
+
+  public DaseCandlesResponse getCandles(String market, String granularity, Long from, Long to)
+      throws IOException {
+    return dase.getCandles(market, granularity, from, to);
   }
 
   public List<CurrencyPair> getExchangeSymbols() throws IOException {
