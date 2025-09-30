@@ -26,8 +26,8 @@ Basic usage is very simple: Create an `Exchange` instance, get the appropriate s
 | gate.io          | [![status](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml)            |
 | kraken           | [![status](https://github.com/knowm/XChange/actions/workflows/kraken.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/kraken.yaml)                  |
 | mexc             | [![status](https://github.com/knowm/XChange/actions/workflows/mexc.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/mexc.yaml)                      |
-| stream-kraken-v2 | [![status](https://github.com/knowm/XChange/actions/workflows/kraken-ws-v2.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/kraken-ws-v2.yaml)      |
 | stream-bitfinex  | [![status](https://github.com/knowm/XChange/actions/workflows/stream-bitfinex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/stream-bitfinex.yml) |
+| stream-kraken-v2 | [![status](https://github.com/knowm/XChange/actions/workflows/stream-kraken-v2.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/stream-kraken-v2.yaml)      |
 
 ## REST API
 #### Public Market Data
