@@ -2,6 +2,7 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assume.assumeTrue;
 
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -70,7 +71,7 @@ public class TradeServiceIntegration {
     // Smoke: call getOrder with a dummy id; only assert no exceptions and non-null structure when available
     // In real runs, replace with a known recent order id if available via env config
     String maybeOrderId = System.getProperty("COINBASE_V3_TEST_ORDER_ID");
-    org.junit.Assume.assumeTrue(maybeOrderId != null && !maybeOrderId.isEmpty());
+    assumeTrue(maybeOrderId != null && !maybeOrderId.isEmpty());
 
     DefaultQueryOrderParam param = new DefaultQueryOrderParam(maybeOrderId);
     assertNotNull(tradeService.getOrder(param));

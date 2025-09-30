@@ -279,7 +279,7 @@ public final class CoinbaseAdapters {
     if (candleIntervalSeconds == null) {
       return null;
     }
-    
+
     switch (candleIntervalSeconds.intValue()) {
       case 60:
         return "ONE_MINUTE";
