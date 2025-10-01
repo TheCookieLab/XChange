@@ -1,18 +1,19 @@
 package org.knowm.xchange.dto.account;
 
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.knowm.xchange.instrument.Instrument;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.Instant;
+
 @Data
 @SuperBuilder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class OpenPosition implements Serializable {
 
   private String id;
