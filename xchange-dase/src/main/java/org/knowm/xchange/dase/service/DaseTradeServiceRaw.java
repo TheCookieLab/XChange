@@ -46,43 +46,43 @@ public class DaseTradeServiceRaw extends BaseExchangeService<Exchange> implement
   public DaseOrdersListResponse getOrders(String market, String status, Integer limit, String before)
       throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getOrders(apiKey, signatureCreator, timestampFactory, market, status, limit, before);
+    return daseAuth.getOrders(apiKey, signatureCreator, timestampFactory.createValue(), market, status, limit, before);
   }
 
   public DasePlaceOrderResponse placeOrder(DasePlaceOrderInput body) throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.placeOrder(apiKey, signatureCreator, timestampFactory, body);
+    return daseAuth.placeOrder(apiKey, signatureCreator, timestampFactory.createValue(), body);
   }
 
   public DaseOrder getOrder(String orderId) throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getOrder(apiKey, signatureCreator, timestampFactory, orderId);
+    return daseAuth.getOrder(apiKey, signatureCreator, timestampFactory.createValue(), orderId);
   }
 
   public void cancelOrderRaw(String orderId) throws IOException {
     ensureCredentialsPresent();
-    daseAuth.cancelOrder(apiKey, signatureCreator, timestampFactory, orderId);
+    daseAuth.cancelOrder(apiKey, signatureCreator, timestampFactory.createValue(), orderId);
   }
 
   public void batchCancelOrdersRaw(List<String> orderIds) throws IOException {
     ensureCredentialsPresent();
     DaseBatchCancelOrdersRequest req = new DaseBatchCancelOrdersRequest();
     req.orderIds = orderIds;
-    daseAuth.batchCancelOrders(apiKey, signatureCreator, timestampFactory, req);
+    daseAuth.batchCancelOrders(apiKey, signatureCreator, timestampFactory.createValue(), req);
   }
 
   public void cancelAllOrdersRaw(String market) throws IOException {
     ensureCredentialsPresent();
     DaseCancelAllOrdersQuery q = new DaseCancelAllOrdersQuery();
     q.market = market;
-    daseAuth.cancelAllOrders(apiKey, signatureCreator, timestampFactory, q);
+    daseAuth.cancelAllOrders(apiKey, signatureCreator, timestampFactory.createValue(), q);
   }
 
   public DaseBatchGetOrdersResponse batchGetOrdersRaw(List<String> orderIds) throws IOException {
     ensureCredentialsPresent();
     DaseBatchGetOrdersRequest req = new DaseBatchGetOrdersRequest();
     req.orderIds = orderIds;
-    return daseAuth.batchGetOrders(apiKey, signatureCreator, timestampFactory, req);
+    return daseAuth.batchGetOrders(apiKey, signatureCreator, timestampFactory.createValue(), req);
   }
 }
 

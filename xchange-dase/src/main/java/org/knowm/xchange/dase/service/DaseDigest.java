@@ -25,18 +25,26 @@ public class DaseDigest extends BaseParamsDigest {
 
   @Override
   public String digestParams(RestInvocation restInvocation) {
-    final String timestamp =
-        String.valueOf(
-            restInvocation.getParamValue(HeaderParam.class, "ex-api-timestamp"));
+    final String timestamp = String.valueOf(
+        restInvocation.getParamValue(HeaderParam.class, "ex-api-timestamp"));
 
     final String method = restInvocation.getHttpMethod().toUpperCase();
 
-    final String path = "/" + restInvocation.getPath();
+    String rawPath = restInvocation.getPath();
+    if (rawPath == null) {
+      rawPath = "";
+    }
+    // Normalize to exactly one leading slash to avoid signature mismatches like "//v1/orders"
+    final String path = rawPath.startsWith("/") ? rawPath : "/" + rawPath;
+
     final String query = restInvocation.getQueryString();
-    final String pathWithQuery =
-        (query == null || query.isEmpty())
-            ? path
-            : (query.startsWith("?") ? path + query : path + "?" + query);
+    final boolean includeQueryInSignature = "GET".equals(method);
+    final String pathWithQuery;
+    if (includeQueryInSignature && query != null && !query.isEmpty()) {
+      pathWithQuery = query.startsWith("?") ? (path + query) : (path + "?" + query);
+    } else {
+      pathWithQuery = path;
+    }
 
     final String body = restInvocation.getRequestBody() == null ? "" : restInvocation.getRequestBody();
 
