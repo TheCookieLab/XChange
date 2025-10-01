@@ -31,5 +31,3 @@ public class DasePlaceOrderInput {
   @JsonProperty("client_id")
   public String clientId; // optional
 }
-
-

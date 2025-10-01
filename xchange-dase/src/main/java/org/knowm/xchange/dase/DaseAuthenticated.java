@@ -14,7 +14,6 @@ import java.io.IOException;
 import org.knowm.xchange.dase.dto.account.ApiGetAccountTxnsOutput;
 import org.knowm.xchange.dase.dto.account.DaseBalancesResponse;
 import org.knowm.xchange.dase.dto.account.DaseSingleBalance;
-import org.knowm.xchange.dase.dto.user.DaseUserProfile;
 import org.knowm.xchange.dase.dto.trade.DaseBatchCancelOrdersRequest;
 import org.knowm.xchange.dase.dto.trade.DaseBatchGetOrdersRequest;
 import org.knowm.xchange.dase.dto.trade.DaseBatchGetOrdersResponse;
@@ -23,6 +22,7 @@ import org.knowm.xchange.dase.dto.trade.DaseOrder;
 import org.knowm.xchange.dase.dto.trade.DaseOrdersListResponse;
 import org.knowm.xchange.dase.dto.trade.DasePlaceOrderInput;
 import org.knowm.xchange.dase.dto.trade.DasePlaceOrderResponse;
+import org.knowm.xchange.dase.dto.user.DaseUserProfile;
 import si.mazi.rescu.ParamsDigest;
 
 @Path("/v1")
@@ -135,5 +135,3 @@ public interface DaseAuthenticated {
       @HeaderParam("ex-api-timestamp") String timestamp)
       throws IOException;
 }
-
-

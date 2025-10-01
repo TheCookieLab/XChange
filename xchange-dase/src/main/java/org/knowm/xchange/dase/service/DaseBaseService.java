@@ -8,9 +8,7 @@ import org.knowm.xchange.service.BaseExchangeService;
 import org.knowm.xchange.service.BaseService;
 import si.mazi.rescu.SynchronizedValueFactory;
 
-/**
- * Holds shared auth state (api key, signer, timestamp factory) for DASE services.
- */
+/** Holds shared auth state (api key, signer, timestamp factory) for DASE services. */
 public class DaseBaseService extends BaseExchangeService<Exchange> implements BaseService {
 
   protected final String apiKey;
@@ -42,5 +40,3 @@ public class DaseBaseService extends BaseExchangeService<Exchange> implements Ba
     }
   }
 }
-
-

@@ -9,8 +9,6 @@ import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -21,6 +19,8 @@ import org.knowm.xchange.dase.dto.trade.DasePlaceOrderResponse;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 public class DaseTradeServicePlaceOrderTest {
 
@@ -45,7 +45,8 @@ public class DaseTradeServicePlaceOrderTest {
             .build();
     lo.addOrderFlag(DaseOrderFlags.POST_ONLY);
 
-    ArgumentCaptor<DasePlaceOrderInput> bodyCap = ArgumentCaptor.forClass(DasePlaceOrderInput.class);
+    ArgumentCaptor<DasePlaceOrderInput> bodyCap =
+        ArgumentCaptor.forClass(DasePlaceOrderInput.class);
     doAnswer(inv -> new DasePlaceOrderResponse("123e4567-e89b-12d3-a456-426614174000"))
         .when(svc)
         .placeOrder(any(DasePlaceOrderInput.class));
@@ -66,13 +67,16 @@ public class DaseTradeServicePlaceOrderTest {
   }
 
   @Test
-  public void placeMarketOrder_buy_setsFunds() throws Exception {
+  public void placeMarketOrder_buy_setsSize() throws Exception {
     DaseTradeService svc = createSpyService();
     doNothing().when(svc).validateOrderLimits(any());
 
-    MarketOrder mo = new MarketOrder(Order.OrderType.BID, new BigDecimal("25"), CurrencyPair.ADA_EUR);
+    // MarketOrder.originalAmount = 0.5 ADA (base currency)
+    MarketOrder mo =
+        new MarketOrder(Order.OrderType.BID, new BigDecimal("0.5"), CurrencyPair.ADA_EUR);
 
-    ArgumentCaptor<DasePlaceOrderInput> bodyCap = ArgumentCaptor.forClass(DasePlaceOrderInput.class);
+    ArgumentCaptor<DasePlaceOrderInput> bodyCap =
+        ArgumentCaptor.forClass(DasePlaceOrderInput.class);
     doAnswer(inv -> new DasePlaceOrderResponse("123e4567-e89b-12d3-a456-426614174001"))
         .when(svc)
         .placeOrder(any(DasePlaceOrderInput.class));
@@ -86,8 +90,9 @@ public class DaseTradeServicePlaceOrderTest {
     assertThat(body.market).isEqualTo("ADA-EUR");
     assertThat(body.type).isEqualTo("market");
     assertThat(body.side).isEqualTo("buy");
-    assertThat(body.funds).isEqualTo("25");
-    assertThat(body.size).isNull();
+    // Corrected: market buy uses size (base currency), matching XChange conventions
+    assertThat(body.size).isEqualTo("0.5");
+    assertThat(body.funds).isNull();
   }
 
   @Test
@@ -95,9 +100,11 @@ public class DaseTradeServicePlaceOrderTest {
     DaseTradeService svc = createSpyService();
     doNothing().when(svc).validateOrderLimits(any());
 
-    MarketOrder mo = new MarketOrder(Order.OrderType.ASK, new BigDecimal("0.75"), CurrencyPair.ADA_EUR);
+    MarketOrder mo =
+        new MarketOrder(Order.OrderType.ASK, new BigDecimal("0.75"), CurrencyPair.ADA_EUR);
 
-    ArgumentCaptor<DasePlaceOrderInput> bodyCap = ArgumentCaptor.forClass(DasePlaceOrderInput.class);
+    ArgumentCaptor<DasePlaceOrderInput> bodyCap =
+        ArgumentCaptor.forClass(DasePlaceOrderInput.class);
     doAnswer(inv -> new DasePlaceOrderResponse("123e4567-e89b-12d3-a456-426614174002"))
         .when(svc)
         .placeOrder(any(DasePlaceOrderInput.class));
@@ -115,5 +122,3 @@ public class DaseTradeServicePlaceOrderTest {
     assertThat(body.funds).isNull();
   }
 }
-
-

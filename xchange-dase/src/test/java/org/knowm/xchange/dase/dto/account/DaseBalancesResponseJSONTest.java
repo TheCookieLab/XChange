@@ -10,7 +10,8 @@ public class DaseBalancesResponseJSONTest {
 
   @Test
   public void unmarshal() throws Exception {
-    String json = "{\n  \"balances\": [\n    {\n      \"id\": \"acc-1\",\n      \"currency\": \"BTC\",\n      \"total\": \"1.23\",\n      \"available\": \"1.00\",\n      \"blocked\": \"0.23\"\n    }\n  ]\n}";
+    String json =
+        "{\n  \"balances\": [\n    {\n      \"id\": \"acc-1\",\n      \"currency\": \"BTC\",\n      \"total\": \"1.23\",\n      \"available\": \"1.00\",\n      \"blocked\": \"0.23\"\n    }\n  ]\n}";
     ObjectMapper mapper = new ObjectMapper();
     DaseBalancesResponse dto = mapper.readValue(json, DaseBalancesResponse.class);
     assertThat(dto.getBalances()).hasSize(1);
@@ -22,5 +23,3 @@ public class DaseBalancesResponseJSONTest {
     assertThat(b.getBlocked()).isEqualTo(new BigDecimal("0.23"));
   }
 }
-
-

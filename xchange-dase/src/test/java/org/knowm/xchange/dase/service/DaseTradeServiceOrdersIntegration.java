@@ -1,8 +1,8 @@
 package org.knowm.xchange.dase.service;
 
-import static org.junit.Assume.assumeTrue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -12,17 +12,17 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.dase.DaseExchange;
 import org.knowm.xchange.dase.DaseAdapters;
+import org.knowm.xchange.dase.DaseExchange;
 import org.knowm.xchange.dase.dto.marketdata.DaseMarketConfig;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 
 /**
- * Authenticated orders integration tests (smoke-level) for place/cancel and open orders.
- * Skips when credentials are missing; placement also requires DASE_TEST_ENABLE_ORDERS=1.
- * Run with: mvn clean verify -DskipIntegrationTests=false
+ * Authenticated orders integration tests (smoke-level) for place/cancel and open orders. Skips when
+ * credentials are missing; placement also requires DASE_TEST_ENABLE_ORDERS=1. Run with: mvn clean
+ * verify -DskipIntegrationTests=false
  */
 public class DaseTradeServiceOrdersIntegration {
 
@@ -68,7 +68,8 @@ public class DaseTradeServiceOrdersIntegration {
     // Determine minimal valid size/price from market config
     int sizePrecision = cfg == null || cfg.sizePrecision == null ? 8 : cfg.sizePrecision;
     int pricePrecision = cfg == null || cfg.pricePrecision == null ? 2 : cfg.pricePrecision;
-    BigDecimal minSize = parseDecimalOr(cfg == null ? null : cfg.minOrderSize, new BigDecimal("0.00002"));
+    BigDecimal minSize =
+        parseDecimalOr(cfg == null ? null : cfg.minOrderSize, new BigDecimal("0.00002"));
 
     // Pick a very low bid price to avoid execution and reduce required funds
     BigDecimal refBid = md.getTicker(market).getBid();
@@ -115,5 +116,3 @@ public class DaseTradeServiceOrdersIntegration {
     }
   }
 }
-
-

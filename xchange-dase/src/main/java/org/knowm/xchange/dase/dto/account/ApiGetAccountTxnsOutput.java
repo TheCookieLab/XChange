@@ -10,8 +10,7 @@ public class ApiGetAccountTxnsOutput {
   private final List<ApiAccountTxn> transactions;
 
   @JsonCreator
-  public ApiGetAccountTxnsOutput(
-      @JsonProperty("transactions") List<ApiAccountTxn> transactions) {
+  public ApiGetAccountTxnsOutput(@JsonProperty("transactions") List<ApiAccountTxn> transactions) {
     this.transactions = transactions;
   }
 
@@ -19,5 +18,3 @@ public class ApiGetAccountTxnsOutput {
     return transactions;
   }
 }
-
-

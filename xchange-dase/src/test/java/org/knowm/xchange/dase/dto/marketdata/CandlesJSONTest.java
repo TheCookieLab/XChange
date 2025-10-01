@@ -10,8 +10,9 @@ public class CandlesJSONTest {
 
   @Test
   public void unmarshal() throws Exception {
-    InputStream is = CandlesJSONTest.class.getResourceAsStream(
-        "/org/knowm/xchange/dase/dto/marketdata/example-candles.json");
+    InputStream is =
+        CandlesJSONTest.class.getResourceAsStream(
+            "/org/knowm/xchange/dase/dto/marketdata/example-candles.json");
     ObjectMapper mapper = new ObjectMapper();
     DaseCandlesResponse res = mapper.readValue(is, DaseCandlesResponse.class);
 

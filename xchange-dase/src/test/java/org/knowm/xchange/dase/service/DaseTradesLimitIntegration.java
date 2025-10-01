@@ -10,8 +10,8 @@ import org.knowm.xchange.dase.DaseExchange;
 import org.knowm.xchange.dase.dto.marketdata.DaseTrade;
 
 /**
- * Public trades with limit parameter smoke test.
- * Run with: mvn clean verify -DskipIntegrationTests=false
+ * Public trades with limit parameter smoke test. Run with: mvn clean verify
+ * -DskipIntegrationTests=false
  */
 public class DaseTradesLimitIntegration {
 
@@ -28,5 +28,3 @@ public class DaseTradesLimitIntegration {
     assertNotNull(trades);
   }
 }
-
-

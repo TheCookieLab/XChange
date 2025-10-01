@@ -32,5 +32,3 @@ public class DaseSingleBalance {
     return blocked;
   }
 }
-
-

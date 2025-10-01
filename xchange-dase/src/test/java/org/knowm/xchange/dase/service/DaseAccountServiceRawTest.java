@@ -20,19 +20,20 @@ public class DaseAccountServiceRawTest {
 
   @Test
   public void deserialize_account_transactions_stub() throws Exception {
-    String json = "{\n" +
-        "  \"transactions\": [\n" +
-        "    {\n" +
-        "      \"id\": \"6a0b7c40-1e16-4e1c-a4c5-1d9fdf7e9d21\",\n" +
-        "      \"currency\": \"EUR\",\n" +
-        "      \"txn_type\": \"deposit\",\n" +
-        "      \"amount\": \"100.00\",\n" +
-        "      \"created_at\": 1719354237834,\n" +
-        "      \"trade_id\": null,\n" +
-        "      \"funding_id\": \"b7c2d8e1-3f4a-4b5c-8d9e-1f2a3b4c5d6e\"\n" +
-        "    }\n" +
-        "  ]\n" +
-        "}";
+    String json =
+        "{\n"
+            + "  \"transactions\": [\n"
+            + "    {\n"
+            + "      \"id\": \"6a0b7c40-1e16-4e1c-a4c5-1d9fdf7e9d21\",\n"
+            + "      \"currency\": \"EUR\",\n"
+            + "      \"txn_type\": \"deposit\",\n"
+            + "      \"amount\": \"100.00\",\n"
+            + "      \"created_at\": 1719354237834,\n"
+            + "      \"trade_id\": null,\n"
+            + "      \"funding_id\": \"b7c2d8e1-3f4a-4b5c-8d9e-1f2a3b4c5d6e\"\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
     ObjectMapper mapper = new ObjectMapper();
     ApiGetAccountTxnsOutput dto = mapper.readValue(json, ApiGetAccountTxnsOutput.class);
     assertThat(dto.getTransactions()).hasSize(1);
@@ -48,19 +49,20 @@ public class DaseAccountServiceRawTest {
 
   @Test
   public void deserialize_account_transactions_with_optional_null_funding_id() throws Exception {
-    String json = "{\n" +
-        "  \"transactions\": [\n" +
-        "    {\n" +
-        "      \"id\": \"7e2f8c91-4d5e-4a6b-9c8d-2e3f4a5b6c7d\",\n" +
-        "      \"currency\": \"USD\",\n" +
-        "      \"txn_type\": \"withdrawal\",\n" +
-        "      \"amount\": \"50.25\",\n" +
-        "      \"created_at\": 1719354300000,\n" +
-        "      \"trade_id\": \"t456\",\n" +
-        "      \"funding_id\": null\n" +
-        "    }\n" +
-        "  ]\n" +
-        "}";
+    String json =
+        "{\n"
+            + "  \"transactions\": [\n"
+            + "    {\n"
+            + "      \"id\": \"7e2f8c91-4d5e-4a6b-9c8d-2e3f4a5b6c7d\",\n"
+            + "      \"currency\": \"USD\",\n"
+            + "      \"txn_type\": \"withdrawal\",\n"
+            + "      \"amount\": \"50.25\",\n"
+            + "      \"created_at\": 1719354300000,\n"
+            + "      \"trade_id\": \"t456\",\n"
+            + "      \"funding_id\": null\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
     ObjectMapper mapper = new ObjectMapper();
     ApiGetAccountTxnsOutput dto = mapper.readValue(json, ApiGetAccountTxnsOutput.class);
     assertThat(dto.getTransactions()).hasSize(1);
@@ -74,5 +76,3 @@ public class DaseAccountServiceRawTest {
     assertThat(t.getFundingId()).isNull(); // Demonstrating optional nature
   }
 }
-
-

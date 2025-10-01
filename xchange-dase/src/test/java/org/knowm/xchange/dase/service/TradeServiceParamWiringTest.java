@@ -18,7 +18,8 @@ public class TradeServiceParamWiringTest {
     DaseTradeService svc = new DaseTradeService(ex);
 
     // When market precision is not known yet via API (live call), skip full invocation.
-    // Construct a LimitOrder with excessive precision to verify local validation once market config is available
+    // Construct a LimitOrder with excessive precision to verify local validation once market config
+    // is available
     LimitOrder lo =
         new LimitOrder.Builder(org.knowm.xchange.dto.Order.OrderType.BID, CurrencyPair.BTC_EUR)
             .limitPrice(new BigDecimal("1.123456789"))
@@ -28,5 +29,3 @@ public class TradeServiceParamWiringTest {
     assertThatThrownBy(() -> svc.placeLimitOrder(lo)).isInstanceOf(Exception.class);
   }
 }
-
-

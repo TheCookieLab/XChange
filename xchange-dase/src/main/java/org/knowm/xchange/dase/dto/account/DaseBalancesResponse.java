@@ -17,5 +17,3 @@ public class DaseBalancesResponse {
     return balances;
   }
 }
-
-

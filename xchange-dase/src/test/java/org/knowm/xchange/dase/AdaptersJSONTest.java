@@ -68,9 +68,11 @@ public class AdaptersJSONTest {
     assertThat(tr.getTrades()).hasSize(2);
     assertThat(tr.getTrades().get(0).getInstrument()).isEqualTo(PAIR);
     // maker_side: sell -> taker side buy -> BID
-    assertThat(tr.getTrades().get(0).getType()).isEqualTo(org.knowm.xchange.dto.Order.OrderType.BID);
+    assertThat(tr.getTrades().get(0).getType())
+        .isEqualTo(org.knowm.xchange.dto.Order.OrderType.BID);
     // maker_side: buy -> taker side sell -> ASK
-    assertThat(tr.getTrades().get(1).getType()).isEqualTo(org.knowm.xchange.dto.Order.OrderType.ASK);
+    assertThat(tr.getTrades().get(1).getType())
+        .isEqualTo(org.knowm.xchange.dto.Order.OrderType.ASK);
   }
 
   @Test

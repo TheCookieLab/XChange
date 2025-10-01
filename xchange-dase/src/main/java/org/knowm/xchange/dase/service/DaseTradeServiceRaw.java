@@ -45,8 +45,8 @@ public class DaseTradeServiceRaw extends BaseExchangeService<Exchange> implement
     }
   }
 
-  public DaseOrdersListResponse getOrders(String market, String status, Integer limit, String before)
-      throws IOException {
+  public DaseOrdersListResponse getOrders(
+      String market, String status, Integer limit, String before) throws IOException {
     ensureCredentialsPresent();
     try {
       return daseAuth.getOrders(
@@ -116,5 +116,3 @@ public class DaseTradeServiceRaw extends BaseExchangeService<Exchange> implement
     }
   }
 }
-
-

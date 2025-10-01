@@ -9,5 +9,3 @@ public class DaseBatchCancelOrdersRequest {
   @JsonProperty("order_ids")
   public List<String> orderIds;
 }
-
-

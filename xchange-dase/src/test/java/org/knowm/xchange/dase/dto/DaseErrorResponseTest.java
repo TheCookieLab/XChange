@@ -42,5 +42,3 @@ public class DaseErrorResponseTest {
     assertEquals("DaseErrorResponse{type='Unauthorized', message='Invalid API key'}", result);
   }
 }
-
-

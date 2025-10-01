@@ -13,8 +13,9 @@ import org.knowm.xchange.dase.dto.marketdata.DaseCandlesResponse;
 import org.knowm.xchange.dase.dto.marketdata.DaseMarketConfig;
 
 /**
- * Live integration tests for markets, single market, candles (with timeframe/from/to), and exchange symbols.
- * Picked up by Failsafe using *Integration.java when run with: mvn clean verify -DskipIntegrationTests=false
+ * Live integration tests for markets, single market, candles (with timeframe/from/to), and exchange
+ * symbols. Picked up by Failsafe using *Integration.java when run with: mvn clean verify
+ * -DskipIntegrationTests=false
  */
 public class DaseMarketsAndCandlesIntegration {
 

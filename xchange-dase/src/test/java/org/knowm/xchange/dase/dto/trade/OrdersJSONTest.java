@@ -31,5 +31,3 @@ public class OrdersJSONTest {
     assertThat(res.getOrderId()).isEqualTo("12345678-1234-1234-1234-123456789abc");
   }
 }
-
-
