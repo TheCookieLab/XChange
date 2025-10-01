@@ -21,5 +21,3 @@ public class DaseAdaptersMarketStringTest {
     assertThat(DaseAdapters.toCurrencyPair("BTC-EUR-EXTRA")).isNull();
   }
 }
-
-

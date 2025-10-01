@@ -61,5 +61,3 @@ public class ApiAccountTxn {
     return fundingId;
   }
 }
-
-

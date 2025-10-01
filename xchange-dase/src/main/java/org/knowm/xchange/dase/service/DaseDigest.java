@@ -10,8 +10,7 @@ import si.mazi.rescu.RestInvocation;
 /**
  * HMAC-SHA256 signer for DASE.
  *
- * Message: {timestamp}{METHOD}{PATH+QUERY}{BODY}
- * Output: Base64-encoded signature string.
+ * <p>Message: {timestamp}{METHOD}{PATH+QUERY}{BODY} Output: Base64-encoded signature string.
  */
 public class DaseDigest extends BaseParamsDigest {
 
@@ -25,8 +24,8 @@ public class DaseDigest extends BaseParamsDigest {
 
   @Override
   public String digestParams(RestInvocation restInvocation) {
-    final String timestamp = String.valueOf(
-        restInvocation.getParamValue(HeaderParam.class, "ex-api-timestamp"));
+    final String timestamp =
+        String.valueOf(restInvocation.getParamValue(HeaderParam.class, "ex-api-timestamp"));
 
     final String method = restInvocation.getHttpMethod().toUpperCase();
 
@@ -38,15 +37,15 @@ public class DaseDigest extends BaseParamsDigest {
     final String path = rawPath.startsWith("/") ? rawPath : "/" + rawPath;
 
     final String query = restInvocation.getQueryString();
-    final boolean includeQueryInSignature = "GET".equals(method);
     final String pathWithQuery;
-    if (includeQueryInSignature && query != null && !query.isEmpty()) {
+    if (query != null && !query.isEmpty()) {
       pathWithQuery = query.startsWith("?") ? (path + query) : (path + "?" + query);
     } else {
       pathWithQuery = path;
     }
 
-    final String body = restInvocation.getRequestBody() == null ? "" : restInvocation.getRequestBody();
+    final String body =
+        restInvocation.getRequestBody() == null ? "" : restInvocation.getRequestBody();
 
     final String message = timestamp + method + pathWithQuery + body;
 
@@ -56,9 +55,7 @@ public class DaseDigest extends BaseParamsDigest {
     return Base64.getEncoder().encodeToString(raw);
   }
 
-  /**
-   * Helper for direct signing in unit tests.
-   */
+  /** Helper for direct signing in unit tests. */
   public String sign(String timestamp, String method, String pathWithQuery, String body) {
     final String payload =
         String.valueOf(timestamp)
@@ -71,5 +68,3 @@ public class DaseDigest extends BaseParamsDigest {
     return Base64.getEncoder().encodeToString(mac.doFinal());
   }
 }
-
-

@@ -33,5 +33,3 @@ public class DaseAdaptersAccountInfoTest {
     assertThat(usdc.getFrozen()).isEqualTo(new BigDecimal("30.00"));
   }
 }
-
-

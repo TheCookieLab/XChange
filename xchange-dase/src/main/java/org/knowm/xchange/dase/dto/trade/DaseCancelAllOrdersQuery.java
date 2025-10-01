@@ -10,5 +10,3 @@ public class DaseCancelAllOrdersQuery {
   @JsonProperty("market")
   public String market; // optional: cancel all for a market, if supported by API
 }
-
-

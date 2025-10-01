@@ -14,8 +14,8 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 
 /**
- * Live adapter-level integration tests for public market data. Picked up by Failsafe using *Integration.java
- * Run with: mvn clean verify -DskipIntegrationTests=false
+ * Live adapter-level integration tests for public market data. Picked up by Failsafe using
+ * *Integration.java Run with: mvn clean verify -DskipIntegrationTests=false
  */
 public class DaseMarketDataServiceIntegration {
 
@@ -52,5 +52,3 @@ public class DaseMarketDataServiceIntegration {
     assertNotNull(tr);
   }
 }
-
-

@@ -5,12 +5,12 @@ import java.util.List;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.dase.DaseAdapters;
 import org.knowm.xchange.dase.dto.account.ApiGetAccountTxnsOutput;
-import org.knowm.xchange.dto.account.FundingRecord;
-import org.knowm.xchange.service.account.AccountService;
-import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.dase.dto.account.DaseBalancesResponse;
 import org.knowm.xchange.dase.dto.user.DaseUserProfile;
 import org.knowm.xchange.dto.account.AccountInfo;
+import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.service.account.AccountService;
+import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 
 public class DaseAccountService extends DaseAccountServiceRaw implements AccountService {
 
@@ -56,7 +56,7 @@ public class DaseAccountService extends DaseAccountServiceRaw implements Account
       this.before = before;
     }
   }
-    
+
   public AccountInfo getAccountInfo() throws IOException {
     DaseUserProfile profile = getUserProfile();
     DaseBalancesResponse balances = getDaseBalances();
@@ -64,5 +64,3 @@ public class DaseAccountService extends DaseAccountServiceRaw implements Account
         profile == null ? null : profile.getPortfolioId(), balances);
   }
 }
-
-

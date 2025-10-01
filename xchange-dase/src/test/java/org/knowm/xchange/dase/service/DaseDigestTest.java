@@ -25,5 +25,3 @@ public class DaseDigestTest {
     assertThat(signature).isEqualTo("t7y7D/gZgY+pEugfGN4GhEvZf9Cuee3fTQdDAl8s0rY=");
   }
 }
-
-

@@ -9,5 +9,3 @@ public class DaseBatchGetOrdersRequest {
   @JsonProperty("order_ids")
   public List<String> orderIds;
 }
-
-

@@ -75,5 +75,3 @@ public class DaseApiExceptionTest {
     assertThat(ex.getMessage()).isEqualTo("Invalid size");
   }
 }
-
-

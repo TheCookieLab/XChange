@@ -33,5 +33,3 @@ public class DaseErrorResponse {
     return "DaseErrorResponse{type='" + type + "', message='" + message + "'}";
   }
 }
-
-

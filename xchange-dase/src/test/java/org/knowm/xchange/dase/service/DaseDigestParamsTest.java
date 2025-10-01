@@ -11,7 +11,8 @@ public class DaseDigestParamsTest {
 
   @Test
   public void digestParams_buildsSameAsHelper() {
-    String secret = "NbMBz+ZLqON9yc/tTA8+5eynWD/37pk6b5yq28q9yH99aJyz4fgifpN1wOv28ReSubHvcsT4Yaq8+c12XjArdg==";
+    String secret =
+        "NbMBz+ZLqON9yc/tTA8+5eynWD/37pk6b5yq28q9yH99aJyz4fgifpN1wOv28ReSubHvcsT4Yaq8+c12XjArdg==";
     String method = "GET";
     String pathWithQuery = "/v1/orders?status=open";
     String timestamp = "1719325936838";
@@ -24,7 +25,8 @@ public class DaseDigestParamsTest {
 
     // Mock RestInvocation to mirror the above values
     RestInvocation inv = Mockito.mock(RestInvocation.class);
-    when(inv.getParamValue(jakarta.ws.rs.HeaderParam.class, "ex-api-timestamp")).thenReturn(timestamp);
+    when(inv.getParamValue(jakarta.ws.rs.HeaderParam.class, "ex-api-timestamp"))
+        .thenReturn(timestamp);
     when(inv.getHttpMethod()).thenReturn(method);
     when(inv.getPath()).thenReturn("v1/orders");
     when(inv.getQueryString()).thenReturn("?status=open");
@@ -34,5 +36,3 @@ public class DaseDigestParamsTest {
     assertThat(actual).isEqualTo(expected);
   }
 }
-
-

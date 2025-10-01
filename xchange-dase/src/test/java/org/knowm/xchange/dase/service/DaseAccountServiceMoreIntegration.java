@@ -1,7 +1,7 @@
 package org.knowm.xchange.dase.service;
 
-import static org.junit.Assume.assumeTrue;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assume.assumeTrue;
 
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
@@ -12,9 +12,9 @@ import org.knowm.xchange.dase.dto.account.DaseSingleBalance;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 
 /**
- * Additional authenticated integration tests for single balance and funding history.
- * Skips when DASE_API_KEY/DASE_API_SECRET are not present in the environment.
- * Run with: mvn clean verify -DskipIntegrationTests=false
+ * Additional authenticated integration tests for single balance and funding history. Skips when
+ * DASE_API_KEY/DASE_API_SECRET are not present in the environment. Run with: mvn clean verify
+ * -DskipIntegrationTests=false
  */
 public class DaseAccountServiceMoreIntegration {
 
@@ -52,5 +52,3 @@ public class DaseAccountServiceMoreIntegration {
     assertNotNull(svc.getFundingHistory(params));
   }
 }
-
-

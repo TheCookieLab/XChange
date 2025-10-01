@@ -18,5 +18,3 @@ public class DaseBatchGetOrdersResponse {
     return orders;
   }
 }
-
-

@@ -55,5 +55,3 @@ public class DaseApiException extends HttpStatusExceptionSupport implements Http
     return DaseErrorAdapter.adapt(type, getMessage());
   }
 }
-
-

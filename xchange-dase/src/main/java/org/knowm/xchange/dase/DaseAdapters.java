@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import org.knowm.xchange.currency.Currency;
-import org.knowm.xchange.dase.dto.account.ApiAccountTxn;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dase.dto.account.ApiAccountTxn;
 import org.knowm.xchange.dase.dto.account.DaseBalanceItem;
 import org.knowm.xchange.dase.dto.account.DaseBalancesResponse;
 import org.knowm.xchange.dase.dto.marketdata.DaseOrderBookSnapshot;
@@ -14,21 +14,20 @@ import org.knowm.xchange.dase.dto.marketdata.DaseTicker;
 import org.knowm.xchange.dase.dto.marketdata.DaseTrade;
 import org.knowm.xchange.dase.dto.trade.DaseOrder;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
-import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.LimitOrder;
-import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.exceptions.ExchangeException;
 
 public final class DaseAdapters {
 
-  private DaseAdapters() {
-  }
+  private DaseAdapters() {}
 
   public static String toMarketString(CurrencyPair pair) {
     return pair.getBase().getCurrencyCode() + "-" + pair.getCounter().getCurrencyCode();
@@ -49,11 +48,9 @@ public final class DaseAdapters {
   }
 
   public static CurrencyPair toCurrencyPair(String market) {
-    if (market == null)
-      return null;
+    if (market == null) return null;
     String[] parts = market.trim().split("-");
-    if (parts.length != 2)
-      return null;
+    if (parts.length != 2) return null;
     return new CurrencyPair(parts[0].toUpperCase(), parts[1].toUpperCase());
   }
 
@@ -75,7 +72,8 @@ public final class DaseAdapters {
   }
 
   public static Trades adaptTrades(List<DaseTrade> trades, CurrencyPair pair) {
-    List<org.knowm.xchange.dto.marketdata.Trade> out = new ArrayList<>(trades == null ? 0 : trades.size());
+    List<org.knowm.xchange.dto.marketdata.Trade> out =
+        new ArrayList<>(trades == null ? 0 : trades.size());
     if (trades != null) {
       for (DaseTrade tr : trades) {
         // maker_side indicates the maker's side; taker side is the opposite and maps to Trade type
@@ -108,14 +106,16 @@ public final class DaseAdapters {
     if (pair == null) {
       throw new ExchangeException("Invalid market in order: " + o.getMarket());
     }
-    OrderType side = "buy".equalsIgnoreCase(o.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK;
+    OrderType side =
+        "buy".equalsIgnoreCase(o.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK;
     BigDecimal originalAmount = parseDecimal(o.getSize());
     BigDecimal averagePrice = parseDecimal(o.getFilledPrice());
     BigDecimal cumulativeAmount = parseDecimal(o.getFilled());
-    boolean hasPartial = cumulativeAmount != null
-        && originalAmount != null
-        && cumulativeAmount.compareTo(BigDecimal.ZERO) > 0
-        && cumulativeAmount.compareTo(originalAmount) < 0;
+    boolean hasPartial =
+        cumulativeAmount != null
+            && originalAmount != null
+            && cumulativeAmount.compareTo(BigDecimal.ZERO) > 0
+            && cumulativeAmount.compareTo(originalAmount) < 0;
 
     Order.OrderStatus status;
     if ("open".equalsIgnoreCase(o.getStatus())) {
@@ -123,9 +123,10 @@ public final class DaseAdapters {
     } else if ("canceled".equalsIgnoreCase(o.getStatus())) {
       status = Order.OrderStatus.CANCELED;
     } else if ("closed".equalsIgnoreCase(o.getStatus())) {
-      boolean isFullyFilled = originalAmount != null
-          && cumulativeAmount != null
-          && cumulativeAmount.compareTo(originalAmount) >= 0;
+      boolean isFullyFilled =
+          originalAmount != null
+              && cumulativeAmount != null
+              && cumulativeAmount.compareTo(originalAmount) >= 0;
       status = isFullyFilled ? Order.OrderStatus.FILLED : Order.OrderStatus.CANCELED;
     } else {
       status = Order.OrderStatus.UNKNOWN;
@@ -156,7 +157,9 @@ public final class DaseAdapters {
         // Otherwise leave null to avoid misrepresenting size.
         originalAmount != null
             ? originalAmount
-            : (status == Order.OrderStatus.FILLED && cumulativeAmount != null ? cumulativeAmount : null),
+            : (status == Order.OrderStatus.FILLED && cumulativeAmount != null
+                ? cumulativeAmount
+                : null),
         pair,
         o.getId(),
         ts,
@@ -168,8 +171,7 @@ public final class DaseAdapters {
   }
 
   private static BigDecimal parseDecimal(String s) {
-    if (s == null)
-      return null;
+    if (s == null) return null;
     try {
       return new BigDecimal(s);
     } catch (Exception e) {

@@ -10,7 +10,8 @@ public class DaseSingleBalanceJSONTest {
 
   @Test
   public void unmarshal() throws Exception {
-    String json = "{\n  \"total\": \"10.00\",\n  \"available\": \"7.50\",\n  \"blocked\": \"2.50\"\n}";
+    String json =
+        "{\n  \"total\": \"10.00\",\n  \"available\": \"7.50\",\n  \"blocked\": \"2.50\"\n}";
     ObjectMapper mapper = new ObjectMapper();
     DaseSingleBalance dto = mapper.readValue(json, DaseSingleBalance.class);
     assertThat(dto.getTotal()).isEqualTo(new BigDecimal("10.00"));
@@ -18,5 +19,3 @@ public class DaseSingleBalanceJSONTest {
     assertThat(dto.getBlocked()).isEqualTo(new BigDecimal("2.50"));
   }
 }
-
-

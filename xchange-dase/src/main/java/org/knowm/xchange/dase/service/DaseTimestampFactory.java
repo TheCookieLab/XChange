@@ -2,9 +2,7 @@ package org.knowm.xchange.dase.service;
 
 import si.mazi.rescu.SynchronizedValueFactory;
 
-/**
- * Supplies current system time in milliseconds as String.
- */
+/** Supplies current system time in milliseconds as String. */
 public class DaseTimestampFactory implements SynchronizedValueFactory<String> {
 
   @Override
@@ -12,5 +10,3 @@ public class DaseTimestampFactory implements SynchronizedValueFactory<String> {
     return String.valueOf(System.currentTimeMillis());
   }
 }
-
-

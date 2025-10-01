@@ -12,8 +12,8 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dase.DaseAdapters;
 import org.knowm.xchange.dase.dto.marketdata.DaseMarketConfig;
 import org.knowm.xchange.dase.dto.trade.DaseOrder;
-import org.knowm.xchange.dase.dto.trade.DasePlaceOrderInput;
 import org.knowm.xchange.dase.dto.trade.DaseOrderFlags;
+import org.knowm.xchange.dase.dto.trade.DasePlaceOrderInput;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
@@ -42,7 +42,7 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
 
   @Override
   public OpenOrdersParams createOpenOrdersParams() {
-    return new DefaultOpenOrdersParamCurrencyPair(CurrencyPair.BTC_EUR);
+    return new DefaultOpenOrdersParamCurrencyPair(null);
   }
 
   @Override
@@ -97,13 +97,8 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
     body.market = DaseAdapters.toMarketString(pair);
     body.type = "market";
     body.side = marketOrder.getType() == Order.OrderType.BID ? "buy" : "sell";
-    if (marketOrder.getType() == Order.OrderType.BID) {
-      body.size = null;
-      body.funds = toStringOrNull(marketOrder.getOriginalAmount());
-    } else {
-      body.size = toStringOrNull(marketOrder.getOriginalAmount());
-      body.funds = null;
-    }
+    body.size = toStringOrNull(marketOrder.getOriginalAmount());
+    body.funds = null;
     body.clientId = isUuid(marketOrder.getUserReference()) ? marketOrder.getUserReference() : null;
     try {
       return placeOrder(body).getOrderId();
@@ -146,11 +141,13 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
       super.cancelAllOrdersRaw(null);
       return true;
     }
-    throw new ExchangeException("Unsupported cancel params: " + orderParams.getClass().getSimpleName());
+    throw new ExchangeException(
+        "Unsupported cancel params: " + orderParams.getClass().getSimpleName());
   }
 
   @Override
-  public Collection<Order> getOrder(org.knowm.xchange.service.trade.params.orders.OrderQueryParams... orderQueryParams)
+  public Collection<Order> getOrder(
+      org.knowm.xchange.service.trade.params.orders.OrderQueryParams... orderQueryParams)
       throws IOException {
     List<Order> out = new ArrayList<>();
     for (org.knowm.xchange.service.trade.params.orders.OrderQueryParams p : orderQueryParams) {
@@ -226,24 +223,13 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
       }
     } else if (order instanceof MarketOrder) {
       MarketOrder mo = (MarketOrder) order;
-      if (mo.getType() == Order.OrderType.BID) {
-        if (mo.getOriginalAmount() == null) {
-          throw new IllegalArgumentException("MarketOrder funds are required for buy");
-        }
-        requirePrecision("funds", mo.getOriginalAmount(), cfg.pricePrecision);
-        BigDecimal minFunds = parseDecimalOrNull(cfg.minFunds);
-        if (minFunds != null && minFunds.compareTo(mo.getOriginalAmount()) > 0) {
-          throw new IllegalArgumentException("funds below min_funds");
-        }
-      } else {
-        if (mo.getOriginalAmount() == null) {
-          throw new IllegalArgumentException("MarketOrder size is required for sell");
-        }
-        requirePrecision("size", mo.getOriginalAmount(), cfg.sizePrecision);
-        BigDecimal minOrderSize = parseDecimalOrNull(cfg.minOrderSize);
-        if (minOrderSize != null && minOrderSize.compareTo(mo.getOriginalAmount()) > 0) {
-          throw new IllegalArgumentException("size below min_order_size");
-        }
+      if (mo.getOriginalAmount() == null) {
+        throw new IllegalArgumentException("MarketOrder size is required");
+      }
+      requirePrecision("size", mo.getOriginalAmount(), cfg.sizePrecision);
+      BigDecimal minOrderSize = parseDecimalOrNull(cfg.minOrderSize);
+      if (minOrderSize != null && minOrderSize.compareTo(mo.getOriginalAmount()) > 0) {
+        throw new IllegalArgumentException("size below min_order_size");
       }
     }
   }
@@ -259,21 +245,17 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
   }
 
   private static void requirePrecision(String field, BigDecimal v, Integer precision) {
-    if (v == null)
-      return;
-    if (precision == null)
-      return;
+    if (v == null) return;
+    if (precision == null) return;
     int scale = v.stripTrailingZeros().scale();
-    if (scale < 0)
-      scale = 0;
+    if (scale < 0) scale = 0;
     if (scale > precision) {
       throw new IllegalArgumentException(field + " exceeds precision " + precision);
     }
   }
 
   private static BigDecimal parseDecimalOrNull(String s) {
-    if (s == null)
-      return null;
+    if (s == null) return null;
     try {
       return new BigDecimal(s);
     } catch (Exception e) {
@@ -282,8 +264,7 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
   }
 
   private static boolean isUuid(String s) {
-    if (s == null)
-      return false;
+    if (s == null) return false;
     try {
       UUID.fromString(s);
       return true;
