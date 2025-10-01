@@ -33,6 +33,7 @@ import org.knowm.xchange.coinmate.dto.marketdata.CoinmateQuickRate;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTicker;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTickers;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTransactions;
+import org.knowm.xchange.coinmate.dto.metadata.CoinmateTradingPairs;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 
 /**
@@ -79,4 +80,8 @@ public interface Coinmate {
   CoinmateQuickRate getSellQuickRate(
       @FormParam("amount") BigDecimal amount, @FormParam("currencyPair") String currencyPair)
       throws IOException;
+
+  @GET
+  @Path("tradingPairs")
+  CoinmateTradingPairs getTradingPairs() throws IOException;
 }
