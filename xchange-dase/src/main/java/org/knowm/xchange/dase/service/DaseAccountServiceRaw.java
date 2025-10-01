@@ -2,6 +2,7 @@ package org.knowm.xchange.dase.service;
 
 import java.io.IOException;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.dase.dto.DaseApiException;
 import org.knowm.xchange.dase.dto.account.ApiGetAccountTxnsOutput;
 import org.knowm.xchange.dase.dto.account.DaseBalancesResponse;
 import org.knowm.xchange.dase.dto.account.DaseSingleBalance;
@@ -16,23 +17,41 @@ public class DaseAccountServiceRaw extends DaseBaseService {
 
   public DaseUserProfile getUserProfile() throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getUserProfile(apiKey, signatureCreator, timestampFactory.createValue());
+    try {
+      return daseAuth.getUserProfile(apiKey, signatureCreator, timestampFactory.createValue());
+    } catch (DaseApiException e) {
+      throw e.toExchangeException();
+    }
   }
 
   public ApiGetAccountTxnsOutput getAccountTransactions(Integer limit, String before)
       throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getAccountTransactions(apiKey, signatureCreator, timestampFactory.createValue(), limit, before);
+    try {
+      return daseAuth.getAccountTransactions(
+          apiKey, signatureCreator, timestampFactory.createValue(), limit, before);
+    } catch (DaseApiException e) {
+      throw e.toExchangeException();
+    }
   }
 
   public DaseBalancesResponse getDaseBalances() throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getBalances(apiKey, signatureCreator, timestampFactory.createValue());
+    try {
+      return daseAuth.getBalances(apiKey, signatureCreator, timestampFactory.createValue());
+    } catch (DaseApiException e) {
+      throw e.toExchangeException();
+    }
   }
 
   public DaseSingleBalance getDaseBalance(String currency) throws IOException {
     ensureCredentialsPresent();
-    return daseAuth.getBalance(currency, apiKey, signatureCreator, timestampFactory.createValue());
+    try {
+      return daseAuth.getBalance(
+          currency, apiKey, signatureCreator, timestampFactory.createValue());
+    } catch (DaseApiException e) {
+      throw e.toExchangeException();
+    }
   }
 }
 
