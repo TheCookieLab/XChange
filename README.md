@@ -185,9 +185,15 @@ For snapshots, add the following repository to your pom.xml file.
 
 ```xml
 <repository>
-  <id>sonatype-oss-snapshot</id>
-  <snapshots/>
-  <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    <name>Central Portal Snapshots</name>
+    <id>central-portal-snapshots</id>
+    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    <releases>
+        <enabled>false</enabled>
+    </releases>
+    <snapshots>
+        <enabled>true</enabled>
+    </snapshots>
 </repository>
 ```
 
