@@ -88,7 +88,7 @@ public final class DaseAdapters {
         }
 
         out.add(
-            new org.knowm.xchange.dto.marketdata.Trade.Builder()
+            org.knowm.xchange.dto.marketdata.Trade.builder()
                 .type(takerType)
                 .originalAmount(tr.getSize())
                 .price(tr.getPrice())
