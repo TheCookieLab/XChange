@@ -1,5 +1,6 @@
 package org.knowm.xchange.coinex;
 
+import java.math.BigDecimal;
 import java.math.MathContext;
 import java.time.Instant;
 import java.util.Collection;
@@ -111,6 +112,8 @@ public class CoinexAdapters {
         .minimumAmount(coinexCurrencyPairInfo.getMinAssetAmount())
         .volumeScale(coinexCurrencyPairInfo.getBaseCurrencyPrecision())
         .priceScale(coinexCurrencyPairInfo.getQuoteCurrencyPrecision())
+        .amountStepSize(BigDecimal.ONE.movePointLeft(coinexCurrencyPairInfo.getBaseCurrencyPrecision()))
+        .priceStepSize(BigDecimal.ONE.movePointLeft(coinexCurrencyPairInfo.getQuoteCurrencyPrecision()))
         .build();
   }
 

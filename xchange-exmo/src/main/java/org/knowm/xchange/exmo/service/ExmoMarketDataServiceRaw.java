@@ -125,10 +125,10 @@ public class ExmoMarketDataServiceRaw extends BaseExmoService {
         long unixTimestamp = Long.parseLong(tradeData.get("date").toString());
 
         results.add(
-            new Trade.Builder()
+            Trade.builder()
                 .type(type.equalsIgnoreCase("sell") ? Order.OrderType.ASK : Order.OrderType.BID)
                 .originalAmount(new BigDecimal(quantity))
-                .currencyPair(currencyPair)
+                .instrument(currencyPair)
                 .price(new BigDecimal(price))
                 .timestamp(new Date(unixTimestamp * 1000L))
                 .id(id)

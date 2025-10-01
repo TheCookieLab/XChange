@@ -231,17 +231,17 @@ public class BitgetAdapters {
   }
 
   public UserTrade toUserTrade(BitgetFillDto bitgetFillDto) {
-    return new UserTrade(
-        bitgetFillDto.getOrderSide(),
-        bitgetFillDto.getAssetAmount(),
-        toCurrencyPair(bitgetFillDto.getSymbol()),
-        bitgetFillDto.getPrice(),
-        toDate(bitgetFillDto.getUpdatedAt()),
-        bitgetFillDto.getTradeId(),
-        bitgetFillDto.getOrderId(),
-        bitgetFillDto.getFeeDetail().getTotalFee().abs(),
-        bitgetFillDto.getFeeDetail().getCurrency(),
-        null);
+    return UserTrade.builder()
+        .type(bitgetFillDto.getOrderSide())
+        .originalAmount(bitgetFillDto.getAssetAmount())
+        .instrument(toCurrencyPair(bitgetFillDto.getSymbol()))
+        .price(bitgetFillDto.getPrice())
+        .timestamp(toDate(bitgetFillDto.getUpdatedAt()))
+        .id(bitgetFillDto.getTradeId())
+        .orderId(bitgetFillDto.getOrderId())
+        .feeAmount(bitgetFillDto.getFeeDetail().getTotalFee().abs())
+        .feeCurrency(bitgetFillDto.getFeeDetail().getCurrency())
+        .build();
   }
 
   public String toString(BitgetAccountType bitgetAccountType) {

@@ -80,7 +80,8 @@ public class OkexPublicDataIntegration {
     Ticker spotTicker = exchange.getMarketDataService().getTicker(currencyPair);
     Ticker swapTicker = exchange.getMarketDataService().getTicker(instrument);
 
-    assertThat(spotTicker.getInstrument()).isEqualTo(currencyPair);
+    assertThat(spotTicker.getInstrument().getBase()).isEqualTo(currencyPair.getBase());
+    assertThat(spotTicker.getInstrument().getCounter()).isEqualTo(Currency.USDT);
     assertThat(swapTicker.getInstrument()).isEqualTo(instrument);
   }
 
@@ -141,5 +142,6 @@ public class OkexPublicDataIntegration {
     assertThat(OkexAdapters.adaptOkexInstrumentId("BTC-USDT"))
         .isEqualTo(new CurrencyPair("BTC/USDT"));
     assertThat(OkexAdapters.adaptInstrument(new CurrencyPair("BTC/USDT"))).isEqualTo("BTC-USDT");
+    assertThat(OkexAdapters.adaptInstrument(new CurrencyPair("BTC/USDC"))).isEqualTo("BTC-USD");
   }
 }

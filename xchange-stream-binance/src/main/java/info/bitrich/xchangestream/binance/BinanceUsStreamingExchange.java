@@ -36,6 +36,7 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
   public static final String FETCH_ORDER_BOOK_LIMIT = "Binance_Fetch_Order_Book_Limit";
   private BinanceStreamingService streamingService;
   private BinanceUserDataStreamingService userDataStreamingService;
+  private BinanceUserTradeStreamingService userTradeStreamingService;
 
   private BinanceStreamingMarketDataService streamingMarketDataService;
   private BinanceStreamingAccountService streamingAccountService;
@@ -65,6 +66,7 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
   @Override
   protected void initServices() {
     super.initServices();
+
     this.onApiCall = Events.onApiCall(exchangeSpecification);
     boolean userHigherFrequency =
         Boolean.TRUE.equals(
@@ -154,7 +156,7 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
             realtimeOrderBookTicker,
             oderBookFetchLimitParameter);
     streamingAccountService = new BinanceStreamingAccountService(userDataStreamingService);
-    streamingTradeService = new BinanceStreamingTradeService(this, userDataStreamingService);
+    streamingTradeService = new BinanceStreamingTradeService(this, userDataStreamingService, userTradeStreamingService,getResilienceRegistries());
 
     return Completable.concat(completables)
         .doOnComplete(

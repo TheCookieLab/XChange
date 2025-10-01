@@ -236,10 +236,10 @@ public class BitmexAdapters {
     // Date timestamp = adaptTimestamp(bitmexPublicTrade.getTime());
     // new Date((long) (bitmexPublicTrade.getTime()));
 
-    return new Trade.Builder()
+    return Trade.builder()
         .type(type)
         .originalAmount(originalAmount)
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(bitmexPublicTrade.getPrice())
         .timestamp(timestamp)
         .id(String.valueOf(timestamp.getTime()))

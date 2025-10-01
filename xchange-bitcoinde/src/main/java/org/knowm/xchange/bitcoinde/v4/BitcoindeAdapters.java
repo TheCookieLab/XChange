@@ -192,9 +192,9 @@ public final class BitcoindeAdapters {
         lastTradeId = tid;
       }
       trades.add(
-          new Trade.Builder()
+          Trade.builder()
               .originalAmount(bitcoindeTrade.getAmount())
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(bitcoindeTrade.getPrice())
               .timestamp(bitcoindeTrade.getDate())
               .id(String.valueOf(tid))
@@ -397,7 +397,7 @@ public final class BitcoindeAdapters {
           UserTrade.builder()
               .id(trade.getTradeId())
               .timestamp(timestamp)
-              .currencyPair(trade.getTradingPair())
+              .instrument(trade.getTradingPair())
               .type(adaptOrderType(trade.getType()))
               .originalAmount(trade.getAmountCurrencyToTrade())
               .price(trade.getPrice())

@@ -4,7 +4,11 @@ import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitBalances;
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -47,14 +51,8 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
     return new AccountInfo(adaptedWallets);
   }
 
-  /**
-   * According to the risk limit, leverage affects the maximum position value that can be opened,
-   * that is, the greater the leverage, the smaller the maximum position value that can be opened,
-   * and vice versa
-   *
-   * @return true, if success
-   */
-  public boolean setLeverage(Instrument instrument, double leverage) throws IOException {
+  @Override
+  public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
     BybitCategory category = BybitAdapters.getCategory(instrument);
     int retCode = setLeverageRaw(category, convertToBybitSymbol(instrument), leverage).getRetCode();
     return retCode == 0 || retCode == 110043;

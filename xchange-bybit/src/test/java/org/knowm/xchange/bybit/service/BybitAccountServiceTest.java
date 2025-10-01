@@ -75,13 +75,13 @@ public class BybitAccountServiceTest extends BaseWiremockTest {
     setUp();
     initPostStub("/v5/position/set-leverage", "/setLeverage.json5");
     try {
-      bybitAccountService.setLeverage(new CurrencyPair("ETH/USDT"), 1d);
+      bybitAccountService.setLeverage(new CurrencyPair("ETH/USDT"), 1);
       fail("Expected UnsupportedOperationException");
     } catch (UnsupportedOperationException ignored) {
 
     }
     boolean bybitSetLeverageBybitResult =
-        bybitAccountService.setLeverage(new FuturesContract("ETH/USDT/PERP"), 1d);
+        bybitAccountService.setLeverage(new FuturesContract("ETH/USDT/PERP"), 1);
     assertThat(bybitSetLeverageBybitResult).isTrue();
   }
 

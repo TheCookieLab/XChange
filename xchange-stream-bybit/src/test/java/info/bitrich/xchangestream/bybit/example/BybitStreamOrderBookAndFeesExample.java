@@ -21,12 +21,12 @@ public class BybitStreamOrderBookAndFeesExample {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(BybitStreamOrderBookAndFeesExample.class);
+  static Instrument instrument = new FuturesContract("XRP/USDT/PERP");
 
   public static void main(String[] args) {
-    // Stream orderBook and OrderBookUpdates
     try {
+      // Stream orderBook and OrderBookUpdates
       getOrderBookExample();
-      // main(not demo) api only
       getFeesExample();
     } catch (InterruptedException e) {
       throw new RuntimeException(e);

@@ -45,12 +45,12 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
     this.streamingService = new OkexStreamingService(getPublicApiUrl(), this.exchangeSpecification);
     if (isApiKeyValid()) {
       this.privateStreamingService =
-          new OkexPrivateStreamingService(getPrivateApiUrl(), this.exchangeSpecification);
+          new OkexPrivateStreamingService(getPrivateApiUrl(), this.exchangeSpecification, this);
     }
     this.streamingMarketDataService =
         new OkexStreamingMarketDataService(streamingService, exchangeMetaData);
     this.streamingTradeService =
-        new OkexStreamingTradeService(privateStreamingService, exchangeMetaData);
+        new OkexStreamingTradeService(privateStreamingService, exchangeMetaData,getResilienceRegistries());
     List<Completable> completableList = new ArrayList<>();
     completableList.add(streamingService.connect());
     if (isApiKeyValid()) {

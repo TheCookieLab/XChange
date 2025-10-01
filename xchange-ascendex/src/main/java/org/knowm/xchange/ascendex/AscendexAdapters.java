@@ -1,12 +1,9 @@
 package org.knowm.xchange.ascendex;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import org.knowm.xchange.ascendex.dto.account.AscendexCashAccountBalanceDto;
 import org.knowm.xchange.ascendex.dto.marketdata.AscendexAssetDto;
 import org.knowm.xchange.ascendex.dto.marketdata.AscendexMarketTradesDto;
@@ -125,7 +122,7 @@ public class AscendexAdapters {
                     .originalAmount(order.getOrderQty())
                     .id(order.getOrderId())
                     .timestamp(order.getLastExecTime())
-                    .currencyPair(
+                    .instrument(
                         CurrencyPairDeserializer.getCurrencyPairFromString(order.getSymbol()))
                     .feeCurrency(new Currency(order.getFeeAsset()))
                     .instrument(
@@ -136,10 +133,13 @@ public class AscendexAdapters {
   }
 
   public static OpenOrders adaptOpenOrders(
-      List<AscendexOpenOrdersResponse> ascendexOpenOrdersRespons) {
-    List<LimitOrder> openOrders = new ArrayList<>(ascendexOpenOrdersRespons.size());
+          List<AscendexOpenOrdersResponse> ascendexOpenOrdersRespons) {
 
-    ascendexOpenOrdersRespons.forEach(AscendexAdapters::adaptOpenOrderById);
+    List<LimitOrder> openOrders = ascendexOpenOrdersRespons.stream()
+            .flatMap(r -> AscendexAdapters.adaptOpenOrderById(r).stream())
+            .filter(LimitOrder.class::isInstance) // ensure only LimitOrders
+            .map(LimitOrder.class::cast)
+            .collect(Collectors.toList());
 
     return new OpenOrders(openOrders);
   }
@@ -223,7 +223,7 @@ public class AscendexAdapters {
         .forEach(
             ascendexMarketTradesData ->
                 trades.add(
-                    new Trade.Builder()
+                    Trade.builder()
                         .price(ascendexMarketTradesData.getPrice())
                         .originalAmount(ascendexMarketTradesData.getQuantity())
                         .timestamp(ascendexMarketTradesData.getTimestamp())

@@ -295,7 +295,7 @@ public class KrakenFuturesAdapters {
 
     for (KrakenFuturesPublicFill fill : krakenFuturesTrades.getFills()) {
       trades.add(
-          new Trade.Builder()
+          Trade.builder()
               .id(fill.getTradeId())
               .type(adaptOrderType(fill.getSide()))
               .price(fill.getPrice())
@@ -383,7 +383,7 @@ public class KrakenFuturesAdapters {
         .forEach(
             krakenFuturesOpenPosition ->
                 openPositions.add(
-                    new OpenPosition.Builder()
+                    OpenPosition.builder()
                         .instrument(adaptInstrument(krakenFuturesOpenPosition.getSymbol()))
                         .type(
                             (krakenFuturesOpenPosition.getSide().equals("long"))
