@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import org.knowm.xchange.coinmate.dto.account.AmountType;
 import org.knowm.xchange.coinmate.dto.account.CoinmateBalance;
+import org.knowm.xchange.coinmate.dto.account.CoinmateCurrencies;
 import org.knowm.xchange.coinmate.dto.account.CoinmateDepositAddresses;
 import org.knowm.xchange.coinmate.dto.account.CoinmateTradingFeesResponse;
 import org.knowm.xchange.coinmate.dto.account.FeePriority;
@@ -81,6 +82,15 @@ public interface CoinmateAuthenticated extends Coinmate {
       @FormParam("signature") ParamsDigest signer,
       @FormParam("nonce") SynchronizedValueFactory<Long> nonce,
       @FormParam("currencyPair") String currencyPair)
+      throws IOException;
+
+  @POST
+  @Path("currencies")
+  CoinmateCurrencies getCurrencies(
+      @FormParam("publicKey") String publicKey,
+      @FormParam("clientId") String clientId,
+      @FormParam("signature") ParamsDigest signer,
+      @FormParam("nonce") SynchronizedValueFactory<Long> nonce)
       throws IOException;
 
   // trade
