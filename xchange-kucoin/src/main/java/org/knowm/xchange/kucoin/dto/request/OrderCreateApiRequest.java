@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 /**
- * 订单创建对象
+ * Represents a request to create a new order on KuCoin.
  *
  * @author 屈亮
  * @since 2018-09-17
@@ -15,54 +15,54 @@ import lombok.Getter;
 @Builder
 public class OrderCreateApiRequest {
 
-  /** a valid trading symbol code. e.g. ETH-BTC */
-  private final String symbol;
-
-  /** [optional] limit or market (default is limit) */
-  @Builder.Default private final String type = "limit";
-
-  /** buy or sell */
-  private final String side;
-
-  /** price per base currency */
-  private final BigDecimal price;
-
-  /** amount of base currency to buy or sell */
-  private final BigDecimal size;
-
-  /** [optional] Desired amount of quote currency to use */
-  private final BigDecimal funds;
-
-  /** [optional] self trade protect , CN, CO, CB or DC */
-  @Builder.Default private final String stp = "";
-
-  /** [optional] Either loss or entry. Requires stopPrice to be defined */
-  @Builder.Default private final String stop = "";
-
-  /** [optional] Only if stop is defined. Sets trigger price for stop order */
-  private final BigDecimal stopPrice;
-
-  /** [optional] GTC, GTT, IOC, or FOK (default is GTC) */
-  @Builder.Default private final String timeInForce = "GTC";
-
-  /** [optional] * cancel after n seconds */
-  private final long cancelAfter;
-
-  /** [optional] ** Post only flag */
-  private final boolean postOnly;
-
-  /** [optional] Orders not displayed in order book */
-  private final boolean hidden;
-
-  /** [optional] Only visible portion of the order is displayed in the order book */
-  private final boolean iceberg;
-
-  /** [optional] The maximum visible size of an iceberg order */
-  private final BigDecimal visibleSize;
-
-  /** Unique order id selected by you to identify your order e.g. UUID */
+  /** Unique order id created by users to identify their orders, e.g. UUID. */
   private final String clientOid;
 
-  /** [optional] remark for the order, length cannot exceed 100 utf8 characters */
+  /** A valid trading symbol code, e.g. ETH-BTC. */
+  private final String symbol;
+
+  /** The type of trading, e.g. TRADE (Spot Trade). Default is TRADE. */
+  @Builder.Default private final String tradeType = "TRADE";
+
+  /** buy or sell. */
+  private final String side;
+
+  /** limit or market (default is limit). */
+  @Builder.Default private final String type = "limit";
+
+  /** Remark for the order, length cannot exceed 100 utf8 characters. */
   private final String remark;
+
+  /** Self-trade prevention strategy: CN, CO, CB or DC. */
+  private final String stp;
+
+  /** [limit order] Price per base currency. */
+  private final BigDecimal price;
+
+  /** [limit order] Amount of base currency to buy or sell. */
+  private final BigDecimal size;
+
+  /** [limit order] Time in force strategy: GTC, GTT, IOC, or FOK (default is GTC). */
+  @Builder.Default private final String timeInForce = "GTC";
+
+  /** [limit order] Cancel after n seconds, requires timeInForce = GTT. */
+  private final Long cancelAfter;
+
+  /** [limit order] Post only flag. */
+  private final boolean postOnly;
+
+  /** [limit order] Order will not be displayed in the order book. */
+  private final boolean hidden;
+
+  /** [limit order] Only a portion of the order is displayed in the order book. */
+  private final boolean iceberg;
+
+  /** [limit order] The maximum visible size of an iceberg order. */
+  private final BigDecimal visibleSize;
+
+  /**
+   * [market order] The amount of quote currency to spend.
+   * size and funds are mutually exclusive.
+   */
+  private final BigDecimal funds;
 }

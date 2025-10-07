@@ -49,6 +49,7 @@ import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kucoin.KucoinTradeService.KucoinOrderFlags;
 import org.knowm.xchange.kucoin.dto.request.OrderCreateApiRequest;
+import org.knowm.xchange.kucoin.dto.request.StopOrderCreateApiRequest;
 import org.knowm.xchange.kucoin.dto.response.AccountBalancesResponse;
 import org.knowm.xchange.kucoin.dto.response.AllTickersResponse;
 import org.knowm.xchange.kucoin.dto.response.DepositResponse;
@@ -299,11 +300,10 @@ public class KucoinAdapters {
         .build();
   }
 
-  public static OrderCreateApiRequest adaptStopOrder(StopOrder stopOrder) {
-    return ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(stopOrder))
+  public static StopOrderCreateApiRequest adaptStopOrder(StopOrder stopOrder) {
+    return ((StopOrderCreateApiRequest.StopOrderCreateApiRequestBuilder) adaptOrder(stopOrder))
         .type(stopOrder.getLimitPrice() == null ? "market" : "limit")
         .price(stopOrder.getLimitPrice())
-        .stop(stopOrder.getType().equals(ASK) ? "loss" : "entry")
         .stopPrice(stopOrder.getStopPrice())
         .build();
   }
