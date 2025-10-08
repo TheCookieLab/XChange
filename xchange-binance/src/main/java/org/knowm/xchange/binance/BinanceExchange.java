@@ -156,7 +156,7 @@ public class BinanceExchange extends BaseExchange implements Exchange {
   }
 
   /** Adjust host parameters depending on exchange specific parameters */
-  private static void concludeHostParams(ExchangeSpecification exchangeSpecification) {
+  protected void concludeHostParams(ExchangeSpecification exchangeSpecification) {
     if (exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE) != null) {
       switch ((ExchangeType)
           exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE)) {
