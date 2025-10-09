@@ -13,7 +13,6 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import org.knowm.xchange.kucoin.dto.request.OrderCreateApiRequest;
-import org.knowm.xchange.kucoin.dto.request.StopOrderCreateApiRequest;
 import org.knowm.xchange.kucoin.dto.response.KucoinResponse;
 import org.knowm.xchange.kucoin.dto.response.OrderCancelResponse;
 import org.knowm.xchange.kucoin.dto.response.OrderCreateResponse;
@@ -66,7 +65,7 @@ public interface OrderAPI {
           @HeaderParam(APIConstants.API_HEADER_SIGN) ParamsDigest signature,
           @HeaderParam(APIConstants.API_HEADER_TIMESTAMP) SynchronizedValueFactory<Long> nonce,
           @HeaderParam(APIConstants.API_HEADER_PASSPHRASE) String apiPassphrase,
-          StopOrderCreateApiRequest opsRequest)
+          OrderCreateApiRequest opsRequest)
           throws IOException;
 
   /**

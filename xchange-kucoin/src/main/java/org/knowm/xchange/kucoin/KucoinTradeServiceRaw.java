@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.kucoin.dto.request.OrderCreateApiRequest;
-import org.knowm.xchange.kucoin.dto.request.StopOrderCreateApiRequest;
 import org.knowm.xchange.kucoin.dto.response.HistOrdersResponse;
 import org.knowm.xchange.kucoin.dto.response.OrderCancelResponse;
 import org.knowm.xchange.kucoin.dto.response.OrderCreateResponse;
@@ -115,7 +114,7 @@ public class KucoinTradeServiceRaw extends KucoinBaseService {
         () -> orderApi.createOrder(apiKey, digest, nonceFactory, passphrase, opsRequest));
   }
 
-  public OrderCreateResponse kucoinCreateStopOrder(StopOrderCreateApiRequest opsRequest)
+  public OrderCreateResponse kucoinCreateStopOrder(OrderCreateApiRequest opsRequest)
           throws IOException {
     checkAuthenticated();
     return classifyingExceptions(

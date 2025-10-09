@@ -1,4 +1,3 @@
-/** Copyright 2019 Mek Global Limited. */
 package org.knowm.xchange.kucoin.dto.request;
 
 import java.math.BigDecimal;
@@ -6,10 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 /**
- * Represents a request to create a new order on KuCoin.
- *
- * @author 屈亮
- * @since 2018-09-17
+ * Represents a request to create a new order (limit, market, or stop) on KuCoin.
  */
 @Getter
 @Builder
@@ -35,6 +31,16 @@ public class OrderCreateApiRequest {
 
   /** Self-trade prevention strategy: CN, CO, CB or DC. */
   private final String stp;
+
+  // Stop-related fields (optional)
+
+  /** "entry" or "loss" (KuCoin’s stop types). */
+  private final String stop;
+
+  /** Trigger price for the stop order. Null for regular orders. */
+  private final BigDecimal stopPrice;
+
+  // Common fields
 
   /** [limit order] Price per base currency. */
   private final BigDecimal price;
