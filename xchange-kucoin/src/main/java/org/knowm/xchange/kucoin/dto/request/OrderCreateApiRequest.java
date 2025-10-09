@@ -38,15 +38,15 @@ public class OrderCreateApiRequest {
   private final String stop;
 
   /** Trigger price for the stop order. Null for regular orders. */
-  private final BigDecimal stopPrice;
+  private final String stopPrice;
 
   // Common fields
 
   /** [limit order] Price per base currency. */
-  private final BigDecimal price;
+  private final String price;
 
   /** [limit order] Amount of base currency to buy or sell. */
-  private final BigDecimal size;
+  private final String size;
 
   /** [limit order] Time in force strategy: GTC, GTT, IOC, or FOK (default is GTC). */
   @Builder.Default private final String timeInForce = "GTC";
@@ -64,11 +64,11 @@ public class OrderCreateApiRequest {
   private final boolean iceberg;
 
   /** [limit order] The maximum visible size of an iceberg order. */
-  private final BigDecimal visibleSize;
+  private final String visibleSize;
 
   /**
    * [market order] The amount of quote currency to spend.
    * size and funds are mutually exclusive.
    */
-  private final BigDecimal funds;
+  private final String funds;
 }
