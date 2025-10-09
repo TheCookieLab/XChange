@@ -95,7 +95,7 @@ public class BybitStreamWebsocketTradeExample {
         }, throwable -> LOG.error("throwable", throwable));
     Thread.sleep(1000);
     LOG.info("limitOrder1 is disposed: {}", limitOrder1Disposable.isDisposed());
-    LimitOrder changeOrder1 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh().add(BigDecimal.ONE)).userReference(limitOrder1UserId).build();
+    LimitOrder changeOrder1 = new Builder(OrderType.ASK, instrument).limitPrice(ticker.getHigh().add(BigDecimal.ONE)).userReference(limitOrder1UserId).build();
     Disposable changeOrder1Disposable = exchange.getStreamingTradeService().changeOrder(changeOrder1)
         .subscribe(result -> {
           LOG.info("changeOrder1 is send, retCode: {}", result);
