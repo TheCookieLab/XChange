@@ -303,6 +303,7 @@ public class KucoinAdapters {
     return ((OrderCreateApiRequest.OrderCreateApiRequestBuilder) adaptOrder(stopOrder))
         .type(stopOrder.getLimitPrice() == null ? "market" : "limit")
         .price(stopOrder.getLimitPrice().toPlainString())
+        .stop(stopOrder.getType().equals(ASK) ? "loss" : "entry")
         .stopPrice(stopOrder.getStopPrice().toPlainString())
         .build();
   }
