@@ -1,12 +1,9 @@
 package org.knowm.xchange.ascendex;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import org.knowm.xchange.ascendex.dto.account.AscendexCashAccountBalanceDto;
 import org.knowm.xchange.ascendex.dto.marketdata.AscendexAssetDto;
 import org.knowm.xchange.ascendex.dto.marketdata.AscendexMarketTradesDto;
@@ -136,10 +133,13 @@ public class AscendexAdapters {
   }
 
   public static OpenOrders adaptOpenOrders(
-      List<AscendexOpenOrdersResponse> ascendexOpenOrdersRespons) {
-    List<LimitOrder> openOrders = new ArrayList<>(ascendexOpenOrdersRespons.size());
+          List<AscendexOpenOrdersResponse> ascendexOpenOrdersRespons) {
 
-    ascendexOpenOrdersRespons.forEach(AscendexAdapters::adaptOpenOrderById);
+    List<LimitOrder> openOrders = ascendexOpenOrdersRespons.stream()
+            .flatMap(r -> AscendexAdapters.adaptOpenOrderById(r).stream())
+            .filter(LimitOrder.class::isInstance) // ensure only LimitOrders
+            .map(LimitOrder.class::cast)
+            .collect(Collectors.toList());
 
     return new OpenOrders(openOrders);
   }
@@ -160,7 +160,9 @@ public class AscendexAdapters {
             .id(ascendexOpenOrdersResponse.getOrderId())
             .timestamp(ascendexOpenOrdersResponse.getLastExecTime())
             .orderStatus(
-                Order.OrderStatus.valueOf(ascendexOpenOrdersResponse.getStatus().toUpperCase()))
+                Order.OrderStatus.valueOf(ascendexOpenOrdersResponse.getStatus().toUpperCase()
+                        .replace("PARTIALLYFILLED", "PARTIALLY_FILLED")))
+            .cumulativeAmount(ascendexOpenOrdersResponse.getCumFilledQty())
             .remainingAmount(
                 ascendexOpenOrdersResponse
                     .getOrderQty()
@@ -199,8 +201,10 @@ public class AscendexAdapters {
                     .volumeScale(ascendexProductDto.getLotSize().scale())
                     .counterMinimumAmount(ascendexProductDto.getMinNotional())
                     .counterMaximumAmount(ascendexProductDto.getMaxNotional())
-                    .minimumAmount(ascendexProductDto.getLotSize())
-                    .amountStepSize(ascendexProductDto.getTickSize())
+                    .minimumAmount(ascendexProductDto.getMinQty())
+                    .maximumAmount(ascendexProductDto.getMaxQty())
+                    .amountStepSize(ascendexProductDto.getLotSize())
+                    .priceStepSize(ascendexProductDto.getTickSize())
                     .build()));
 
     return new ExchangeMetaData(currencyPairMetaDataMap, currencyMetaDataMap, null, null, null);
