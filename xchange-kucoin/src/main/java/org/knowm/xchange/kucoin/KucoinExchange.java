@@ -28,7 +28,7 @@ public class KucoinExchange extends BaseExchange implements Exchange {
 
   private static ResilienceRegistries RESILIENCE_REGISTRIES;
 
-  private void concludeHostParams(ExchangeSpecification exchangeSpecification) {
+  protected void concludeHostParams(ExchangeSpecification exchangeSpecification) {
     if (exchangeSpecification.getExchangeSpecificParameters() != null) {
       if (Boolean.TRUE.equals(
           exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX))) {
