@@ -136,11 +136,7 @@
             <artifactId>xchange-coincheck</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-coindirect</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <!-- XChange CoinEgg support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
