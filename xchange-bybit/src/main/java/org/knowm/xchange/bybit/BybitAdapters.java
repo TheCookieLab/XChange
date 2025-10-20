@@ -239,6 +239,7 @@ public class BybitAdapters {
         .tradingFee(instrumentInfo.getDeliveryFeeRate())
         .volumeScale(instrumentInfo.getLotSizeFilter().getQtyStep().scale())
         .amountStepSize(instrumentInfo.getLotSizeFilter().getQtyStep())
+        .counterMinimumAmount(instrumentInfo.getLotSizeFilter().getMinNotionalValue())
         .build();
   }
 
@@ -539,8 +540,10 @@ public class BybitAdapters {
             order.getId(),
             order.getUserReference(),
             null,
-            order.getOriginalAmount().toPlainString(),
-            order.getLimitPrice().toPlainString(),
+            // conditional
+            order.getOriginalAmount() == null ? null :order.getOriginalAmount().toPlainString(),
+            // conditional
+            order.getLimitPrice() == null ? null: order.getLimitPrice().toPlainString(),
             null,
             null,
             null,

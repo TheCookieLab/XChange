@@ -182,9 +182,4 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
     return null;
   }
 
-  @Override
-  public void sendMessage(String message) {
-    LOG.debug("Sending message: {}", message);
-    super.sendMessage(message);
-  }
 }

@@ -300,8 +300,10 @@ public class BybitStreamAdapters {
           order.getId(),
           order.getUserReference(),
           null,
-          order.getOriginalAmount().toPlainString(),
-          order.getLimitPrice().toPlainString(),
+          // conditional
+          order.getOriginalAmount() == null ? null :order.getOriginalAmount().toPlainString(),
+          // conditional
+          order.getLimitPrice() == null ? null: order.getLimitPrice().toPlainString(),
           null,
           null,
           null,

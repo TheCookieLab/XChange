@@ -13,7 +13,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderParams;
-import org.knowm.xchange.bybit.dto.trade.details.BybitHedgeMode;
 import org.knowm.xchange.bybit.service.BybitAccountService;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -52,15 +51,15 @@ public class BybitStreamWebsocketTradeExample {
   private static void websocketBatchTradeExample() throws IOException, InterruptedException {
     CompositeDisposable compositeDisposable = new CompositeDisposable();
     // switch mode to two-way
-    ((BybitAccountService) exchange.getAccountService()).switchPositionMode(BybitCategory.LINEAR, instrument, "USDT", 3);
+    ((BybitAccountService) exchange.getAccountService()).switchPositionMode(BybitCategory.LINEAR, instrument, "USDT", 0);
     BigDecimal minAmount =
         exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
     minAmount = getMinAmount(new BigDecimal("5"), minAmount, ticker, exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
     String limitOrder1UserId = RandomStringUtils.randomAlphanumeric(20);
-    LimitOrder limitOrder1 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh()).userReference(limitOrder1UserId).flag(BybitHedgeMode.TWOWAY).build();
+    LimitOrder limitOrder1 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh()).userReference(limitOrder1UserId).build();
     String limitOrder2UserId = RandomStringUtils.randomAlphanumeric(20);
-    LimitOrder limitOrder2 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh().add(BigDecimal.ONE)).userReference(limitOrder2UserId).flag(BybitHedgeMode.TWOWAY).build();
+    LimitOrder limitOrder2 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh().add(BigDecimal.ONE)).userReference(limitOrder2UserId).build();
     compositeDisposable.add(exchange.getStreamingTradeService().placeLimitOrder(limitOrder1)
         .subscribe(result -> {
           LOG.info("limitOrder1 is send, retCode: {}", result);
@@ -70,8 +69,8 @@ public class BybitStreamWebsocketTradeExample {
           LOG.info("limitOrder2 is send, retCode: {}", result);
         }, throwable -> LOG.error("throwable", throwable)));
     Thread.sleep(1000);
-    LimitOrder changeOrder1 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh().add(new BigDecimal("0.01"))).userReference(limitOrder1UserId).flag(BybitHedgeMode.TWOWAY).build();
-    LimitOrder changeOrder2 = new Builder(OrderType.ASK, instrument).originalAmount(new BigDecimal("0.01")).limitPrice(ticker.getHigh()).userReference(limitOrder2UserId).flag(BybitHedgeMode.TWOWAY).build();
+    LimitOrder changeOrder1 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh().add(new BigDecimal("0.01"))).userReference(limitOrder1UserId).build();
+    LimitOrder changeOrder2 = new Builder(OrderType.ASK, instrument).originalAmount(new BigDecimal("0.01")).limitPrice(ticker.getHigh()).userReference(limitOrder2UserId).build();
     compositeDisposable.add(exchange.getStreamingTradeService().batchChangeOrder(List.of(changeOrder1,changeOrder2))
         .subscribe(result -> {
           LOG.info("changeOrder(1,2) is send, retCode: {}", result);
@@ -82,20 +81,20 @@ public class BybitStreamWebsocketTradeExample {
 
   private static void websocketTradeExample() throws IOException, InterruptedException {
     // switch mode to two-way
-    ((BybitAccountService) exchange.getAccountService()).switchPositionMode(BybitCategory.LINEAR, instrument, "USDT", 3);
+    ((BybitAccountService) exchange.getAccountService()).switchPositionMode(BybitCategory.LINEAR, instrument, "USDT", 0);
     BigDecimal minAmount =
         exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
     minAmount = getMinAmount(new BigDecimal("5"), minAmount, ticker, exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
     String limitOrder1UserId = RandomStringUtils.randomAlphanumeric(20);
-    LimitOrder limitOrder1 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh()).userReference(limitOrder1UserId).flag(BybitHedgeMode.TWOWAY).build();
+    LimitOrder limitOrder1 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh()).userReference(limitOrder1UserId).build();
     Disposable limitOrder1Disposable = exchange.getStreamingTradeService().placeLimitOrder(limitOrder1)
         .subscribe(result -> {
           LOG.info("limitOrder1 is send, retCode: {}", result);
         }, throwable -> LOG.error("throwable", throwable));
     Thread.sleep(1000);
     LOG.info("limitOrder1 is disposed: {}", limitOrder1Disposable.isDisposed());
-    LimitOrder changeOrder1 = new Builder(OrderType.ASK, instrument).originalAmount(minAmount).limitPrice(ticker.getHigh().add(BigDecimal.ONE)).userReference(limitOrder1UserId).build();
+    LimitOrder changeOrder1 = new Builder(OrderType.ASK, instrument).limitPrice(ticker.getHigh().add(BigDecimal.ONE)).userReference(limitOrder1UserId).build();
     Disposable changeOrder1Disposable = exchange.getStreamingTradeService().changeOrder(changeOrder1)
         .subscribe(result -> {
           LOG.info("changeOrder1 is send, retCode: {}", result);
@@ -110,7 +109,6 @@ public class BybitStreamWebsocketTradeExample {
     LOG.info("cancelOrder1 is disposed: {}", cancelOrder1Disposable.isDisposed());
     Thread.sleep(1000);
     MarketOrder marketOrder = new MarketOrder(OrderType.ASK, minAmount, instrument);
-    marketOrder.addOrderFlag(BybitHedgeMode.TWOWAY);
     Disposable marketOrderDisposable = exchange.getStreamingTradeService().placeMarketOrder(marketOrder)
         .subscribe(result -> {
           LOG.info("marketOrder is send, retCode: {}", result);
