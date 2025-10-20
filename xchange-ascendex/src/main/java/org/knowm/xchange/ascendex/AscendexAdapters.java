@@ -160,7 +160,9 @@ public class AscendexAdapters {
             .id(ascendexOpenOrdersResponse.getOrderId())
             .timestamp(ascendexOpenOrdersResponse.getLastExecTime())
             .orderStatus(
-                Order.OrderStatus.valueOf(ascendexOpenOrdersResponse.getStatus().toUpperCase()))
+                Order.OrderStatus.valueOf(ascendexOpenOrdersResponse.getStatus().toUpperCase()
+                        .replace("PARTIALLYFILLED", "PARTIALLY_FILLED")))
+            .cumulativeAmount(ascendexOpenOrdersResponse.getCumFilledQty())
             .remainingAmount(
                 ascendexOpenOrdersResponse
                     .getOrderQty()
@@ -199,8 +201,10 @@ public class AscendexAdapters {
                     .volumeScale(ascendexProductDto.getLotSize().scale())
                     .counterMinimumAmount(ascendexProductDto.getMinNotional())
                     .counterMaximumAmount(ascendexProductDto.getMaxNotional())
-                    .minimumAmount(ascendexProductDto.getLotSize())
-                    .amountStepSize(ascendexProductDto.getTickSize())
+                    .minimumAmount(ascendexProductDto.getMinQty())
+                    .maximumAmount(ascendexProductDto.getMaxQty())
+                    .amountStepSize(ascendexProductDto.getLotSize())
+                    .priceStepSize(ascendexProductDto.getTickSize())
                     .build()));
 
     return new ExchangeMetaData(currencyPairMetaDataMap, currencyMetaDataMap, null, null, null);
