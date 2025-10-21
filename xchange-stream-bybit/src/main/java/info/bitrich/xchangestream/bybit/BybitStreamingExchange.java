@@ -45,10 +45,13 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
     if (isApiKeyValid()) {
       this.streamingUserDataService =
           new BybitUserDataStreamingService(getApiUrlWithAuth(), exchangeSpecification);
-      this.streamingUserTradeService = new BybitUserTradeStreamingService(getTradeApiUrlWithAuth(),exchangeSpecification);
+      this.streamingUserTradeService =
+          new BybitUserTradeStreamingService(getTradeApiUrlWithAuth(), exchangeSpecification);
     }
     this.streamingMarketDataService = new BybitStreamingMarketDataService(streamingService);
-    this.streamingTradeService = new BybitStreamingTradeService(streamingUserDataService,streamingUserTradeService,getResilienceRegistries(), this);
+    this.streamingTradeService =
+        new BybitStreamingTradeService(
+            streamingUserDataService, streamingUserTradeService, getResilienceRegistries(), this);
   }
 
   private String getTradeApiUrlWithAuth() {
@@ -195,5 +198,4 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
       streamingUserDataService.resubscribeChannels();
     }
   }
-
 }

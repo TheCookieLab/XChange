@@ -28,5 +28,4 @@ public class UserTrade extends Trade {
 
   /** The order reference id which has been added by the user on the order creation */
   private String orderUserReference;
-
 }

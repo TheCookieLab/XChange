@@ -22,4 +22,3 @@ public class CoinmateWithdrawFee {
     this.variant = variant;
   }
 }
-

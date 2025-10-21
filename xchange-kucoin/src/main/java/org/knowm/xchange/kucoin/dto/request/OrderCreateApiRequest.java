@@ -1,12 +1,9 @@
 package org.knowm.xchange.kucoin.dto.request;
 
-import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Getter;
 
-/**
- * Represents a request to create a new order (limit, market, or stop) on KuCoin.
- */
+/** Represents a request to create a new order (limit, market, or stop) on KuCoin. */
 @Getter
 @Builder
 public class OrderCreateApiRequest {
@@ -67,8 +64,7 @@ public class OrderCreateApiRequest {
   private final String visibleSize;
 
   /**
-   * [market order] The amount of quote currency to spend.
-   * size and funds are mutually exclusive.
+   * [market order] The amount of quote currency to spend. size and funds are mutually exclusive.
    */
   private final String funds;
 }

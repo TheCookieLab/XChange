@@ -22,5 +22,4 @@ public class KrakenExtendedBalance {
 
   @JsonProperty("hold_trade")
   private BigDecimal holdTrade;
-
 }

@@ -115,10 +115,10 @@ public class KucoinTradeServiceRaw extends KucoinBaseService {
   }
 
   public OrderCreateResponse kucoinCreateStopOrder(OrderCreateApiRequest opsRequest)
-          throws IOException {
+      throws IOException {
     checkAuthenticated();
     return classifyingExceptions(
-            () -> orderApi.createStopOrder(apiKey, digest, nonceFactory, passphrase, opsRequest));
+        () -> orderApi.createStopOrder(apiKey, digest, nonceFactory, passphrase, opsRequest));
   }
 
   public List<OrderResponse> getKucoinRecentOrders() throws IOException {

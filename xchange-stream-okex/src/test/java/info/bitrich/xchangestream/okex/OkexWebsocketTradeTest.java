@@ -30,8 +30,7 @@ import org.slf4j.LoggerFactory;
 @Ignore
 public class OkexWebsocketTradeTest {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(OkexWebsocketTradeTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(OkexWebsocketTradeTest.class);
   StreamingExchange exchange;
   private final Instrument instrument = new FuturesContract("SOL/USDT/SWAP");
   private final boolean logOutput = false;
@@ -83,56 +82,89 @@ public class OkexWebsocketTradeTest {
 
   @Test
   public void websocketTradeTest() throws IOException, InterruptedException {
-    OkexStreamingTradeService tradeService = (OkexStreamingTradeService) exchange.getStreamingTradeService();
+    OkexStreamingTradeService tradeService =
+        (OkexStreamingTradeService) exchange.getStreamingTradeService();
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
-    BigDecimal minAmount = exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
-    BigDecimal amount = getMinAmount(new BigDecimal("5"), minAmount, ticker, exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
+    BigDecimal minAmount =
+        exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
+    BigDecimal amount =
+        getMinAmount(
+            new BigDecimal("5"),
+            minAmount,
+            ticker,
+            exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
     String limitOrderUserId = RandomStringUtils.randomAlphanumeric(20);
-    LimitOrder limitOrder = new LimitOrder.Builder(BID, instrument).limitPrice(ticker.getLow()).originalAmount(amount).userReference(limitOrderUserId).build();
-    Disposable placeLimitOrderDisposable = tradeService.placeLimitOrder(limitOrder).subscribe(
-        result -> {
-          if (logOutput) {
-            LOG.info("placeLimitOrder result: {}", result.toString());
-          }
-        },
-        throwable -> LOG.error("placeLimitOrder error", throwable));
+    LimitOrder limitOrder =
+        new LimitOrder.Builder(BID, instrument)
+            .limitPrice(ticker.getLow())
+            .originalAmount(amount)
+            .userReference(limitOrderUserId)
+            .build();
+    Disposable placeLimitOrderDisposable =
+        tradeService
+            .placeLimitOrder(limitOrder)
+            .subscribe(
+                result -> {
+                  if (logOutput) {
+                    LOG.info("placeLimitOrder result: {}", result.toString());
+                  }
+                },
+                throwable -> LOG.error("placeLimitOrder error", throwable));
     Thread.sleep(1000);
     if (logOutput) {
       LOG.info("placeLimitOrderDisposable disposed: {}", placeLimitOrderDisposable.isDisposed());
     }
-    LimitOrder limitOrderChange = new LimitOrder.Builder(BID, instrument).limitPrice(ticker.getLow().add(BigDecimal.ONE.negate())).userReference(limitOrderUserId).originalAmount(amount).build();
-    Disposable placeLimitOrderChangeDisposable = tradeService.changeOrder(limitOrderChange).subscribe(
-        result -> {
-          if (logOutput) {
-            LOG.info("changeOrder result: {}", result.toString());
-          }
-        },
-        throwable -> LOG.error("changeOrder error", throwable));
+    LimitOrder limitOrderChange =
+        new LimitOrder.Builder(BID, instrument)
+            .limitPrice(ticker.getLow().add(BigDecimal.ONE.negate()))
+            .userReference(limitOrderUserId)
+            .originalAmount(amount)
+            .build();
+    Disposable placeLimitOrderChangeDisposable =
+        tradeService
+            .changeOrder(limitOrderChange)
+            .subscribe(
+                result -> {
+                  if (logOutput) {
+                    LOG.info("changeOrder result: {}", result.toString());
+                  }
+                },
+                throwable -> LOG.error("changeOrder error", throwable));
     Thread.sleep(1000);
     if (logOutput) {
       LOG.info("changeOrder disposed: {}", placeLimitOrderChangeDisposable.isDisposed());
     }
     CancelOrderParams params = new OkexCancelOrderParams(instrument, limitOrderUserId);
-    Disposable cancelOrderDisposable = tradeService.cancelOrder(params).subscribe(
-        result -> {
-          if (logOutput) {
-            LOG.info("cancelOrder result: {}", result.toString());
-          }
-        },
-        throwable -> LOG.error("cancelOrder error", throwable));
+    Disposable cancelOrderDisposable =
+        tradeService
+            .cancelOrder(params)
+            .subscribe(
+                result -> {
+                  if (logOutput) {
+                    LOG.info("cancelOrder result: {}", result.toString());
+                  }
+                },
+                throwable -> LOG.error("cancelOrder error", throwable));
     Thread.sleep(1000);
     if (logOutput) {
       LOG.info("cancelOrderDisposable disposed: {}", cancelOrderDisposable.isDisposed());
     }
     String marketOrderUserId = RandomStringUtils.randomAlphanumeric(20);
-    MarketOrder marketOrder = new MarketOrder.Builder(Order.OrderType.ASK, instrument).userReference(marketOrderUserId).originalAmount(amount).build();
-    Disposable marketOrderDisposable = tradeService.placeMarketOrder(marketOrder).subscribe(
-        result -> {
-          if (logOutput) {
-            LOG.info("marketOrder result: {}", result.toString());
-          }
-        },
-        throwable -> LOG.error("marketOrder error", throwable));
+    MarketOrder marketOrder =
+        new MarketOrder.Builder(Order.OrderType.ASK, instrument)
+            .userReference(marketOrderUserId)
+            .originalAmount(amount)
+            .build();
+    Disposable marketOrderDisposable =
+        tradeService
+            .placeMarketOrder(marketOrder)
+            .subscribe(
+                result -> {
+                  if (logOutput) {
+                    LOG.info("marketOrder result: {}", result.toString());
+                  }
+                },
+                throwable -> LOG.error("marketOrder error", throwable));
     Thread.sleep(1000);
     if (logOutput) {
       LOG.info("marketOrderDisposable disposed: {}", marketOrderDisposable.isDisposed());

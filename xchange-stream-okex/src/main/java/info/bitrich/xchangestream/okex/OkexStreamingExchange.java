@@ -33,7 +33,6 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
 
   private OkexStreamingMarketDataService streamingMarketDataService;
 
-
   private OkexStreamingTradeService streamingTradeService;
 
   private OkexPrivateStreamingService privateStreamingService;
@@ -50,7 +49,8 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
     this.streamingMarketDataService =
         new OkexStreamingMarketDataService(streamingService, exchangeMetaData);
     this.streamingTradeService =
-        new OkexStreamingTradeService(privateStreamingService, exchangeMetaData,getResilienceRegistries());
+        new OkexStreamingTradeService(
+            privateStreamingService, exchangeMetaData, getResilienceRegistries());
     List<Completable> completableList = new ArrayList<>();
     completableList.add(streamingService.connect());
     if (isApiKeyValid()) {

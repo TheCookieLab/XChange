@@ -31,4 +31,3 @@ public class CoinmateDepositInfo {
     this.minConfirmations = minConfirmations;
   }
 }
-
