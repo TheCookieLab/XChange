@@ -9,6 +9,8 @@
 
     <artifactId>xchange-stream-krakenfutures</artifactId>
 
+    <name>XChange Kraken Futures Stream</name>
+
     <dependencies>
         <dependency>
             <groupId>org.knowm.xchange</groupId>
