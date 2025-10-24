@@ -6,6 +6,7 @@
 XChange is a Java library providing a simple and consistent API for interacting with 60+ Bitcoin and other cryptocurrency exchanges, providing a consistent interface for trading and accessing market data.
 
 A big thanks to all the [contributors](CONTRIBUTORS) who have helped make XChange what it is today! ❤️
+
 A big thanks also to our sponsor: https://ai-receptionist.com/.
 
 ## Important!
