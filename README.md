@@ -5,6 +5,9 @@
 
 XChange is a Java library providing a simple and consistent API for interacting with 60+ Bitcoin and other cryptocurrency exchanges, providing a consistent interface for trading and accessing market data.
 
+A big thanks to all the [contributors](CONTRIBUTORS) who have helped make XChange what it is today! ❤️
+A big thanks also to our sponsor: https://ai-receptionist.com/.
+
 ## Important!
 
 The world of Bitcoin changes quickly and XChange is no exception. For the latest bugfixes and features you should use the [snapshot jars](https://oss.sonatype.org/content/groups/public/org/knowm/xchange/) or build yourself from the `develop` branch. See below for more details about building with Maven. To report bugs and see what issues people are currently working on see the [issues page](https://github.com/knowm/XChange/issues).
