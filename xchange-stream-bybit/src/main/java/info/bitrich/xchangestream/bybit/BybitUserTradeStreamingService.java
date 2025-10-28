@@ -12,8 +12,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import dto.BybitSubscribeMessage;
 import dto.trade.BybitOrderMessage;
-import dto.trade.BybitOrderMessage.Header;
+import dto.trade.BybitOrderMessage.BybitHeader;
 import dto.trade.BybitStreamBatchAmendOrdersPayload;
+import dto.trade.BybitStreamBatchCancelOrdersPayload;
+import dto.trade.BybitStreamBatchCancelOrdersPayload.BybitStreamBatchCancelOrderPayload;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextHandler;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
@@ -24,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -49,9 +52,11 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
   private static final Logger LOG = LoggerFactory.getLogger(BybitUserTradeStreamingService.class);
   private final ExchangeSpecification spec;
   public static final String ORDER_CREATE = "order.create";
+  public static final String BATCH_ORDER_CREATE = "order.create-batch";
   public static final String ORDER_CHANGE = "order.amend";
   public static final String BATCH_ORDER_CHANGE = "order.amend-batch";
   public static final String ORDER_CANCEL = "order.cancel";
+  public static final String BATCH_ORDER_CANCEL = "order.cancel-batch";
   @Getter private boolean isAuthorized = false;
   private String connId;
 
@@ -134,7 +139,7 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
 
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
-    Header header = new Header(String.valueOf(System.currentTimeMillis()), "5000", "");
+    BybitHeader header = new BybitHeader(String.valueOf(System.currentTimeMillis()), "5000", "");
     BybitCategory category = (BybitCategory) args[2];
     List<BybitPlaceOrderPayload> bybitPlaceOrderPayload = null;
     BybitOrderMessage<?> bybitOrderMessage = null;
@@ -187,6 +192,23 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
               new BybitOrderMessage<>(reqId, header, channelName, bybitCancelOrderPayload);
           break;
         }
+      case BATCH_ORDER_CANCEL:
+      {
+        BybitCancelOrderParams[] params =
+            objectMapper.readValue(args[0].toString(), new TypeReference<>() {});
+        List<BybitStreamBatchCancelOrderPayload> bybitBatchCancelOrderPayload = new ArrayList<>();
+        for(BybitCancelOrderParams param : params) {
+          bybitBatchCancelOrderPayload.add(
+              new BybitStreamBatchCancelOrderPayload(
+                  convertToBybitSymbol(param.getInstrument()),
+                  param.getOrderId(),
+                  param.getUserReference()));
+        }
+        List<BybitStreamBatchCancelOrdersPayload> bybitBatchCancelOrdersPayload = List.of(new BybitStreamBatchCancelOrdersPayload(category,bybitBatchCancelOrderPayload));
+        bybitOrderMessage =
+            new BybitOrderMessage<>(reqId, header, channelName, bybitBatchCancelOrdersPayload);
+        break;
+      }
     }
     return objectMapper.writeValueAsString(bybitOrderMessage);
   }
