@@ -23,7 +23,8 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
   @Override
   public Completable connect(ProductSubscription... args) {
     krakenStreamingService = new KrakenStreamingService(Config.V2_PUBLIC_WS_URL);
-    krakenPrivateStreamingService = new KrakenPrivateStreamingService(Config.V2_PRIVATE_WS_URL, this);
+    krakenPrivateStreamingService =
+        new KrakenPrivateStreamingService(Config.V2_PRIVATE_WS_URL, this);
 
     streamingTradeService = new KrakenStreamingTradeService(krakenPrivateStreamingService);
     streamingAccountService = new KrakenStreamingAccountService(krakenPrivateStreamingService);
@@ -67,7 +68,5 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
   }
 
   @Override
-  protected void initServices() {
-
-  }
+  protected void initServices() {}
 }

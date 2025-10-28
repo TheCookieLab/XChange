@@ -216,7 +216,8 @@ public class KrakenAccountService extends KrakenAccountServiceRaw implements Acc
       ledgerType = KrakenAdapters.toLedgerType(type);
     }
 
-    return KrakenAdapters.adaptFundingHistory(getKrakenPartialLedgerInfo(ledgerType, startTime, endTime, offset, currencies));
+    return KrakenAdapters.adaptFundingHistory(
+        getKrakenPartialLedgerInfo(ledgerType, startTime, endTime, offset, currencies));
   }
 
   public static class KrakenFundingHistoryParams extends DefaultTradeHistoryParamsTimeSpan

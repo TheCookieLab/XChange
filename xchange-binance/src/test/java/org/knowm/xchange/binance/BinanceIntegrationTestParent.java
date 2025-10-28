@@ -1,11 +1,11 @@
 package org.knowm.xchange.binance;
 
+import static org.assertj.core.api.Assumptions.assumeThat;
+
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.dto.meta.ExchangeHealth;
-
-import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class BinanceIntegrationTestParent {
 

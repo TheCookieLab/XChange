@@ -1,5 +1,15 @@
 package org.knowm.xchange.binance;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.knowm.xchange.binance.dto.account.AssetDetail;
 import org.knowm.xchange.binance.dto.account.BinanceAccountInformation;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureAccountInformation;
@@ -33,17 +43,6 @@ import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.meta.WalletHealth;
 import org.knowm.xchange.dto.trade.*;
 import org.knowm.xchange.instrument.Instrument;
-
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class BinanceAdapters {
   private static final DateTimeFormatter DATE_TIME_FMT =
@@ -227,8 +226,10 @@ public class BinanceAdapters {
     if (order.averagePrice != null && order.averagePrice.compareTo(BigDecimal.ZERO) != 0) {
       builder.averagePrice(order.averagePrice);
     }
-    if (order.executedQty != null && order.cumulativeQuoteQty != null &&
-        order.executedQty.signum() != 0 && order.cumulativeQuoteQty.signum() != 0) {
+    if (order.executedQty != null
+        && order.cumulativeQuoteQty != null
+        && order.executedQty.signum() != 0
+        && order.cumulativeQuoteQty.signum() != 0) {
       builder.averagePrice(
           order.cumulativeQuoteQty.divide(order.executedQty, MathContext.DECIMAL32));
     }
@@ -243,7 +244,7 @@ public class BinanceAdapters {
     Instrument instrument = adaptSymbol(binanceTicker24h.getSymbol(), isFuture);
 
     if (instrument == null) {
-        return null;
+      return null;
     }
 
     return new Ticker.Builder()
@@ -471,7 +472,9 @@ public class BinanceAdapters {
 
     for (Symbol futureSymbol : futureSymbols) {
       if (futureSymbol.getStatus().equals("TRADING")) { // Symbols which are trading
-        if (futureSymbol.getContractType().equals("PERPETUAL")) { // leave only perpetual contractType for now
+        if (futureSymbol
+            .getContractType()
+            .equals("PERPETUAL")) { // leave only perpetual contractType for now
           int pairPrecision = 8;
           int amountPrecision = 8;
 
@@ -487,7 +490,8 @@ public class BinanceAdapters {
 
           Instrument currentCurrencyPair =
               new FuturesContract(
-                  new CurrencyPair(futureSymbol.getBaseAsset() + "/" + futureSymbol.getQuoteAsset()),
+                  new CurrencyPair(
+                      futureSymbol.getBaseAsset() + "/" + futureSymbol.getQuoteAsset()),
                   "PERP");
 
           for (Filter filter : futureSymbol.getFilters()) {

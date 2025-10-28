@@ -156,32 +156,35 @@ public class BinanceExchange extends BaseExchange implements Exchange {
   }
 
   /** Adjust host parameters depending on exchange specific parameters */
-  private static void concludeHostParams(ExchangeSpecification exchangeSpecification) {
+  protected void concludeHostParams(ExchangeSpecification exchangeSpecification) {
     if (exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE) != null) {
       switch ((ExchangeType)
           exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE)) {
-        case SPOT: {
-          if (enabledSandbox(exchangeSpecification)) {
-            exchangeSpecification.setSslUri(SANDBOX_SPOT_URL);
+        case SPOT:
+          {
+            if (enabledSandbox(exchangeSpecification)) {
+              exchangeSpecification.setSslUri(SANDBOX_SPOT_URL);
+            }
+            break;
           }
-          break;
-        }
-        case FUTURES: {
-          if (!enabledSandbox(exchangeSpecification)) {
-            exchangeSpecification.setSslUri(FUTURES_URL);
-          } else {
-            exchangeSpecification.setSslUri(SANDBOX_FUTURES_URL);
+        case FUTURES:
+          {
+            if (!enabledSandbox(exchangeSpecification)) {
+              exchangeSpecification.setSslUri(FUTURES_URL);
+            } else {
+              exchangeSpecification.setSslUri(SANDBOX_FUTURES_URL);
+            }
+            break;
           }
-          break;
-        }
-        case INVERSE: {
-          if (!enabledSandbox(exchangeSpecification)) {
-            exchangeSpecification.setSslUri(INVERSE_FUTURES_URL);
-          } else {
-            exchangeSpecification.setSslUri(SANDBOX_INVERSE_FUTURES_URL);
+        case INVERSE:
+          {
+            if (!enabledSandbox(exchangeSpecification)) {
+              exchangeSpecification.setSslUri(INVERSE_FUTURES_URL);
+            } else {
+              exchangeSpecification.setSslUri(SANDBOX_INVERSE_FUTURES_URL);
+            }
+            break;
           }
-          break;
-        }
         case PORTFOLIO_MARGIN:
           exchangeSpecification.setSslUri(PORTFOLIO_MARGIN_URL);
           break;

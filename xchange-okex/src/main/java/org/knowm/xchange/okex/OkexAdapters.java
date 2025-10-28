@@ -136,8 +136,7 @@ public class OkexAdapters {
   private static Order adaptOrderChange(
       OkexOrderDetails okexOrder, ExchangeMetaData exchangeMetaData) {
     Instrument instrument = adaptOkexInstrumentId(okexOrder.getInstrumentId());
-    OrderType orderType =
-        "buy".equals(okexOrder.getSide()) ? OrderType.BID : OrderType.ASK;
+    OrderType orderType = "buy".equals(okexOrder.getSide()) ? OrderType.BID : OrderType.ASK;
     Order order;
     if (okexOrder.getOrderType().equals(OkexOrderType.market.name())) {
       order =
@@ -178,7 +177,8 @@ public class OkexAdapters {
               .id(okexOrder.getOrderId())
               .timestamp(new Date(Long.parseLong(okexOrder.getUpdateTime())))
               .limitPrice(
-                  okexOrder.getLastFilledPrice().isEmpty() || okexOrder.getLastFilledPrice().equals("0")
+                  okexOrder.getLastFilledPrice().isEmpty()
+                          || okexOrder.getLastFilledPrice().equals("0")
                       ? new BigDecimal(okexOrder.getPrice())
                       : new BigDecimal(okexOrder.getLastFilledPrice()))
               .averagePrice(new BigDecimal(okexOrder.getAverageFilledPrice()))
@@ -254,8 +254,9 @@ public class OkexAdapters {
     return (order.getInstrument() instanceof FuturesContract)
         ? order
             .getOriginalAmount()
-            .divide(metaData.getContractValue(),20, RoundingMode.HALF_DOWN)
-            .stripTrailingZeros().toPlainString()
+            .divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN)
+            .stripTrailingZeros()
+            .toPlainString()
         : order.getOriginalAmount().toString();
   }
 
@@ -299,7 +300,7 @@ public class OkexAdapters {
   }
 
   private static String getSide(Order order) {
-    String side= "";
+    String side = "";
     switch (order.getType()) {
       case BID:
         side = "buy";
@@ -440,7 +441,8 @@ public class OkexAdapters {
       CurrencyPair pair = (CurrencyPair) instrument;
       String base = pair.getBase().getCurrencyCode();
       String counter = pair.getCounter().getCurrencyCode();
-      // Adapt for USDC after delist: https://www.okx.com/docs-v5/log_en/#2025-08-20-unified-usd-orderbook-revamp
+      // Adapt for USDC after delist:
+      // https://www.okx.com/docs-v5/log_en/#2025-08-20-unified-usd-orderbook-revamp
       if ("USDC".equals(counter)) {
         counter = "USD";
       }
@@ -700,8 +702,7 @@ public class OkexAdapters {
       List<OkexAccountPositionRisk> accountPositionRiskData) {
     BigDecimal totalPositionValueInUsd = BigDecimal.ZERO;
 
-    for (PositionData positionData :
-        accountPositionRiskData.get(0).getPositionData()) {
+    for (PositionData positionData : accountPositionRiskData.get(0).getPositionData()) {
       totalPositionValueInUsd = totalPositionValueInUsd.add(positionData.getNotionalUsdValue());
     }
 
@@ -789,15 +790,13 @@ public class OkexAdapters {
     for (OkexPublicOrder ask : asks) {
       BigDecimal volume = convertContractSizeToVolume(ask.getVolume(), instrument, contractValue);
       OrderBookUpdate o =
-          new OrderBookUpdate(
-              OrderType.ASK, volume, instrument, ask.getPrice(), date, volume);
+          new OrderBookUpdate(OrderType.ASK, volume, instrument, ask.getPrice(), date, volume);
       orderBookUpdates.add(o);
     }
     for (OkexPublicOrder bid : bids) {
       BigDecimal volume = convertContractSizeToVolume(bid.getVolume(), instrument, contractValue);
       OrderBookUpdate o =
-          new OrderBookUpdate(
-              OrderType.BID, volume, instrument, bid.getPrice(), date, volume);
+          new OrderBookUpdate(OrderType.BID, volume, instrument, bid.getPrice(), date, volume);
       orderBookUpdates.add(o);
     }
     return orderBookUpdates;
