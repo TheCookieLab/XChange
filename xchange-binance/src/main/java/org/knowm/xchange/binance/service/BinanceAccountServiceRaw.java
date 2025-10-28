@@ -65,14 +65,15 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
     return futuresAccount(false);
   }
 
-  public BinanceFutureAccountInformation futuresAccount(boolean useV3) throws BinanceException, IOException {
+  public BinanceFutureAccountInformation futuresAccount(boolean useV3)
+      throws BinanceException, IOException {
     return decorateApiCall(
             () ->
                 useV3
-                ? binanceFutures.futuresV3Account(
+                    ? binanceFutures.futuresV3Account(
                         getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator)
-                : binanceFutures.futuresAccount(
-                    getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
+                    : binanceFutures.futuresAccount(
+                        getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("futures-account"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
         .call();
@@ -294,8 +295,8 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
         .call();
   }
 
-  public BinanceChangeStatus setMarginType(
-      Instrument instrument, MarginType marginType) throws IOException {
+  public BinanceChangeStatus setMarginType(Instrument instrument, MarginType marginType)
+      throws IOException {
     return decorateApiCall(
             () ->
                 binanceFutures.setMarginType(
@@ -310,8 +311,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
         .call();
   }
 
-  public BinanceChangeStatus setDualSidePosition(
-      boolean dualSidePosition) throws IOException {
+  public BinanceChangeStatus setDualSidePosition(boolean dualSidePosition) throws IOException {
     return decorateApiCall(
             () ->
                 binanceFutures.setDualSidePosition(
@@ -327,14 +327,14 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
 
   public BinanceSetLeverage setLeverageRaw(Instrument instrument, int leverage) throws IOException {
     return decorateApiCall(
-        () ->
-            binanceFutures.setLeverage(
-                BinanceAdapters.toSymbol(instrument, false),
-                leverage,
-                getRecvWindow(),
-                getTimestampFactory(),
-                apiKey,
-                signatureCreator))
+            () ->
+                binanceFutures.setLeverage(
+                    BinanceAdapters.toSymbol(instrument, false),
+                    leverage,
+                    getRecvWindow(),
+                    getTimestampFactory(),
+                    apiKey,
+                    signatureCreator))
         .withRetry(retry("setLeverage"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();

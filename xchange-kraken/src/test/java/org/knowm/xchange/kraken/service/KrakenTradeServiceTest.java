@@ -28,22 +28,24 @@ public class KrakenTradeServiceTest extends KrakenExchangeWiremock {
 
   @Test
   void all_open_orders() throws IOException {
-    var expected = new LimitOrder.Builder(OrderType.BID, CurrencyPair.ETH_USDT)
-        .id("OKXYTQ-BJLS2-HYJD7R")
-        .limitPrice(new BigDecimal("4065.54"))
-        .originalAmount(new BigDecimal("0.002"))
-        .cumulativeAmount(BigDecimal.ZERO)
-        .averagePrice(BigDecimal.ZERO)
-        .fee(BigDecimal.ZERO)
-        .timestamp(Date.from(Instant.parse("2025-09-03T21:18:20.624Z")))
-        .orderStatus(OrderStatus.NEW)
-        .userReference("0")
-        .build();
+    var expected =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.ETH_USDT)
+            .id("OKXYTQ-BJLS2-HYJD7R")
+            .limitPrice(new BigDecimal("4065.54"))
+            .originalAmount(new BigDecimal("0.002"))
+            .cumulativeAmount(BigDecimal.ZERO)
+            .averagePrice(BigDecimal.ZERO)
+            .fee(BigDecimal.ZERO)
+            .timestamp(Date.from(Instant.parse("2025-09-03T21:18:20.624Z")))
+            .orderStatus(OrderStatus.NEW)
+            .userReference("0")
+            .build();
 
     OpenOrders openOrders = tradeService.getOpenOrders();
 
     assertThat(openOrders.getOpenOrders()).hasSize(2);
-    assertThat(openOrders.getOpenOrders()).first()
+    assertThat(openOrders.getOpenOrders())
+        .first()
         .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
         .usingRecursiveComparison()
         .isEqualTo(expected);
@@ -66,20 +68,19 @@ public class KrakenTradeServiceTest extends KrakenExchangeWiremock {
 
     assertThat(actual.getOpenPositions()).hasSize(2);
 
-    var expected = OpenPosition.builder()
-        .instrument(CurrencyPair.BTC_USDT)
-        .type(Type.LONG)
-        .size(new BigDecimal("5.51"))
-        .price(new BigDecimal("110200"))
-        .build();
+    var expected =
+        OpenPosition.builder()
+            .instrument(CurrencyPair.BTC_USDT)
+            .type(Type.LONG)
+            .size(new BigDecimal("5.51"))
+            .price(new BigDecimal("110200"))
+            .build();
 
     assertThat(actual.getOpenPositions().get(1))
         .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
         .usingRecursiveComparison()
         .isEqualTo(expected);
-
   }
-
 
   @Test
   void trade_history() throws IOException {
@@ -87,24 +88,23 @@ public class KrakenTradeServiceTest extends KrakenExchangeWiremock {
         exchange
             .getTradeService()
             .getTradeHistory(
-                KrakenTradeHistoryParams.builder()
-                    .currencyPair(CurrencyPair.BTC_USDT)
-                    .build());
+                KrakenTradeHistoryParams.builder().currencyPair(CurrencyPair.BTC_USDT).build());
 
     assertThat(userTrades.getUserTrades()).hasSize(2);
 
-    KrakenUserTrade expected = KrakenUserTrade.builder()
-        .id("TAGKDK-PVBGJ-RZ4N35")
-        .orderId("O7XYLB-A7U77-GE4DLL")
-        .instrument(CurrencyPair.BTC_USDT)
-        .type(OrderType.BID)
-        .originalAmount(new BigDecimal("0.00013394"))
-        .price(new BigDecimal("111993.3"))
-        .timestamp(Date.from(Instant.parse("2025-09-03T21:33:57.276Z")))
-        .feeAmount(new BigDecimal("0.06"))
-        .feeCurrency(Currency.USDT)
-        .cost(new BigDecimal("15"))
-        .build();
+    KrakenUserTrade expected =
+        KrakenUserTrade.builder()
+            .id("TAGKDK-PVBGJ-RZ4N35")
+            .orderId("O7XYLB-A7U77-GE4DLL")
+            .instrument(CurrencyPair.BTC_USDT)
+            .type(OrderType.BID)
+            .originalAmount(new BigDecimal("0.00013394"))
+            .price(new BigDecimal("111993.3"))
+            .timestamp(Date.from(Instant.parse("2025-09-03T21:33:57.276Z")))
+            .feeAmount(new BigDecimal("0.06"))
+            .feeCurrency(Currency.USDT)
+            .cost(new BigDecimal("15"))
+            .build();
 
     assertThat(userTrades.getUserTrades())
         .first()
@@ -166,5 +166,4 @@ public class KrakenTradeServiceTest extends KrakenExchangeWiremock {
     boolean actual = tradeService.cancelOrder("OKXYTQ-BJLS2-HYJD7R");
     assertThat(actual).isTrue();
   }
-
 }

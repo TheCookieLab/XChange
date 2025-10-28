@@ -62,4 +62,3 @@ public class CurrenciesJSONTest {
     assertThat(xrpNet.getWithdraw().getFee().get(0).getFixFee()).isEqualByComparingTo("0.02");
   }
 }
-

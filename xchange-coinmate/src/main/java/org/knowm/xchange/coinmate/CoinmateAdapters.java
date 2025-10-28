@@ -57,24 +57,24 @@ import org.knowm.xchange.coinmate.dto.trade.CoinmateTransferHistory;
 import org.knowm.xchange.coinmate.dto.trade.CoinmateTransferHistoryEntry;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.dto.account.Wallet;
-import org.knowm.xchange.dto.meta.CurrencyMetaData;
-import org.knowm.xchange.dto.meta.ExchangeMetaData;
-import org.knowm.xchange.dto.meta.InstrumentMetaData;
-import org.knowm.xchange.dto.meta.WalletHealth;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.dto.meta.CurrencyMetaData;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
+import org.knowm.xchange.dto.meta.WalletHealth;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsSorted;
 
 /**
@@ -587,22 +587,21 @@ public class CoinmateAdapters {
           minWithdrawalAmount = network.getWithdraw().getMinAmount();
 
           // Get first fee variant
-          if (network.getWithdraw().getFee() != null
-              && !network.getWithdraw().getFee().isEmpty()) {
+          if (network.getWithdraw().getFee() != null && !network.getWithdraw().getFee().isEmpty()) {
             CoinmateWithdrawFee feeInfo = network.getWithdraw().getFee().get(0);
             withdrawalFee = feeInfo.getFixFee();
           }
         }
       }
 
-      CurrencyMetaData metadata = getCurrencyMetaData(currencyInfo, withdrawalFee, minWithdrawalAmount);
+      CurrencyMetaData metadata =
+          getCurrencyMetaData(currencyInfo, withdrawalFee, minWithdrawalAmount);
 
       currencies.put(currency, metadata);
     }
 
     return currencies;
   }
-
 
   /**
    * Adapts CoinmateTradingPairs to XChange InstrumentMetaData map.
@@ -621,21 +620,22 @@ public class CoinmateAdapters {
     for (CoinmateTradingPairsEntry pairInfo : coinmateTradingPairs.getData()) {
       CurrencyPair currencyPair = CoinmateUtils.getPair(pairInfo.getName());
 
-      InstrumentMetaData metadata = new InstrumentMetaData(
-          null, // tradingFee
-          null, // feeTiers
-          BigDecimal.valueOf(pairInfo.getMinAmount()), // minimumAmount
-          null, // maximumAmount
-          null, // counterMinimumAmount
-          null, // counterMaximumAmount
-          pairInfo.getPriceScale(), // priceScale
-          pairInfo.getVolumeScale(), // volumeScale
-          null, // amountStepSize
-          null, // priceStepSize
-          null, // tradingFeeCurrency
-          true, // marketOrderEnabled - Coinmate supports market orders
-          null  // contractValue
-      );
+      InstrumentMetaData metadata =
+          new InstrumentMetaData(
+              null, // tradingFee
+              null, // feeTiers
+              BigDecimal.valueOf(pairInfo.getMinAmount()), // minimumAmount
+              null, // maximumAmount
+              null, // counterMinimumAmount
+              null, // counterMaximumAmount
+              pairInfo.getPriceScale(), // priceScale
+              pairInfo.getVolumeScale(), // volumeScale
+              null, // amountStepSize
+              null, // priceStepSize
+              null, // tradingFeeCurrency
+              true, // marketOrderEnabled - Coinmate supports market orders
+              null // contractValue
+              );
 
       pairs.put(currencyPair, metadata);
     }
@@ -644,8 +644,8 @@ public class CoinmateAdapters {
   }
 
   /**
-   * Adapts Coinmate metadata to XChange ExchangeMetaData.
-   * Similar to Kraken's adaptToExchangeMetaData method.
+   * Adapts Coinmate metadata to XChange ExchangeMetaData. Similar to Kraken's
+   * adaptToExchangeMetaData method.
    *
    * @param originalMetaData Original metadata (for rate limits)
    * @param coinmateCurrencies Coinmate currency information
@@ -668,8 +668,8 @@ public class CoinmateAdapters {
         originalMetaData == null ? null : originalMetaData.isShareRateLimits());
   }
 
-  private static CurrencyMetaData getCurrencyMetaData(CoinmateCurrencyInfo currencyInfo, BigDecimal withdrawalFee,
-      BigDecimal minWithdrawalAmount) {
+  private static CurrencyMetaData getCurrencyMetaData(
+      CoinmateCurrencyInfo currencyInfo, BigDecimal withdrawalFee, BigDecimal minWithdrawalAmount) {
     boolean depositsEnabled = currencyInfo.isDepositEnabled();
     boolean withdrawalsEnabled = currencyInfo.isWithdrawEnabled();
     WalletHealth walletHealth;
@@ -684,10 +684,6 @@ public class CoinmateAdapters {
     }
 
     return new CurrencyMetaData(
-        currencyInfo.getPrecision(),
-        withdrawalFee,
-        minWithdrawalAmount,
-        walletHealth
-    );
+        currencyInfo.getPrecision(), withdrawalFee, minWithdrawalAmount, walletHealth);
   }
 }

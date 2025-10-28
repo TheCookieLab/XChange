@@ -112,7 +112,6 @@ public class AscendexProductDto {
     return maxQty;
   }
 
-
   @Override
   public String toString() {
     return "AscendexProductDto{"

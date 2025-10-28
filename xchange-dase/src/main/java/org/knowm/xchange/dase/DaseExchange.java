@@ -14,6 +14,7 @@ public class DaseExchange extends BaseExchange {
     this.accountService = new DaseAccountService(this);
     this.tradeService = new DaseTradeService(this);
   }
+
   @Override
   public ExchangeSpecification getDefaultExchangeSpecification() {
     ExchangeSpecification spec = new ExchangeSpecification(this.getClass());
