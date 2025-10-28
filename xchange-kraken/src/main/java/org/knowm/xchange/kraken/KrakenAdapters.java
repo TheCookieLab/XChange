@@ -107,7 +107,8 @@ public class KrakenAdapters {
             krakenOpenPosition ->
                 openPositionsList.add(
                     OpenPosition.builder()
-                        .instrument(KrakenAdapters.adaptCurrencyPair(krakenOpenPosition.getAssetPair()))
+                        .instrument(
+                            KrakenAdapters.adaptCurrencyPair(krakenOpenPosition.getAssetPair()))
                         .type(
                             krakenOpenPosition.getType() == KrakenType.BUY
                                 ? OpenPosition.Type.LONG
@@ -247,21 +248,22 @@ public class KrakenAdapters {
         .build();
   }
 
-  public static Wallet toWallet(Map<String, KrakenExtendedBalance> krakenExtendedBalancePositions, String walletId) {
-    var balances = krakenExtendedBalancePositions.entrySet().stream()
-        .map(e -> toBalance(e.getKey(), e.getValue()))
-        .collect(Collectors.toList());
+  public static Wallet toWallet(
+      Map<String, KrakenExtendedBalance> krakenExtendedBalancePositions, String walletId) {
+    var balances =
+        krakenExtendedBalancePositions.entrySet().stream()
+            .map(e -> toBalance(e.getKey(), e.getValue()))
+            .collect(Collectors.toList());
 
-    return new Wallet.Builder()
-        .id(walletId)
-        .balances(balances)
-        .build();
+    return new Wallet.Builder().id(walletId).balances(balances).build();
   }
 
-  public static Balance toBalance(String krakenCurrencyCode, KrakenExtendedBalance krakenExtendedBalance) {
-    var builder = Balance.builder()
-        .currency(adaptCurrency(krakenCurrencyCode))
-        .total(krakenExtendedBalance.getBalance());
+  public static Balance toBalance(
+      String krakenCurrencyCode, KrakenExtendedBalance krakenExtendedBalance) {
+    var builder =
+        Balance.builder()
+            .currency(adaptCurrency(krakenCurrencyCode))
+            .total(krakenExtendedBalance.getBalance());
 
     if (krakenExtendedBalance.getCredit() != null) {
       builder.borrowed(krakenExtendedBalance.getCredit());
@@ -488,32 +490,33 @@ public class KrakenAdapters {
   }
 
   private static InstrumentMetaData adaptPair(
-          KrakenAssetPair krakenPair, InstrumentMetaData originalMeta) {
+      KrakenAssetPair krakenPair, InstrumentMetaData originalMeta) {
     // Normalize order minimum into base units
-    BigDecimal minimumAmount = krakenPair.getOrderMin()
-            .multiply(krakenPair.getVolumeMultiplier());
+    BigDecimal minimumAmount = krakenPair.getOrderMin().multiply(krakenPair.getVolumeMultiplier());
     // effective step size in base units
     // stepSize = lot_multiplier × 10^(-lot_decimals)
-    BigDecimal volumeStepSize = BigDecimal.ONE
+    BigDecimal volumeStepSize =
+        BigDecimal.ONE
             .divide(BigDecimal.TEN.pow(krakenPair.getVolumeLotScale()))
             .multiply(krakenPair.getVolumeMultiplier());
     // --- Trading fee: first tier as default ---
-    BigDecimal tradingFee = krakenPair.getFees().isEmpty()
+    BigDecimal tradingFee =
+        krakenPair.getFees().isEmpty()
             ? BigDecimal.ZERO
             : krakenPair.getFees().get(0).getPercentFee().divide(BigDecimal.valueOf(100));
 
     return InstrumentMetaData.builder()
-            .tradingFee(tradingFee)
-            .feeTiers(adaptFeeTiers(krakenPair.getFees_maker(), krakenPair.getFees()))
-            .tradingFeeCurrency(
-                    KrakenUtils.translateKrakenCurrencyCode(krakenPair.getFeeVolumeCurrency()))
-            .minimumAmount(minimumAmount)
-            .priceScale(krakenPair.getPairScale())
-            .priceStepSize(krakenPair.getTickSize())
-            .volumeScale(krakenPair.getVolumeLotScale())
-            .amountStepSize(volumeStepSize)
-            .marketOrderEnabled(true)
-            .build();
+        .tradingFee(tradingFee)
+        .feeTiers(adaptFeeTiers(krakenPair.getFees_maker(), krakenPair.getFees()))
+        .tradingFeeCurrency(
+            KrakenUtils.translateKrakenCurrencyCode(krakenPair.getFeeVolumeCurrency()))
+        .minimumAmount(minimumAmount)
+        .priceScale(krakenPair.getPairScale())
+        .priceStepSize(krakenPair.getTickSize())
+        .volumeScale(krakenPair.getVolumeLotScale())
+        .amountStepSize(volumeStepSize)
+        .marketOrderEnabled(true)
+        .build();
   }
 
   public static List<FundingRecord> adaptFundingHistory(

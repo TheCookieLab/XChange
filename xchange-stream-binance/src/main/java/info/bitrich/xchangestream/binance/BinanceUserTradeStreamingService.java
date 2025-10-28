@@ -46,8 +46,7 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceUserTradeStreamingService.class);
   private static final Pattern p = Pattern.compile("[a-z.]+|\\d+");
   CompositeDisposable compositeDisposable = new CompositeDisposable();
-  @Getter
-  private boolean authorized = false;
+  @Getter private boolean authorized = false;
   private String signature = "";
   Charset charSet = StandardCharsets.UTF_8;
   private final String apiKey;
@@ -67,10 +66,13 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
         (CompletableSource)
             (completable) -> {
               login();
-              Disposable disposable = subscribeDisconnect().subscribe(obj -> {
-                authorized = false;
-                signature = "";
-              });
+              Disposable disposable =
+                  subscribeDisconnect()
+                      .subscribe(
+                          obj -> {
+                            authorized = false;
+                            signature = "";
+                          });
               compositeDisposable.add(disposable);
               completable.onComplete();
             });
@@ -89,21 +91,31 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
 
   public void login() {
     ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
-    Observable<Boolean> observable = this.subscribeChannel(String.valueOf(System.currentTimeMillis()), "session.logon").flatMap(node -> {
-      TypeReference<BinanceWebsocketOrderResponse<BinanceWebsocketLoginResponse>> typeReference = new TypeReference<>() {
-      };
-      BinanceWebsocketOrderResponse<BinanceWebsocketLoginResponse> response = mapper.treeToValue(node, typeReference);
-      if (response.getStatus() == 200) {
-        return Observable.just(true);
-      } else {
-        return Observable.error(new BinanceException(response.getError().getCode(), response.getError().getMsg()));
-      }
-    });
-    loginDisposable = observable.firstElement().doOnError(error ->
-        LOG.error("Login error", error)).subscribe(loginResult -> {
-      LOG.info("Successfully authorized to BinanceUserTradeStreamingService");
-      authorized = true;
-    });
+    Observable<Boolean> observable =
+        this.subscribeChannel(String.valueOf(System.currentTimeMillis()), "session.logon")
+            .flatMap(
+                node -> {
+                  TypeReference<BinanceWebsocketOrderResponse<BinanceWebsocketLoginResponse>>
+                      typeReference = new TypeReference<>() {};
+                  BinanceWebsocketOrderResponse<BinanceWebsocketLoginResponse> response =
+                      mapper.treeToValue(node, typeReference);
+                  if (response.getStatus() == 200) {
+                    return Observable.just(true);
+                  } else {
+                    return Observable.error(
+                        new BinanceException(
+                            response.getError().getCode(), response.getError().getMsg()));
+                  }
+                });
+    loginDisposable =
+        observable
+            .firstElement()
+            .doOnError(error -> LOG.error("Login error", error))
+            .subscribe(
+                loginResult -> {
+                  LOG.info("Successfully authorized to BinanceUserTradeStreamingService");
+                  authorized = true;
+                });
   }
 
   public String signPayload(String payload) throws Exception {
@@ -140,53 +152,65 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
     String method = args[0].toString();
     switch (method) {
-      case "session.logon": { // login
-        long timestamp = System.currentTimeMillis();
-        try {
-          String loginPayload = "apiKey=" + apiKey + "&timestamp=" + timestamp;
-          signature = signPayload(loginPayload);
-          BinanceWebsocketLoginPayloadWithSignature loginPayloadWithSignature = new BinanceWebsocketLoginPayloadWithSignature(apiKey, signature, timestamp);
-          BinanceWebsocketPayload<BinanceWebsocketLoginPayloadWithSignature> payload = new BinanceWebsocketPayload<>(channelName, "session.logon", loginPayloadWithSignature);
+      case "session.logon":
+        { // login
+          long timestamp = System.currentTimeMillis();
+          try {
+            String loginPayload = "apiKey=" + apiKey + "&timestamp=" + timestamp;
+            signature = signPayload(loginPayload);
+            BinanceWebsocketLoginPayloadWithSignature loginPayloadWithSignature =
+                new BinanceWebsocketLoginPayloadWithSignature(apiKey, signature, timestamp);
+            BinanceWebsocketPayload<BinanceWebsocketLoginPayloadWithSignature> payload =
+                new BinanceWebsocketPayload<>(
+                    channelName, "session.logon", loginPayloadWithSignature);
+            return objectMapper.writeValueAsString(payload);
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      case "order.place":
+        {
+          BinanceWebsocketPlaceOrderPayload orderPayload = null;
+          if (args[1] instanceof MarketOrder) {
+            MarketOrder marketOrder = (MarketOrder) args[1];
+            orderPayload = BinanceStreamingAdapters.adaptPlaceOrder(marketOrder);
+          } else if (args[1] instanceof LimitOrder) {
+            LimitOrder limitOrder = (LimitOrder) args[1];
+            orderPayload = BinanceStreamingAdapters.adaptPlaceOrder(limitOrder);
+          }
+          assert orderPayload != null;
+          BinanceWebsocketPayload<BinanceWebsocketPlaceOrderPayload> payload =
+              new BinanceWebsocketPayload<>(channelName, method, orderPayload);
           return objectMapper.writeValueAsString(payload);
-        } catch (Exception e) {
-          throw new RuntimeException(e);
         }
-      }
-      case "order.place": {
-        BinanceWebsocketPlaceOrderPayload orderPayload = null;
-        if (args[1] instanceof MarketOrder) {
-          MarketOrder marketOrder = (MarketOrder) args[1];
-          orderPayload = BinanceStreamingAdapters.adaptPlaceOrder(marketOrder);
-        } else if (args[1] instanceof LimitOrder) {
+      case "order.modify":
+        {
           LimitOrder limitOrder = (LimitOrder) args[1];
-          orderPayload = BinanceStreamingAdapters.adaptPlaceOrder(limitOrder);
+          BinanceWebsocketOrderAmendPayload amendOrderPayload =
+              BinanceStreamingAdapters.adaptAmendOrder(limitOrder);
+          assert amendOrderPayload != null;
+          BinanceWebsocketPayload<BinanceWebsocketOrderAmendPayload> payload =
+              new BinanceWebsocketPayload<>(channelName, method, amendOrderPayload);
+          return objectMapper.writeValueAsString(payload);
         }
-        assert orderPayload != null;
-        BinanceWebsocketPayload<BinanceWebsocketPlaceOrderPayload> payload = new BinanceWebsocketPayload<>(channelName, method, orderPayload);
-        return objectMapper.writeValueAsString(payload);
-      }
-      case "order.modify": {
-        LimitOrder limitOrder = (LimitOrder) args[1];
-        BinanceWebsocketOrderAmendPayload amendOrderPayload = BinanceStreamingAdapters.adaptAmendOrder(limitOrder);
-        assert amendOrderPayload != null;
-        BinanceWebsocketPayload<BinanceWebsocketOrderAmendPayload> payload = new BinanceWebsocketPayload<>(channelName, method, amendOrderPayload);
-        return objectMapper.writeValueAsString(payload);
-      }
-      case "order.cancel": {
-        BinanceCancelOrderParams params = (BinanceCancelOrderParams) args[1];
-        Long orderId = null;
-        if(params.getOrderId()!= null && !params.getOrderId().isEmpty()) {
-          orderId = Long.valueOf(params.getOrderId());
+      case "order.cancel":
+        {
+          BinanceCancelOrderParams params = (BinanceCancelOrderParams) args[1];
+          Long orderId = null;
+          if (params.getOrderId() != null && !params.getOrderId().isEmpty()) {
+            orderId = Long.valueOf(params.getOrderId());
+          }
+          BinanceWebsocketOrderCancelPayload cancelOrderPayload =
+              BinanceWebsocketOrderCancelPayload.builder()
+                  .symbol(BinanceAdapters.toSymbol(params.getInstrument()))
+                  .orderId(orderId)
+                  .origClientOrderId(params.getUserReference())
+                  .timestamp(System.currentTimeMillis())
+                  .build();
+          BinanceWebsocketPayload<BinanceWebsocketOrderCancelPayload> payload =
+              new BinanceWebsocketPayload<>(channelName, method, cancelOrderPayload);
+          return objectMapper.writeValueAsString(payload);
         }
-        BinanceWebsocketOrderCancelPayload cancelOrderPayload = BinanceWebsocketOrderCancelPayload.builder()
-            .symbol(BinanceAdapters.toSymbol(params.getInstrument()))
-            .orderId(orderId)
-            .origClientOrderId(params.getUserReference())
-            .timestamp(System.currentTimeMillis())
-            .build();
-        BinanceWebsocketPayload<BinanceWebsocketOrderCancelPayload> payload = new BinanceWebsocketPayload<>(channelName, method, cancelOrderPayload);
-        return objectMapper.writeValueAsString(payload);
-      }
       default:
         return null;
     }
@@ -196,5 +220,4 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   protected WebSocketClientExtensionHandler getWebSocketClientExtensionHandler() {
     return WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler.INSTANCE;
   }
-
 }

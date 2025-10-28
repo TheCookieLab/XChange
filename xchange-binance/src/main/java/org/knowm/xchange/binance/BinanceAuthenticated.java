@@ -618,8 +618,7 @@ public interface BinanceAuthenticated extends Binance {
   @PUT
   @Path("/fapi/v1/listenKey")
   Map<?, ?> keepAliveFutureUserDataStream(
-      @HeaderParam(X_MBX_APIKEY) String apiKey,
-      @FormParam("listenKey") String listenKey)
+      @HeaderParam(X_MBX_APIKEY) String apiKey, @FormParam("listenKey") String listenKey)
       throws IOException, BinanceException;
 
   /**
@@ -631,6 +630,5 @@ public interface BinanceAuthenticated extends Binance {
    */
   @DELETE
   @Path("/fapi/v1/listenKey")
-  Map<?, ?> closeFutureUserDataStream()
-      throws IOException, BinanceException;
+  Map<?, ?> closeFutureUserDataStream() throws IOException, BinanceException;
 }

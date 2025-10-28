@@ -29,4 +29,3 @@ public class CoinmateWithdrawInfo {
     this.max24hLimit = max24hLimit;
   }
 }
-

@@ -61,12 +61,12 @@ public interface OrderAPI {
   @Path("/stop-order")
   @Consumes(MediaType.APPLICATION_JSON)
   KucoinResponse<OrderCreateResponse> createStopOrder(
-          @HeaderParam(APIConstants.API_HEADER_KEY) String apiKey,
-          @HeaderParam(APIConstants.API_HEADER_SIGN) ParamsDigest signature,
-          @HeaderParam(APIConstants.API_HEADER_TIMESTAMP) SynchronizedValueFactory<Long> nonce,
-          @HeaderParam(APIConstants.API_HEADER_PASSPHRASE) String apiPassphrase,
-          OrderCreateApiRequest opsRequest)
-          throws IOException;
+      @HeaderParam(APIConstants.API_HEADER_KEY) String apiKey,
+      @HeaderParam(APIConstants.API_HEADER_SIGN) ParamsDigest signature,
+      @HeaderParam(APIConstants.API_HEADER_TIMESTAMP) SynchronizedValueFactory<Long> nonce,
+      @HeaderParam(APIConstants.API_HEADER_PASSPHRASE) String apiPassphrase,
+      OrderCreateApiRequest opsRequest)
+      throws IOException;
 
   /**
    * Cancel an order

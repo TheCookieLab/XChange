@@ -29,6 +29,4 @@ public class KrakenTradeHistoryParams
   private Date startTime;
 
   private CurrencyPair currencyPair;
-
-
 }

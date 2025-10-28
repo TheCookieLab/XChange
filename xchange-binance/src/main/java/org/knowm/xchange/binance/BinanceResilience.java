@@ -62,14 +62,16 @@ public final class BinanceResilience {
                 .build());
     registries
         .rateLimiters()
-        .rateLimiter(ORDERS_PER_10_SECONDS_RATE_LIMITER,
+        .rateLimiter(
+            ORDERS_PER_10_SECONDS_RATE_LIMITER,
             RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
                 .limitRefreshPeriod(Duration.ofSeconds(10))
                 .limitForPeriod(300)
                 .build());
     registries
         .rateLimiters()
-        .rateLimiter(ORDERS_PER_MINUTE_RATE_LIMITER,
+        .rateLimiter(
+            ORDERS_PER_MINUTE_RATE_LIMITER,
             RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
                 .limitRefreshPeriod(Duration.ofMinutes(1))
                 .limitForPeriod(1200)

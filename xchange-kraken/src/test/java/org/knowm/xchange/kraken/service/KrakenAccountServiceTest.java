@@ -1,5 +1,14 @@
 package org.knowm.xchange.kraken.service;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Date;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.AccountInfo;
@@ -13,16 +22,6 @@ import org.knowm.xchange.kraken.KrakenExchangeWiremock;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.account.params.DefaultRequestDepositAddressParams;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.Date;
-
-import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-
 public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
 
   AccountService accountService = exchange.getAccountService();
@@ -33,34 +32,34 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
 
     assertThat(actual).hasSize(2);
 
-    var expected = FundingRecord.builder()
-        .type(Type.DEPOSIT)
-        .status(Status.COMPLETE)
-        .currency(Currency.USDT)
-        .balance(new BigDecimal("100"))
-        .amount(new BigDecimal("100"))
-        .fee(BigDecimal.ZERO)
-        .internalId("FTJ4ZXN-YRWqyo1No6Wqt3vzBVgNMf")
-        .date(Date.from(Instant.parse("2025-09-02T15:11:18.456Z")))
-        .build();
+    var expected =
+        FundingRecord.builder()
+            .type(Type.DEPOSIT)
+            .status(Status.COMPLETE)
+            .currency(Currency.USDT)
+            .balance(new BigDecimal("100"))
+            .amount(new BigDecimal("100"))
+            .fee(BigDecimal.ZERO)
+            .internalId("FTJ4ZXN-YRWqyo1No6Wqt3vzBVgNMf")
+            .date(Date.from(Instant.parse("2025-09-02T15:11:18.456Z")))
+            .build();
 
     assertThat(actual.get(1))
         .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
         .usingRecursiveComparison()
         .isEqualTo(expected);
-
   }
-
 
   @Test
   void valid_balances() throws IOException {
     AccountInfo accountInfo = accountService.getAccountInfo();
 
-    var expectedBTC = new Balance.Builder()
-        .currency(Currency.BTC)
-        .total(new BigDecimal("0.0001339400"))
-        .frozen(new BigDecimal("0.00005"))
-        .build();
+    var expectedBTC =
+        new Balance.Builder()
+            .currency(Currency.BTC)
+            .total(new BigDecimal("0.0001339400"))
+            .frozen(new BigDecimal("0.00005"))
+            .build();
 
     var actualBTC = accountInfo.getWallet("spot").getBalance(Currency.BTC);
 
@@ -74,7 +73,6 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
         .isEqualTo(expectedBTC);
   }
 
-
   @Test
   public void testRequestDepositAddress() throws IOException {
     DefaultRequestDepositAddressParams params =
@@ -84,7 +82,6 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
 
     assertThat(address).isEqualTo("TYAnp8VW1aq5Jbtxgoai7BDo3jKSRe6VNR");
   }
-
 
   @Test
   public void testRequestDepositAddressUnknownCurrencyMultipleMethods() {
@@ -132,5 +129,4 @@ public class KrakenAccountServiceTest extends KrakenExchangeWiremock {
 
     wireMockServer.verify(2, postRequestedFor(urlEqualTo("/0/private/DepositMethods")));
   }
-
 }

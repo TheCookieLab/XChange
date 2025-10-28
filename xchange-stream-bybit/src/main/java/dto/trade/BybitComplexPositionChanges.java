@@ -6,10 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
 import org.knowm.xchange.dto.account.OpenPosition;
 
@@ -46,7 +42,6 @@ public class BybitComplexPositionChanges extends OpenPosition {
   private Date createdTime;
   private Date updatedTime;
   private long seq;
-
 
   public BigDecimal getPositionValue() {
     if (getSize().compareTo(BigDecimal.ZERO) != 0 && getPrice().compareTo(BigDecimal.ZERO) != 0) {

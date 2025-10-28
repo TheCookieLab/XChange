@@ -3,7 +3,6 @@ package org.knowm.xchange.ascendex;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import org.knowm.xchange.ascendex.dto.account.AscendexCashAccountBalanceDto;
 import org.knowm.xchange.ascendex.dto.marketdata.AscendexAssetDto;
 import org.knowm.xchange.ascendex.dto.marketdata.AscendexMarketTradesDto;
@@ -133,9 +132,10 @@ public class AscendexAdapters {
   }
 
   public static OpenOrders adaptOpenOrders(
-          List<AscendexOpenOrdersResponse> ascendexOpenOrdersRespons) {
+      List<AscendexOpenOrdersResponse> ascendexOpenOrdersRespons) {
 
-    List<LimitOrder> openOrders = ascendexOpenOrdersRespons.stream()
+    List<LimitOrder> openOrders =
+        ascendexOpenOrdersRespons.stream()
             .flatMap(r -> AscendexAdapters.adaptOpenOrderById(r).stream())
             .filter(LimitOrder.class::isInstance) // ensure only LimitOrders
             .map(LimitOrder.class::cast)
@@ -160,7 +160,10 @@ public class AscendexAdapters {
             .id(ascendexOpenOrdersResponse.getOrderId())
             .timestamp(ascendexOpenOrdersResponse.getLastExecTime())
             .orderStatus(
-                Order.OrderStatus.valueOf(ascendexOpenOrdersResponse.getStatus().toUpperCase()
+                Order.OrderStatus.valueOf(
+                    ascendexOpenOrdersResponse
+                        .getStatus()
+                        .toUpperCase()
                         .replace("PARTIALLYFILLED", "PARTIALLY_FILLED")))
             .cumulativeAmount(ascendexOpenOrdersResponse.getCumFilledQty())
             .remainingAmount(
