@@ -38,7 +38,7 @@ public class BybitStreamAdapters {
   public static OrderBook adaptOrderBook(BybitOrderbook bybitOrderBooks, Instrument instrument) {
     List<LimitOrder> asks = new ArrayList<>();
     List<LimitOrder> bids = new ArrayList<>();
-    Date timestamp = new Date(Long.parseLong(bybitOrderBooks.getCts()));
+    Date timestamp = new Date(bybitOrderBooks.getCts());
     bybitOrderBooks
         .getData()
         .getAsk()

@@ -112,7 +112,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
           bybitOrderBookUpdate.getData().getSeq());
       List<BybitPublicOrder> asks = bybitOrderBookUpdate.getData().getAsk();
       List<BybitPublicOrder> bids = bybitOrderBookUpdate.getData().getBid();
-      Date timestamp = new Date(Long.parseLong(bybitOrderBookUpdate.getCts()));
+      Date timestamp = new Date(bybitOrderBookUpdate.getCts());
       asks.forEach(
           bybitPublicOrder ->
               orderBook.update(
