@@ -3,13 +3,7 @@ package info.bitrich.xchangestream.binance;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketLoginPayloadWithSignature;
-import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketLoginResponse;
-import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderAmendPayload;
-import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderCancelPayload;
-import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderResponse;
-import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketPayload;
-import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketPlaceOrderPayload;
+import info.bitrich.xchangestream.binance.dto.trade.*;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler;
@@ -19,13 +13,6 @@ import io.reactivex.rxjava3.core.CompletableSource;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.security.Security;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Base64;
-import java.util.regex.Pattern;
 import lombok.Getter;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.crypto.Signer;
@@ -41,6 +28,15 @@ import org.knowm.xchange.dto.trade.MarketOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.Security;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.Duration;
+import java.util.Base64;
+import java.util.regex.Pattern;
+
 public class BinanceUserTradeStreamingService extends JsonNettyStreamingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceUserTradeStreamingService.class);
@@ -54,7 +50,7 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   private Disposable loginDisposable;
 
   public BinanceUserTradeStreamingService(String apiUrl, String apiKey, String privateKey) {
-    super(apiUrl);
+      super(apiUrl,65536, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
     this.apiKey = apiKey;
     this.privateKey = privateKey;
   }

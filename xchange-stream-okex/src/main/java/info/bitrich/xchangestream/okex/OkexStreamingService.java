@@ -11,13 +11,15 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableSource;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 public class OkexStreamingService extends JsonNettyStreamingService {
 
@@ -41,7 +43,7 @@ public class OkexStreamingService extends JsonNettyStreamingService {
   private final ExchangeSpecification xSpec;
 
   public OkexStreamingService(String apiUrl, ExchangeSpecification exchangeSpecification) {
-    super(apiUrl);
+    super(apiUrl,65536, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
     this.xSpec = exchangeSpecification;
   }
 

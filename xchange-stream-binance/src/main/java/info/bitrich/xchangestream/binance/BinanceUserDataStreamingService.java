@@ -9,6 +9,8 @@ import io.reactivex.rxjava3.core.Observable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+
 public class BinanceUserDataStreamingService extends JsonNettyStreamingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceUserDataStreamingService.class);
@@ -19,7 +21,7 @@ public class BinanceUserDataStreamingService extends JsonNettyStreamingService {
   }
 
   private BinanceUserDataStreamingService(String url) {
-    super(url, Integer.MAX_VALUE);
+      super(url,Integer.MAX_VALUE, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
   }
 
   public Observable<JsonNode> subscribeChannel(BinanceWebSocketTypes eventType) {

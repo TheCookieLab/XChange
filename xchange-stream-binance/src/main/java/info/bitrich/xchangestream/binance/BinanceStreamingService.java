@@ -11,6 +11,9 @@ import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -20,8 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class BinanceStreamingService extends JsonNettyStreamingService {
 
@@ -44,7 +45,7 @@ public class BinanceStreamingService extends JsonNettyStreamingService {
       String baseUri,
       ProductSubscription productSubscription,
       KlineSubscription klineSubscription) {
-    super(baseUri, Integer.MAX_VALUE);
+      super(baseUri,Integer.MAX_VALUE, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
     this.productSubscription = productSubscription;
     this.klineSubscription = klineSubscription;
   }
