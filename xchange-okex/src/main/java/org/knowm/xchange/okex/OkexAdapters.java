@@ -171,8 +171,7 @@ public class OkexAdapters {
                       exchangeMetaData.getInstruments().get(instrument).getContractValue()))
               .cumulativeAmount(
                   convertContractSizeToVolume(
-                      // Accumulated or Filled ?
-                      new BigDecimal(okexOrder.getLastFilledQuantity()),
+                      new BigDecimal(okexOrder.getAccumulatedFill()),
                       instrument,
                       exchangeMetaData.getInstruments().get(instrument).getContractValue()))
               .id(okexOrder.getOrderId())
