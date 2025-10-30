@@ -202,7 +202,7 @@
         <version.lombok>1.18.38</version.lombok>
         <version.maven-enforcer-plugin>3.2.1</version.maven-enforcer-plugin>
         <version.maven-prerequisite>3.6.3</version.maven-prerequisite>
-        <version.mockito>5.11.0</version.mockito>
+        <version.mockito>5.20.0</version.mockito>
         <version.qos.logback>1.5.6</version.qos.logback>
         <version.reflections>0.10.2</version.reflections>
         <version.resilience4j>1.7.1</version.resilience4j>
