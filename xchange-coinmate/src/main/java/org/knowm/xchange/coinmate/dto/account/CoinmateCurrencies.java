@@ -13,4 +13,3 @@ public class CoinmateCurrencies extends CoinmateBaseResponse<List<CoinmateCurren
     super(error, errorMessage, data);
   }
 }
-

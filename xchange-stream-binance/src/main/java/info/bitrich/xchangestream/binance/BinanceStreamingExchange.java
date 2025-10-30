@@ -31,7 +31,8 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
   private static final String WS_API_BASE_URI = "wss://stream.binance.com:9443/";
   private static final String WS_TRADE_API_BASE_URI = WS_API_BASE_URI;
   private static final String WS_SANDBOX_API_BASE_URI = "wss://stream.testnet.binance.vision:9443/";
-  private static final String WS_SANDBOX_TRADE_API_BASE_URI = "wss://ws-api.testnet.binance.vision/ws-api/v3";
+  private static final String WS_SANDBOX_TRADE_API_BASE_URI =
+      "wss://ws-api.testnet.binance.vision/ws-api/v3";
   public static final String USE_HIGHER_UPDATE_FREQUENCY = "Binance_Orderbook_Use_Higher_Frequency";
   public static final String USE_REALTIME_BOOK_TICKER = "Binance_Ticker_Use_Realtime";
   public static final String FETCH_ORDER_BOOK_LIMIT = "Binance_Fetch_Order_Book_Limit";
@@ -49,7 +50,6 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
   private String orderBookUpdateFrequencyParameter = "";
   private int oderBookFetchLimitParameter = 1000;
   private boolean realtimeOrderBookTicker;
-
 
   @Override
   protected void initServices() {
@@ -147,7 +147,9 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
             realtimeOrderBookTicker,
             oderBookFetchLimitParameter);
     streamingAccountService = new BinanceStreamingAccountService(userDataStreamingService);
-    streamingTradeService = new BinanceStreamingTradeService(this,userDataStreamingService, userTradeStreamingService, getResilienceRegistries());
+    streamingTradeService =
+        new BinanceStreamingTradeService(
+            this, userDataStreamingService, userTradeStreamingService, getResilienceRegistries());
 
     return Completable.concat(completables)
         .doOnComplete(
@@ -184,7 +186,10 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
 
   private Completable createAndConnectUserTradeService() {
     userTradeStreamingService =
-        new BinanceUserTradeStreamingService(getTradeStreamingBaseUri(), exchangeSpecification.getApiKey(),exchangeSpecification.getSecretKey());
+        new BinanceUserTradeStreamingService(
+            getTradeStreamingBaseUri(),
+            exchangeSpecification.getApiKey(),
+            exchangeSpecification.getSecretKey());
     applyStreamingSpecification(getExchangeSpecification(), userTradeStreamingService);
     return userTradeStreamingService.connect();
   }
@@ -210,13 +215,16 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
 
   @Override
   public boolean isAlive() {
-    if(exchangeSpecification.getApiKey() != null) {
-      if(streamingService!= null)
-      return streamingService.isSocketOpen() &&  userDataStreamingService.isSocketOpen() &&
-          userTradeStreamingService.isSocketOpen() && userTradeStreamingService.isAuthorized();
+    if (exchangeSpecification.getApiKey() != null) {
+      if (streamingService != null)
+        return streamingService.isSocketOpen()
+            && userDataStreamingService.isSocketOpen()
+            && userTradeStreamingService.isSocketOpen()
+            && userTradeStreamingService.isAuthorized();
       else
-        return userDataStreamingService.isSocketOpen() &&
-            userTradeStreamingService.isSocketOpen() && userTradeStreamingService.isAuthorized();
+        return userDataStreamingService.isSocketOpen()
+            && userTradeStreamingService.isSocketOpen()
+            && userTradeStreamingService.isAuthorized();
     } else {
       return streamingService != null && streamingService.isSocketOpen();
     }

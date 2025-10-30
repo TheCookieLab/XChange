@@ -18,8 +18,10 @@ public class BybitOrderMessage<T> {
   public static class Header {
     @JsonProperty("X-BAPI-TIMESTAMP")
     private String X_BAPI_TIMESTAMP;
+
     @JsonProperty("X-BAPI-RECV-WINDOW")
     private String X_BAPI_RECV_WINDOW;
+
     @JsonProperty("Referer")
     private String referer;
   }

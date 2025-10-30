@@ -38,7 +38,7 @@ public class BybitStreamAdapters {
   public static OrderBook adaptOrderBook(BybitOrderbook bybitOrderBooks, Instrument instrument) {
     List<LimitOrder> asks = new ArrayList<>();
     List<LimitOrder> bids = new ArrayList<>();
-    Date timestamp = new Date(Long.parseLong(bybitOrderBooks.getTs()));
+    Date timestamp = new Date(bybitOrderBooks.getCts());
     bybitOrderBooks
         .getData()
         .getAsk()
@@ -141,14 +141,16 @@ public class BybitStreamAdapters {
       if (!position.getLiqPrice().isEmpty()) {
         liqPrice = new BigDecimal(position.getLiqPrice());
       }
-      OpenPosition openPosition = OpenPosition.builder()
-          .instrument(convertBybitSymbolToInstrument(position.getSymbol(), position.getCategory()))
-          .type(type)
-          .size(new BigDecimal(position.getSize()))
-          .price(new BigDecimal(position.getEntryPrice()))
-          .liquidationPrice(liqPrice)
-          .unRealisedPnl(new BigDecimal(position.getUnrealisedPnl()))
-          .build();
+      OpenPosition openPosition =
+          OpenPosition.builder()
+              .instrument(
+                  convertBybitSymbolToInstrument(position.getSymbol(), position.getCategory()))
+              .type(type)
+              .size(new BigDecimal(position.getSize()))
+              .price(new BigDecimal(position.getEntryPrice()))
+              .liquidationPrice(liqPrice)
+              .unRealisedPnl(new BigDecimal(position.getUnrealisedPnl()))
+              .build();
       openPositions.getOpenPositions().add(openPosition);
     }
     return openPositions;
@@ -184,7 +186,8 @@ public class BybitStreamAdapters {
       }
       BybitComplexPositionChanges positionChanges =
           BybitComplexPositionChanges.builder()
-              .instrument(convertBybitSymbolToInstrument(position.getSymbol(), position.getCategory()))
+              .instrument(
+                  convertBybitSymbolToInstrument(position.getSymbol(), position.getCategory()))
               .type(type)
               .size(new BigDecimal(position.getSize()))
               .price(new BigDecimal(position.getEntryPrice()))
@@ -291,25 +294,28 @@ public class BybitStreamAdapters {
     return result;
   }
 
-
-  public static BybitStreamBatchAmendOrdersPayload adaptBatchAmendOrder(LimitOrder[] orders,  BybitCategory category) {
+  public static BybitStreamBatchAmendOrdersPayload adaptBatchAmendOrder(
+      LimitOrder[] orders, BybitCategory category) {
     List<BybitStreamBatchAmendOrderPayload> ordersPayload = new ArrayList<>();
-    for(LimitOrder order:orders) {
-      ordersPayload.add(new BybitStreamBatchAmendOrderPayload(
-          convertToBybitSymbol(order.getInstrument()),
-          order.getId(),
-          order.getUserReference(),
-          null,
-          order.getOriginalAmount().toPlainString(),
-          order.getLimitPrice().toPlainString(),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null));
+    for (LimitOrder order : orders) {
+      ordersPayload.add(
+          new BybitStreamBatchAmendOrderPayload(
+              convertToBybitSymbol(order.getInstrument()),
+              order.getId(),
+              order.getUserReference(),
+              null,
+              // conditional
+              order.getOriginalAmount() == null ? null : order.getOriginalAmount().toPlainString(),
+              // conditional
+              order.getLimitPrice() == null ? null : order.getLimitPrice().toPlainString(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null));
     }
     return new BybitStreamBatchAmendOrdersPayload(category, ordersPayload);
   }

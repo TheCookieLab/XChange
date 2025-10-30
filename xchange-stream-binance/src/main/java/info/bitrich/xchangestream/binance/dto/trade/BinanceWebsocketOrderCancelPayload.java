@@ -16,5 +16,4 @@ public class BinanceWebsocketOrderCancelPayload {
   private String origClientOrderId;
   private Long recvWindow;
   private Long timestamp;
-
 }

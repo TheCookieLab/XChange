@@ -1,14 +1,13 @@
 package org.knowm.xchange.dto.account;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.knowm.xchange.instrument.Instrument;
-
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.time.Instant;
 
 @Data
 @SuperBuilder
@@ -44,7 +43,6 @@ public class OpenPosition implements Serializable {
   /** Timestamp of update */
   private Instant updatedAt;
 
-
   public enum Type {
     LONG,
     SHORT
@@ -54,5 +52,4 @@ public class OpenPosition implements Serializable {
     CROSS,
     ISOLATED
   }
-
 }

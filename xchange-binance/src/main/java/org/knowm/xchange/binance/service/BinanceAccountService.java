@@ -403,8 +403,7 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
                             .type(Type.WITHDRAWAL)
                             .status(withdrawStatus(w.getStatus()))
                             .fee(w.getTransactionFee())
-                            .build()
-                            ));
+                            .build()));
       }
 
       if (deposits) {
@@ -418,8 +417,7 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
                             .date(new Date(d.getInsertTime()))
                             .currency(Currency.getInstance(d.getCoin()))
                             .amount(d.getAmount())
-                            .blockchainTransactionHash(
-                            d.getTxId())
+                            .blockchainTransactionHash(d.getTxId())
                             .type(Type.DEPOSIT)
                             .status(depositStatus(d.getStatus()))
                             .build()));
@@ -434,12 +432,11 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
                             .date(new Date(a.getDivTime()))
                             .currency(Currency.getInstance(a.getAsset()))
                             .amount(a.getAmount())
-                            .blockchainTransactionHash(
-                            String.valueOf(a.getTranId()))
+                            .blockchainTransactionHash(String.valueOf(a.getTranId()))
                             .type(Type.OTHER_INFLOW)
                             .status(Status.COMPLETE)
-                            .description(
-                            a.getEnInfo()).build()));
+                            .description(a.getEnInfo())
+                            .build()));
       }
 
       final String finalEmail = email;

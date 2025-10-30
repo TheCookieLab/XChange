@@ -65,7 +65,8 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
     }
 
     if (currencyPair != null) {
-      Map<String, KrakenOrder> filteredKrakenOrders = KrakenUtils.filterOpenOrdersByCurrencyPair(krakenOrders, currencyPair);
+      Map<String, KrakenOrder> filteredKrakenOrders =
+          KrakenUtils.filterOpenOrdersByCurrencyPair(krakenOrders, currencyPair);
       return KrakenAdapters.adaptOpenOrders(filteredKrakenOrders);
     }
     return KrakenAdapters.adaptOpenOrders(krakenOrders);
@@ -177,5 +178,4 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
   public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {
     return KrakenAdapters.adaptOrders(super.getOrders(TradeService.toOrderIds(orderQueryParams)));
   }
-
 }

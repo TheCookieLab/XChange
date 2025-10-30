@@ -275,7 +275,8 @@ public class KrakenAccountServiceRaw extends KrakenBaseService {
    * @return
    * @throws IOException
    */
-  public Map<String, KrakenLedger> getKrakenPartialLedgerInfo(LedgerType ledgerType, Date start, Date end, Long offset, Currency... assets)
+  public Map<String, KrakenLedger> getKrakenPartialLedgerInfo(
+      LedgerType ledgerType, Date start, Date end, Long offset, Currency... assets)
       throws IOException {
 
     String startTime = null;
@@ -320,7 +321,8 @@ public class KrakenAccountServiceRaw extends KrakenBaseService {
       LedgerType ledgerType, Date start, Date end, Long offset, Currency... assets)
       throws IOException {
 
-    Map<String, KrakenLedger> fullLedgerMap = getKrakenPartialLedgerInfo(ledgerType, start, end, offset, assets);
+    Map<String, KrakenLedger> fullLedgerMap =
+        getKrakenPartialLedgerInfo(ledgerType, start, end, offset, assets);
     Map<String, KrakenLedger> lastLedgerMap = fullLedgerMap;
 
     long longOffset = 0;
