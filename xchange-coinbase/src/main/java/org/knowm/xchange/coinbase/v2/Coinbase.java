@@ -20,26 +20,26 @@ import org.slf4j.LoggerFactory;
  * Coinbase API v2 public endpoints.
  *
  * @deprecated The Coinbase v2 API provides retail pricing information (buy/sell quotes) but lacks
- *     trading functionality. Authenticated endpoints no longer work due to changes in Coinbase's
- *     authentication mechanism. For full trading functionality with order book access, market data,
- *     and order placement, use {@link org.knowm.xchange.coinbase.v3.CoinbaseExchange} with the
- *     Coinbase Advanced Trade API instead.
+ * trading functionality. Authenticated endpoints no longer work due to changes in Coinbase's
+ * authentication mechanism. For full trading functionality with order book access, market data, and
+ * order placement, use {@link org.knowm.xchange.coinbase.v3.CoinbaseExchange} with the Coinbase
+ * Advanced Trade API instead.
  */
 @Deprecated
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)
 public interface Coinbase {
 
-  public static Logger LOG = LoggerFactory.getLogger(Coinbase.class.getPackage().getName());
+  Logger LOG = LoggerFactory.getLogger(Coinbase.class.getPackage().getName());
 
   /**
    * All API calls should be made with a CB-VERSION header which guarantees that your call is using
    * the correct API version. <a
    * href="https://developers.coinbase.com/api/v2#versioning">developers.coinbase.com/api/v2#versioning</a>
    */
-  final String CB_VERSION = "CB-VERSION";
+  String CB_VERSION = "CB-VERSION";
 
-  final String CB_VERSION_VALUE = "2018-04-08";
+  String CB_VERSION_VALUE = "2018-04-08";
 
   @GET
   @Path("currencies")
@@ -53,28 +53,23 @@ public interface Coinbase {
 
   @GET
   @Path("prices/{pair}/buy")
-  CoinbasePriceData getBuyPrice(
-      @HeaderParam(CB_VERSION) String apiVersion, @PathParam("pair") String pair)
-      throws IOException, CoinbaseException;
+  CoinbasePriceData getBuyPrice(@HeaderParam(CB_VERSION) String apiVersion,
+      @PathParam("pair") String pair) throws IOException, CoinbaseException;
 
   @GET
   @Path("prices/{pair}/sell")
-  CoinbasePriceData getSellPrice(
-      @HeaderParam(CB_VERSION) String apiVersion, @PathParam("pair") String pair)
-      throws IOException, CoinbaseException;
+  CoinbasePriceData getSellPrice(@HeaderParam(CB_VERSION) String apiVersion,
+      @PathParam("pair") String pair) throws IOException, CoinbaseException;
 
   @GET
   @Path("prices/{pair}/spot")
-  CoinbasePriceData getSpotRate(
-      @HeaderParam(CB_VERSION) String apiVersion, @PathParam("pair") String pair)
-      throws IOException, CoinbaseException;
+  CoinbasePriceData getSpotRate(@HeaderParam(CB_VERSION) String apiVersion,
+      @PathParam("pair") String pair) throws IOException, CoinbaseException;
 
   @GET
   @Path("prices/{pair}/spot")
-  CoinbasePriceData getHistoricalSpotRate(
-      @HeaderParam(CB_VERSION) String apiVersion,
-      @PathParam("pair") String pair,
-      @QueryParam("date") String date)
+  CoinbasePriceData getHistoricalSpotRate(@HeaderParam(CB_VERSION) String apiVersion,
+      @PathParam("pair") String pair, @QueryParam("date") String date)
       throws IOException, CoinbaseException;
 
   @GET

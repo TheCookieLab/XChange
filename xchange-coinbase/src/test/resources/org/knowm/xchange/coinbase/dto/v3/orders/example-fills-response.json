@@ -1,0 +1,32 @@
+{
+  "fills": [
+    {
+      "entry_id": "fill-entry-123",
+      "trade_id": "trade-456",
+      "order_id": "order-789",
+      "product_id": "BTC-USD",
+      "price": "50000.00",
+      "size": "0.1",
+      "commission": "2.5",
+      "side": "BUY",
+      "sequence_timestamp": "2024-01-01T00:00:00Z",
+      "trade_time": "2024-01-01T00:00:00Z",
+      "liquidity_indicator": "TAKER"
+    },
+    {
+      "entry_id": "fill-entry-124",
+      "trade_id": "trade-457",
+      "order_id": "order-790",
+      "product_id": "ETH-USD",
+      "price": "3000.00",
+      "size": "1.0",
+      "commission": "1.5",
+      "side": "SELL",
+      "sequence_timestamp": "2024-01-01T00:01:00Z",
+      "trade_time": "2024-01-01T00:01:00Z",
+      "liquidity_indicator": "MAKER"
+    }
+  ],
+  "cursor": "next-cursor-abc"
+}
+
