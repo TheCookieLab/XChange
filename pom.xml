@@ -304,6 +304,14 @@
                 <version>3.1.8</version>
             </dependency>
 
+            <!-- ByteBuddy agent for Mockito with JDK 21+ -->
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>1.15.11</version>
+                <scope>test</scope>
+            </dependency>
+
             <!--For String Joining, etc. -->
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -582,6 +590,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.0</version>
+                <configuration>
+                    <argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.15.11/byte-buddy-agent-1.15.11.jar
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED</argLine>
+                </configuration>
             </plugin>
         </plugins>
     </build>
