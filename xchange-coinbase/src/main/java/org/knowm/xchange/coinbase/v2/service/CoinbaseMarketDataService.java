@@ -9,6 +9,14 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 
+/**
+ * Market data service for Coinbase v2 API.
+ *
+ * @deprecated The Coinbase v2 API provides retail pricing but lacks trading functionality. Use
+ *     {@link org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataService} instead for full
+ *     market data via the Coinbase Advanced Trade API.
+ */
+@Deprecated
 public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw
     implements MarketDataService {
 

@@ -16,6 +16,16 @@ import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseTimeData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Coinbase API v2 public endpoints.
+ *
+ * @deprecated The Coinbase v2 API provides retail pricing information (buy/sell quotes) but lacks
+ *     trading functionality. Authenticated endpoints no longer work due to changes in Coinbase's
+ *     authentication mechanism. For full trading functionality with order book access, market data,
+ *     and order placement, use {@link org.knowm.xchange.coinbase.v3.CoinbaseExchange} with the
+ *     Coinbase Advanced Trade API instead.
+ */
+@Deprecated
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)
 public interface Coinbase {

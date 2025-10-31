@@ -10,6 +10,12 @@ import org.knowm.xchange.coinbase.v2.Coinbase;
 import org.knowm.xchange.coinbase.v2.dto.CoinbasePrice;
 import org.knowm.xchange.currency.Currency;
 
+/**
+ * @deprecated The Coinbase v2 API has limited functionality. Use {@link
+ *     org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataService} instead for full market data
+ *     functionality via the Coinbase Advanced Trade API.
+ */
+@Deprecated
 class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
 
   public CoinbaseMarketDataServiceRaw(Exchange exchange) {
