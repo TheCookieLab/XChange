@@ -86,9 +86,61 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   /**
    * Lists historical orders and returns the raw Coinbase response for further mapping.
    * Note: this endpoint returns historical orders; open orders can be derived by filtering status.
+   * 
+   * @return response containing orders and pagination cursor
+   * @throws IOException if a network or serialization error occurs
    */
   public CoinbaseListOrdersResponse listOrders() throws IOException {
-    return coinbaseAdvancedTrade.listOrders(authTokenCreator);
+    return listOrders(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+  }
+
+  /**
+   * Lists historical orders with optional filters and returns the raw Coinbase response.
+   * 
+   * @param orderIds optional list of order IDs to filter by
+   * @param productIds optional list of product IDs to filter by
+   * @param productType optional product type filter (e.g., "SPOT", "FUTURE")
+   * @param orderStatus optional list of order statuses to filter by (e.g., "OPEN", "FILLED")
+   * @param timeInForces optional list of time in force values
+   * @param orderTypes optional list of order types (e.g., "LIMIT", "MARKET")
+   * @param orderSide optional order side filter ("BUY" or "SELL")
+   * @param startDate optional start date for filtering (ISO 8601 format)
+   * @param endDate optional end date for filtering (ISO 8601 format)
+   * @param orderPlacementSource optional placement source filter
+   * @param contractExpiryType optional contract expiry type for futures
+   * @param assetFilters optional list of assets to filter by
+   * @param retailPortfolioId optional portfolio ID filter (deprecated for CDP keys)
+   * @param limit optional limit on number of results to return
+   * @param cursor optional pagination cursor
+   * @param sortBy optional sort field
+   * @param userNativeCurrency optional native currency (deprecated, defaults to USD)
+   * @param useSimplifiedTotalValueCalculation optional flag for simplified calculation
+   * @return response containing filtered orders and pagination cursor
+   * @throws IOException if a network or serialization error occurs
+   */
+  public CoinbaseListOrdersResponse listOrders(
+      List<String> orderIds,
+      List<String> productIds,
+      String productType,
+      List<String> orderStatus,
+      List<String> timeInForces,
+      List<String> orderTypes,
+      String orderSide,
+      String startDate,
+      String endDate,
+      String orderPlacementSource,
+      String contractExpiryType,
+      List<String> assetFilters,
+      String retailPortfolioId,
+      Integer limit,
+      String cursor,
+      String sortBy,
+      String userNativeCurrency,
+      Boolean useSimplifiedTotalValueCalculation) throws IOException {
+    return coinbaseAdvancedTrade.listOrders(authTokenCreator, orderIds, productIds, productType,
+        orderStatus, timeInForces, orderTypes, orderSide, startDate, endDate, orderPlacementSource,
+        contractExpiryType, assetFilters, retailPortfolioId, limit, cursor, sortBy,
+        userNativeCurrency, useSimplifiedTotalValueCalculation);
   }
 
   /**

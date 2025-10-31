@@ -98,13 +98,29 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @GET
   @Path("orders/historical/batch")
-  @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseListOrdersResponse listOrders(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
+  CoinbaseListOrdersResponse listOrders(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @QueryParam("order_ids") List<String> orderIds,
+      @QueryParam("product_ids") List<String> productIds,
+      @QueryParam("product_type") String productType,
+      @QueryParam("order_status") List<String> orderStatus,
+      @QueryParam("time_in_forces") List<String> timeInForces,
+      @QueryParam("order_types") List<String> orderTypes,
+      @QueryParam("order_side") String orderSide,
+      @QueryParam("start_date") String startDate,
+      @QueryParam("end_date") String endDate,
+      @QueryParam("order_placement_source") String orderPlacementSource,
+      @QueryParam("contract_expiry_type") String contractExpiryType,
+      @QueryParam("asset_filters") List<String> assetFilters,
+      @QueryParam("retail_portfolio_id") String retailPortfolioId,
+      @QueryParam("limit") Integer limit,
+      @QueryParam("cursor") String cursor,
+      @QueryParam("sort_by") String sortBy,
+      @QueryParam("user_native_currency") String userNativeCurrency,
+      @QueryParam("use_simplified_total_value_calculation") Boolean useSimplifiedTotalValueCalculation)
       throws IOException, CoinbaseException;
 
   @GET
   @Path("orders/historical/fills")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseOrdersResponse listFills(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @QueryParam("order_ids") List<String> orderIds,
       @QueryParam("trade_ids") List<String> tradeIds,
@@ -117,7 +133,6 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @GET
   @Path("orders/historical/{order_id}")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseOrderDetailResponse getOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("order_id") String orderId) throws IOException, CoinbaseException;
 
@@ -135,14 +150,12 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @GET
   @Path("best_bid_ask")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseBestBidAsksResponse getBestBidAsk(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @QueryParam("product_ids") String productId) throws IOException, CoinbaseException;
 
   @GET
   @Path("product_book")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseProductPriceBookResponse getProductBook(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @QueryParam("product_id") String productId, @QueryParam("limit") Integer limit,
@@ -151,7 +164,6 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @GET
   @Path("products")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseProductsResponse listProducts(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @QueryParam("limit") Integer limit, @QueryParam("offset") Integer offset,
       @QueryParam("product_type") String productType,
@@ -165,7 +177,6 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @GET
   @Path("products/{product_id}")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseProductResponse getProduct(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("product_id") String productId,
       @QueryParam("get_tradability_status") Boolean getTradabilityStatus)
@@ -173,7 +184,6 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @GET
   @Path("products/{product_id}/candles")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseProductCandlesResponse getProductCandles(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("product_id") String productId, @QueryParam("start") String start,
@@ -182,7 +192,6 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @GET
   @Path("products/{product_id}/ticker")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseProductMarketTradesResponse getMarketTrades(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("product_id") String productId, @QueryParam("limit") Integer limit,
@@ -191,7 +200,6 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @GET
   @Path("transaction_summary")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseTransactionSummaryResponse getTransactionSummary(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @QueryParam("product_type") String productType,

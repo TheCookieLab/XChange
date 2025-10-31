@@ -101,6 +101,82 @@ Key mapping notes:
 - [ ] Add integration test with minimal stable assertions
 - [ ] Create/update Javadoc for all new and changed public APIs with an eye toward maximizing usefulness for other devs
 - [ ] Run lints; keep imports clean
-- [ ] Keep this Agents.md file up to date with any new changes, references, and information that would be useful for future reference / agentic work. 
+- [ ] Keep this Agents.md file up to date with any new changes, references, and information that would be useful for future reference / agentic work.
 
+### Testing strategy for AI assistants
+When implementing or modifying endpoints, follow this testing approach:
+
+1. **Sandbox tests first**: Create or update sandbox integration tests
+   - Located in: `xchange-coinbase/src/test/java/.../service/*SandboxIntegration.java`
+   - Run with: `mvn test -pl xchange-coinbase -Dtest=*SandboxIntegration`
+   - Use `CoinbaseTestUtils.createSandboxSpecification()` for setup
+   - Requires API credentials (but sandbox doesn't validate them)
+   - Tests response structure, DTO parsing, and adapter logic
+   - Safe to run repeatedly (no rate limits, no costs)
+
+2. **Production tests**: Add tests to existing integration test classes
+   - Located in: `xchange-coinbase/src/test/java/.../service/*Integration.java`
+   - Run with: `mvn test -pl xchange-coinbase`
+   - Use `CoinbaseTestUtils.createSpecificationWithOverride()` for setup
+   - Requires valid API credentials
+   - Add `Assume.assumeNotNull(service.authTokenCreator)` to skip when no auth
+   - Keep assertions minimal and robust (avoid strict counts or time-dependent checks)
+
+3. **Test utilities**: Use `CoinbaseTestUtils` for common test setup
+   - `createSandboxSpecification()` - for sandbox tests
+   - `createProductionSpecification()` - for production tests
+   - `createSpecificationWithOverride()` - auto-detects mode
+   - `assumeSandboxMode()` - skip test if not sandbox
+   - `assumeProductionMode()` - skip test if not production
+   - `isAuthConfigured(spec)` - check if auth is available
+
+4. **Test patterns**:
+   ```java
+   @BeforeClass
+   public static void beforeClass() {
+     ExchangeSpecification spec = CoinbaseTestUtils.createSpecificationWithOverride();
+     exchange = (CoinbaseExchange) ExchangeFactory.INSTANCE.createExchange(spec);
+     service = exchange.getSomeService();
+   }
+   
+   @Test
+   public void testEndpoint() throws Exception {
+     Assume.assumeNotNull(service.authTokenCreator);
+     
+     // Call service
+     Response response = service.someMethod();
+     
+     // Validate structure (not exact values)
+     assertNotNull("Field should not be null", response.getField());
+     assertTrue("List should not be empty", !response.getList().isEmpty());
+     // Avoid: assertEquals(10, response.getList().size()) - too brittle
+   }
+   ```
+
+5. **When tests fail**:
+   - First run sandbox tests to isolate DTO/adapter issues
+   - Then run production tests to catch auth/API-specific issues
+   - Check both test outputs to identify root cause
+   - Fix code, then re-run tests to verify
+
+### Sandbox test infrastructure
+- **Sandbox URL**: `https://api-sandbox.coinbase.com`
+- **Endpoints supported**: Accounts, Orders, Fills (limited market data)
+- **Authentication**: Required but not validated (safe to use production keys)
+- **Rate limits**: None
+- **Data**: Static responses (deterministic)
+- **Use cases**: Structure validation, DTO parsing, adapter logic, pagination handling
+
+### Test documentation
+For human users and detailed testing information, refer to:
+- `COINBASE_TESTING_DOCUMENTATION.md` - Comprehensive testing guide for humans
+- Covers all test modes, troubleshooting, best practices, and examples
+
+### Common testing gotchas
+- Sandbox tests may fail if endpoint is not supported in sandbox (use try-catch)
+- Production tests may be skipped if `authTokenCreator` is null (expected behavior)
+- Always use `Assume.assumeNotNull()` for auth-required tests
+- Avoid assertions on exact counts or time-dependent data
+- Test pagination by checking page size limits, not exact results
+- When testing error scenarios, verify error messages are meaningful
 

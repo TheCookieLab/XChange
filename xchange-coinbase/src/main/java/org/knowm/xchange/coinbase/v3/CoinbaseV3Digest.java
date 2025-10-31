@@ -214,10 +214,16 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
    * @return Signed JWT string
    */
 
+  /**
+   * JWT token expiration time in seconds (2 minutes).
+   * This is the recommended expiry time for Coinbase Advanced Trade API JWT tokens.
+   */
+  private static final int JWT_EXPIRY_SECONDS = 120;
+
   private String generateJWT(String method, String uri) {
     long now = Instant.now().getEpochSecond();
     Date nbf = Date.from(Instant.ofEpochSecond(now));
-    Date exp = Date.from(Instant.ofEpochSecond(now + 120));
+    Date exp = Date.from(Instant.ofEpochSecond(now + JWT_EXPIRY_SECONDS));
 
     return JWT.create().withKeyId(keyName).withIssuer("cdp").withSubject(keyName).withNotBefore(nbf)
         .withExpiresAt(exp).withClaim("uri", method + " " + uri)

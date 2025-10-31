@@ -16,7 +16,15 @@ public final class CoinbaseV3OrderRequests {
     Map<String, Object> root = commonRoot(order);
     Map<String, Object> config = new HashMap<>();
     Map<String, Object> market = new HashMap<>();
-    market.put("quote_size", order.getOriginalAmount());
+    
+    // For BUY orders, use quote_size (amount of quote currency to spend)
+    // For SELL orders, use base_size (amount of base currency to sell)
+    if (order.getType() == Order.OrderType.BID) {
+      market.put("quote_size", order.getOriginalAmount());
+    } else {
+      market.put("base_size", order.getOriginalAmount());
+    }
+    
     config.put("market_market_ioc", market);
     root.put("order_configuration", config);
     return root;
@@ -50,6 +58,16 @@ public final class CoinbaseV3OrderRequests {
     return root;
   }
 
+  /**
+   * Creates a stop-limit order request for Coinbase Advanced Trade API.
+   * 
+   * <p>Note: Advanced Trade API infers stop direction from the order side, so stop_direction
+   * is not explicitly set. For BUY orders, the stop triggers when price rises above stop_price.
+   * For SELL orders, the stop triggers when price falls below stop_price.
+   * 
+   * @param order the stop order containing size, limit price, and stop price
+   * @return the request payload as a Map
+   */
   public static Object stopOrderRequest(StopOrder order) {
     Map<String, Object> root = commonRoot(order);
     Map<String, Object> config = new HashMap<>();
