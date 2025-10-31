@@ -19,10 +19,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.Balance;
+import org.junit.jupiter.api.condition.DisabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
+// Disabled on JDK 21+ due to ByteBuddy/Mockito incompatibility
+@DisabledOnJre({JRE.JAVA_21, JRE.JAVA_22, JRE.OTHER})
 class GateioStreamingAccountServiceTest {
 
   @Mock GateioStreamingService gateioStreamingService;
