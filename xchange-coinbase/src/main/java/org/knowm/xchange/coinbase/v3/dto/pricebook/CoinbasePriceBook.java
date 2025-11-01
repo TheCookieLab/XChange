@@ -3,6 +3,7 @@ package org.knowm.xchange.coinbase.v3.dto.pricebook;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Collections;
 import java.util.List;
 import lombok.Getter;
 
@@ -21,8 +22,8 @@ public class CoinbasePriceBook {
       @JsonProperty("asks") List<CoinbasePriceBookEntry> asks, @JsonProperty("time") String time) {
     this.productId = productId;
     this.time = time;
-    this.bids = bids;
-    this.asks = asks;
+    this.bids = bids == null ? Collections.emptyList() : Collections.unmodifiableList(bids);
+    this.asks = asks == null ? Collections.emptyList() : Collections.unmodifiableList(asks);
   }
 
   @Override

@@ -61,7 +61,8 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
     List<CoinbasePriceBook> priceBooks = this.getBestBidAsk(productId).getPriceBooks();
     CoinbaseProductCandlesResponse candle = this.getProductCandles(productId, "ONE_DAY", 1, null, null);
 
-    return CoinbaseAdapters.adaptTicker(product, candle, priceBooks.get(0));
+    CoinbasePriceBook priceBook = priceBooks.isEmpty() ? null : priceBooks.get(0);
+    return CoinbaseAdapters.adaptTicker(product, candle, priceBook);
   }
 
   @Override

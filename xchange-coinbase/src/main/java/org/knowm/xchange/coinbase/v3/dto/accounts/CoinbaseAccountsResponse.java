@@ -20,14 +20,14 @@ public class CoinbaseAccountsResponse {
   private CoinbaseAccountsResponse(@JsonProperty("accounts") final List<CoinbaseAccount> accounts,
       @JsonProperty("has_next") Boolean hasNext, @JsonProperty("cursor") String cursor,
       @JsonProperty("size") Integer size) {
-    this.accounts = accounts;
+    this.accounts = accounts == null ? Collections.emptyList() : Collections.unmodifiableList(accounts);
     this.hasNext = hasNext;
     this.cursor = cursor;
     this.size = size;
   }
 
   public List<CoinbaseAccount> getAccounts() {
-    return Collections.unmodifiableList(accounts);
+    return accounts;
   }
 
   @Override

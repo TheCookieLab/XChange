@@ -22,7 +22,6 @@ import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
-import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 
@@ -57,9 +56,6 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     List<Order> orders = new ArrayList<>(orderQueryParams.length);
     for (OrderQueryParams param : orderQueryParams) {
       String orderId = param.getOrderId();
-      if (orderId == null && param instanceof DefaultQueryOrderParam) {
-        orderId = param.getOrderId();
-      }
       if (orderId == null) continue;
       orders.add(CoinbaseAdapters.adaptOrder(getOrder(orderId).getOrder()));
     }

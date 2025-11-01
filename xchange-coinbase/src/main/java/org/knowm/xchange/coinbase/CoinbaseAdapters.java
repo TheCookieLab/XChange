@@ -227,9 +227,16 @@ public final class CoinbaseAdapters {
     Builder builder = new Ticker.Builder();
 
     if (product != null) {
-      builder = builder.percentageChange(
-              product.getPricePercentageChange24H().round(new MathContext(2, RoundingMode.HALF_EVEN)))
-          .volume(product.getVolume24H()).quoteVolume(product.getApproximateQuoteVolume24H());
+      if (product.getPricePercentageChange24H() != null) {
+        builder = builder.percentageChange(
+            product.getPricePercentageChange24H().round(new MathContext(2, RoundingMode.HALF_EVEN)));
+      }
+      if (product.getVolume24H() != null) {
+        builder = builder.volume(product.getVolume24H());
+      }
+      if (product.getApproximateQuoteVolume24H() != null) {
+        builder = builder.quoteVolume(product.getApproximateQuoteVolume24H());
+      }
     }
 
     if (priceBook != null && !priceBook.getAsks().isEmpty() && !priceBook.getBids().isEmpty()) {
