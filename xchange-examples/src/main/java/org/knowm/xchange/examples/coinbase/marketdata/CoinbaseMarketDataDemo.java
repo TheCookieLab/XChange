@@ -1,30 +1,38 @@
 package org.knowm.xchange.examples.coinbase.marketdata;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import org.knowm.xchange.Exchange;
-import org.knowm.xchange.ExchangeFactory;
-import org.knowm.xchange.coinbase.CoinbaseExchange;
-import org.knowm.xchange.coinbase.dto.marketdata.CoinbaseCurrency;
-import org.knowm.xchange.coinbase.dto.marketdata.CoinbaseHistoricalSpotPrice;
-import org.knowm.xchange.coinbase.dto.marketdata.CoinbaseMoney;
-import org.knowm.xchange.coinbase.dto.marketdata.CoinbasePrice;
-import org.knowm.xchange.coinbase.dto.marketdata.CoinbaseSpotPriceHistory;
-import org.knowm.xchange.coinbase.service.CoinbaseMarketDataService;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
+import org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataService;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.marketdata.CandleStickData;
+import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.examples.coinbase.CoinbaseDemoUtils;
 import org.knowm.xchange.service.marketdata.MarketDataService;
+import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
 
 /**
+ * @deprecated This example class is deprecated. For code examples and usage, refer to:
+ * <ul>
+ *   <li>{@link org.knowm.xchange.coinbase.v3.service.MarketDataServiceIntegration MarketDataServiceIntegration}</li>
+ *   <li>{@link org.knowm.xchange.coinbase.v3.service.MarketDataServiceSandboxIntegration MarketDataServiceSandboxIntegration}</li>
+ * </ul>
  * @author jamespedwards42
  */
+@SuppressWarnings("JavadocReference")
+@Deprecated
 public class CoinbaseMarketDataDemo {
 
   public static void main(String[] args) throws IOException {
 
-    Exchange coinbaseExchange = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class);
+    Exchange coinbaseExchange = CoinbaseDemoUtils.createExchange();
     MarketDataService marketDataService = coinbaseExchange.getMarketDataService();
 
     generic(marketDataService);
@@ -33,35 +41,44 @@ public class CoinbaseMarketDataDemo {
 
   private static void generic(MarketDataService marketDataService) throws IOException {
 
-    Ticker ticker = marketDataService.getTicker(CurrencyPair.BTC_USD, true);
-    System.out.println(ticker);
+    Ticker ticker = marketDataService.getTicker(CurrencyPair.BTC_USD);
+    System.out.println("Ticker: " + ticker);
+
+    OrderBook orderBook = marketDataService.getOrderBook(CurrencyPair.BTC_USD, 10);
+    System.out.println("Order Book: " + orderBook);
+
+    Trades trades = marketDataService.getTrades(CurrencyPair.BTC_USD, 5);
+    System.out.println("Recent Trades: " + trades);
+
+    CandleStickData candleStickData = marketDataService.getCandleStickData(CurrencyPair.BTC_USD,
+        new DefaultCandleStickParamWithLimit(null, null, 3600L, 10)); // 1 hour candles, limit 10
+    System.out.println("Candlestick Data: " + candleStickData);
   }
 
   private static void raw(CoinbaseMarketDataService marketDataService) throws IOException {
 
-    List<CoinbaseCurrency> currencies = marketDataService.getCoinbaseCurrencies();
-    System.out.println(currencies);
+    // Get product information
+    CoinbaseProductResponse product = marketDataService.getProduct("BTC-USD");
+    System.out.println("Product Info: " + product);
 
-    Map<String, BigDecimal> exchangeRates = marketDataService.getCoinbaseCurrencyExchangeRates();
-    System.out.println("Exchange Rates: " + exchangeRates);
+    // Get best bid/ask prices
+    List<CoinbasePriceBook> priceBooks = marketDataService.getBestBidAsk(CurrencyPair.BTC_USD);
+    System.out.println("Best Bid/Ask: " + priceBooks);
 
-    String amount = "1.57";
-    CoinbasePrice buyPrice = marketDataService.getCoinbaseBuyPrice(new BigDecimal(amount));
-    System.out.println("Buy Price for " + amount + " BTC: " + buyPrice);
+    // Get market trades
+    CoinbaseProductMarketTradesResponse marketTrades = marketDataService.getMarketTrades("BTC-USD", 5, null, null);
+    System.out.println("Market Trades: " + marketTrades);
 
-    CoinbasePrice sellPrice = marketDataService.getCoinbaseSellPrice();
-    System.out.println("Sell Price: " + sellPrice);
+    // Get product candles
+    CoinbaseProductCandlesResponse candles = marketDataService.getProductCandles("BTC-USD", "ONE_HOUR", 10, null, null);
+    System.out.println("Product Candles: " + candles);
 
-    CoinbaseMoney spotRate = marketDataService.getCoinbaseSpotRate("EUR");
-    System.out.println("Spot Rate: " + spotRate);
-
-    int page = 2;
-    CoinbaseSpotPriceHistory spotPriceHistory =
-        marketDataService.getCoinbaseHistoricalSpotRates(page);
-    List<CoinbaseHistoricalSpotPrice> spotPriceHistoryList = spotPriceHistory.getSpotPriceHistory();
-    for (CoinbaseHistoricalSpotPrice coinbaseHistoricalSpotPrice : spotPriceHistoryList) {
-      System.out.println(coinbaseHistoricalSpotPrice);
+    // List products
+    try {
+      CoinbaseProductsResponse products = marketDataService.listProducts("SPOT");
+      System.out.println("Available Products (first 10): " + products.getProducts().subList(0, Math.min(10, products.getProducts().size())));
+    } catch (Exception e) {
+      System.out.println("List products not available: " + e.getMessage());
     }
-    System.out.println("...Retrieved " + spotPriceHistoryList.size() + " historical spot rates.");
   }
 }

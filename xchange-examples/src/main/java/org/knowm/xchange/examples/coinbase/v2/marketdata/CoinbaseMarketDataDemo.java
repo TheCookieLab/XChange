@@ -14,6 +14,15 @@ import org.knowm.xchange.coinbase.v2.dto.marketdata.CoinbaseCurrencyData.Coinbas
 import org.knowm.xchange.coinbase.v2.service.CoinbaseMarketDataService;
 import org.knowm.xchange.currency.Currency;
 
+/**
+ * @deprecated This example class is deprecated. Coinbase v2 API is deprecated.
+ * For code examples and usage, refer to:
+ * <ul>
+ *   <li>{@link org.knowm.xchange.coinbase.v2.service.MarketDataServiceIntegration MarketDataServiceIntegration}</li>
+ * </ul>
+ * For v3 API examples, see the integration tests in {@link org.knowm.xchange.coinbase.v3.service}.
+ */
+@Deprecated
 public class CoinbaseMarketDataDemo {
 
   public static void main(String[] args) throws IOException, ParseException {
