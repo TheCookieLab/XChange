@@ -21,7 +21,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -37,15 +39,27 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(CoinbaseStreamingService.class);
 
+  private static final long DEFAULT_JWT_REFRESH_PERIOD_SECONDS =
+      Math.max(CoinbaseV3Digest.JWT_EXPIRY_SECONDS - 30, 30);
   private static final String SUBSCRIBE = "subscribe";
   private static final String UNSUBSCRIBE = "unsubscribe";
 
   private final Supplier<String> jwtSupplier;
   private final CoinbaseRateLimiter publicRateLimiter;
   private final CoinbaseRateLimiter privateRateLimiter;
+  private final long jwtRefreshPeriodSeconds;
   private final ScheduledExecutorService jwtRefreshScheduler;
 
   private final Map<CoinbaseChannel, ChannelState> channelStates = new ConcurrentHashMap<>();
+
+  private static ScheduledExecutorService createDefaultJwtScheduler() {
+    return Executors.newSingleThreadScheduledExecutor(
+        r -> {
+          Thread t = new Thread(r, "coinbase-ws-jwt-refresh");
+          t.setDaemon(true);
+          return t;
+        });
+  }
 
   CoinbaseStreamingService(
       String apiUrl,
@@ -56,15 +70,37 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
       int maxFramePayloadLength,
       int unauthenticatedPerSecond,
       int authenticatedPerSecond) {
+    this(
+        apiUrl,
+        jwtSupplier,
+        connectionTimeout,
+        retryDuration,
+        idleTimeoutSeconds,
+        maxFramePayloadLength,
+        unauthenticatedPerSecond,
+        authenticatedPerSecond,
+        DEFAULT_JWT_REFRESH_PERIOD_SECONDS,
+        createDefaultJwtScheduler());
+  }
+
+  CoinbaseStreamingService(
+      String apiUrl,
+      Supplier<String> jwtSupplier,
+      Duration connectionTimeout,
+      Duration retryDuration,
+      int idleTimeoutSeconds,
+      int maxFramePayloadLength,
+      int unauthenticatedPerSecond,
+      int authenticatedPerSecond,
+      long jwtRefreshPeriodSeconds,
+      ScheduledExecutorService jwtRefreshScheduler) {
     super(apiUrl, maxFramePayloadLength, connectionTimeout, retryDuration, idleTimeoutSeconds);
     this.jwtSupplier = jwtSupplier == null ? () -> null : jwtSupplier;
     this.publicRateLimiter = new CoinbaseRateLimiter(unauthenticatedPerSecond);
     this.privateRateLimiter = new CoinbaseRateLimiter(authenticatedPerSecond);
-    this.jwtRefreshScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-      Thread t = new Thread(r, "coinbase-ws-jwt-refresh");
-      t.setDaemon(true);
-      return t;
-    });
+    this.jwtRefreshPeriodSeconds = Math.max(1, jwtRefreshPeriodSeconds);
+    this.jwtRefreshScheduler =
+        jwtRefreshScheduler != null ? jwtRefreshScheduler : createDefaultJwtScheduler();
   }
 
   CoinbaseStreamingService(
@@ -94,6 +130,7 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
       }
     }
 
+    scheduleJwtRefreshIfActive(state);
     return state.stream;
   }
 
@@ -104,9 +141,13 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
       return;
     }
 
-    List<String> productsToRemove = state.decrementRefCounts(request.getProductIds());
+    ChannelState.DecrementResult result = state.decrementRefCounts(request.getProductIds());
+    List<String> productsToRemove = result.getProductsToRemove();
     if (!productsToRemove.isEmpty()) {
       sendChannelCommand(state, UNSUBSCRIBE, productsToRemove);
+    }
+    if (state.requiresAuthentication() && !result.hasActiveSubscriptions()) {
+      state.cancelJwtRefresh();
     }
   }
 
@@ -127,14 +168,21 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
       }
       Observable<JsonNode> upstream = super.subscribeChannel(state.channel.channelName(), state);
       state.stream = upstream.share();
-      if (state.requiresAuthentication()) {
-        long refreshPeriod = Math.max(CoinbaseV3Digest.JWT_EXPIRY_SECONDS - 30, 30);
-        jwtRefreshScheduler.scheduleAtFixedRate(
-            () -> refreshJwt(state),
-            refreshPeriod,
-            refreshPeriod,
-            TimeUnit.SECONDS);
-      }
+    }
+  }
+
+  private void scheduleJwtRefreshIfActive(ChannelState state) {
+    if (!state.requiresAuthentication()) {
+      return;
+    }
+    try {
+      state.scheduleJwtRefresh(
+          jwtRefreshScheduler, jwtRefreshPeriodSeconds, () -> refreshJwt(state));
+    } catch (RejectedExecutionException e) {
+      LOG.debug(
+          "Skipping JWT refresh scheduling for channel {} because scheduler rejected task",
+          state.channel.channelName(),
+          e);
     }
   }
 
@@ -142,10 +190,11 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
     if (!state.requiresAuthentication()) {
       return;
     }
-    List<String> products = state.currentProducts();
-    if (products.isEmpty()) {
+    if (!state.hasActiveSubscriptions()) {
+      state.cancelJwtRefresh();
       return;
     }
+    List<String> products = state.currentProducts();
     LOG.debug("Refreshing Coinbase WebSocket JWT for channel {} with {} products",
         state.channel.channelName(), products.size());
     sendChannelCommand(state, SUBSCRIBE, products);
@@ -156,6 +205,7 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
     return super.disconnect()
         .doFinally(
             () -> {
+              channelStates.values().forEach(state -> state.cancelJwtRefresh());
               channelStates.clear();
               jwtRefreshScheduler.shutdownNow();
             });
@@ -312,6 +362,7 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
     private final Map<String, Object> args = new HashMap<>();
     private Observable<JsonNode> stream;
     private boolean usesExplicitProducts = true;
+    private ScheduledFuture<?> jwtRefreshFuture;
 
     private ChannelState(CoinbaseChannel channel) {
       this.channel = channel;
@@ -334,7 +385,7 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
       }
     }
 
-    synchronized List<String> decrementRefCounts(List<String> products) {
+    synchronized DecrementResult decrementRefCounts(List<String> products) {
       boolean requestHasProducts = products != null && !products.isEmpty();
       if (!requestHasProducts) {
         products = Collections.singletonList(NO_PRODUCT_KEY);
@@ -351,7 +402,7 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
           toRemove.add(product);
         }
       }
-      return toRemove;
+      return new DecrementResult(toRemove, !productRefCounts.isEmpty());
     }
 
     synchronized List<String> flushPendingSubscribes() {
@@ -374,6 +425,32 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
       List<String> result = new ArrayList<>(productRefCounts.keySet());
       result.remove(NO_PRODUCT_KEY);
       return result;
+    }
+
+    synchronized boolean hasActiveSubscriptions() {
+      return !productRefCounts.isEmpty();
+    }
+
+    synchronized void scheduleJwtRefresh(
+        ScheduledExecutorService scheduler, long periodSeconds, Runnable refreshTask) {
+      if (!requiresAuthentication()) {
+        return;
+      }
+      if (!hasActiveSubscriptions()) {
+        return;
+      }
+      if (jwtRefreshFuture != null && !jwtRefreshFuture.isCancelled() && !jwtRefreshFuture.isDone()) {
+        return;
+      }
+      jwtRefreshFuture =
+          scheduler.scheduleAtFixedRate(refreshTask, periodSeconds, periodSeconds, TimeUnit.SECONDS);
+    }
+
+    synchronized void cancelJwtRefresh() {
+      if (jwtRefreshFuture != null) {
+        jwtRefreshFuture.cancel(false);
+        jwtRefreshFuture = null;
+      }
     }
 
     boolean requiresAuthentication() {
@@ -400,6 +477,24 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
         }
       }
       return sanitized;
+    }
+
+    private static final class DecrementResult {
+      private final List<String> productsToRemove;
+      private final boolean hasActiveSubscriptions;
+
+      private DecrementResult(List<String> productsToRemove, boolean hasActiveSubscriptions) {
+        this.productsToRemove = productsToRemove;
+        this.hasActiveSubscriptions = hasActiveSubscriptions;
+      }
+
+      List<String> getProductsToRemove() {
+        return productsToRemove;
+      }
+
+      boolean hasActiveSubscriptions() {
+        return hasActiveSubscriptions;
+      }
     }
   }
 }

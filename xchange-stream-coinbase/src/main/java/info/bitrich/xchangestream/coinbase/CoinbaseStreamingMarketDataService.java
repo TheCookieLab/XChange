@@ -10,6 +10,7 @@ import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.OrderBook;
@@ -33,14 +35,24 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
   private static final Logger LOG =
       LoggerFactory.getLogger(CoinbaseStreamingMarketDataService.class);
 
+  @FunctionalInterface
+  interface OrderBookSnapshotProvider {
+    OrderBook fetchSnapshot(CurrencyPair currencyPair) throws IOException;
+  }
+
   private final CoinbaseStreamingService streamingService;
+  private final OrderBookSnapshotProvider snapshotProvider;
   private final Map<CurrencyPair, OrderBookState> orderBooks = new ConcurrentHashMap<>();
 
   private final List<Disposable> internalSubscriptions = new CopyOnWriteArrayList<>();
 
   CoinbaseStreamingMarketDataService(
-      CoinbaseStreamingService streamingService, org.knowm.xchange.ExchangeSpecification spec) {
+      CoinbaseStreamingService streamingService,
+      OrderBookSnapshotProvider snapshotProvider,
+      ExchangeSpecification spec) {
     this.streamingService = streamingService;
+    this.snapshotProvider =
+        snapshotProvider != null ? snapshotProvider : pair -> null;
   }
 
   void ensureHeartbeatsSubscription() {
@@ -57,8 +69,7 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
   }
 
   void resubscribe() {
-    // Observables returned from streamingService.observeChannel remain active across reconnects,
-    // so no explicit re-subscription is required here.
+    orderBooks.values().forEach(OrderBookState::reset);
   }
 
   @Override
@@ -114,7 +125,8 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
             Collections.emptyMap());
 
     OrderBookState state =
-        orderBooks.computeIfAbsent(currencyPair, key -> new OrderBookState(currencyPair));
+        orderBooks.computeIfAbsent(
+            currencyPair, key -> new OrderBookState(currencyPair, snapshotProvider));
 
     return streamingService
         .observeChannel(request)
@@ -136,15 +148,19 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
     return false;
   }
 
-  private static final class OrderBookState {
+  static final class OrderBookState {
     private final CurrencyPair currencyPair;
+    private final OrderBookSnapshotProvider snapshotProvider;
     private final Map<BigDecimal, LimitOrder> bids =
         new ConcurrentHashMap<>();
     private final Map<BigDecimal, LimitOrder> asks =
         new ConcurrentHashMap<>();
+    private Long lastSequence;
+    private volatile boolean hasSnapshot;
 
-    OrderBookState(CurrencyPair currencyPair) {
+    OrderBookState(CurrencyPair currencyPair, OrderBookSnapshotProvider snapshotProvider) {
       this.currencyPair = currencyPair;
+      this.snapshotProvider = snapshotProvider;
     }
 
     Maybe<OrderBook> process(JsonNode message) {
@@ -159,21 +175,48 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
           continue;
         }
         String type = event.path("type").asText("");
+        long sequence = event.path("sequence").asLong(-1L);
         if ("snapshot".equalsIgnoreCase(type)) {
-          bids.clear();
-          asks.clear();
+          applySnapshotEvent(event);
+          if (sequence >= 0) {
+            lastSequence = sequence;
+          }
+          hasSnapshot = true;
+          changed = true;
+          continue;
         }
-        List<LimitOrder> bidUpdates =
-            CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID);
-        List<LimitOrder> askUpdates =
-            CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK);
-        if (!bidUpdates.isEmpty()) {
-          applyUpdates(bids, bidUpdates);
+        if (!ensureInitialized(sequence)) {
+          continue;
+        }
+        if (sequence > 0 && lastSequence != null) {
+          long expected = lastSequence + 1;
+          if (sequence > expected) {
+            LOG.warn(
+                "Detected Coinbase level2 sequence gap for {}: expected {} but received {}",
+                currencyPair,
+                expected,
+                sequence);
+            if (recoverFromSnapshot(sequence)) {
+              changed = true;
+            } else {
+              continue;
+            }
+          } else if (sequence <= lastSequence) {
+            LOG.debug(
+                "Skipping stale Coinbase level2 update for {} with sequence {} (last seen {})",
+                currencyPair,
+                sequence,
+                lastSequence);
+            continue;
+          }
+        }
+
+        boolean applied = applyUpdates(event);
+        if (applied) {
           changed = true;
         }
-        if (!askUpdates.isEmpty()) {
-          applyUpdates(asks, askUpdates);
-          changed = true;
+        if (sequence > 0) {
+          lastSequence = sequence;
         }
       }
       if (!changed) {
@@ -187,7 +230,37 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
       return Maybe.just(orderBook);
     }
 
-    private void applyUpdates(Map<BigDecimal, LimitOrder> side, List<LimitOrder> updates) {
+    private void applySnapshotEvent(JsonNode event) {
+      bids.clear();
+      asks.clear();
+      applyUpdatesToSide(
+          bids, CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID));
+      applyUpdatesToSide(
+          asks, CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK));
+    }
+
+    private boolean applyUpdates(JsonNode event) {
+      boolean changed = false;
+      List<LimitOrder> bidUpdates =
+          CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID);
+      if (!bidUpdates.isEmpty()) {
+        if (applyUpdatesToSide(bids, bidUpdates)) {
+          changed = true;
+        }
+      }
+
+      List<LimitOrder> askUpdates =
+          CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK);
+      if (!askUpdates.isEmpty()) {
+        if (applyUpdatesToSide(asks, askUpdates)) {
+          changed = true;
+        }
+      }
+      return changed;
+    }
+
+    private boolean applyUpdatesToSide(Map<BigDecimal, LimitOrder> side, List<LimitOrder> updates) {
+      boolean changed = false;
       for (LimitOrder update : updates) {
         BigDecimal price = update.getLimitPrice();
         BigDecimal size = update.getOriginalAmount();
@@ -195,11 +268,13 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
           continue;
         }
         if (size.compareTo(BigDecimal.ZERO) <= 0) {
-          side.remove(price);
+          changed |= side.remove(price) != null;
         } else {
           side.put(price, update);
+          changed = true;
         }
       }
+      return changed;
     }
 
     private List<LimitOrder> sortedOrders(
@@ -210,6 +285,61 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
                   ? (l, r) -> r.getLimitPrice().compareTo(l.getLimitPrice())
                   : (l, r) -> l.getLimitPrice().compareTo(r.getLimitPrice()))
           .collect(Collectors.toList());
+    }
+
+    private boolean ensureInitialized(long nextSequence) {
+      if (hasSnapshot) {
+        return true;
+      }
+      return recoverFromSnapshot(nextSequence);
+    }
+
+    private boolean recoverFromSnapshot(long nextSequence) {
+      if (snapshotProvider == null) {
+        LOG.warn(
+            "No snapshot provider configured for {} - unable to recover Coinbase order book",
+            currencyPair);
+        return false;
+      }
+      try {
+        OrderBook snapshot = snapshotProvider.fetchSnapshot(currencyPair);
+        if (snapshot == null) {
+          LOG.warn(
+              "Snapshot provider returned null while recovering Coinbase order book for {}",
+              currencyPair);
+          return false;
+        }
+        bids.clear();
+        asks.clear();
+        snapshot.getBids().forEach(order -> {
+          if (order.getLimitPrice() != null && order.getOriginalAmount() != null) {
+            bids.put(order.getLimitPrice(), order);
+          }
+        });
+        snapshot.getAsks().forEach(order -> {
+          if (order.getLimitPrice() != null && order.getOriginalAmount() != null) {
+            asks.put(order.getLimitPrice(), order);
+          }
+        });
+        hasSnapshot = true;
+        if (nextSequence > 0) {
+          lastSequence = nextSequence - 1;
+        } else {
+          lastSequence = null;
+        }
+        LOG.debug("Recovered Coinbase order book snapshot for {}", currencyPair);
+        return true;
+      } catch (IOException e) {
+        LOG.warn("Failed to fetch Coinbase order book snapshot for {}", currencyPair, e);
+        return false;
+      }
+    }
+
+    void reset() {
+      bids.clear();
+      asks.clear();
+      lastSequence = null;
+      hasSnapshot = false;
     }
   }
 }

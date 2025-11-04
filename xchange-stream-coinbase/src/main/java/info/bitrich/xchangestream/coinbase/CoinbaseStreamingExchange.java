@@ -7,17 +7,25 @@ import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
-import org.knowm.xchange.coinbase.v3.service.CoinbaseWebsocketAuthentication;
+import org.knowm.xchange.coinbase.v3.CoinbaseV3Digest;
+import org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataService;
+import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Streaming exchange implementation for Coinbase Advanced Trade WebSockets.
  */
 public class CoinbaseStreamingExchange extends CoinbaseExchange implements StreamingExchange {
+  private static final Logger LOG = LoggerFactory.getLogger(CoinbaseStreamingExchange.class);
 
   public static final String PARAM_SANDBOX = "Use_Sandbox_Websocket";
   public static final String PARAM_PUBLIC_RATE_LIMIT = "Coinbase_Public_Subscriptions_Per_Second";
@@ -30,7 +38,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   private final AtomicReference<Disposable> reconnectSubscription = new AtomicReference<>();
 
   private CoinbaseStreamingService streamingService;
-  private CoinbaseStreamingMarketDataService marketDataService;
+  private CoinbaseStreamingMarketDataService streamingMarketDataService;
   private CoinbaseStreamingTradeService tradeService;
 
   @Override
@@ -60,12 +68,14 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
     streamingService =
         new CoinbaseStreamingService(
             websocketUrl,
-            CoinbaseWebsocketAuthentication.websocketJwtSupplier(exchangeSpecification),
+            resolveJwtSupplier(exchangeSpecification),
             publicRateLimit,
             privateRateLimit);
     applyStreamingSpecification(exchangeSpecification, streamingService);
 
-    marketDataService = new CoinbaseStreamingMarketDataService(streamingService, exchangeSpecification);
+    streamingMarketDataService =
+        new CoinbaseStreamingMarketDataService(
+            streamingService, createSnapshotProvider(), exchangeSpecification);
     tradeService = new CoinbaseStreamingTradeService(streamingService, exchangeSpecification);
 
     Completable connectCompletable = streamingService.connect();
@@ -90,11 +100,11 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
     if (Boolean.TRUE.equals(disableAutoHeartbeat)) {
       return;
     }
-    marketDataService.ensureHeartbeatsSubscription();
+    streamingMarketDataService.ensureHeartbeatsSubscription();
   }
 
   private void resubscribeOpenStreams() {
-    marketDataService.resubscribe();
+    streamingMarketDataService.resubscribe();
     tradeService.resubscribe();
   }
 
@@ -107,7 +117,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
     }
     CoinbaseStreamingService service = streamingService;
     streamingService = null;
-    marketDataService = null;
+    streamingMarketDataService = null;
     tradeService = null;
     return service.disconnect();
   }
@@ -134,7 +144,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
 
   @Override
   public CoinbaseStreamingMarketDataService getStreamingMarketDataService() {
-    return marketDataService;
+    return streamingMarketDataService;
   }
 
   @Override
@@ -152,6 +162,58 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
     if (streamingService != null) {
       streamingService.useCompressedMessages(compressedMessages);
     }
+  }
+
+  private Supplier<String> resolveJwtSupplier(ExchangeSpecification specification) {
+    Supplier<String> helperSupplier = attemptHelperJwtSupplier(specification);
+    return helperSupplier != null ? helperSupplier : createLocalJwtSupplier(specification);
+  }
+
+  private CoinbaseStreamingMarketDataService.OrderBookSnapshotProvider createSnapshotProvider() {
+    if (marketDataService instanceof CoinbaseMarketDataService) {
+      CoinbaseMarketDataService coinbaseMarketDataService =
+          (CoinbaseMarketDataService) marketDataService;
+      return coinbaseMarketDataService::getOrderBook;
+    }
+    LOG.warn(
+        "Coinbase market data service not available for snapshot recovery; falling back to streaming updates only");
+    return currencyPair -> null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Supplier<String> attemptHelperJwtSupplier(ExchangeSpecification specification) {
+    try {
+      Class<?> helperClass =
+          Class.forName("org.knowm.xchange.coinbase.v3.service.CoinbaseWebsocketAuthentication");
+      Method supplierMethod = helperClass.getMethod("websocketJwtSupplier", ExchangeSpecification.class);
+      return (Supplier<String>) supplierMethod.invoke(null, specification);
+    } catch (ClassNotFoundException e) {
+      LOG.debug(
+          "CoinbaseWebsocketAuthentication helper not found on classpath; falling back to inline JWT supplier");
+      return null;
+    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+      LOG.warn(
+          "Failed to use CoinbaseWebsocketAuthentication helper; falling back to inline JWT supplier",
+          e);
+      return null;
+    }
+  }
+
+  private Supplier<String> createLocalJwtSupplier(ExchangeSpecification specification) {
+    CoinbaseV3Digest digest =
+        CoinbaseV3Digest.createInstance(specification.getApiKey(), specification.getSecretKey());
+    if (digest == null) {
+      LOG.debug("Inline Coinbase JWT supplier unavailable - missing API credentials");
+      return () -> null;
+    }
+    return () -> {
+      try {
+        return digest.generateWebsocketJwt();
+      } catch (Exception ex) {
+        LOG.warn("Inline Coinbase JWT supplier failed to generate token", ex);
+        return null;
+      }
+    };
   }
 
   private String resolveWebsocketUrl(ExchangeSpecification specification) {
