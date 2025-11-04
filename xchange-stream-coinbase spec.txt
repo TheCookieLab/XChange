@@ -1,0 +1,186 @@
+XChange Stream Coinbase Spec (Revised)
+
+  Stream client for Coinbase Advanced Trade WebSockets, aligned with XChange streaming abstractions, covering public/
+  private channels with automated regression tests.
+
+  - Coinbase Advanced Trade WebSocket docs (overview, authentication, channels).
+  - Existing modules: xchange-stream-coinbasepro, xchange-coinbase.
+
+  Goals
+
+  - Create xchange-stream-coinbase Maven submodule mirroring xchange-stream-coinbasepro but targeting Coinbase Advanced
+    Trade v3.
+  - Offer RxJava3 observables for every documented WebSocket channel (public + private) with ergonomic APIs.
+  - Reuse authentication/data model artifacts from xchange-coinbase v3 (JWT signing, DTOs) to avoid duplication.
+  - Deliver comprehensive automated test coverage safeguarding subscriptions, decoding, reconnection, and JWT refresh
+    behavior.
+
+  Non-Goals
+
+  - Building CLI/GUI tooling (manual example optional).
+  - Extending legacy Coinbase Pro module or REST coverage.
+  - Supporting deprecated/pro endpoints.
+  - Running live network tests; rely on deterministic fakes/mocks.
+
+  Stakeholders
+
+  - Java developers leveraging XChange for Coinbase streaming (trading, analytics).
+  - Maintainership team ensuring feature parity across exchanges.
+
+  Functional Scope
+
+  1. Exchange façade
+      - Implement CoinbaseStreamingExchange extending CoinbaseExchange (v3) + StreamingExchange.
+      - Primary endpoint: wss://advanced-trade-ws.coinbase.com.
+      - Sandbox endpoint: provisionally wss://advanced-trade-ws.sandbox.coinbase.com; include TODO + automated test to
+        verify availability once client functional. If invalid, disable sandbox toggle gracefully and document outcome.
+      - Allow override via ExchangeSpecification.setOverrideWebsocketApiUri.
+  2. Channel coverage
+      - Public: ticker, ticker_batch, market_trades, candles, level2, level2_batch, status, heartbeats.
+      - Private: user (orders, fills, balances, margins) requiring JWT and refresh cycle <2 min.
+      - Subscription filters: product IDs, market type (spot/futures/perps where supported), candle granularity,
+        snapshot flags.
+      - Implement adapters converting raw payloads to XChange DTOs (reuse org.knowm.xchange.coinbase.v3.dto; add missing
+        ones in xchange-coinbase if needed).
+  3. Service layer
+      - CoinbaseStreamingService: Netty-based connection manager, handles subscribe/unsubscribe messages, JWT injection,
+        heartbeats, reconnection with backoff, enforce rate limits (see throttling below).
+      - CoinbaseStreamingMarketDataService: exposes observables for public channels.
+      - CoinbaseStreamingTradeService: exposes private/user channel events; optionally split account-focused stream
+        later.
+  4. Configuration options
+      - Exchange params: sandbox toggle (auto-disabled if verification fails), manual resubscribe switch, default candle
+        granularity, per-connection channel limit (configurable), JWT refresh buffer (default 90s), heartbeat auto-
+        subscribe flag.
+      - Honour global streaming settings (timeouts, idle detection).
+  5. Message flow & sequencing
+      - Level2 sequencing: maintain per-product sequence, detect gaps, emit reconnection signals, helper to rebuild book
+        via REST snapshot (using CoinbasePriceBook).
+      - Ensure heartbeat channel automatically subscribed when requested; emit health signals on missed beats.
+      - Frame demultiplexing: handle Coinbase multi-event payload structure.
+  6. Throttling & limits
+      - Enforce Coinbase limits: authenticated subscriptions ≤750 per second per IP, unauthenticated ≤8 per second per
+        IP.
+      - Implement rate limiter inside streaming service (token bucket) to serialize subscribe calls accordingly and
+        expose config to adjust burst/period if Coinbase updates policy.
+      - Document best practices for batching channels to minimize rate consumption.
+  7. Error handling
+      - Differentiate transport vs auth vs subscription vs payload errors.
+      - Expose structured errors through Observable<Throwable> and logs.
+
+  - Reconnect with exponential backoff + jitter while respecting requirement to send subscription message within 5
+    seconds (cache subscriptions, resend promptly).
+
+  8. Authentication
+      - Reuse CoinbaseV3Digest to mint JWTs; add helper in xchange-coinbase returning lambda for streaming service.
+      - Auto-refresh JWT 30s before expiry whenever private channels active; refresh immediately when server signals
+        auth failure.
+  9. Data modelling
+      - Map channels to core DTOs:
+          - ticker/ticker_batch → Ticker.
+          - market_trades → Trade.
+          - candles → CandleStick.
+          - level2/level2_batch → OrderBook via coinbase pricebook DTO.
+          - status → new DTO capturing status fields, with adapter to Product.
+          - heartbeats → typed heartbeat DTO including sequence/time.
+          - user → typed event hierarchy (order lifecycle, fills, balances). Extend coinbase v3 DTO package as needed.
+      - Implement adapter class akin to CoinbaseProStreamingAdapters.
+  10. API exposure
+      - Provide typed observables only; do not expose raw Observable<JsonNode> initially. Architect service so raw
+        stream can be added later without breaking API (e.g., keep internal method returning JsonNode but package-
+        private).
+  11. Documentation
+      - README snippet: setup, auth instructions, sandbox verification notes, rate limit guidance, heartbeat usage.
+      - Javadocs covering Coinbase-specific behaviors.
+
+  Technical Architecture
+
+  xchange-stream-coinbase/
+    pom.xml
+    src/main/java/info/bitrich/xchangestream/coinbase/
+      CoinbaseStreamingExchange.java
+      CoinbaseStreamingService.java
+      CoinbaseStreamingMarketDataService.java
+      CoinbaseStreamingTradeService.java
+      adapters/…
+      dto/… (websocket-specific)
+    src/test/java/…
+    src/test/resources/…
+
+  - Maven pom similar to coinbasepro; depend on xchange-coinbase, streaming core, RxJava3.
+  - CoinbaseStreamingService extends JsonNettyStreamingService, overrides message handling.
+  - Rate limiter + JWT refresh scheduled executor (reuse shared scheduler from base if available).
+  - Sandbox verification test executed in integration tests: once client built, attempt connection to sandbox URL; if
+    fails, log + disable sandbox flag by default.
+
+  Implementation Steps
+
+  1. Scaffolding
+      - Create module, wire pom, add to root aggregator, copy lint configs.
+      - Add README skeleton.
+  2. Auth integration
+      - Add helper in xchange-coinbase to produce JWT supplier (if absent).
+      - In streaming service, lazily fetch tokens, schedule refresh (using ScheduledExecutorService).
+  3. Service core
+      - Connection lifecycle, subscribe/unsubscribe JSON builder (support arrays per spec).
+      - Rate limiting injection (Guava RateLimiter or custom) with config for auth vs public flows.
+      - Heartbeat subscription + idle detection.
+      - Reconnection & resubscription caching.
+  4. Adapters & DTOs
+      - Implement channel-specific mappers.
+      - Add missing DTO definitions to xchange-coinbase (websocket-specific) to keep single source.
+      - Unit tests verifying sample payloads to DTOs and domain conversions.
+  5. Market/Trade services
+      - Public service exposing getTicker, getTrades, getOrderBook, getCandles, getStatus, getHeartbeats.
+      - Private service exposing getOrderUpdates, getUserTrades, getBalanceUpdates, etc., leveraging user channel
+        events.
+  6. Testing suite
+      - Unit tests: JSON builder, rate limiter, JWT refresh, sequence tracker.
+      - Fixture-based tests using embedded WebSocket server (e.g., Netty) to push sample payloads for each channel.
+      - Reconnection tests simulating disconnect/gap scenarios.
+      - Sandbox validation test: attempt to connect to sandbox URL (skippable if env flag set); update README to note
+        verified outcome.
+  7. Documentation & polish
+      - Fill README, document rate limits, heartbeat usage, sandbox result.
+      - Ensure Checkstyle/Spotless compliance.
+
+  Testing Strategy
+
+  - Unit: subscription builder, adapters, JWT refresh logic, rate limiting, sequence gap detection.
+  - Integration (mock server):
+      - Validate public channel pipelines.
+      - Private channel requiring JWT, auto-refresh on expiration.
+      - Heartbeat monitoring (simulate missing heartbeat).
+      - Resubscribe on reconnect within 5s window.
+  - Regression fixtures: curated JSON payloads per channel (from docs/sanitized captures).
+  - Sandbox verification: integration test verifying sandbox availability; mark outcome (pass/fail) and adjust default
+    spec parameter accordingly.
+
+  Coverage target: ≥90% class coverage; 100% on critical components (adapters, auth, sequencing).
+
+  Risks & Mitigations
+
+  - Sandbox endpoint may not exist: integration test and README note; default sandbox flag off if verification fails.
+  - Rate limit violations: enforce client-side throttling, document best practices.
+  - Schema changes: isolate payload parsing in adapters; use versioned DTOs.
+  - High-volume order book: support backpressure (consider Flowable) and document.
+
+  Future considerations
+
+  - Potential optional raw Observable<JsonNode> exposure (architect service to enable later).
+  - Multi-connection sharding when subscription counts exceed per-connection practicality.
+  - Additional channels if Coinbase expands offering.
+
+  Open Questions
+
+  - Confirm final sandbox status post-validation.
+  - Clarify event taxonomy in user channel (ensure DTO coverage).
+  - Determine optimal default rate limiter values (configurable per auth/public as per Coinbase guidance).
+
+  Definition of Done
+
+  - Module builds, tests green with required coverage.
+  - Sandbox behavior documented based on verification.
+  - API documentation complete, README instructive.
+  - Manual smoke instructions for production endpoint provided.
+  - Maintainer review sign-off.

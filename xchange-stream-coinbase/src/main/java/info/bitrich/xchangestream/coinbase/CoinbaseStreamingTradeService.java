@@ -1,0 +1,229 @@
+package info.bitrich.xchangestream.coinbase;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseFuturesBalanceSummary;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseUserOrderEvent;
+import info.bitrich.xchangestream.core.StreamingTradeService;
+import io.reactivex.rxjava3.core.Observable;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.trade.UserTrade;
+import org.knowm.xchange.exceptions.ExchangeSecurityException;
+import org.knowm.xchange.instrument.Instrument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+class CoinbaseStreamingTradeService implements StreamingTradeService {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CoinbaseStreamingTradeService.class);
+
+  private final CoinbaseStreamingService streamingService;
+  private final org.knowm.xchange.ExchangeSpecification specification;
+
+  CoinbaseStreamingTradeService(
+      CoinbaseStreamingService streamingService,
+      org.knowm.xchange.ExchangeSpecification specification) {
+    this.streamingService = streamingService;
+    this.specification = specification;
+  }
+
+  void resubscribe() {
+    // No-op: streaming service handles reconnection automatically.
+  }
+
+  public Observable<CoinbaseUserOrderEvent> getUserOrderEvents(List<String> productIds) {
+    ensureAuthenticated();
+    CoinbaseSubscriptionRequest request =
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.USER,
+            productIds == null ? Collections.emptyList() : productIds,
+            Collections.emptyMap());
+
+    return streamingService
+        .observeChannel(request)
+        .flatMapIterable(this::extractOrderEvents);
+  }
+
+  public Observable<CoinbaseFuturesBalanceSummary> getFuturesBalanceSummary() {
+    ensureAuthenticated();
+    CoinbaseSubscriptionRequest request =
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.FUTURES_BALANCE_SUMMARY, Collections.emptyList(), Collections.emptyMap());
+
+    return streamingService
+        .observeChannel(request)
+        .flatMapIterable(this::extractBalanceSummaries);
+  }
+
+  @Override
+  public Observable<Order> getOrderChanges(CurrencyPair currencyPair, Object... args) {
+    ensureAuthenticated();
+    String productId = CoinbaseProductIds.productId(currencyPair);
+    return getUserOrderEvents(Collections.singletonList(productId))
+        .filter(event -> currencyPair.equals(event.getProduct()))
+        .map(CoinbaseStreamingTradeService::toOrder);
+  }
+
+  @Override
+  public Observable<Order> getOrderChanges(Instrument instrument, Object... args) {
+    if (instrument instanceof CurrencyPair) {
+      return getOrderChanges((CurrencyPair) instrument, args);
+    }
+    return StreamingTradeService.super.getOrderChanges(instrument, args);
+  }
+
+  @Override
+  public Observable<UserTrade> getUserTrades(CurrencyPair currencyPair, Object... args) {
+    ensureAuthenticated();
+    String productId = CoinbaseProductIds.productId(currencyPair);
+    return getUserOrderEvents(Collections.singletonList(productId))
+        .filter(event -> currencyPair.equals(event.getProduct()))
+        .filter(
+            event ->
+                event.getFilledSize() != null
+                    && event.getFilledSize().compareTo(BigDecimal.ZERO) > 0)
+        .map(CoinbaseStreamingTradeService::toUserTrade);
+  }
+
+  @Override
+  public Observable<UserTrade> getUserTrades(Instrument instrument, Object... args) {
+    if (instrument instanceof CurrencyPair) {
+      return getUserTrades((CurrencyPair) instrument, args);
+    }
+    return StreamingTradeService.super.getUserTrades(instrument, args);
+  }
+
+  private List<CoinbaseUserOrderEvent> extractOrderEvents(JsonNode message) {
+    JsonNode events = message.path("events");
+    if (!events.isArray()) {
+      return Collections.emptyList();
+    }
+    return stream(events)
+        .filter(event -> event.path("orders").isArray())
+        .flatMap(
+            event ->
+                stream(event.path("orders"))
+                    .map(orderNode -> toUserOrderEvent(orderNode, event)))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .collect(Collectors.toList());
+  }
+
+  private List<CoinbaseFuturesBalanceSummary> extractBalanceSummaries(JsonNode message) {
+    JsonNode events = message.path("events");
+    if (!events.isArray()) {
+      return Collections.emptyList();
+    }
+    return stream(events)
+        .map(event -> event.path("fcm_balance_summary"))
+        .filter(JsonNode::isObject)
+        .map(this::toBalanceSummary)
+        .collect(Collectors.toList());
+  }
+
+  private CoinbaseFuturesBalanceSummary toBalanceSummary(JsonNode summaryNode) {
+    return new CoinbaseFuturesBalanceSummary(
+        asBigDecimal(summaryNode, "futures_buying_power"),
+        asBigDecimal(summaryNode, "total_usd_balance"),
+        asBigDecimal(summaryNode, "unrealized_pnl"),
+        asBigDecimal(summaryNode, "daily_realized_pnl"),
+        asBigDecimal(summaryNode, "initial_margin"),
+        asBigDecimal(summaryNode, "available_margin"));
+  }
+
+  private Optional<CoinbaseUserOrderEvent> toUserOrderEvent(JsonNode orderNode, JsonNode event) {
+    try {
+      String productId = orderNode.path("product_id").asText(null);
+      CurrencyPair pair = CoinbaseStreamingAdapters.toCurrencyPair(productId);
+      Order.OrderType side =
+          CoinbaseStreamingAdapters.parseOrderSide(orderNode.path("order_side").asText(null));
+      BigDecimal orderSize =
+          Optional.ofNullable(asBigDecimal(orderNode, "size"))
+              .orElse(Optional.ofNullable(asBigDecimal(orderNode, "order_total")).orElse(null));
+      return Optional.of(
+          new CoinbaseUserOrderEvent(
+              orderNode.path("order_id").asText(null),
+              orderNode.path("client_order_id").asText(null),
+              pair,
+              side,
+              orderNode.path("order_type").asText(null),
+              asBigDecimal(orderNode, "limit_price"),
+              asBigDecimal(orderNode, "avg_price"),
+              orderSize,
+              asBigDecimal(orderNode, "cumulative_quantity"),
+              asBigDecimal(orderNode, "leaves_quantity"),
+              orderNode.path("status").asText(null),
+              CoinbaseStreamingAdapters.asInstant(orderNode.path("event_time")).orElse(null)));
+    } catch (Exception ex) {
+      LOG.warn("Failed to map user order event: {}", orderNode, ex);
+      return Optional.empty();
+    }
+  }
+
+  private static Order toOrder(CoinbaseUserOrderEvent event) {
+    BigDecimal amount =
+        Optional.ofNullable(event.getRemainingSize()).orElse(event.getSize());
+    BigDecimal price =
+        Optional.ofNullable(event.getLimitPrice()).orElse(event.getAveragePrice());
+    return new org.knowm.xchange.dto.trade.LimitOrder(
+        event.getSide(),
+        amount,
+        event.getProduct(),
+        event.getOrderId(),
+        event.getEventTime() == null ? null : Date.from(event.getEventTime()),
+        price);
+  }
+
+  private static UserTrade toUserTrade(CoinbaseUserOrderEvent event) {
+    BigDecimal price =
+        Optional.ofNullable(event.getAveragePrice()).orElse(event.getLimitPrice());
+    BigDecimal amount =
+        Optional.ofNullable(event.getFilledSize()).orElse(BigDecimal.ZERO);
+    return UserTrade.builder()
+        .type(event.getSide())
+        .instrument(event.getProduct())
+        .price(price)
+        .originalAmount(amount)
+        .timestamp(event.getEventTime() == null ? null : Date.from(event.getEventTime()))
+        .orderId(event.getOrderId())
+        .build();
+  }
+
+  private void ensureAuthenticated() {
+    if (specification == null
+        || specification.getApiKey() == null
+        || specification.getSecretKey() == null) {
+      throw new ExchangeSecurityException(
+          "Coinbase streaming private channels require API credentials");
+    }
+  }
+
+  private static BigDecimal asBigDecimal(JsonNode node, String field) {
+    if (node == null) {
+      return null;
+    }
+    JsonNode value = node.path(field);
+    if (value.isMissingNode() || value.isNull()) {
+      return null;
+    }
+    try {
+      return new BigDecimal(value.asText());
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  private static java.util.stream.Stream<JsonNode> stream(JsonNode array) {
+    Iterable<JsonNode> iterable = array::elements;
+    return java.util.stream.StreamSupport.stream(iterable.spliterator(), false);
+  }
+}

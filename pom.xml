@@ -126,6 +126,7 @@
         <module>xchange-stream-bybit</module>
         <module>xchange-stream-cexio</module>
         <module>xchange-stream-coinbasepro</module>
+        <module>xchange-stream-coinbase</module>
         <module>xchange-stream-coincheck</module>
         <module>xchange-stream-coinjar</module>
         <module>xchange-stream-coinmate</module>
