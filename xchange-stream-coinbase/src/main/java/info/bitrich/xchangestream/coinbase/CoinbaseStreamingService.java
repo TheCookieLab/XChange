@@ -48,7 +48,7 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
   private final CoinbaseRateLimiter publicRateLimiter;
   private final CoinbaseRateLimiter privateRateLimiter;
   private final long jwtRefreshPeriodSeconds;
-  private final ScheduledExecutorService jwtRefreshScheduler;
+  private ScheduledExecutorService jwtRefreshScheduler;
 
   private final Map<CoinbaseChannel, ChannelState> channelStates = new ConcurrentHashMap<>();
 
@@ -213,7 +213,8 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
             () -> {
               channelStates.values().forEach(state -> state.cancelJwtRefresh());
               channelStates.clear();
-              jwtRefreshScheduler.shutdownNow();
+              // Don't shut down the scheduler - the service instance may be reused on reconnect.
+              // Canceling the JWT refresh tasks above is sufficient to clean up scheduled work.
             });
   }
 

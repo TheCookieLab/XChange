@@ -2,10 +2,12 @@ package info.bitrich.xchangestream.coinbase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.reactivex.rxjava3.core.Completable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -140,6 +142,101 @@ class CoinbaseStreamingServiceTest {
     service.unsubscribeChannel(request);
 
     assertTrue(scheduler.getFuture().isCancelled());
+  }
+
+  @Test
+  void schedulerRemainsUsableAfterDisconnect() throws Exception {
+    RecordingScheduler scheduler = new RecordingScheduler();
+    CapturingCoinbaseStreamingService service = new CapturingCoinbaseStreamingService(scheduler);
+
+    // Schedule a JWT refresh before disconnect
+    Object channelState = newChannelState(CoinbaseChannel.USER);
+    invoke(
+        channelState,
+        "incrementRefCounts",
+        new java.util.ArrayList<String>(java.util.Collections.singletonList("BTC-USD")),
+        new java.util.HashMap<String, Object>());
+
+    @SuppressWarnings("unchecked")
+    Map<CoinbaseChannel, Object> channelStates = (Map<CoinbaseChannel, Object>) channelStates(service);
+    channelStates.put(CoinbaseChannel.USER, channelState);
+
+    scheduleJwtRefresh(service, channelState);
+    assertTrue(scheduler.wasScheduled());
+    assertFalse(scheduler.isShutdown());
+
+    // Disconnect - this should NOT shut down the scheduler
+    Completable disconnect = service.disconnect();
+    disconnect.blockingAwait();
+
+    // Verify scheduler is still usable (not shut down)
+    assertFalse(scheduler.isShutdown(), "Scheduler should remain alive after disconnect");
+    assertFalse(scheduler.isTerminated(), "Scheduler should not be terminated after disconnect");
+
+    // Verify we can still schedule new tasks after disconnect
+    scheduler.reset();
+    scheduleJwtRefresh(service, channelState);
+    assertTrue(scheduler.wasScheduled(), "Should be able to schedule tasks after disconnect");
+    assertNotNull(scheduler.getFuture());
+  }
+
+  @Test
+  void jwtRefreshWorksAfterDisconnectReconnectCycle() throws Exception {
+    RecordingScheduler scheduler = new RecordingScheduler();
+    CapturingCoinbaseStreamingService service = new CapturingCoinbaseStreamingService(scheduler);
+
+    // Initial subscription
+    Object channelState = newChannelState(CoinbaseChannel.USER);
+    invoke(
+        channelState,
+        "incrementRefCounts",
+        new java.util.ArrayList<String>(java.util.Collections.singletonList("BTC-USD")),
+        new java.util.HashMap<String, Object>());
+
+    @SuppressWarnings("unchecked")
+    Map<CoinbaseChannel, Object> channelStates = (Map<CoinbaseChannel, Object>) channelStates(service);
+    channelStates.put(CoinbaseChannel.USER, channelState);
+
+    scheduleJwtRefresh(service, channelState);
+    assertTrue(scheduler.wasScheduled());
+    ScheduledFuture<?> firstFuture = scheduler.getFuture();
+    assertNotNull(firstFuture);
+
+    // Disconnect
+    Completable disconnect = service.disconnect();
+    disconnect.blockingAwait();
+
+    // Verify the first future was cancelled (cleanup)
+    assertTrue(firstFuture.isCancelled(), "JWT refresh task should be cancelled on disconnect");
+
+    // Verify scheduler is still alive
+    assertFalse(scheduler.isShutdown(), "Scheduler must remain alive after disconnect");
+
+    // Simulate reconnect: create new subscription (as would happen on reconnect)
+    scheduler.reset();
+    Object newChannelState = newChannelState(CoinbaseChannel.USER);
+    invoke(
+        newChannelState,
+        "incrementRefCounts",
+        new java.util.ArrayList<String>(java.util.Collections.singletonList("BTC-USD")),
+        new java.util.HashMap<String, Object>());
+    channelStates.put(CoinbaseChannel.USER, newChannelState);
+
+    // Schedule JWT refresh again (should work without RejectedExecutionException)
+    scheduleJwtRefresh(service, newChannelState);
+
+    // Verify new JWT refresh was scheduled successfully
+    assertTrue(scheduler.wasScheduled(), "Should be able to schedule JWT refresh after reconnect");
+    ScheduledFuture<?> secondFuture = scheduler.getFuture();
+    assertNotNull(secondFuture);
+    assertFalse(secondFuture.isCancelled(), "New JWT refresh should be active");
+
+    // Verify the refresh task actually runs
+    scheduler.trigger();
+    Map<String, Object> payload = service.getLastPayload();
+    assertEquals("subscribe", payload.get("type"));
+    assertEquals("user", payload.get("channel"));
+    assertEquals("jwt-token", payload.get("jwt"));
   }
 
   private static Object newChannelState(CoinbaseChannel channel)
@@ -297,6 +394,12 @@ class CoinbaseStreamingServiceTest {
       if (scheduledTask != null) {
         scheduledTask.run();
       }
+    }
+
+    void reset() {
+      scheduledTask = null;
+      future = null;
+      periodSeconds = 0;
     }
   }
 
