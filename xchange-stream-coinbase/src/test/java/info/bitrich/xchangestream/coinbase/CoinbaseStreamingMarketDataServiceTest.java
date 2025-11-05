@@ -616,4 +616,381 @@ class CoinbaseStreamingMarketDataServiceTest {
     }
   }
 
+  @Test
+  void priceNormalizationInSnapshotAllowsUpdateWithDifferentScale() throws Exception {
+    // Test that a price in snapshot with one scale can be updated with the same price
+    // but different scale (e.g., "100.0" vs "100.00")
+    CoinbaseStreamingMarketDataService.OrderBookState state =
+        new CoinbaseStreamingMarketDataService.OrderBookState(CurrencyPair.BTC_USD, null);
+
+    // Snapshot with price "100.0" (scale 1)
+    JsonNode snapshot =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 100,\n"
+                + "      \"bids\": [\n"
+                + "        [\"100.0\", \"2.0\"]\n"
+                + "      ],\n"
+                + "      \"asks\": [\n"
+                + "        [\"110.0\", \"3.0\"]\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook book = state.process(snapshot).blockingGet();
+    assertEquals(1, book.getBids().size());
+    assertEquals(new BigDecimal("2.0"), book.getBids().get(0).getOriginalAmount());
+
+    // Update with price "100.00" (scale 2) - should match and update the same level
+    JsonNode update =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"l2update\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 101,\n"
+                + "      \"updates\": [\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"100.00\", \"new_quantity\": \"5.5\"}\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook updated = state.process(update).blockingGet();
+    assertEquals(1, updated.getBids().size());
+    assertEquals(new BigDecimal("5.5"), updated.getBids().get(0).getOriginalAmount(),
+        "Price 100.00 should update the same level as 100.0");
+    // The LimitOrder stores the original price from the update, but the map key is normalized
+    // So the price should be "100.00" (from the update) but it matches the normalized key from snapshot
+    assertEquals(0, updated.getBids().get(0).getLimitPrice().compareTo(new BigDecimal("100.00")),
+        "LimitOrder should have the price from the update");
+  }
+
+  @Test
+  void priceNormalizationInSnapshotAllowsRemovalWithDifferentScale() throws Exception {
+    // Test that a price in snapshot can be removed with a different scale
+    CoinbaseStreamingMarketDataService.OrderBookState state =
+        new CoinbaseStreamingMarketDataService.OrderBookState(CurrencyPair.BTC_USD, null);
+
+    // Snapshot with price "100.00" (scale 2)
+    JsonNode snapshot =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 100,\n"
+                + "      \"bids\": [\n"
+                + "        [\"100.00\", \"2.0\"],\n"
+                + "        [\"99.50\", \"1.5\"]\n"
+                + "      ],\n"
+                + "      \"asks\": [\n"
+                + "        [\"110.00\", \"3.0\"]\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook book = state.process(snapshot).blockingGet();
+    assertEquals(2, book.getBids().size());
+
+    // Remove with price "100.0" (scale 1) - should match and remove
+    JsonNode update =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"l2update\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 101,\n"
+                + "      \"updates\": [\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"100.0\", \"new_quantity\": \"0\"}\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook updated = state.process(update).blockingGet();
+    assertEquals(1, updated.getBids().size(), "Price 100.0 should remove the same level as 100.00");
+    assertEquals(new BigDecimal("99.50"), updated.getBids().get(0).getLimitPrice());
+  }
+
+  @Test
+  void priceNormalizationInUpdatesAllowsMatchingExistingLevels() throws Exception {
+    // Test that updates with different scales can match existing levels
+    CoinbaseStreamingMarketDataService.OrderBookState state =
+        new CoinbaseStreamingMarketDataService.OrderBookState(CurrencyPair.BTC_USD, null);
+
+    // Snapshot
+    JsonNode snapshot =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 100,\n"
+                + "      \"bids\": [\n"
+                + "        [\"100.000\", \"2.0\"]\n"
+                + "      ],\n"
+                + "      \"asks\": [\n"
+                + "        [\"110.000\", \"3.0\"]\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    state.process(snapshot).blockingGet();
+
+    // Multiple updates with different scales for same price
+    JsonNode update1 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"l2update\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 101,\n"
+                + "      \"updates\": [\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"100.0\", \"new_quantity\": \"5.0\"}\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook updated1 = state.process(update1).blockingGet();
+    assertEquals(1, updated1.getBids().size());
+    assertEquals(new BigDecimal("5.0"), updated1.getBids().get(0).getOriginalAmount());
+
+    // Update again with yet another scale
+    JsonNode update2 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"l2update\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 102,\n"
+                + "      \"updates\": [\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"100.00\", \"new_quantity\": \"7.5\"}\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook updated2 = state.process(update2).blockingGet();
+    assertEquals(1, updated2.getBids().size());
+    assertEquals(new BigDecimal("7.5"), updated2.getBids().get(0).getOriginalAmount(),
+        "Price 100.00 should update the same level as 100.000 and 100.0");
+  }
+
+  @Test
+  void priceNormalizationInSnapshotRecovery() throws Exception {
+    // Test that snapshot recovery normalizes prices correctly
+    RecordingSnapshotProvider provider =
+        new RecordingSnapshotProvider(
+            Collections.singletonList(
+                orderBook(
+                    Collections.singletonList(limitOrder(Order.OrderType.ASK, "110.00", "3")),
+                    Collections.singletonList(limitOrder(Order.OrderType.BID, "100.0", "2")))));
+
+    CoinbaseStreamingMarketDataService.OrderBookState state =
+        new CoinbaseStreamingMarketDataService.OrderBookState(CurrencyPair.BTC_USD, provider);
+
+    // Trigger recovery by sending an update without snapshot
+    JsonNode update =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"l2update\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 100,\n"
+                + "      \"updates\": [\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"100.00\", \"new_quantity\": \"5.0\"}\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook recovered = state.process(update).blockingGet();
+    
+    // The snapshot had "100.0" and the update has "100.00" - they should match after normalization
+    assertEquals(1, recovered.getBids().size());
+    assertEquals(new BigDecimal("5.0"), recovered.getBids().get(0).getOriginalAmount(),
+        "Price 100.00 should update the same level as 100.0 from snapshot recovery");
+  }
+
+  @Test
+  void priceNormalizationHandlesMultiplePricesWithDifferentScales() throws Exception {
+    // Test snapshot with multiple prices that have different scales
+    CoinbaseStreamingMarketDataService.OrderBookState state =
+        new CoinbaseStreamingMarketDataService.OrderBookState(CurrencyPair.BTC_USD, null);
+
+    // Snapshot with prices having different scales
+    JsonNode snapshot =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 100,\n"
+                + "      \"bids\": [\n"
+                + "        [\"100.0\", \"2.0\"],\n"
+                + "        [\"99.50\", \"1.5\"],\n"
+                + "        [\"99.000\", \"1.0\"]\n"
+                + "      ],\n"
+                + "      \"asks\": [\n"
+                + "        [\"110.00\", \"3.0\"],\n"
+                + "        [\"110.5\", \"2.5\"],\n"
+                + "        [\"111.000\", \"2.0\"]\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook book = state.process(snapshot).blockingGet();
+    assertEquals(3, book.getBids().size());
+    assertEquals(3, book.getAsks().size());
+
+    // Update each level with different scales
+    JsonNode update =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"l2update\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 101,\n"
+                + "      \"updates\": [\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"100.00\", \"new_quantity\": \"10.0\"},\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"99.5\", \"new_quantity\": \"20.0\"},\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"99.0000\", \"new_quantity\": \"30.0\"},\n"
+                + "        {\"side\": \"ask\", \"price_level\": \"110.0\", \"new_quantity\": \"15.0\"},\n"
+                + "        {\"side\": \"ask\", \"price_level\": \"110.50\", \"new_quantity\": \"25.0\"},\n"
+                + "        {\"side\": \"ask\", \"price_level\": \"111.00\", \"new_quantity\": \"35.0\"}\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook updated = state.process(update).blockingGet();
+    assertEquals(3, updated.getBids().size());
+    assertEquals(3, updated.getAsks().size());
+    
+    // Verify all updates matched correctly
+    assertEquals(new BigDecimal("10.0"), updated.getBids().get(0).getOriginalAmount());
+    assertEquals(new BigDecimal("20.0"), updated.getBids().get(1).getOriginalAmount());
+    assertEquals(new BigDecimal("30.0"), updated.getBids().get(2).getOriginalAmount());
+    assertEquals(new BigDecimal("15.0"), updated.getAsks().get(0).getOriginalAmount());
+    assertEquals(new BigDecimal("25.0"), updated.getAsks().get(1).getOriginalAmount());
+    assertEquals(new BigDecimal("35.0"), updated.getAsks().get(2).getOriginalAmount());
+  }
+
+  @Test
+  void priceNormalizationInSnapshotWithIntegerPrices() throws Exception {
+    // Test that integer prices (like "100" vs "100.0") are normalized correctly
+    CoinbaseStreamingMarketDataService.OrderBookState state =
+        new CoinbaseStreamingMarketDataService.OrderBookState(CurrencyPair.BTC_USD, null);
+
+    // Snapshot with integer price "100"
+    JsonNode snapshot =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 100,\n"
+                + "      \"bids\": [\n"
+                + "        [\"100\", \"2.0\"]\n"
+                + "      ],\n"
+                + "      \"asks\": [\n"
+                + "        [\"110\", \"3.0\"]\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook book = state.process(snapshot).blockingGet();
+    assertEquals(1, book.getBids().size());
+
+    // Update with decimal price "100.0" - should match
+    JsonNode update =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"l2update\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 101,\n"
+                + "      \"updates\": [\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"100.0\", \"new_quantity\": \"5.0\"}\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook updated = state.process(update).blockingGet();
+    assertEquals(1, updated.getBids().size());
+    assertEquals(new BigDecimal("5.0"), updated.getBids().get(0).getOriginalAmount(),
+        "Price 100.0 should match integer price 100");
+  }
+
+  @Test
+  void priceNormalizationPreventsDuplicateEntries() throws Exception {
+    // Test that the same price with different scales doesn't create duplicate entries
+    CoinbaseStreamingMarketDataService.OrderBookState state =
+        new CoinbaseStreamingMarketDataService.OrderBookState(CurrencyPair.BTC_USD, null);
+
+    // Snapshot with price "100.0"
+    JsonNode snapshot =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 100,\n"
+                + "      \"bids\": [\n"
+                + "        [\"100.0\", \"2.0\"]\n"
+                + "      ],\n"
+                + "      \"asks\": []\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook book = state.process(snapshot).blockingGet();
+    assertEquals(1, book.getBids().size());
+
+    // Update with "100.00" - should not create a duplicate
+    JsonNode update =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"l2update\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 101,\n"
+                + "      \"updates\": [\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"100.00\", \"new_quantity\": \"5.0\"}\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    OrderBook updated = state.process(update).blockingGet();
+    assertEquals(1, updated.getBids().size(),
+        "Should not create duplicate entry for same price with different scale");
+    assertEquals(new BigDecimal("5.0"), updated.getBids().get(0).getOriginalAmount());
+  }
+
 }

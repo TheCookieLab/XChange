@@ -31,9 +31,8 @@ future AI agents can avoid the same potholes.
    - Public subscribe: 8 msgs/sec/IP. Private: 750 msgs/sec/IP. Guard at the streaming-service
      level so all higher layers can request without thinking about throttling.
 
-7. **Tests via reflection.**  
-   - Order book state and similar helpers are package-private; reflection-based tests are fine but
-     keep them local to this module so we can refactor later.
+7. **Unit Testing**  
+   - After changes verify the build by navigating to the project root and issuing Maven goals, ex: `cd ${PROJECT_ROOT} && mvn clean install -pl xchange-stream-coinbase -am`
 
 Feel free to extend this file as the implementation evolves. The goal is to keep tribal knowledge
 close to the codebase.***

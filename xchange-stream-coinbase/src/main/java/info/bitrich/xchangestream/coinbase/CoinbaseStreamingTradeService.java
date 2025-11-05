@@ -12,7 +12,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentHashMap.KeySetView;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -34,8 +34,15 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
   private final ConcurrentHashMap<String, BigDecimal> lastCumulativeQuantity = new ConcurrentHashMap<>();
   
   // Track terminal orders that have already been processed to prevent duplicate emissions
-  // when duplicate or late events arrive after the entry has been removed from the map
-  private final KeySetView<String, Boolean> processedTerminalOrders = ConcurrentHashMap.newKeySet();
+  // when duplicate or late events arrive after the entry has been removed from the map.
+  // Maps order ID to timestamp (milliseconds since epoch) when the terminal order was processed.
+  // Entries are pruned periodically to prevent unbounded memory growth.
+  private final ConcurrentHashMap<String, Long> processedTerminalOrders = new ConcurrentHashMap<>();
+  
+  // Counter for opportunistic cleanup - trigger cleanup every N operations
+  private final AtomicLong operationCount = new AtomicLong(0);
+  private static final long CLEANUP_INTERVAL = 100; // Cleanup every 100 operations
+  private static final long TERMINAL_ORDER_TTL_MS = 10 * 60 * 1000; // 10 minutes TTL
 
   CoinbaseStreamingTradeService(
       CoinbaseStreamingService streamingService,
@@ -256,7 +263,8 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
    * 
    * This method also tracks terminal orders that have already been processed to prevent
    * duplicate emissions when duplicate or late events arrive after the entry has been
-   * removed from the tracking map.
+   * removed from the tracking map. The tracking uses timestamps with periodic cleanup
+   * to prevent unbounded memory growth.
    * 
    * @param orderId The order ID
    * @param currentCumulative The current cumulative filled quantity
@@ -269,12 +277,23 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
     }
     
     // For terminal orders, check if we've already processed this order.
-    // If add() returns false, it means the order was already in the set (already processed),
-    // so we should return zero delta to prevent duplicate emissions.
-    // This check happens before compute() to avoid unnecessary computation.
-    if (isTerminal && !processedTerminalOrders.add(orderId)) {
-      // Order was already in the set (already processed) - return zero delta
-      return BigDecimal.ZERO;
+    // If putIfAbsent() returns a non-null value, it means the order was already in the map
+    // (already processed), so we should return zero delta to prevent duplicate emissions.
+    // This check must happen BEFORE compute() to prevent race conditions where multiple threads
+    // could both pass the check and proceed to compute() concurrently.
+    // By checking and adding atomically (via putIfAbsent() which returns existing value if present),
+    // we ensure only one thread processes a terminal order.
+    if (isTerminal) {
+      long now = System.currentTimeMillis();
+      Long existingTimestamp = processedTerminalOrders.putIfAbsent(orderId, now);
+      if (existingTimestamp != null) {
+        // Order was already in the map (already processed) - return zero delta
+        // Trigger periodic cleanup even for duplicate checks to ensure old entries are pruned
+        maybeCleanupProcessedTerminalOrders();
+        return BigDecimal.ZERO;
+      }
+      // Trigger opportunistic cleanup periodically for new terminal orders
+      maybeCleanupProcessedTerminalOrders();
     }
     
     // Use compute() to atomically capture the old value, conditionally update, and handle removal
@@ -319,14 +338,28 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
       }
     }
     
-    // If this is a terminal order but delta is zero (no new fill), remove it from the set
-    // so that future events with actual fills can still be processed. This handles edge cases
-    // where we might see a terminal status update before the actual fill event.
-    if (isTerminal && delta.compareTo(BigDecimal.ZERO) == 0) {
-      processedTerminalOrders.remove(orderId);
-    }
+    // Note: Terminal orders are tracked in processedTerminalOrders with timestamps.
+    // Periodic cleanup removes entries older than TERMINAL_ORDER_TTL_MS to prevent
+    // unbounded memory growth while still preventing duplicate emissions for a reasonable
+    // time window (10 minutes). Duplicate events from Coinbase should not arrive that late.
     
     return delta;
+  }
+  
+  /**
+   * Periodically cleans up old entries from processedTerminalOrders to prevent unbounded
+   * memory growth. This method is called opportunistically (every CLEANUP_INTERVAL operations)
+   * to avoid overhead on every operation.
+   */
+  private void maybeCleanupProcessedTerminalOrders() {
+    long count = operationCount.incrementAndGet();
+    if (count % CLEANUP_INTERVAL == 0) {
+      long now = System.currentTimeMillis();
+      long cutoffTime = now - TERMINAL_ORDER_TTL_MS;
+      
+      // Remove entries older than the TTL
+      processedTerminalOrders.entrySet().removeIf(entry -> entry.getValue() < cutoffTime);
+    }
   }
 
   private void ensureAuthenticated() {

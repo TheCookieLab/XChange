@@ -305,6 +305,19 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       this.snapshotProvider = snapshotProvider;
     }
 
+    /**
+     * Normalizes a BigDecimal price to ensure consistent map key behavior.
+     * This removes trailing zeros and canonicalizes the scale so that
+     * identical numeric values with different scales (e.g., 1.0 vs 1.00) are
+     * treated as the same key.
+     */
+    private static BigDecimal normalizePrice(BigDecimal price) {
+      if (price == null) {
+        return null;
+      }
+      return price.stripTrailingZeros();
+    }
+
     Maybe<OrderBook> process(JsonNode message) {
       JsonNode events = message.path("events");
       if (!events.isArray()) {
@@ -406,10 +419,11 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         try {
           BigDecimal price = new BigDecimal(priceText);
           BigDecimal size = new BigDecimal(sizeText);
+          BigDecimal normalizedPrice = normalizePrice(price);
           if (size.compareTo(BigDecimal.ZERO) > 0) {
-            side.put(price, new LimitOrder(orderType, size, pair, null, null, price));
+            side.put(normalizedPrice, new LimitOrder(orderType, size, pair, null, null, price));
           } else {
-            side.remove(price);
+            side.remove(normalizedPrice);
           }
         } catch (NumberFormatException ignore) {
           // skip malformed level
@@ -443,10 +457,11 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         if (price == null || size == null) {
           continue;
         }
+        BigDecimal normalizedPrice = normalizePrice(price);
         if (size.compareTo(BigDecimal.ZERO) <= 0) {
-          changed |= side.remove(price) != null;
+          changed |= side.remove(normalizedPrice) != null;
         } else {
-          side.put(price, update);
+          side.put(normalizedPrice, update);
           changed = true;
         }
       }
@@ -489,12 +504,14 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         asks.clear();
         snapshot.getBids().forEach(order -> {
           if (order.getLimitPrice() != null && order.getOriginalAmount() != null) {
-            bids.put(order.getLimitPrice(), order);
+            BigDecimal normalizedPrice = normalizePrice(order.getLimitPrice());
+            bids.put(normalizedPrice, order);
           }
         });
         snapshot.getAsks().forEach(order -> {
           if (order.getLimitPrice() != null && order.getOriginalAmount() != null) {
-            asks.put(order.getLimitPrice(), order);
+            BigDecimal normalizedPrice = normalizePrice(order.getLimitPrice());
+            asks.put(normalizedPrice, order);
           }
         });
         hasSnapshot = true;
