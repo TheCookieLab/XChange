@@ -38,7 +38,7 @@ class CoinbaseStreamingAdaptersTest {
                 + "          \"volume_24_h\": \"123.45\",\n"
                 + "          \"best_bid\": \"49900\",\n"
                 + "          \"best_ask\": \"50100\",\n"
-                + "          \"time\": \"2024-01-01T00:00:00Z\"\n"
+                + "          \"time\": \"2022-10-19T23:28:22.061769Z\"\n"
                 + "        }\n"
                 + "      ]\n"
                 + "    }\n"
@@ -54,6 +54,12 @@ class CoinbaseStreamingAdaptersTest {
     Assertions.assertEquals(new BigDecimal("123.45"), ticker.getVolume());
     Assertions.assertEquals(new BigDecimal("49900"), ticker.getBid());
     Assertions.assertEquals(new BigDecimal("50100"), ticker.getAsk());
+    // Verify timestamp parsing - format: 2022-10-19T23:28:22.061769Z
+    Assertions.assertNotNull(ticker.getTimestamp(), "Ticker timestamp should not be null");
+    Assertions.assertEquals(
+        Date.from(Instant.parse("2022-10-19T23:28:22.061769Z")),
+        ticker.getTimestamp(),
+        "Ticker timestamp should match the parsed ISO-8601 instant");
   }
 
   @Test
@@ -264,5 +270,197 @@ class CoinbaseStreamingAdaptersTest {
     Assertions.assertEquals(new BigDecimal("105"), asks.get(0).getLimitPrice());
     Assertions.assertEquals(new BigDecimal("2"), asks.get(0).getOriginalAmount());
     Assertions.assertEquals(Order.OrderType.ASK, asks.get(0).getType());
+  }
+
+  @Test
+  void adaptCandlesHandlesMissingCandlesField() throws IOException {
+    // Test that adaptCandles handles heartbeat/control messages without "candles" field
+    // This prevents ClassCastException when event.path("candles") returns MissingNode
+    JsonNode node =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"candles\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"heartbeat\"\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    List<CandleStick> candles =
+        CoinbaseStreamingAdapters.adaptCandles(node, CurrencyPair.BTC_USD);
+
+    Assertions.assertTrue(candles.isEmpty(), "Should return empty list when candles field is missing");
+  }
+
+  @Test
+  void adaptCandlesHandlesNullCandlesField() throws IOException {
+    // Test that adaptCandles handles null "candles" field gracefully
+    JsonNode node =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"candles\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"candles\": null\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    List<CandleStick> candles =
+        CoinbaseStreamingAdapters.adaptCandles(node, CurrencyPair.BTC_USD);
+
+    Assertions.assertTrue(candles.isEmpty(), "Should return empty list when candles field is null");
+  }
+
+  @Test
+  void adaptCandlesHandlesNonArrayCandlesField() throws IOException {
+    // Test that adaptCandles handles non-array "candles" field gracefully
+    JsonNode node =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"candles\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"candles\": \"invalid\"\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    List<CandleStick> candles =
+        CoinbaseStreamingAdapters.adaptCandles(node, CurrencyPair.BTC_USD);
+
+    Assertions.assertTrue(candles.isEmpty(), "Should return empty list when candles field is not an array");
+  }
+
+  @Test
+  void adaptCandlesHandlesMixedEventsWithMissingCandles() throws IOException {
+    // Test that adaptCandles handles events where some have candles and some don't
+    JsonNode node =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"candles\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"heartbeat\"\n"
+                + "    },\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"candles\": [\n"
+                + "        {\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"start\": \"1704067200\",\n"
+                + "          \"open\": \"100\",\n"
+                + "          \"close\": \"110\",\n"
+                + "          \"high\": \"120\",\n"
+                + "          \"low\": \"90\",\n"
+                + "          \"volume\": \"5\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    },\n"
+                + "    {\n"
+                + "      \"type\": \"heartbeat\"\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    List<CandleStick> candles =
+        CoinbaseStreamingAdapters.adaptCandles(node, CurrencyPair.BTC_USD);
+
+    // Should process the event with candles and skip the heartbeat events
+    Assertions.assertEquals(1, candles.size(), "Should process valid candles and skip events without candles");
+  }
+
+  @Test
+  void adaptLevel2UpdatesHandlesMissingUpdatesField() throws IOException {
+    // Test that adaptLevel2Updates handles messages without "updates" field
+    // This prevents ClassCastException when eventNode.path("updates") returns MissingNode
+    JsonNode node =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"type\": \"heartbeat\",\n"
+                + "  \"product_id\": \"BTC-USD\"\n"
+                + "}");
+
+    List<LimitOrder> orders =
+        CoinbaseStreamingAdapters.adaptLevel2Updates(node, Order.OrderType.BID);
+
+    Assertions.assertTrue(orders.isEmpty(), "Should return empty list when updates field is missing");
+  }
+
+  @Test
+  void adaptLevel2UpdatesHandlesNullUpdatesField() throws IOException {
+    // Test that adaptLevel2Updates handles null "updates" field gracefully
+    JsonNode node =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"type\": \"snapshot\",\n"
+                + "  \"product_id\": \"BTC-USD\",\n"
+                + "  \"updates\": null\n"
+                + "}");
+
+    List<LimitOrder> orders =
+        CoinbaseStreamingAdapters.adaptLevel2Updates(node, Order.OrderType.BID);
+
+    Assertions.assertTrue(orders.isEmpty(), "Should return empty list when updates field is null");
+  }
+
+  @Test
+  void adaptLevel2UpdatesHandlesNonArrayUpdatesField() throws IOException {
+    // Test that adaptLevel2Updates handles non-array "updates" field gracefully
+    JsonNode node =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"type\": \"snapshot\",\n"
+                + "  \"product_id\": \"BTC-USD\",\n"
+                + "  \"updates\": \"invalid\"\n"
+                + "}");
+
+    List<LimitOrder> orders =
+        CoinbaseStreamingAdapters.adaptLevel2Updates(node, Order.OrderType.BID);
+
+    Assertions.assertTrue(orders.isEmpty(), "Should return empty list when updates field is not an array");
+  }
+
+  @Test
+  void adaptTickersHandlesMissingTickersField() throws IOException {
+    // Test that adaptTickers handles heartbeat/control messages without "tickers" field
+    // This is already correctly implemented, but verifying it works
+    JsonNode node =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"ticker\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"heartbeat\"\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    List<Ticker> tickers = CoinbaseStreamingAdapters.adaptTickers(node);
+
+    Assertions.assertTrue(tickers.isEmpty(), "Should return empty list when tickers field is missing");
+  }
+
+  @Test
+  void adaptTradesHandlesMissingTradesField() throws IOException {
+    // Test that adaptTrades handles heartbeat/control messages without "trades" field
+    // This is already correctly implemented, but verifying it works
+    JsonNode node =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"market_trades\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"heartbeat\"\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    List<Trade> trades = CoinbaseStreamingAdapters.adaptTrades(node);
+
+    Assertions.assertTrue(trades.isEmpty(), "Should return empty list when trades field is missing");
   }
 }

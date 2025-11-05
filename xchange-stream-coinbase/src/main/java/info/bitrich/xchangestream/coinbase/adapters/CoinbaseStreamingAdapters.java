@@ -1,7 +1,6 @@
 package info.bitrich.xchangestream.coinbase.adapters;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.CandleStick;
@@ -93,8 +92,8 @@ public final class CoinbaseStreamingAdapters {
         }
         List<CandleStick> candlesList = new ArrayList<>();
         for (JsonNode event : events) {
-            ArrayNode candles = (ArrayNode) event.path("candles");
-            if (candles == null) {
+            JsonNode candles = event.path("candles");
+            if (!candles.isArray()) {
                 continue;
             }
             for (JsonNode candleNode : candles) {
@@ -113,8 +112,8 @@ public final class CoinbaseStreamingAdapters {
 
     public static List<LimitOrder> adaptLevel2Updates(JsonNode eventNode, Order.OrderType side) {
         List<LimitOrder> orders = new ArrayList<>();
-        ArrayNode updates = (ArrayNode) eventNode.path("updates");
-        if (updates == null) {
+        JsonNode updates = eventNode.path("updates");
+        if (!updates.isArray()) {
             return orders;
         }
         String productId = eventNode.path("product_id").asText(null);
