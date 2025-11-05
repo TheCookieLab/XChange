@@ -217,22 +217,18 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
     // are processed concurrently between filter and map operations
     String orderId = event.getOrderId();
     BigDecimal currentCumulative = event.getFilledSize();
+    String status = event.getStatus();
+    boolean isTerminal = status != null && isTerminalStatus(status);
     
-    // Use compute() to atomically get-calculate-put
-    // This ensures the delta calculation and map update happen atomically per orderId
-    BigDecimal deltaAmount = calculateAndUpdateDelta(orderId, currentCumulative);
+    // Use compute() to atomically get-calculate-put and handle terminal status cleanup
+    // This ensures the delta calculation, map update, and removal (if terminal) happen atomically
+    // per orderId, preventing race conditions where removal happens between compute() operations
+    BigDecimal deltaAmount = calculateAndUpdateDelta(orderId, currentCumulative, isTerminal);
     
     // Filter out events with no new fill (delta <= 0)
     // This prevents emitting duplicate or zero-amount trades
     if (deltaAmount == null || deltaAmount.compareTo(BigDecimal.ZERO) <= 0) {
       return Optional.empty();
-    }
-    
-    // Remove entries for completed orders to prevent memory leaks
-    // Terminal states: FILLED, CANCELLED, CANCELED, REJECTED, EXPIRED, SETTLED
-    String status = event.getStatus();
-    if (status != null && isTerminalStatus(status)) {
-      lastCumulativeQuantity.remove(orderId);
     }
     
     return Optional.of(
@@ -249,19 +245,23 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
   /**
    * Atomically calculates the delta (incremental fill amount) and updates the tracking map.
    * This method uses ConcurrentHashMap.compute() to ensure thread-safety when multiple events
-   * for the same orderId are processed concurrently.
+   * for the same orderId are processed concurrently. If the order is in a terminal status,
+   * the entry is removed atomically as part of the compute operation to prevent race conditions.
    * 
    * @param orderId The order ID
    * @param currentCumulative The current cumulative filled quantity
+   * @param isTerminal Whether the order is in a terminal status (should be removed after processing)
    * @return The delta amount (incremental fill since last update)
    */
-  private BigDecimal calculateAndUpdateDelta(String orderId, BigDecimal currentCumulative) {
+  private BigDecimal calculateAndUpdateDelta(String orderId, BigDecimal currentCumulative, boolean isTerminal) {
     if (currentCumulative == null) {
       return BigDecimal.ZERO;
     }
     
-    // Use compute() to atomically capture the old value and conditionally update
-    // The lambda receives the existing value (oldValue) and returns the new value
+    // Use compute() to atomically capture the old value, conditionally update, and handle removal
+    // The lambda receives the existing value (oldValue) and returns the new value (or null to remove)
+    // Moving the removal inside compute() ensures it's atomic with the delta calculation,
+    // preventing race conditions where another thread's compute() would see null as existingValue
     final BigDecimal[] oldValue = new BigDecimal[1];
     
     lastCumulativeQuantity.compute(
@@ -272,13 +272,18 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
           // Only update if this is the first event or if new value is greater than old value
           // This prevents updating the map with decreasing or equal cumulative quantities,
           // which would cause incorrect delta calculations for subsequent events
+          BigDecimal newValue;
           if (existingValue == null) {
-            return currentCumulative; // First event - always update
+            newValue = currentCumulative; // First event - always update
           } else if (currentCumulative.compareTo(existingValue) > 0) {
-            return currentCumulative; // New value is greater - update
+            newValue = currentCumulative; // New value is greater - update
           } else {
-            return existingValue; // New value is less or equal - keep old value
+            newValue = existingValue; // New value is less or equal - keep old value
           }
+          
+          // If order is in terminal status, remove the entry to prevent memory leaks
+          // Returning null from compute() removes the entry atomically
+          return isTerminal ? null : newValue;
         });
     
     // Calculate delta using the captured old value
