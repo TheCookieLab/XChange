@@ -97,6 +97,9 @@ class CoinbaseStreamingAdaptersTest {
 
   @Test
   void adaptCandlesProducesCandleStick() throws IOException {
+    // Use UNIX timestamp format (epoch seconds) as expected by parseUnixTimestamp
+    // 1704067200 = 2024-01-01T00:00:00Z
+    long expectedEpochSeconds = 1704067200L;
     JsonNode node =
         MAPPER.readTree(
             "{\n"
@@ -107,7 +110,9 @@ class CoinbaseStreamingAdaptersTest {
                 + "      \"candles\": [\n"
                 + "        {\n"
                 + "          \"product_id\": \"BTC-USD\",\n"
-                + "          \"start\": \"2024-01-01T00:00:00Z\",\n"
+                + "          \"start\": \""
+                + expectedEpochSeconds
+                + "\",\n"
                 + "          \"open\": \"100\",\n"
                 + "          \"close\": \"110\",\n"
                 + "          \"high\": \"120\",\n"
@@ -129,6 +134,12 @@ class CoinbaseStreamingAdaptersTest {
     Assertions.assertEquals(new BigDecimal("120"), candle.getHigh());
     Assertions.assertEquals(new BigDecimal("90"), candle.getLow());
     Assertions.assertEquals(new BigDecimal("5"), candle.getVolume());
+    // Verify timestamp is parsed correctly
+    Assertions.assertNotNull(candle.getTimestamp(), "Candle timestamp should not be null");
+    Assertions.assertEquals(
+        Date.from(Instant.ofEpochSecond(expectedEpochSeconds)),
+        candle.getTimestamp(),
+        "Candle timestamp should match the parsed UNIX timestamp");
   }
 
   @Test
