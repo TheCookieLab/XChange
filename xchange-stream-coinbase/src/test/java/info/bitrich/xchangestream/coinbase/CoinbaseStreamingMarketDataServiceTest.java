@@ -160,7 +160,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "      \"candles\": [\n"
                 + "        {\n"
                 + "          \"product_id\": \"BTC-USD\",\n"
-                + "          \"start\": \"2024-01-01T00:00:00Z\",\n"
+                + "          \"start\": \"1704067200\",\n"
                 + "          \"open\": \"100\",\n"
                 + "          \"close\": \"110\",\n"
                 + "          \"high\": \"120\",\n"

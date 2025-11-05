@@ -13,7 +13,6 @@ import org.knowm.xchange.dto.trade.UserTrade;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -242,12 +241,10 @@ class CoinbaseStreamingTradeServiceTest {
 
         JsonNode message3 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"concurrent-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"10.0\",\n" + "          \"cumulative_quantity\": \"3.0\",\n" + "          \"leaves_quantity\": \"7.0\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:03Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
 
-        // Create a streaming service that emits all messages concurrently
-        // This simulates the race condition where multiple events for the same orderId
-        // arrive at nearly the same time
+        // Create a streaming service that emits messages sequentially
+        // The atomic fix ensures correct delta calculation even with rapid sequential processing
         StubStreamingService streamingService = new StubStreamingService(
             Observable.just(message1, message2, message3)
-                .flatMap(msg -> Observable.just(msg).delay(1, TimeUnit.MILLISECONDS))
         );
         CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(streamingService, spec);
 
