@@ -85,12 +85,8 @@ class CoinbaseStreamingTradeService implements StreamingTradeService {
   public Observable<UserTrade> getUserTrades(CurrencyPair currencyPair, Object... args) {
     ensureAuthenticated();
     String productId = CoinbaseProductIds.productId(currencyPair);
-    return getUserOrderEvents(Collections.singletonList(productId))
+    return streamFilledTrades(Collections.singletonList(productId))
         .filter(event -> currencyPair.equals(event.getProduct()))
-        .filter(
-            event ->
-                event.getFilledSize() != null
-                    && event.getFilledSize().compareTo(BigDecimal.ZERO) > 0)
         .map(CoinbaseStreamingTradeService::toUserTrade);
   }
 
@@ -100,6 +96,20 @@ class CoinbaseStreamingTradeService implements StreamingTradeService {
       return getUserTrades((CurrencyPair) instrument, args);
     }
     return StreamingTradeService.super.getUserTrades(instrument, args);
+  }
+
+  @Override
+  public Observable<UserTrade> getUserTrades() {
+    ensureAuthenticated();
+    return streamFilledTrades(Collections.emptyList()).map(CoinbaseStreamingTradeService::toUserTrade);
+  }
+
+  private Observable<CoinbaseUserOrderEvent> streamFilledTrades(List<String> productIds) {
+    return getUserOrderEvents(productIds)
+        .filter(
+            event ->
+                event.getFilledSize() != null
+                    && event.getFilledSize().compareTo(BigDecimal.ZERO) > 0);
   }
 
   private List<CoinbaseUserOrderEvent> extractOrderEvents(JsonNode message) {

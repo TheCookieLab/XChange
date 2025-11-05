@@ -25,40 +25,35 @@ fresh agent can resume implementation without needing chat history.
 
 ## Remaining Work
 
-1. **Streaming trade service parity**
-   - Confirm `CoinbaseStreamingTradeService` exposes all required public methods from
-     `StreamingTradeService` (e.g., `getUserTrades()` overload without instrument argument). Add tests
-     verifying the mapped `UserTrade` instances match real payloads.
-
-2. **Market data enhancements**
-   - Implement candle stream wiring in `CoinbaseStreamingExchange` (currently `getCandles` helper is
-     unused). Decide whether to expose a dedicated method or keep internal for later.
-   - [2025-11-04] In progress: plan to add `CoinbaseCandleGranularity` plus subscription params so
-     `CoinbaseStreamingMarketDataService#getCandles` can emit flattened `CandleStick` observables
-     with Mockito coverage ensuring `granularity` propagates in subscription args.
-   - [2025-11-04] Done: wired candle subscriptions via new `CoinbaseCandleSubscriptionParams`,
-     exchange helpers, and regression test validating subscription args + candle mapping.
-
-3. **Sandbox verification**
-   - Implement an integration-style test (can be disabled/skipped by default) that attempts to connect
-     to `wss://advanced-trade-ws.sandbox.coinbase.com`. Record the outcome in `README.md`.
-   - If the sandbox is unavailable, adjust default spec parameters accordingly (e.g., disable sandbox
-     toggle or emit warning).
-
-4. **End-to-end examples**
-   - Add a `examples` class (e.g., under `xchange-examples`) demonstrating connection to Coinbase
-     streaming with ticker/order book subscription.
-   - Include instructions in `README.md` on running the example against production and sandbox.
-
-5. **Documentation polish**
+1. **Documentation polish**
    - Expand `README.md` with channel-specific notes (payload fields, throttling, heartbeats).
-   - Document caveats (missing raw JSON API, JWT refresh behaviour, rate limit tuning via exchange
-     params).
-
-6. **Final QA**
+     - Document caveats (missing raw JSON API, JWT refresh behaviour, rate limit tuning via exchange
+       params).
+2. **Final QA**
    - Re-run `mvn -pl xchange-stream-coinbase -am test` after completing the above.
    - Consider running a quick manual smoke test connecting to production WebSocket (optional if network
      access is constrained).
+
+## Completed Tasks
+
+- **Streaming trade service parity** (2025-11-04)  
+  `CoinbaseStreamingTradeService` now exposes all `StreamingTradeService` overloads, including the
+  no-arg `getUserTrades()`, with regression coverage verifying subscription wiring and payload mapping.
+
+- **Market data enhancements: candle wiring** (2025-11-04)  
+  Candle subscriptions are wired via `CoinbaseCandleSubscriptionParams`, exchange helpers, and tests
+  asserting `granularity` propagation and candle decoding.
+
+- **Sandbox verification** (2025-11-05)  
+  Added an opt-in smoke test (`CoinbaseSandboxConnectivityTest`) that attempts to connect to the
+  documented sandbox WebSocket. As of 2025-11-05 the hostname `advanced-trade-ws.sandbox.coinbase.com`
+  fails DNS resolution (UnknownHost); the test remains skipped unless explicitly enabled so regular
+  CI runs stay green.
+
+- **Streaming examples** (2025-11-05)  
+  Added `CoinbaseStreamingMarketDataExample` under `xchange-examples` to demonstrate ticker, trade,
+  and order book subscriptions. Usage instructions (including sandbox toggle) are documented in the
+  module README.
 
 ## How to Resume
 

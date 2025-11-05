@@ -42,8 +42,9 @@ future AI agents can avoid the same potholes.
    - Document sandbox availability once verified.
 
 9. **Progress logging expectations.**  
-   - When instructed, keep `TODO.md` milestones (e.g., item #2) updated as you make measurable
-     progress so another agent can resume mid-task without rereading chat history.
+   - Keep `TODO.md` milestones updated as you make measurable progress, and whenever a task reaches
+     100% completion move it out of “Remaining Work” into the dedicated completed section so the list
+     only tracks active items.
 
 Feel free to extend this file as the implementation evolves. The goal is to keep tribal knowledge
 close to the codebase.***

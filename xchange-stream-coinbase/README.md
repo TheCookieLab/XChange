@@ -48,8 +48,30 @@ exchange.getStreamingMarketDataService()
 ### Sandbox endpoint
 
 Coinbase's documentation lists `wss://advanced-trade-ws.sandbox.coinbase.com` as the sandbox host.
-The automated tests attempt to connect once the implementation is wired up; if connectivity fails
-a warning is emitted and the production endpoint remains the default.
+An opt-in smoke test (`CoinbaseSandboxConnectivityTest`) attempts a real connection when enabled via
+`-Dcoinbase.sandbox.smoke=true` or the `COINBASE_SANDBOX_SMOKE=true` environment variable:
+
+```bash
+mvn -pl xchange-stream-coinbase -am test -DskipITs=true -Dcoinbase.sandbox.smoke=true
+```
+
+As of 2025-11-05 the hostname fails DNS resolution (`UnknownHostException`), so the smoke test will
+report that error when enabled. By default the test is skipped and the implementation continues to
+use the production host unless the sandbox flag is set explicitly.
+
+### Examples
+
+A runnable example is provided under the `xchange-examples` module. Run it against production:
+
+```bash
+mvn -pl xchange-examples -am \
+  org.codehaus.mojo:exec-maven-plugin:3.1.0:java \
+  -Dexec.mainClass=org.knowm.xchange.examples.coinbase.streaming.CoinbaseStreamingMarketDataExample
+```
+
+To target the sandbox (if reachable), add `-Dcoinbase.streaming.sandbox=true` or set the
+`COINBASE_STREAMING_SANDBOX=true` environment variable before running the command. The example
+subscribes to ticker, trades, and order book updates for BTC/USD and logs events until interrupted.
 
 ## Testing
 
