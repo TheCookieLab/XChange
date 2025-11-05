@@ -33,6 +33,11 @@ fresh agent can resume implementation without needing chat history.
 2. **Market data enhancements**
    - Implement candle stream wiring in `CoinbaseStreamingExchange` (currently `getCandles` helper is
      unused). Decide whether to expose a dedicated method or keep internal for later.
+   - [2025-11-04] In progress: plan to add `CoinbaseCandleGranularity` plus subscription params so
+     `CoinbaseStreamingMarketDataService#getCandles` can emit flattened `CandleStick` observables
+     with Mockito coverage ensuring `granularity` propagates in subscription args.
+   - [2025-11-04] Done: wired candle subscriptions via new `CoinbaseCandleSubscriptionParams`,
+     exchange helpers, and regression test validating subscription args + candle mapping.
 
 3. **Sandbox verification**
    - Implement an integration-style test (can be disabled/skipped by default) that attempts to connect

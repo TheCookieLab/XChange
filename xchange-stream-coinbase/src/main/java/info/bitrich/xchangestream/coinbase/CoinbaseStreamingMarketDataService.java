@@ -1,5 +1,6 @@
 package info.bitrich.xchangestream.coinbase;
 
+import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters.adaptCandles;
 import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters.adaptTickers;
 import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters.adaptTrades;
 import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters.parseOrderSide;
@@ -12,6 +13,7 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
@@ -42,6 +45,7 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
 
   private final CoinbaseStreamingService streamingService;
   private final OrderBookSnapshotProvider snapshotProvider;
+  private final ExchangeSpecification exchangeSpecification;
   private final Map<CurrencyPair, OrderBookState> orderBooks = new ConcurrentHashMap<>();
 
   private final List<Disposable> internalSubscriptions = new CopyOnWriteArrayList<>();
@@ -53,6 +57,7 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
     this.streamingService = streamingService;
     this.snapshotProvider =
         snapshotProvider != null ? snapshotProvider : pair -> null;
+    this.exchangeSpecification = spec;
   }
 
   void ensureHeartbeatsSubscription() {
@@ -116,6 +121,25 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
     return StreamingMarketDataService.super.getTrades(instrument, args);
   }
 
+  public Observable<CandleStick> getCandles(CurrencyPair currencyPair, Object... args) {
+    CoinbaseCandleSubscriptionParams params = resolveCandleParams(args);
+    return subscribeCandles(currencyPair, params);
+  }
+
+  public Observable<CandleStick> getCandles(
+      CurrencyPair currencyPair, CoinbaseCandleSubscriptionParams params) {
+    CoinbaseCandleSubscriptionParams effective =
+        params == null ? resolveCandleParams() : resolveCandleParams(params);
+    return subscribeCandles(currencyPair, effective);
+  }
+
+  public Observable<CandleStick> getCandles(Instrument instrument, Object... args) {
+    if (instrument instanceof CurrencyPair) {
+      return getCandles((CurrencyPair) instrument, args);
+    }
+    throw new IllegalArgumentException("Coinbase candle subscriptions support currency pairs only");
+  }
+
   @Override
   public Observable<OrderBook> getOrderBook(CurrencyPair currencyPair, Object... args) {
     CoinbaseSubscriptionRequest request =
@@ -139,6 +163,137 @@ class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
       return getOrderBook((CurrencyPair) instrument, args);
     }
     return StreamingMarketDataService.super.getOrderBook(instrument, args);
+  }
+
+  private Observable<CandleStick> subscribeCandles(
+      CurrencyPair currencyPair, CoinbaseCandleSubscriptionParams params) {
+    CoinbaseSubscriptionRequest request =
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.CANDLES,
+            Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+            params.toChannelArgs());
+
+    return streamingService
+        .observeChannel(request)
+        .flatMapIterable(message -> adaptCandles(message, currencyPair));
+  }
+
+  private CoinbaseCandleSubscriptionParams resolveCandleParams(Object... args) {
+    CoinbaseCandleSubscriptionParams params = null;
+    if (args != null && args.length > 0 && args[0] != null) {
+      params = convertToCandleParams(args[0]);
+      if (params == null) {
+        throw new IllegalArgumentException(
+            "Unsupported Coinbase candle parameter: " + args[0]);
+      }
+    }
+    if (params == null) {
+      CoinbaseCandleGranularity defaultGranularity = defaultCandleGranularity();
+      if (defaultGranularity == null) {
+        throw new IllegalArgumentException(
+            "Coinbase candle subscriptions require a granularity parameter");
+      }
+      params = new CoinbaseCandleSubscriptionParams(defaultGranularity);
+    }
+    if (params.getProductType() == null) {
+      String productType = null;
+      if (args != null && args.length > 1) {
+        productType = parseProductType(args[1]);
+        if (productType == null && args[1] != null) {
+          throw new IllegalArgumentException(
+              "Unsupported Coinbase candle product type parameter: " + args[1]);
+        }
+      }
+      if (productType == null) {
+        productType = defaultCandleProductType();
+      }
+      if (productType != null) {
+        params = params.withProductType(productType);
+      }
+    }
+    return params;
+  }
+
+  private CoinbaseCandleSubscriptionParams convertToCandleParams(Object value) {
+    if (value instanceof CoinbaseCandleSubscriptionParams) {
+      return (CoinbaseCandleSubscriptionParams) value;
+    }
+    CoinbaseCandleGranularity granularity = parseGranularity(value);
+    if (granularity != null) {
+      return new CoinbaseCandleSubscriptionParams(granularity);
+    }
+    return null;
+  }
+
+  private CoinbaseCandleGranularity parseGranularity(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof CoinbaseCandleSubscriptionParams) {
+      return ((CoinbaseCandleSubscriptionParams) value).getGranularity();
+    }
+    if (value instanceof CoinbaseCandleGranularity) {
+      return (CoinbaseCandleGranularity) value;
+    }
+    if (value instanceof Duration) {
+      return CoinbaseCandleGranularity.fromDuration((Duration) value);
+    }
+    if (value instanceof Number) {
+      return CoinbaseCandleGranularity.fromSeconds(((Number) value).longValue());
+    }
+    if (value instanceof String) {
+      return parseGranularityFromString((String) value);
+    }
+    return null;
+  }
+
+  private CoinbaseCandleGranularity parseGranularityFromString(String value) {
+    if (value == null) {
+      return null;
+    }
+    String normalized = value.trim();
+    if (normalized.isEmpty()) {
+      return null;
+    }
+    for (CoinbaseCandleGranularity option : CoinbaseCandleGranularity.values()) {
+      if (option.name().equalsIgnoreCase(normalized)
+          || option.apiValue().equalsIgnoreCase(normalized)) {
+        return option;
+      }
+    }
+    try {
+      long seconds = Long.parseLong(normalized);
+      return CoinbaseCandleGranularity.fromSeconds(seconds);
+    } catch (NumberFormatException ignore) {
+      return null;
+    }
+  }
+
+  private String parseProductType(Object value) {
+    if (value == null) {
+      return null;
+    }
+    String text = value.toString().trim();
+    return text.isEmpty() ? null : text;
+  }
+
+  private CoinbaseCandleGranularity defaultCandleGranularity() {
+    Object raw =
+        exchangeSpecification == null
+            ? null
+            : exchangeSpecification.getExchangeSpecificParametersItem(
+                CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_GRANULARITY);
+    return parseGranularity(raw);
+  }
+
+  private String defaultCandleProductType() {
+    if (exchangeSpecification == null) {
+      return null;
+    }
+    Object raw =
+        exchangeSpecification.getExchangeSpecificParametersItem(
+            CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_PRODUCT_TYPE);
+    return parseProductType(raw);
   }
 
   private static boolean instrumentMatches(Object instrument, CurrencyPair expected) {

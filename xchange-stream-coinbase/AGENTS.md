@@ -41,5 +41,9 @@ future AI agents can avoid the same potholes.
    - Add fixture-based tests (mock WebSocket server, sandbox verification).
    - Document sandbox availability once verified.
 
+9. **Progress logging expectations.**  
+   - When instructed, keep `TODO.md` milestones (e.g., item #2) updated as you make measurable
+     progress so another agent can resume mid-task without rereading chat history.
+
 Feel free to extend this file as the implementation evolves. The goal is to keep tribal knowledge
 close to the codebase.***

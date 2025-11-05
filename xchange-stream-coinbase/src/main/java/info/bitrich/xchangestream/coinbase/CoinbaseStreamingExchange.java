@@ -17,6 +17,8 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseV3Digest;
 import org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataService;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,10 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   public static final String PARAM_PUBLIC_RATE_LIMIT = "Coinbase_Public_Subscriptions_Per_Second";
   public static final String PARAM_PRIVATE_RATE_LIMIT = "Coinbase_Private_Subscriptions_Per_Second";
   public static final String PARAM_MANUAL_HEARTBEAT = "Coinbase_Disable_Auto_Heartbeat";
+  public static final String PARAM_DEFAULT_CANDLE_GRANULARITY =
+      "Coinbase_Default_Candle_Granularity";
+  public static final String PARAM_DEFAULT_CANDLE_PRODUCT_TYPE =
+      "Coinbase_Default_Candle_Product_Type";
 
   public static final String PROD_WS_URI = "wss://advanced-trade-ws.coinbase.com";
   public static final String SANDBOX_WS_URI = "wss://advanced-trade-ws.sandbox.coinbase.com";
@@ -145,6 +151,21 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   @Override
   public CoinbaseStreamingMarketDataService getStreamingMarketDataService() {
     return streamingMarketDataService;
+  }
+
+  public Observable<CandleStick> getCandles(CurrencyPair currencyPair, Object... args) {
+    if (streamingMarketDataService == null) {
+      throw new IllegalStateException("Streaming market data service not initialized");
+    }
+    return streamingMarketDataService.getCandles(currencyPair, args);
+  }
+
+  public Observable<CandleStick> getCandles(
+      CurrencyPair currencyPair, CoinbaseCandleSubscriptionParams params) {
+    if (streamingMarketDataService == null) {
+      throw new IllegalStateException("Streaming market data service not initialized");
+    }
+    return streamingMarketDataService.getCandles(currencyPair, params);
   }
 
   @Override

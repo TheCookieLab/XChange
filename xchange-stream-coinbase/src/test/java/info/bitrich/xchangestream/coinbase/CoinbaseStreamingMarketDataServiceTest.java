@@ -6,14 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.core.Observable;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.trade.LimitOrder;
 
@@ -141,6 +144,59 @@ class CoinbaseStreamingMarketDataServiceTest {
     assertEquals("1", recovered.getBids().get(1).getOriginalAmount().toPlainString());
   }
 
+  @Test
+  void getCandlesSubscribesAndMapsPayload() throws Exception {
+    ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+    spec.setExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_PRODUCT_TYPE, "SPOT");
+
+    JsonNode message =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"candles\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"candles\": [\n"
+                + "        {\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"start\": \"2024-01-01T00:00:00Z\",\n"
+                + "          \"open\": \"100\",\n"
+                + "          \"close\": \"110\",\n"
+                + "          \"high\": \"120\",\n"
+                + "          \"low\": \"90\",\n"
+                + "          \"volume\": \"5\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    StubStreamingService streamingService = new StubStreamingService(Observable.just(message));
+    CoinbaseStreamingMarketDataService service =
+        new CoinbaseStreamingMarketDataService(streamingService, null, spec);
+
+    CoinbaseCandleSubscriptionParams params =
+        new CoinbaseCandleSubscriptionParams(CoinbaseCandleGranularity.ONE_MINUTE, "SPOT");
+
+    List<CandleStick> candles =
+        service.getCandles(CurrencyPair.BTC_USD, params).toList().blockingGet();
+
+    assertEquals(1, candles.size());
+    CandleStick candle = candles.get(0);
+    assertEquals(new BigDecimal("100"), candle.getOpen());
+    assertEquals(new BigDecimal("110"), candle.getClose());
+    assertEquals(new BigDecimal("120"), candle.getHigh());
+    assertEquals(new BigDecimal("90"), candle.getLow());
+    assertEquals(new BigDecimal("5"), candle.getVolume());
+
+    CoinbaseSubscriptionRequest request = streamingService.lastRequest();
+    assertEquals(CoinbaseChannel.CANDLES, request.getChannel());
+    assertEquals(Collections.singletonList("BTC-USD"), request.getProductIds());
+    assertEquals("ONE_MINUTE", request.getChannelArgs().get("granularity"));
+    assertEquals("SPOT", request.getChannelArgs().get("product_type"));
+  }
+
   private static OrderBook orderBook(List<LimitOrder> asks, List<LimitOrder> bids) {
     return new OrderBook(null, asks, bids);
   }
@@ -172,6 +228,26 @@ class CoinbaseStreamingMarketDataServiceTest {
 
     int callCount() {
       return calls.get();
+    }
+  }
+
+  private static final class StubStreamingService extends CoinbaseStreamingService {
+    private final Observable<JsonNode> response;
+    private CoinbaseSubscriptionRequest lastRequest;
+
+    StubStreamingService(Observable<JsonNode> response) {
+      super("wss://example.com", () -> null, 8, 750);
+      this.response = response;
+    }
+
+    @Override
+    Observable<JsonNode> observeChannel(CoinbaseSubscriptionRequest request) {
+      this.lastRequest = request;
+      return response;
+    }
+
+    CoinbaseSubscriptionRequest lastRequest() {
+      return lastRequest;
     }
   }
 }
