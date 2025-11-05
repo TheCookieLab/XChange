@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * Coinbase Advanced Trade streaming service responsible for low-level websocket management,
  * including subscription tracking, throttling and JWT refresh for private channels.
  */
-class CoinbaseStreamingService extends JsonNettyStreamingService {
+public class CoinbaseStreamingService extends JsonNettyStreamingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(CoinbaseStreamingService.class);
 
@@ -151,7 +151,13 @@ class CoinbaseStreamingService extends JsonNettyStreamingService {
     }
   }
 
-  Observable<JsonNode> observeChannel(CoinbaseSubscriptionRequest request) {
+  /**
+   * Observes a channel with automatic subscription management. Protected for testing.
+   *
+   * @param request The subscription request
+   * @return Observable stream of messages from the channel
+   */
+  protected Observable<JsonNode> observeChannel(CoinbaseSubscriptionRequest request) {
     return Observable.using(
         () -> request,
         this::subscribeChannel,

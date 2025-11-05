@@ -241,7 +241,7 @@ class CoinbaseStreamingMarketDataServiceTest {
     }
 
     @Override
-    Observable<JsonNode> observeChannel(CoinbaseSubscriptionRequest request) {
+    protected Observable<JsonNode> observeChannel(CoinbaseSubscriptionRequest request) {
       this.lastRequest = request;
       return response;
     }

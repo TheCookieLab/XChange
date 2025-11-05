@@ -21,7 +21,7 @@ import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class CoinbaseStreamingTradeService implements StreamingTradeService {
+public class CoinbaseStreamingTradeService implements StreamingTradeService {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(CoinbaseStreamingTradeService.class);

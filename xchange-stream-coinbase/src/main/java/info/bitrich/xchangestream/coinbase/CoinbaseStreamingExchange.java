@@ -9,10 +9,12 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseV3Digest;
@@ -42,10 +44,12 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   public static final String SANDBOX_WS_URI = "wss://advanced-trade-ws.sandbox.coinbase.com";
 
   private final AtomicReference<Disposable> reconnectSubscription = new AtomicReference<>();
+  private final List<Disposable> productSubscriptions = new CopyOnWriteArrayList<>();
 
-  private CoinbaseStreamingService streamingService;
-  private CoinbaseStreamingMarketDataService streamingMarketDataService;
-  private CoinbaseStreamingTradeService tradeService;
+  // Protected for testing - allows subclasses to inject mock services
+  protected CoinbaseStreamingService streamingService;
+  protected CoinbaseStreamingMarketDataService streamingMarketDataService;
+  protected CoinbaseStreamingTradeService tradeService;
 
   @Override
   protected void initServices() {
@@ -55,6 +59,46 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   @Override
   public Completable connect(ProductSubscription... args) {
     ExchangeSpecification exchangeSpecification = getExchangeSpecification();
+    
+    // Create services using factory methods (can be overridden in tests)
+    if (streamingService == null) {
+      streamingService = createStreamingService(exchangeSpecification);
+    }
+    
+    if (streamingMarketDataService == null) {
+      streamingMarketDataService = createStreamingMarketDataService(exchangeSpecification);
+    }
+    
+    if (tradeService == null) {
+      tradeService = createStreamingTradeService(exchangeSpecification);
+    }
+
+    Completable connectCompletable = streamingService.connect();
+
+    reconnectSubscription.updateAndGet(
+        previous -> {
+          if (previous != null && !previous.isDisposed()) {
+            previous.dispose();
+          }
+          return streamingService
+              .subscribeConnectionSuccess()
+              .doOnNext(o -> resubscribeOpenStreams())
+              .subscribe();
+        });
+
+    return connectCompletable
+        .doOnComplete(this::autoSubscribeHeartbeatsIfConfigured)
+        .doOnComplete(() -> processProductSubscriptions(args));
+  }
+
+  /**
+   * Factory method to create the streaming service. Can be overridden in tests to inject mocks.
+   *
+   * @param exchangeSpecification The exchange specification
+   * @return The streaming service instance
+   */
+  protected CoinbaseStreamingService createStreamingService(
+      ExchangeSpecification exchangeSpecification) {
     String websocketUrl = resolveWebsocketUrl(exchangeSpecification);
 
     int publicRateLimit =
@@ -71,33 +115,39 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
             .map(Integer::parseInt)
             .orElse(750);
 
-    streamingService =
+    CoinbaseStreamingService service =
         new CoinbaseStreamingService(
             websocketUrl,
             resolveJwtSupplier(exchangeSpecification),
             publicRateLimit,
             privateRateLimit);
-    applyStreamingSpecification(exchangeSpecification, streamingService);
+    applyStreamingSpecification(exchangeSpecification, service);
+    return service;
+  }
 
-    streamingMarketDataService =
-        new CoinbaseStreamingMarketDataService(
-            streamingService, createSnapshotProvider(), exchangeSpecification);
-    tradeService = new CoinbaseStreamingTradeService(streamingService, exchangeSpecification);
+  /**
+   * Factory method to create the streaming market data service. Can be overridden in tests to
+   * inject mocks.
+   *
+   * @param exchangeSpecification The exchange specification
+   * @return The streaming market data service instance
+   */
+  protected CoinbaseStreamingMarketDataService createStreamingMarketDataService(
+      ExchangeSpecification exchangeSpecification) {
+    return new CoinbaseStreamingMarketDataService(
+        streamingService, createSnapshotProvider(), exchangeSpecification);
+  }
 
-    Completable connectCompletable = streamingService.connect();
-
-    reconnectSubscription.updateAndGet(
-        previous -> {
-          if (previous != null && !previous.isDisposed()) {
-            previous.dispose();
-          }
-          return streamingService
-              .subscribeConnectionSuccess()
-              .doOnNext(o -> resubscribeOpenStreams())
-              .subscribe();
-        });
-
-    return connectCompletable.doOnComplete(this::autoSubscribeHeartbeatsIfConfigured);
+  /**
+   * Factory method to create the streaming trade service. Can be overridden in tests to inject
+   * mocks.
+   *
+   * @param exchangeSpecification The exchange specification
+   * @return The streaming trade service instance
+   */
+  protected CoinbaseStreamingTradeService createStreamingTradeService(
+      ExchangeSpecification exchangeSpecification) {
+    return new CoinbaseStreamingTradeService(streamingService, exchangeSpecification);
   }
 
   private void autoSubscribeHeartbeatsIfConfigured() {
@@ -118,14 +168,23 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   public Completable disconnect() {
     Optional.ofNullable(reconnectSubscription.getAndSet(null))
         .ifPresent(Disposable::dispose);
+    productSubscriptions.forEach(Disposable::dispose);
+    productSubscriptions.clear();
     if (streamingService == null) {
       return Completable.complete();
     }
     CoinbaseStreamingService service = streamingService;
+    resetServices();
+    return service.disconnect();
+  }
+
+  /**
+   * Reset service references. Package-private for testing.
+   */
+  void resetServices() {
     streamingService = null;
     streamingMarketDataService = null;
     tradeService = null;
-    return service.disconnect();
   }
 
   @Override
@@ -246,5 +305,141 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
       return SANDBOX_WS_URI;
     }
     return PROD_WS_URI;
+  }
+
+  /**
+   * Process ProductSubscription objects and create subscriptions. Package-private for testing.
+   *
+   * @param args The ProductSubscription objects to process
+   */
+  void processProductSubscriptions(ProductSubscription... args) {
+    if (args == null || args.length == 0 || streamingMarketDataService == null) {
+      return;
+    }
+
+    // Process all ProductSubscription objects
+    for (ProductSubscription subscription : args) {
+      if (subscription == null) {
+        continue;
+      }
+
+      // Subscribe to tickers
+      for (Instrument instrument : subscription.getTicker()) {
+        if (instrument instanceof CurrencyPair) {
+          CurrencyPair pair = (CurrencyPair) instrument;
+          try {
+            Disposable disposable =
+                streamingMarketDataService
+                    .getTicker(pair)
+                    .subscribe(
+                        ticker -> {
+                          // No-op: subscription is active but data is consumed by explicit subscribers
+                        },
+                        error ->
+                            LOG.debug(
+                                "Error in ticker subscription for {}: {}", pair, error.getMessage()));
+            productSubscriptions.add(disposable);
+          } catch (Exception e) {
+            LOG.warn("Failed to subscribe to ticker for {}", pair, e);
+          }
+        }
+      }
+
+      // Subscribe to trades
+      for (Instrument instrument : subscription.getTrades()) {
+        if (instrument instanceof CurrencyPair) {
+          CurrencyPair pair = (CurrencyPair) instrument;
+          try {
+            Disposable disposable =
+                streamingMarketDataService
+                    .getTrades(pair)
+                    .subscribe(
+                        trade -> {
+                          // No-op: subscription is active but data is consumed by explicit subscribers
+                        },
+                        error ->
+                            LOG.debug(
+                                "Error in trades subscription for {}: {}", pair, error.getMessage()));
+            productSubscriptions.add(disposable);
+          } catch (Exception e) {
+            LOG.warn("Failed to subscribe to trades for {}", pair, e);
+          }
+        }
+      }
+
+      // Subscribe to order books
+      for (Instrument instrument : subscription.getOrderBook()) {
+        if (instrument instanceof CurrencyPair) {
+          CurrencyPair pair = (CurrencyPair) instrument;
+          try {
+            Disposable disposable =
+                streamingMarketDataService
+                    .getOrderBook(pair)
+                    .subscribe(
+                        orderBook -> {
+                          // No-op: subscription is active but data is consumed by explicit subscribers
+                        },
+                        error ->
+                            LOG.debug(
+                                "Error in order book subscription for {}: {}",
+                                pair,
+                                error.getMessage()));
+            productSubscriptions.add(disposable);
+          } catch (Exception e) {
+            LOG.warn("Failed to subscribe to order book for {}", pair, e);
+          }
+        }
+      }
+
+      // Subscribe to user trades (requires authentication)
+      if (tradeService != null) {
+        for (Instrument instrument : subscription.getUserTrades()) {
+          if (instrument instanceof CurrencyPair) {
+            CurrencyPair pair = (CurrencyPair) instrument;
+            try {
+              Disposable disposable =
+                  tradeService
+                      .getUserTrades(pair)
+                      .subscribe(
+                          userTrade -> {
+                            // No-op: subscription is active but data is consumed by explicit subscribers
+                          },
+                          error ->
+                              LOG.debug(
+                                  "Error in user trades subscription for {}: {}",
+                                  pair,
+                                  error.getMessage()));
+              productSubscriptions.add(disposable);
+            } catch (Exception e) {
+              LOG.warn("Failed to subscribe to user trades for {}", pair, e);
+            }
+          }
+        }
+
+        // Subscribe to order changes (requires authentication)
+        for (Instrument instrument : subscription.getOrders()) {
+          if (instrument instanceof CurrencyPair) {
+            CurrencyPair pair = (CurrencyPair) instrument;
+            try {
+              Disposable disposable =
+                  tradeService
+                      .getOrderChanges(pair)
+                      .subscribe(
+                          order -> {
+                            // No-op: subscription is active but data is consumed by explicit subscribers
+                          },
+                          error ->
+                              LOG.debug(
+                                  "Error in order changes subscription for {}: {}",
+                                  pair,
+                                  error.getMessage()));
+              productSubscriptions.add(disposable);
+            } catch (Exception e) {
+              LOG.warn("Failed to subscribe to order changes for {}", pair, e);
+            }
+          }
+        }
+      }
+    }
   }
 }

@@ -33,7 +33,7 @@ import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
+public class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(CoinbaseStreamingMarketDataService.class);
