@@ -35,16 +35,5 @@ future AI agents can avoid the same potholes.
    - Order book state and similar helpers are package-private; reflection-based tests are fine but
      keep them local to this module so we can refactor later.
 
-8. **Still outstanding (as of this note).**  
-   - Finish aligning market/trade services with interfaces (fix compile errors around constructors,
-     missing methods, and candle handling).
-   - Add fixture-based tests (mock WebSocket server, sandbox verification).
-   - Document sandbox availability once verified.
-
-9. **Progress logging expectations.**  
-   - Keep `TODO.md` milestones updated as you make measurable progress, and whenever a task reaches
-     100% completion move it out of “Remaining Work” into the dedicated completed section so the list
-     only tracks active items.
-
 Feel free to extend this file as the implementation evolves. The goal is to keep tribal knowledge
 close to the codebase.***

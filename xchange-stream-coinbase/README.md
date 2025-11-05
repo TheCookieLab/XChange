@@ -73,6 +73,28 @@ To target the sandbox (if reachable), add `-Dcoinbase.streaming.sandbox=true` or
 `COINBASE_STREAMING_SANDBOX=true` environment variable before running the command. The example
 subscribes to ticker, trades, and order book updates for BTC/USD and logs events until interrupted.
 
+## Channel details
+
+- **Ticker / ticker_batch** – Emit the most recent price snapshot. Payloads contain `price`,
+  `open_24_h`, `high_24_h`, `low_24_h`, `volume_24_h`, `best_bid`, and `best_ask`.
+- **Market trades** – Include the executed `price`, `size`, `trade_id`, `side`, and timestamp. The
+  adapter maps the `side` to `OrderType.BID`/`ASK`.
+- **Candles** – Require a `granularity` argument (`ONE_MINUTE`, `FIVE_MINUTE`, etc.). Configure it
+  via `CoinbaseCandleSubscriptionParams`, a default exchange parameter, or by passing a duration to
+  `getCandles`.
+- **Level2** – Carries snapshot and incremental `updates` arrays along with `sequence` numbers. The
+  module enforces sequencing and automatically falls back to REST snapshots when gaps are detected.
+- **Heartbeats** – Enabled by default to keep connections warm; can be disabled with the
+  `Coinbase_Disable_Auto_Heartbeat` parameter.
+
+## Rate limiting & configuration
+
+- Default throttles: 8 public subscribe/unsubscribe messages per second and 750 private per second.
+  Override via `Coinbase_Public_Subscriptions_Per_Second` and
+  `Coinbase_Private_Subscriptions_Per_Second`.
+- The streaming service coalesces duplicate requests and automatically resubscribes after reconnects
+  while honouring the configured limits.
+
 ## Testing
 
 The module ships with unit tests covering:
@@ -92,5 +114,7 @@ mvn -pl xchange-stream-coinbase -am test
 
 - Private channels require Advanced Trade API credentials. The module reuses `CoinbaseV3Digest` to
   mint WebSocket JWTs and refreshes them every 90 seconds while a private subscription is active.
-- The implementation only exposes typed observables today; access to the raw JSON stream can be
-  added later without any API breakage.***
+- Sandbox connectivity is currently unreliable: `advanced-trade-ws.sandbox.coinbase.com` does not
+  resolve as of 2025-11-05. Use the smoke test to verify the latest behaviour.
+- Only typed observables are exposed today; access to raw JSON can be added in the future without
+  API breakage.***
