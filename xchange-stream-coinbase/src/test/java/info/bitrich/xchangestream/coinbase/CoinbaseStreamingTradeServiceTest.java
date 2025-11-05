@@ -10,9 +10,10 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.trade.UserTrade;
 
-import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,15 +22,18 @@ class CoinbaseStreamingTradeServiceTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
-    void extractOrderEventsMapsFields() throws Exception {
+    void getUserOrderEventsMapsFields() throws Exception {
+        ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+        spec.setApiKey("key");
+        spec.setSecretKey("secret");
+
         String payload = "{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"snapshot\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"111\",\n" + "          \"client_order_id\": \"abc\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"order_type\": \"limit\",\n" + "          \"limit_price\": \"200\",\n" + "          \"avg_price\": \"199.5\",\n" + "          \"size\": \"1.2\",\n" + "          \"cumulative_quantity\": \"0.2\",\n" + "          \"leaves_quantity\": \"1.0\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-02T00:00:00Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}";
 
         JsonNode node = MAPPER.readTree(payload);
-        CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(null, null);
-        Method method = CoinbaseStreamingTradeService.class.getDeclaredMethod("extractOrderEvents", JsonNode.class);
-        method.setAccessible(true);
+        StubStreamingService streamingService = new StubStreamingService(Observable.just(node));
+        CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(streamingService, spec);
 
-        @SuppressWarnings("unchecked") List<CoinbaseUserOrderEvent> events = (List<CoinbaseUserOrderEvent>) method.invoke(service, node);
+        List<CoinbaseUserOrderEvent> events = service.getUserOrderEvents(Collections.emptyList()).toList().blockingGet();
 
         assertEquals(1, events.size());
         CoinbaseUserOrderEvent event = events.get(0);
@@ -42,15 +46,18 @@ class CoinbaseStreamingTradeServiceTest {
     }
 
     @Test
-    void extractBalanceSummaryMapsNumericFields() throws Exception {
+    void getFuturesBalanceSummaryMapsNumericFields() throws Exception {
+        ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+        spec.setApiKey("key");
+        spec.setSecretKey("secret");
+
         String payload = "{\n" + "  \"channel\": \"futures_balance_summary\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"snapshot\",\n" + "      \"fcm_balance_summary\": {\n" + "        \"futures_buying_power\": \"5000\",\n" + "        \"total_usd_balance\": \"8000\",\n" + "        \"unrealized_pnl\": \"12.5\",\n" + "        \"daily_realized_pnl\": \"1.2\",\n" + "        \"initial_margin\": \"200\",\n" + "        \"available_margin\": \"300\"\n" + "      }\n" + "    }\n" + "  ]\n" + "}";
 
         JsonNode node = MAPPER.readTree(payload);
-        CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(null, null);
-        Method method = CoinbaseStreamingTradeService.class.getDeclaredMethod("extractBalanceSummaries", JsonNode.class);
-        method.setAccessible(true);
+        StubStreamingService streamingService = new StubStreamingService(Observable.just(node));
+        CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(streamingService, spec);
 
-        @SuppressWarnings("unchecked") List<CoinbaseFuturesBalanceSummary> summaries = (List<CoinbaseFuturesBalanceSummary>) method.invoke(service, node);
+        List<CoinbaseFuturesBalanceSummary> summaries = service.getFuturesBalanceSummary().toList().blockingGet();
 
         assertEquals(1, summaries.size());
         CoinbaseFuturesBalanceSummary summary = summaries.get(0);
@@ -219,6 +226,119 @@ class CoinbaseStreamingTradeServiceTest {
 
         assertEquals(new BigDecimal("0.5"), trades.get(0).getOriginalAmount());
         assertEquals(new BigDecimal("0.2"), trades.get(1).getOriginalAmount()); // delta: 0.7 - 0.5
+    }
+
+    @Test
+    void getUserTradesHandlesConcurrentEventsAtomically() throws Exception {
+        ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+        spec.setApiKey("key");
+        spec.setSecretKey("secret");
+
+        // Create multiple events for the same orderId with sequential cumulative quantities
+        // These will be processed concurrently to test the race condition fix
+        JsonNode message1 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"concurrent-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"10.0\",\n" + "          \"cumulative_quantity\": \"1.0\",\n" + "          \"leaves_quantity\": \"9.0\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:01Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
+
+        JsonNode message2 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"concurrent-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"10.0\",\n" + "          \"cumulative_quantity\": \"2.0\",\n" + "          \"leaves_quantity\": \"8.0\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:02Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
+
+        JsonNode message3 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"concurrent-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"10.0\",\n" + "          \"cumulative_quantity\": \"3.0\",\n" + "          \"leaves_quantity\": \"7.0\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:03Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
+
+        // Create a streaming service that emits all messages concurrently
+        // This simulates the race condition where multiple events for the same orderId
+        // arrive at nearly the same time
+        StubStreamingService streamingService = new StubStreamingService(
+            Observable.just(message1, message2, message3)
+                .flatMap(msg -> Observable.just(msg).delay(1, TimeUnit.MILLISECONDS))
+        );
+        CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(streamingService, spec);
+
+        List<UserTrade> trades = service.getUserTrades(CurrencyPair.BTC_USD).toList().blockingGet();
+
+        // Should emit exactly 3 trades (one for each incremental fill)
+        // With the atomic fix, even if events are processed concurrently, each delta
+        // should be calculated correctly based on the previous value
+        assertEquals(3, trades.size(), "Should emit all incremental fills correctly");
+
+        // Verify all trades are for the same order
+        assertTrue(trades.stream().allMatch(t -> "concurrent-order".equals(t.getOrderId())),
+            "All trades should be for the same order");
+
+        // Calculate total amount - should equal final cumulative quantity (3.0)
+        BigDecimal totalAmount = trades.stream()
+            .map(UserTrade::getOriginalAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        assertEquals(new BigDecimal("3.0"), totalAmount,
+            "Total amount should equal final cumulative quantity, indicating correct delta calculation");
+
+        // Verify each trade has a positive delta
+        assertTrue(trades.stream().allMatch(t -> t.getOriginalAmount().compareTo(BigDecimal.ZERO) > 0),
+            "All trades should have positive amounts");
+    }
+
+    @Test
+    void getUserTradesFiltersZeroDeltaEvents() throws Exception {
+        ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+        spec.setApiKey("key");
+        spec.setSecretKey("secret");
+
+        // First event with cumulative quantity
+        JsonNode message1 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"zero-delta-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"1.0\",\n" + "          \"cumulative_quantity\": \"0.5\",\n" + "          \"leaves_quantity\": \"0.5\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:01Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
+
+        // Second event with same cumulative quantity (zero delta - should be filtered)
+        JsonNode message2 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"zero-delta-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"1.0\",\n" + "          \"cumulative_quantity\": \"0.5\",\n" + "          \"leaves_quantity\": \"0.5\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:02Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
+
+        // Third event with increasing cumulative quantity (should be emitted)
+        JsonNode message3 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"zero-delta-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"1.0\",\n" + "          \"cumulative_quantity\": \"0.8\",\n" + "          \"leaves_quantity\": \"0.2\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:03Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
+
+        StubStreamingService streamingService = new StubStreamingService(Observable.just(message1, message2, message3));
+        CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(streamingService, spec);
+
+        List<UserTrade> trades = service.getUserTrades(CurrencyPair.BTC_USD).toList().blockingGet();
+
+        // Should only emit 2 trades (first and third, second filtered out due to zero delta)
+        assertEquals(2, trades.size(), "Should filter out zero-delta events");
+
+        assertEquals(new BigDecimal("0.5"), trades.get(0).getOriginalAmount(),
+            "First event should emit full cumulative amount");
+        assertEquals(new BigDecimal("0.3"), trades.get(1).getOriginalAmount(),
+            "Third event should emit delta: 0.8 - 0.5 = 0.3");
+    }
+
+    @Test
+    void getUserTradesPreventsDuplicateFillsFromRaceCondition() throws Exception {
+        ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+        spec.setApiKey("key");
+        spec.setSecretKey("secret");
+
+        // Simulate a scenario where multiple events with the same cumulative quantity
+        // arrive concurrently - should only emit one trade
+        JsonNode message1 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"race-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"5.0\",\n" + "          \"cumulative_quantity\": \"1.0\",\n" + "          \"leaves_quantity\": \"4.0\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:01Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
+
+        // Two events with the same cumulative quantity arriving concurrently
+        // With the atomic fix, both should see the same previous value and only one
+        // should emit a trade (the other will have zero delta)
+        JsonNode message2 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"race-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"5.0\",\n" + "          \"cumulative_quantity\": \"2.0\",\n" + "          \"leaves_quantity\": \"3.0\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:02Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
+
+        JsonNode message3 = MAPPER.readTree("{\n" + "  \"channel\": \"user\",\n" + "  \"events\": [\n" + "    {\n" + "      \"type\": \"update\",\n" + "      \"orders\": [\n" + "        {\n" + "          \"order_id\": \"race-order\",\n" + "          \"product_id\": \"BTC-USD\",\n" + "          \"order_side\": \"buy\",\n" + "          \"avg_price\": \"50000\",\n" + "          \"size\": \"5.0\",\n" + "          \"cumulative_quantity\": \"2.0\",\n" + "          \"leaves_quantity\": \"3.0\",\n" + "          \"status\": \"OPEN\",\n" + "          \"event_time\": \"2024-01-01T00:00:02Z\"\n" + "        }\n" + "      ]\n" + "    }\n" + "  ]\n" + "}");
+
+        StubStreamingService streamingService = new StubStreamingService(Observable.just(message1, message2, message3));
+        CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(streamingService, spec);
+
+        List<UserTrade> trades = service.getUserTrades(CurrencyPair.BTC_USD).toList().blockingGet();
+
+        // Should emit exactly 2 trades:
+        // 1. First event: 1.0 (first cumulative)
+        // 2. Second or third event: 1.0 delta (2.0 - 1.0)
+        // The other duplicate event should be filtered out (zero delta)
+        assertEquals(2, trades.size(),
+            "Should prevent duplicate fills even when events arrive concurrently");
+
+        BigDecimal totalAmount = trades.stream()
+            .map(UserTrade::getOriginalAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        assertEquals(new BigDecimal("2.0"), totalAmount,
+            "Total should equal final cumulative quantity, preventing duplicate fills");
     }
 
     private static final class StubStreamingService extends CoinbaseStreamingService {
