@@ -35,8 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(CoinbaseStreamingMarketDataService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CoinbaseStreamingMarketDataService.class);
 
   @FunctionalInterface
   interface OrderBookSnapshotProvider {
@@ -55,21 +54,19 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       OrderBookSnapshotProvider snapshotProvider,
       ExchangeSpecification spec) {
     this.streamingService = streamingService;
-    this.snapshotProvider =
-        snapshotProvider != null ? snapshotProvider : pair -> null;
+    this.snapshotProvider = snapshotProvider != null ? snapshotProvider : pair -> null;
     this.exchangeSpecification = spec;
   }
 
   void ensureHeartbeatsSubscription() {
-    CoinbaseSubscriptionRequest request =
-        new CoinbaseSubscriptionRequest(CoinbaseChannel.HEARTBEATS, Collections.emptyList(), Collections.emptyMap());
-    Disposable disposable =
-        streamingService
-            .observeChannel(request)
-            .subscribe(
-                msg -> {},
-                error ->
-                    LOG.debug("Heartbeat subscription emitted error: {}", error.getMessage()));
+    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(CoinbaseChannel.HEARTBEATS,
+        Collections.emptyList(), Collections.emptyMap());
+    Disposable disposable = streamingService
+        .observeChannel(request)
+        .subscribe(
+            msg -> {
+            },
+            error -> LOG.debug("Heartbeat subscription emitted error: {}", error.getMessage()));
     internalSubscriptions.add(disposable);
   }
 
@@ -79,11 +76,10 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   @Override
   public Observable<Ticker> getTicker(CurrencyPair currencyPair, Object... args) {
-    CoinbaseSubscriptionRequest request =
-        new CoinbaseSubscriptionRequest(
-            CoinbaseChannel.TICKER,
-            Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
-            Collections.emptyMap());
+    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
+        CoinbaseChannel.TICKER,
+        Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+        Collections.emptyMap());
 
     return streamingService
         .observeChannel(request)
@@ -101,11 +97,10 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   @Override
   public Observable<Trade> getTrades(CurrencyPair currencyPair, Object... args) {
-    CoinbaseSubscriptionRequest request =
-        new CoinbaseSubscriptionRequest(
-            CoinbaseChannel.MARKET_TRADES,
-            Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
-            Collections.emptyMap());
+    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
+        CoinbaseChannel.MARKET_TRADES,
+        Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+        Collections.emptyMap());
 
     return streamingService
         .observeChannel(request)
@@ -128,8 +123,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   public Observable<CandleStick> getCandles(
       CurrencyPair currencyPair, CoinbaseCandleSubscriptionParams params) {
-    CoinbaseCandleSubscriptionParams effective =
-        params == null ? resolveCandleParams() : resolveCandleParams(params);
+    CoinbaseCandleSubscriptionParams effective = params == null ? resolveCandleParams() : resolveCandleParams(params);
     return subscribeCandles(currencyPair, effective);
   }
 
@@ -142,15 +136,13 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   @Override
   public Observable<OrderBook> getOrderBook(CurrencyPair currencyPair, Object... args) {
-    CoinbaseSubscriptionRequest request =
-        new CoinbaseSubscriptionRequest(
-            CoinbaseChannel.LEVEL2,
-            Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
-            Collections.emptyMap());
+    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
+        CoinbaseChannel.LEVEL2,
+        Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+        Collections.emptyMap());
 
-    OrderBookState state =
-        orderBooks.computeIfAbsent(
-            currencyPair, key -> new OrderBookState(currencyPair, snapshotProvider));
+    OrderBookState state = orderBooks.computeIfAbsent(
+        currencyPair, key -> new OrderBookState(currencyPair, snapshotProvider));
 
     return streamingService
         .observeChannel(request)
@@ -167,11 +159,10 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   private Observable<CandleStick> subscribeCandles(
       CurrencyPair currencyPair, CoinbaseCandleSubscriptionParams params) {
-    CoinbaseSubscriptionRequest request =
-        new CoinbaseSubscriptionRequest(
-            CoinbaseChannel.CANDLES,
-            Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
-            params.toChannelArgs());
+    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
+        CoinbaseChannel.CANDLES,
+        Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+        params.toChannelArgs());
 
     return streamingService
         .observeChannel(request)
@@ -278,11 +269,10 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   }
 
   private CoinbaseCandleGranularity defaultCandleGranularity() {
-    Object raw =
-        exchangeSpecification == null
-            ? null
-            : exchangeSpecification.getExchangeSpecificParametersItem(
-                CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_GRANULARITY);
+    Object raw = exchangeSpecification == null
+        ? null
+        : exchangeSpecification.getExchangeSpecificParametersItem(
+            CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_GRANULARITY);
     return parseGranularity(raw);
   }
 
@@ -290,9 +280,8 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     if (exchangeSpecification == null) {
       return null;
     }
-    Object raw =
-        exchangeSpecification.getExchangeSpecificParametersItem(
-            CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_PRODUCT_TYPE);
+    Object raw = exchangeSpecification.getExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_PRODUCT_TYPE);
     return parseProductType(raw);
   }
 
@@ -306,10 +295,8 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   static final class OrderBookState {
     private final CurrencyPair currencyPair;
     private final OrderBookSnapshotProvider snapshotProvider;
-    private final Map<BigDecimal, LimitOrder> bids =
-        new ConcurrentHashMap<>();
-    private final Map<BigDecimal, LimitOrder> asks =
-        new ConcurrentHashMap<>();
+    private final Map<BigDecimal, LimitOrder> bids = new ConcurrentHashMap<>();
+    private final Map<BigDecimal, LimitOrder> asks = new ConcurrentHashMap<>();
     private Long lastSequence;
     private volatile boolean hasSnapshot;
 
@@ -377,35 +364,65 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       if (!changed) {
         return Maybe.empty();
       }
-      OrderBook orderBook =
-          new OrderBook(
-              null,
-              sortedOrders(asks, Order.OrderType.ASK),
-              sortedOrders(bids, Order.OrderType.BID));
+      OrderBook orderBook = new OrderBook(
+          null,
+          sortedOrders(asks, Order.OrderType.ASK),
+          sortedOrders(bids, Order.OrderType.BID));
       return Maybe.just(orderBook);
     }
 
     private void applySnapshotEvent(JsonNode event) {
       bids.clear();
       asks.clear();
-      applyUpdatesToSide(
-          bids, CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID));
-      applyUpdatesToSide(
-          asks, CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK));
+      CurrencyPair pair = CoinbaseStreamingAdapters.toCurrencyPair(event.path("product_id").asText(null));
+      if (pair == null) {
+        return;
+      }
+      populateSnapshotSide(bids, event.path("bids"), Order.OrderType.BID, pair);
+      populateSnapshotSide(asks, event.path("asks"), Order.OrderType.ASK, pair);
+    }
+
+    private void populateSnapshotSide(
+        Map<BigDecimal, LimitOrder> side,
+        JsonNode levels,
+        Order.OrderType orderType,
+        CurrencyPair pair) {
+      if (!levels.isArray()) {
+        return;
+      }
+      for (JsonNode level : levels) {
+        if (!level.isArray() || level.size() < 2) {
+          continue;
+        }
+        String priceText = level.get(0).asText(null);
+        String sizeText = level.get(1).asText(null);
+        if (priceText == null || sizeText == null) {
+          continue;
+        }
+        try {
+          BigDecimal price = new BigDecimal(priceText);
+          BigDecimal size = new BigDecimal(sizeText);
+          if (size.compareTo(BigDecimal.ZERO) > 0) {
+            side.put(price, new LimitOrder(orderType, size, pair, null, null, price));
+          } else {
+            side.remove(price);
+          }
+        } catch (NumberFormatException ignore) {
+          // skip malformed level
+        }
+      }
     }
 
     private boolean applyUpdates(JsonNode event) {
       boolean changed = false;
-      List<LimitOrder> bidUpdates =
-          CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID);
+      List<LimitOrder> bidUpdates = CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID);
       if (!bidUpdates.isEmpty()) {
         if (applyUpdatesToSide(bids, bidUpdates)) {
           changed = true;
         }
       }
 
-      List<LimitOrder> askUpdates =
-          CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK);
+      List<LimitOrder> askUpdates = CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK);
       if (!askUpdates.isEmpty()) {
         if (applyUpdatesToSide(asks, askUpdates)) {
           changed = true;
@@ -498,5 +515,3 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     }
   }
 }
-
-
