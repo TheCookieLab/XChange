@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import info.bitrich.xchangestream.coinbase.CoinbaseStreamingTestUtils.StubStreamingService;
 
 class CoinbaseStreamingTradeServiceTest {
 
@@ -775,23 +776,4 @@ class CoinbaseStreamingTradeServiceTest {
             "Total must be exactly 3.0, proving atomic removal prevents race condition");
     }
 
-    private static final class StubStreamingService extends CoinbaseStreamingService {
-        private final Observable<JsonNode> response;
-        private CoinbaseSubscriptionRequest lastRequest;
-
-        StubStreamingService(Observable<JsonNode> response) {
-            super("wss://example.com", () -> null, 8, 750);
-            this.response = response;
-        }
-
-        @Override
-        protected Observable<JsonNode> observeChannel(CoinbaseSubscriptionRequest request) {
-            this.lastRequest = request;
-            return response;
-        }
-
-        CoinbaseSubscriptionRequest lastRequest() {
-            return lastRequest;
-        }
-    }
 }

@@ -22,6 +22,7 @@ import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import info.bitrich.xchangestream.coinbase.CoinbaseStreamingTestUtils.StubStreamingService;
 
 class CoinbaseStreamingMarketDataServiceTest {
 
@@ -219,6 +220,8 @@ class CoinbaseStreamingMarketDataServiceTest {
     assertEquals(new BigDecimal("120"), candle.getHigh());
     assertEquals(new BigDecimal("90"), candle.getLow());
     assertEquals(new BigDecimal("5"), candle.getVolume());
+    // Verify timestamp: 1704067200 epoch seconds = 2024-01-01T00:00:00Z
+    assertEquals(1704067200000L, candle.getTimestamp().toInstant().toEpochMilli());
 
     CoinbaseSubscriptionRequest request = streamingService.lastRequest();
     assertEquals(CoinbaseChannel.CANDLES, request.getChannel());
@@ -613,23 +616,4 @@ class CoinbaseStreamingMarketDataServiceTest {
     }
   }
 
-  private static final class StubStreamingService extends CoinbaseStreamingService {
-    private final Observable<JsonNode> response;
-    private CoinbaseSubscriptionRequest lastRequest;
-
-    StubStreamingService(Observable<JsonNode> response) {
-      super("wss://example.com", () -> null, 8, 750);
-      this.response = response;
-    }
-
-    @Override
-    protected Observable<JsonNode> observeChannel(CoinbaseSubscriptionRequest request) {
-      this.lastRequest = request;
-      return response;
-    }
-
-    CoinbaseSubscriptionRequest lastRequest() {
-      return lastRequest;
-    }
-  }
 }
