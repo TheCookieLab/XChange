@@ -163,12 +163,12 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
 
   private CoinbaseFuturesBalanceSummary toBalanceSummary(JsonNode summaryNode) {
     return new CoinbaseFuturesBalanceSummary(
-        asBigDecimal(summaryNode, "futures_buying_power"),
-        asBigDecimal(summaryNode, "total_usd_balance"),
-        asBigDecimal(summaryNode, "unrealized_pnl"),
-        asBigDecimal(summaryNode, "daily_realized_pnl"),
-        asBigDecimal(summaryNode, "initial_margin"),
-        asBigDecimal(summaryNode, "available_margin"));
+        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "futures_buying_power"),
+        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "total_usd_balance"),
+        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "unrealized_pnl"),
+        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "daily_realized_pnl"),
+        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "initial_margin"),
+        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "available_margin"));
   }
 
   private Optional<CoinbaseUserOrderEvent> toUserOrderEvent(JsonNode orderNode, JsonNode event) {
@@ -178,8 +178,8 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
       Order.OrderType side =
           CoinbaseStreamingAdapters.parseOrderSide(orderNode.path("order_side").asText(null));
       BigDecimal orderSize =
-          Optional.ofNullable(asBigDecimal(orderNode, "size"))
-              .orElse(Optional.ofNullable(asBigDecimal(orderNode, "order_total")).orElse(null));
+          Optional.ofNullable(CoinbaseStreamingAdapters.asBigDecimal(orderNode, "size"))
+              .orElse(Optional.ofNullable(CoinbaseStreamingAdapters.asBigDecimal(orderNode, "order_total")).orElse(null));
       return Optional.of(
           new CoinbaseUserOrderEvent(
               orderNode.path("order_id").asText(null),
@@ -187,11 +187,11 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
               pair,
               side,
               orderNode.path("order_type").asText(null),
-              asBigDecimal(orderNode, "limit_price"),
-              asBigDecimal(orderNode, "avg_price"),
+              CoinbaseStreamingAdapters.asBigDecimal(orderNode, "limit_price"),
+              CoinbaseStreamingAdapters.asBigDecimal(orderNode, "avg_price"),
               orderSize,
-              asBigDecimal(orderNode, "cumulative_quantity"),
-              asBigDecimal(orderNode, "leaves_quantity"),
+              CoinbaseStreamingAdapters.asBigDecimal(orderNode, "cumulative_quantity"),
+              CoinbaseStreamingAdapters.asBigDecimal(orderNode, "leaves_quantity"),
               orderNode.path("status").asText(null),
               CoinbaseStreamingAdapters.asInstant(orderNode.path("event_time")).orElse(null)));
     } catch (Exception ex) {
@@ -257,21 +257,6 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
         || specification.getSecretKey() == null) {
       throw new ExchangeSecurityException(
           "Coinbase streaming private channels require API credentials");
-    }
-  }
-
-  private static BigDecimal asBigDecimal(JsonNode node, String field) {
-    if (node == null) {
-      return null;
-    }
-    JsonNode value = node.path(field);
-    if (value.isMissingNode() || value.isNull()) {
-      return null;
-    }
-    try {
-      return new BigDecimal(value.asText());
-    } catch (NumberFormatException e) {
-      return null;
     }
   }
 
