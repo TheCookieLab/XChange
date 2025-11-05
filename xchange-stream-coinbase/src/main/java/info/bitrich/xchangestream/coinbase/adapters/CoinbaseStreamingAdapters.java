@@ -124,7 +124,7 @@ public final class CoinbaseStreamingAdapters {
                 .low(asBigDecimal(candleNode, "low"))
                 .volume(asBigDecimal(candleNode, "volume"))
                 .timestamp(
-                    asInstant(candleNode.path("start"))
+                    parseUnixTimestamp(candleNode.path("start"))
                         .map(java.util.Date::from)
                         .orElse(null))
                 .build());
@@ -177,6 +177,22 @@ public final class CoinbaseStreamingAdapters {
       } catch (Exception ignored) {
         return Optional.empty();
       }
+    }
+  }
+
+  public static Optional<Instant> parseUnixTimestamp(JsonNode node) {
+    if (node == null || node.isMissingNode() || node.isNull()) {
+      return Optional.empty();
+    }
+    String text = node.asText(null);
+    if (text == null || text.isEmpty()) {
+      return Optional.empty();
+    }
+    try {
+      long epochSeconds = Long.parseLong(text);
+      return Optional.of(Instant.ofEpochSecond(epochSeconds));
+    } catch (NumberFormatException e) {
+      return Optional.empty();
     }
   }
 
