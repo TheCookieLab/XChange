@@ -23,7 +23,7 @@ This module integrates Coinbase Advanced Trade v3 REST via a JAX‑RS proxy and 
 - Use Jackson annotations:
   - `@JsonIgnoreProperties(ignoreUnknown = true)` for forward compatibility
   - `@JsonCreator` + `@JsonProperty("json_name")` on constructor params
-  - Parse timestamps as ISO‑8601 strings into `java.util.Date` when needed
+- Parse timestamps into `java.util.Date` according to the API docs (most fields are ISO‑8601, but candle `start` is a UNIX timestamp string)
 - Prefer immutable DTOs with `final` fields and Lombok `@Getter`
 
 2) Declare the HTTP method in `CoinbaseAuthenticated`
@@ -88,7 +88,7 @@ Key mapping notes:
 
 ### Gotchas
 - Do not reuse response DTOs across endpoints if the JSON shape differs; define dedicated response types
-- Times are ISO‑8601 strings; parse into `Date` using `DateTimeFormatter.ISO_INSTANT`
+- Timestamp formats vary by endpoint—use ISO‑8601 parsing where documented, but handle UNIX epoch strings for candle `start` and other numeric fields
 - For market‑data vs user endpoints, map to the correct XChange DTOs (`Trade` vs `UserTrade`)
 
 ### Checklist for a new endpoint
@@ -179,4 +179,3 @@ For human users and detailed testing information, refer to:
 - Avoid assertions on exact counts or time-dependent data
 - Test pagination by checking page size limits, not exact results
 - When testing error scenarios, verify error messages are meaningful
-
