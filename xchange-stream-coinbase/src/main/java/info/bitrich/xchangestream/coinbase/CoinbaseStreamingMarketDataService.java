@@ -1,9 +1,6 @@
 package info.bitrich.xchangestream.coinbase;
 
 import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters.adaptCandles;
-import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters.adaptTickers;
-import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters.adaptTrades;
-import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters.parseOrderSide;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters;
@@ -14,12 +11,12 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -297,7 +294,10 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     private final OrderBookSnapshotProvider snapshotProvider;
     private final Map<BigDecimal, LimitOrder> bids = new ConcurrentHashMap<>();
     private final Map<BigDecimal, LimitOrder> asks = new ConcurrentHashMap<>();
-    private Long lastSequence;
+    // Use AtomicLong to ensure thread-safe access to sequence number
+    // This prevents race conditions when process() is called concurrently from
+    // multiple subscribers or different schedulers
+    private final AtomicLong lastSequence = new AtomicLong(-1);
     private volatile boolean hasSnapshot;
 
     OrderBookState(CurrencyPair currencyPair, OrderBookSnapshotProvider snapshotProvider) {
@@ -321,7 +321,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         if ("snapshot".equalsIgnoreCase(type)) {
           applySnapshotEvent(event);
           if (sequence >= 0) {
-            lastSequence = sequence;
+            lastSequence.set(sequence);
           }
           hasSnapshot = true;
           changed = true;
@@ -330,8 +330,9 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         if (!ensureInitialized(sequence)) {
           continue;
         }
-        if (sequence > 0 && lastSequence != null) {
-          long expected = lastSequence + 1;
+        long currentLastSequence = lastSequence.get();
+        if (sequence > 0 && currentLastSequence >= 0) {
+          long expected = currentLastSequence + 1;
           if (sequence > expected) {
             LOG.warn(
                 "Detected Coinbase level2 sequence gap for {}: expected {} but received {}",
@@ -343,12 +344,12 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
             } else {
               continue;
             }
-          } else if (sequence <= lastSequence) {
+          } else if (sequence <= currentLastSequence) {
             LOG.debug(
                 "Skipping stale Coinbase level2 update for {} with sequence {} (last seen {})",
                 currencyPair,
                 sequence,
-                lastSequence);
+                currentLastSequence);
             continue;
           }
         }
@@ -358,7 +359,10 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
           changed = true;
         }
         if (sequence > 0) {
-          lastSequence = sequence;
+          // Atomically update lastSequence only if the new sequence is greater
+          // This prevents race conditions where concurrent updates might overwrite
+          // a higher sequence with a lower one
+          lastSequence.updateAndGet(current -> sequence > current ? sequence : current);
         }
       }
       if (!changed) {
@@ -495,9 +499,9 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         });
         hasSnapshot = true;
         if (nextSequence > 0) {
-          lastSequence = nextSequence - 1;
+          lastSequence.set(nextSequence - 1);
         } else {
-          lastSequence = null;
+          lastSequence.set(-1);
         }
         LOG.debug("Recovered Coinbase order book snapshot for {}", currencyPair);
         return true;
@@ -510,7 +514,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     void reset() {
       bids.clear();
       asks.clear();
-      lastSequence = null;
+      lastSequence.set(-1);
       hasSnapshot = false;
     }
   }

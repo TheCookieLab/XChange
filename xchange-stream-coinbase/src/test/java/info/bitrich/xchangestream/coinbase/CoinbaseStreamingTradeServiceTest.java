@@ -339,6 +339,117 @@ class CoinbaseStreamingTradeServiceTest {
     }
 
     @Test
+    void getUserTradesPreventsDuplicateEmissionsForTerminalOrders() throws Exception {
+        ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+        spec.setApiKey("key");
+        spec.setSecretKey("secret");
+
+        // This test specifically covers the race condition fix:
+        // When the first event for a terminal order arrives, it correctly returns the full
+        // cumulative amount as delta and removes the entry from the map. If a duplicate or
+        // late event for the same terminal order arrives, it should return zero delta,
+        // not the full cumulative amount again.
+        
+        // First event: terminal order with FILLED status (removes entry from map)
+        JsonNode message1 = MAPPER.readTree("{\n" +
+            "  \"channel\": \"user\",\n" +
+            "  \"events\": [\n" +
+            "    {\n" +
+            "      \"type\": \"update\",\n" +
+            "      \"orders\": [\n" +
+            "        {\n" +
+            "          \"order_id\": \"terminal-race-order\",\n" +
+            "          \"product_id\": \"BTC-USD\",\n" +
+            "          \"order_side\": \"buy\",\n" +
+            "          \"avg_price\": \"50000\",\n" +
+            "          \"size\": \"2.0\",\n" +
+            "          \"cumulative_quantity\": \"2.0\",\n" +
+            "          \"leaves_quantity\": \"0.0\",\n" +
+            "          \"status\": \"FILLED\",\n" +
+            "          \"event_time\": \"2024-01-01T00:00:01Z\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}");
+
+        // Duplicate/late event: same terminal order with same cumulative quantity
+        // This simulates the scenario where the entry was already removed, so oldValue
+        // would be null. Without the fix, this would return the full cumulative amount
+        // again. With the fix, it should return zero delta.
+        JsonNode message2 = MAPPER.readTree("{\n" +
+            "  \"channel\": \"user\",\n" +
+            "  \"events\": [\n" +
+            "    {\n" +
+            "      \"type\": \"update\",\n" +
+            "      \"orders\": [\n" +
+            "        {\n" +
+            "          \"order_id\": \"terminal-race-order\",\n" +
+            "          \"product_id\": \"BTC-USD\",\n" +
+            "          \"order_side\": \"buy\",\n" +
+            "          \"avg_price\": \"50000\",\n" +
+            "          \"size\": \"2.0\",\n" +
+            "          \"cumulative_quantity\": \"2.0\",\n" +
+            "          \"leaves_quantity\": \"0.0\",\n" +
+            "          \"status\": \"FILLED\",\n" +
+            "          \"event_time\": \"2024-01-01T00:00:02Z\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}");
+
+        // Third duplicate event to be thorough
+        JsonNode message3 = MAPPER.readTree("{\n" +
+            "  \"channel\": \"user\",\n" +
+            "  \"events\": [\n" +
+            "    {\n" +
+            "      \"type\": \"update\",\n" +
+            "      \"orders\": [\n" +
+            "        {\n" +
+            "          \"order_id\": \"terminal-race-order\",\n" +
+            "          \"product_id\": \"BTC-USD\",\n" +
+            "          \"order_side\": \"buy\",\n" +
+            "          \"avg_price\": \"50000\",\n" +
+            "          \"size\": \"2.0\",\n" +
+            "          \"cumulative_quantity\": \"2.0\",\n" +
+            "          \"leaves_quantity\": \"0.0\",\n" +
+            "          \"status\": \"FILLED\",\n" +
+            "          \"event_time\": \"2024-01-01T00:00:03Z\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}");
+
+        StubStreamingService streamingService = new StubStreamingService(
+            Observable.just(message1, message2, message3));
+        CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(streamingService, spec);
+
+        List<UserTrade> trades = service.getUserTrades(CurrencyPair.BTC_USD).toList().blockingGet();
+
+        // Should emit exactly 1 trade (only the first event), not 3
+        // The duplicate/late events should return zero delta because the order
+        // is already in the processedTerminalOrders set
+        assertEquals(1, trades.size(),
+            "Should emit exactly 1 trade for terminal order, preventing duplicate emissions");
+
+        UserTrade trade = trades.get(0);
+        assertEquals("terminal-race-order", trade.getOrderId());
+        assertEquals(new BigDecimal("2.0"), trade.getOriginalAmount(),
+            "First event should emit full cumulative amount (2.0)");
+
+        // Verify total is exactly 2.0, not 6.0 (which would indicate the bug)
+        BigDecimal totalAmount = trades.stream()
+            .map(UserTrade::getOriginalAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        assertEquals(new BigDecimal("2.0"), totalAmount,
+            "Total should be exactly 2.0 (the cumulative quantity), not 6.0, " +
+            "proving duplicate terminal events are correctly filtered");
+    }
+
+    @Test
     void getUserTradesHandlesTerminalStatusRemovalAtomically() throws Exception {
         ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
         spec.setApiKey("key");

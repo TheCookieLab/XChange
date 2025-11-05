@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap.KeySetView;
 import java.util.stream.Collectors;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -31,6 +32,10 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
   
   // Track last seen cumulative quantity per order ID to calculate deltas
   private final ConcurrentHashMap<String, BigDecimal> lastCumulativeQuantity = new ConcurrentHashMap<>();
+  
+  // Track terminal orders that have already been processed to prevent duplicate emissions
+  // when duplicate or late events arrive after the entry has been removed from the map
+  private final KeySetView<String, Boolean> processedTerminalOrders = ConcurrentHashMap.newKeySet();
 
   CoinbaseStreamingTradeService(
       CoinbaseStreamingService streamingService,
@@ -44,6 +49,7 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
     // The streaming service will send a fresh snapshot with current state,
     // so we don't need to maintain stale cumulative quantity data.
     lastCumulativeQuantity.clear();
+    processedTerminalOrders.clear();
   }
 
   public Observable<CoinbaseUserOrderEvent> getUserOrderEvents(List<String> productIds) {
@@ -248,6 +254,10 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
    * for the same orderId are processed concurrently. If the order is in a terminal status,
    * the entry is removed atomically as part of the compute operation to prevent race conditions.
    * 
+   * This method also tracks terminal orders that have already been processed to prevent
+   * duplicate emissions when duplicate or late events arrive after the entry has been
+   * removed from the tracking map.
+   * 
    * @param orderId The order ID
    * @param currentCumulative The current cumulative filled quantity
    * @param isTerminal Whether the order is in a terminal status (should be removed after processing)
@@ -255,6 +265,15 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
    */
   private BigDecimal calculateAndUpdateDelta(String orderId, BigDecimal currentCumulative, boolean isTerminal) {
     if (currentCumulative == null) {
+      return BigDecimal.ZERO;
+    }
+    
+    // For terminal orders, check if we've already processed this order.
+    // If add() returns false, it means the order was already in the set (already processed),
+    // so we should return zero delta to prevent duplicate emissions.
+    // This check happens before compute() to avoid unnecessary computation.
+    if (isTerminal && !processedTerminalOrders.add(orderId)) {
+      // Order was already in the set (already processed) - return zero delta
       return BigDecimal.ZERO;
     }
     
@@ -287,15 +306,27 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
         });
     
     // Calculate delta using the captured old value
+    BigDecimal delta;
     if (oldValue[0] == null) {
       // First event for this order - delta is the full cumulative amount
-      return currentCumulative;
+      delta = currentCumulative;
     } else {
       // Calculate the incremental fill amount (delta since last update)
-      BigDecimal delta = currentCumulative.subtract(oldValue[0]);
+      delta = currentCumulative.subtract(oldValue[0]);
       // Only return positive deltas (filter out zero or negative deltas)
-      return delta.compareTo(BigDecimal.ZERO) > 0 ? delta : BigDecimal.ZERO;
+      if (delta.compareTo(BigDecimal.ZERO) <= 0) {
+        delta = BigDecimal.ZERO;
+      }
     }
+    
+    // If this is a terminal order but delta is zero (no new fill), remove it from the set
+    // so that future events with actual fills can still be processed. This handles edge cases
+    // where we might see a terminal status update before the actual fill event.
+    if (isTerminal && delta.compareTo(BigDecimal.ZERO) == 0) {
+      processedTerminalOrders.remove(orderId);
+    }
+    
+    return delta;
   }
 
   private void ensureAuthenticated() {

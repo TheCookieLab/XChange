@@ -574,7 +574,9 @@ class CoinbaseStreamingMarketDataServiceTest {
     Field field = CoinbaseStreamingMarketDataService.OrderBookState.class
         .getDeclaredField("lastSequence");
     field.setAccessible(true);
-    return (Long) field.get(state);
+    java.util.concurrent.atomic.AtomicLong atomicLong = (java.util.concurrent.atomic.AtomicLong) field.get(state);
+    long value = atomicLong.get();
+    return value < 0 ? null : value;
   }
 
   private static OrderBook orderBook(List<LimitOrder> asks, List<LimitOrder> bids) {
