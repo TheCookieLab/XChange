@@ -182,7 +182,7 @@
         <version.lombok>1.18.42</version.lombok>
         <version.maven-enforcer-plugin>3.6.2</version.maven-enforcer-plugin>
         <version.maven-prerequisite>3.6.3</version.maven-prerequisite>
-        <version.mockito>5.18.0</version.mockito>
+        <version.mockito>5.20.0</version.mockito>
         <version.qos.logback>1.5.18</version.qos.logback>
         <version.reflections>0.10.2</version.reflections>
         <version.resilience4j>1.7.1</version.resilience4j>
@@ -282,6 +282,14 @@
                 <groupId>io.reactivex.rxjava3</groupId>
                 <artifactId>rxjava</artifactId>
                 <version>3.1.12</version>
+            </dependency>
+
+            <!-- ByteBuddy agent for Mockito with JDK 21+ -->
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>1.15.11</version>
+                <scope>test</scope>
             </dependency>
 
             <!--For String Joining, etc. -->
@@ -465,6 +473,13 @@
                     <release>${version.java}</release>
                     <showDeprecation>true</showDeprecation>
                     <showWarnings>true</showWarnings>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${version.lombok}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
 
@@ -554,6 +569,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
+                <configuration>
+                    <argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.15.11/byte-buddy-agent-1.15.11.jar
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.io=ALL-UNNAMED
+                        --add-opens java.base/jdk.internal.loader=ALL-UNNAMED</argLine>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.sonatype.central</groupId>

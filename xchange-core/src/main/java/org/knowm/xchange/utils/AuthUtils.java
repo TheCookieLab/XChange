@@ -48,7 +48,7 @@ public class AuthUtils {
    *
    * @return The properties or null
    */
-  public static Properties getSecretProperties(String prefix) {
+  public static Properties  getSecretProperties(String prefix) {
 
     String resource = prefix != null ? prefix + "-secret.keys" : "secret.keys";
 

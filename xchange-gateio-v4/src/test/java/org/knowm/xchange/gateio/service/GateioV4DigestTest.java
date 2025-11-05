@@ -6,12 +6,16 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import si.mazi.rescu.RestInvocation;
 
 @ExtendWith(MockitoExtension.class)
+// Disabled on JDK 21+ due to ByteBuddy/Mockito incompatibility with rescu RestInvocation
+@DisabledOnJre({JRE.JAVA_21, JRE.JAVA_22, JRE.OTHER})
 class GateioV4DigestTest {
 
   @Mock RestInvocation restInvocation;

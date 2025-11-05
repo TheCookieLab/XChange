@@ -1,0 +1,98 @@
+package org.knowm.xchange.coinbase.v3.service;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.AbstractMap;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.knowm.xchange.Exchange;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
+import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseFeeTier;
+import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.account.AccountInfo;
+import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.Fee;
+import org.knowm.xchange.dto.account.Wallet;
+import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
+import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
+import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.service.account.AccountService;
+import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
+import org.knowm.xchange.service.trade.params.TradeHistoryParams;
+import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+
+public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw implements
+    AccountService {
+
+  public CoinbaseAccountService(Exchange exchange) {
+
+    super(exchange);
+  }
+
+  @Override
+  public AccountInfo getAccountInfo() throws IOException {
+    List<Wallet> wallets = new ArrayList<>();
+
+    List<CoinbaseAccount> coinbaseAccounts = getCoinbaseAccounts();
+    for (CoinbaseAccount coinbaseAccount : coinbaseAccounts) {
+      CoinbaseAmount balance = coinbaseAccount.getBalance();
+      Wallet wallet = Wallet.Builder.from(Arrays.asList(
+              new Balance(Currency.getInstance(balance.getCurrency()), balance.getValue())))
+          .id(coinbaseAccount.getUuid()).build();
+      wallets.add(wallet);
+    }
+
+    return new AccountInfo(wallets);
+  }
+
+  @Override
+  public String withdrawFunds(WithdrawFundsParams params)
+      throws ExchangeException, NotAvailableFromExchangeException, NotYetImplementedForExchangeException, IOException {
+    if (params instanceof DefaultWithdrawFundsParams) {
+      DefaultWithdrawFundsParams defaultParams = (DefaultWithdrawFundsParams) params;
+      return withdrawFunds(defaultParams.getCurrency(), defaultParams.getAmount(),
+          defaultParams.getAddress());
+    }
+    throw new IllegalStateException("Don't know how to withdraw: " + params);
+  }
+
+  @Override
+  public TradeHistoryParams createFundingHistoryParams() {
+    throw new NotAvailableFromExchangeException();
+  }
+
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+    CoinbaseTransactionSummaryResponse response = getTransactionSummary();
+    CoinbaseFeeTier feeTier = response.getFeeTier();
+
+    final Fee globalFee = new Fee(feeTier.getMakerFeeRate(), feeTier.getTakerFeeRate());
+
+    // Return a Map that provides the same fee for any Instrument key without enumerating pairs
+    return Collections.unmodifiableMap(new AbstractMap<Instrument, Fee>() {
+      private final Instrument representativeKey = CurrencyPair.BTC_USD; // arbitrary representative
+
+      @Override
+      public Fee get(Object key) {
+        return globalFee;
+      }
+
+      @Override
+      public Set<Map.Entry<Instrument, Fee>> entrySet() {
+        return Collections.singleton(new AbstractMap.SimpleImmutableEntry<>(representativeKey, globalFee));
+      }
+
+      @Override
+      public int size() {
+        return 1;
+      }
+    });
+  }
+
+}

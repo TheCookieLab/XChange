@@ -1,0 +1,38 @@
+{
+  "accounts": [
+    {
+      "uuid": "acc-123-456-789",
+      "name": "BTC Wallet",
+      "currency": "BTC",
+      "available_balance": {
+        "value": "1.5",
+        "currency": "BTC"
+      },
+      "default": true,
+      "active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T12:00:00Z",
+      "type": "ACCOUNT",
+      "ready": true
+    },
+    {
+      "uuid": "acc-987-654-321",
+      "name": "USD Wallet",
+      "currency": "USD",
+      "available_balance": {
+        "value": "10000.50",
+        "currency": "USD"
+      },
+      "default": false,
+      "active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T12:00:00Z",
+      "type": "ACCOUNT",
+      "ready": true
+    }
+  ],
+  "has_next": false,
+  "cursor": "",
+  "size": 2
+}
+
