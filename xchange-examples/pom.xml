@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.knowm.xchange</groupId>
         <artifactId>xchange-parent</artifactId>
-        <version>5.2.3-SNAPSHOT</version>
+        <version>5.2.4-SNAPSHOT</version>
     </parent>
 
     <artifactId>xchange-examples</artifactId>
@@ -89,21 +89,10 @@
             <artifactId>xchange-bitstamp</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- XChange Bittrex exchange support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-bittrex</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>xchange-bitz</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <!-- XChange Bleutrade exchange support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-bleutrade</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- XChange Blockchain support -->
@@ -122,11 +111,7 @@
             <artifactId>xchange-btcturk</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-ccex</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <!-- XChange Cex.io exchange support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -151,23 +136,14 @@
             <artifactId>xchange-coincheck</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-coindirect</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <!-- XChange CoinEgg support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>xchange-coinegg</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- Xchange Coingi exchange support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-coingi</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>xchange-coinmate</artifactId>
@@ -298,11 +274,7 @@
             <artifactId>xchange-poloniex</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-quoine</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>xchange-ripple</artifactId>

@@ -112,7 +112,7 @@ public class BitstampAdapterTest {
     assertThat(trade.getPrice().toString()).isEqualTo("13.14");
     assertThat(trade.getType()).isEqualTo(OrderType.BID);
     assertThat(trade.getOriginalAmount()).isEqualTo(new BigDecimal("23.66362253"));
-    assertThat(trade.getCurrencyPair()).isEqualTo(CurrencyPair.BTC_USD);
+    assertThat(trade.getInstrument()).isEqualTo(CurrencyPair.BTC_USD);
   }
 
   @Test
@@ -136,7 +136,7 @@ public class BitstampAdapterTest {
     assertThat(trades.getTrades().get(0).getType()).isEqualTo(OrderType.BID);
     assertThat(trades.getTrades().get(0).getOriginalAmount())
         .isEqualTo(new BigDecimal("10.11643836"));
-    assertThat(trades.getTrades().get(0).getCurrencyPair()).isEqualTo(CurrencyPair.BTC_USD);
+    assertThat(trades.getTrades().get(0).getInstrument()).isEqualTo(CurrencyPair.BTC_USD);
   }
 
   @Test
@@ -258,7 +258,9 @@ public class BitstampAdapterTest {
     // Use Jackson to parse it
     ObjectMapper mapper = new ObjectMapper();
     List<BitstampTradingFee> tradingFees =
-        mapper.readValue(is, mapper.getTypeFactory().constructCollectionType(List.class, BitstampTradingFee.class));
+        mapper.readValue(
+            is,
+            mapper.getTypeFactory().constructCollectionType(List.class, BitstampTradingFee.class));
 
     // Call the adapter method
     Map<Instrument, Fee> feesMap = BitstampAdapters.adaptTradingFees(tradingFees);

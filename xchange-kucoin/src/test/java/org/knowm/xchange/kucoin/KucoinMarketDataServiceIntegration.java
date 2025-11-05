@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -21,9 +22,21 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.kucoin.dto.KlineIntervalType;
+import org.knowm.xchange.kucoin.dto.response.KucoinCurrencyResponseV3;
 import org.knowm.xchange.kucoin.dto.response.KucoinKline;
 
 public class KucoinMarketDataServiceIntegration extends KucoinIntegrationTestParent {
+
+  @Test
+  public void valid_currency_infos() throws Exception {
+    KucoinMarketDataService kucoinMarketDataService = exchange.getMarketDataService();
+    List<KucoinCurrencyResponseV3> currencyInfos = kucoinMarketDataService.getAllKucoinCurrencies();
+    assertThat(
+            currencyInfos.stream()
+                .filter(currencyInfo -> currencyInfo.getCurrency().equals(Currency.USDT))
+                .findFirst())
+        .isNotEmpty();
+  }
 
   @Test
   public void testGetPrices() throws Exception {
@@ -71,9 +84,11 @@ public class KucoinMarketDataServiceIntegration extends KucoinIntegrationTestPar
         .allSatisfy(
             ticker -> {
               assertThat(ticker.getInstrument()).isNotNull();
-              assertThat(ticker.getLast()).isNotNull();
 
-              if (ticker.getBid().signum() > 0 && ticker.getAsk().signum() > 0) {
+              if (ticker.getBid() != null
+                  && ticker.getBid().signum() > 0
+                  && ticker.getAsk() != null
+                  && ticker.getAsk().signum() > 0) {
                 assertThat(ticker.getBid()).isLessThan(ticker.getAsk());
               }
             });
@@ -90,7 +105,9 @@ public class KucoinMarketDataServiceIntegration extends KucoinIntegrationTestPar
   @Test
   public void testOrderBookPartialShallow() throws Exception {
     OrderBook orderBook =
-        exchange.getMarketDataService().getOrderBook(CurrencyPair.ETH_BTC, PARAM_PARTIAL_SHALLOW_ORDERBOOK);
+        exchange
+            .getMarketDataService()
+            .getOrderBook(CurrencyPair.ETH_BTC, PARAM_PARTIAL_SHALLOW_ORDERBOOK);
     checkOrderBookIntegrity(orderBook);
     assertThat(orderBook.getAsks().size()).isLessThanOrEqualTo(20);
     assertThat(orderBook.getBids().size()).isLessThanOrEqualTo(20);

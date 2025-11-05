@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.knowm.xchange</groupId>
         <artifactId>xchange-parent</artifactId>
-        <version>5.2.3-SNAPSHOT</version>
+        <version>5.2.4-SNAPSHOT</version>
     </parent>
     <artifactId>xchange-dydx</artifactId>
 
@@ -21,10 +21,6 @@
                 <exclusion>
                     <groupId>com.google.j2objc</groupId>
                     <artifactId>j2objc-annotations</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>jakarta.ws.rs</groupId>
-                    <artifactId>jakarta.ws.rs-api</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>io.vavr</groupId>

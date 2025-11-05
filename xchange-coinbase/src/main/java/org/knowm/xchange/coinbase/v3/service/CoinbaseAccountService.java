@@ -68,7 +68,6 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
     throw new NotAvailableFromExchangeException();
   }
 
-  @Override
   public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
     CoinbaseTransactionSummaryResponse response = getTransactionSummary();
     CoinbaseFeeTier feeTier = response.getFeeTier();

@@ -4,13 +4,18 @@
     <parent>
         <groupId>org.knowm.xchange</groupId>
         <artifactId>xchange-parent</artifactId>
-        <version>5.2.3-SNAPSHOT</version>
+        <version>5.2.4-SNAPSHOT</version>
     </parent>
     <artifactId>xchange-stream-core</artifactId>
 
     <name>XChange Core Stream</name>
 
     <dependencies>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-rxjava3</artifactId>
+            <version>${version.resilience4j}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.knowm.xchange</groupId>
