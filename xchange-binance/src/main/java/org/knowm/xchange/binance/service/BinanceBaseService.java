@@ -46,6 +46,7 @@ public class BinanceBaseService extends BaseResilientExchangeService<BinanceExch
             break;
           }
         case FUTURES:
+        case PORTFOLIO_MARGIN:
           {
             futuresSpec = exchange.getExchangeSpecification();
             binanceFutures =
@@ -68,14 +69,25 @@ public class BinanceBaseService extends BaseResilientExchangeService<BinanceExch
       }
     }
     this.apiKey = exchange.getExchangeSpecification().getApiKey();
-    this.signatureCreator =
-        BinanceHmacDigest.createInstance(exchange.getExchangeSpecification().getSecretKey());
+    if (exchange.getExchangeSpecification().getExchangeSpecificParametersItem("ed25519") != null
+        && exchange
+            .getExchangeSpecification()
+            .getExchangeSpecificParametersItem("ed25519")
+            .equals(true)) {
+      this.signatureCreator =
+          BinanceED25519Digest.createInstance(exchange.getExchangeSpecification().getSecretKey());
+    } else {
+      this.signatureCreator =
+          BinanceHmacDigest.createInstance(exchange.getExchangeSpecification().getSecretKey());
+    }
   }
 
   public Long getRecvWindow() {
     Object obj =
         exchange.getExchangeSpecification().getExchangeSpecificParametersItem("recvWindow");
-    if (obj == null) return null;
+    if (obj == null) {
+      return null;
+    }
     if (obj instanceof Number) {
       long value = ((Number) obj).longValue();
       if (value < 0 || value > 60000) {

@@ -13,7 +13,9 @@ public class KucoinIntegrationTestParent {
 
   @BeforeAll
   static void init() {
-    exchange = ExchangeFactory.INSTANCE.createExchange(KucoinExchange.class);
+    if (exchange == null) {
+      exchange = ExchangeFactory.INSTANCE.createExchange(KucoinExchange.class);
+    }
   }
 
   @BeforeEach

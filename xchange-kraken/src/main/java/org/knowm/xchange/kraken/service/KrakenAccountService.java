@@ -21,7 +21,6 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kraken.KrakenAdapters;
 import org.knowm.xchange.kraken.KrakenUtils;
 import org.knowm.xchange.kraken.dto.account.KrakenDepositAddress;
-import org.knowm.xchange.kraken.dto.account.KrakenLedger;
 import org.knowm.xchange.kraken.dto.account.KrakenTradeBalanceInfo;
 import org.knowm.xchange.kraken.dto.account.LedgerType;
 import org.knowm.xchange.service.account.AccountService;
@@ -51,8 +50,10 @@ public class KrakenAccountService extends KrakenAccountServiceRaw implements Acc
   @Override
   public AccountInfo getAccountInfo() throws IOException {
 
+    var krakenExtendedBalance = getKrakenExtendedBalance();
+    Wallet tradingWallet = KrakenAdapters.toWallet(krakenExtendedBalance, "spot");
+
     KrakenTradeBalanceInfo krakenTradeBalanceInfo = getKrakenTradeBalance();
-    Wallet tradingWallet = KrakenAdapters.adaptWallet(getKrakenBalance());
 
     Wallet marginWallet =
         Wallet.Builder.from(tradingWallet.getBalances().values())
@@ -72,7 +73,8 @@ public class KrakenAccountService extends KrakenAccountServiceRaw implements Acc
   }
 
   @Override
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
+      throws IOException {
     return KrakenAdapters.adaptFees(
         super.getTradeVolume(
             exchange.getExchangeMetaData().getInstruments().keySet().toArray(new CurrencyPair[0])));
@@ -210,23 +212,12 @@ public class KrakenAccountService extends KrakenAccountServiceRaw implements Acc
 
     LedgerType ledgerType = null;
     if (params instanceof HistoryParamsFundingType) {
-      final FundingRecord.Type type = ((HistoryParamsFundingType) params).getType();
-      ledgerType =
-          type == FundingRecord.Type.DEPOSIT
-              ? LedgerType.DEPOSIT
-              : type == FundingRecord.Type.WITHDRAWAL ? LedgerType.WITHDRAWAL : null;
+      FundingRecord.Type type = ((HistoryParamsFundingType) params).getType();
+      ledgerType = KrakenAdapters.toLedgerType(type);
     }
 
-    if (ledgerType == null) {
-      Map<String, KrakenLedger> ledgerEntries =
-          getKrakenLedgerInfo(LedgerType.DEPOSIT, startTime, endTime, offset, currencies);
-      ledgerEntries.putAll(
-          getKrakenLedgerInfo(LedgerType.WITHDRAWAL, startTime, endTime, offset, currencies));
-      return KrakenAdapters.adaptFundingHistory(ledgerEntries);
-    } else {
-      return KrakenAdapters.adaptFundingHistory(
-          getKrakenLedgerInfo(ledgerType, startTime, endTime, offset, currencies));
-    }
+    return KrakenAdapters.adaptFundingHistory(
+        getKrakenPartialLedgerInfo(ledgerType, startTime, endTime, offset, currencies));
   }
 
   public static class KrakenFundingHistoryParams extends DefaultTradeHistoryParamsTimeSpan

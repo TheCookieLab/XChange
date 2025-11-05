@@ -666,12 +666,12 @@ public interface BitstampAuthenticatedV2 {
   @POST
   @Path("fees/trading/")
   List<BitstampTradingFee> getTradingFees(
-          @HeaderParam("X-Auth") String apiKey,
-          @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-          @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-          @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-          @HeaderParam("X-Auth-Version") String version)
-          throws BitstampException, IOException;
+      @HeaderParam("X-Auth") String apiKey,
+      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
+      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
+      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
+      @HeaderParam("X-Auth-Version") String version)
+      throws BitstampException, IOException;
 
   @POST
   @Path("withdrawal/open/")

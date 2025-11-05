@@ -27,6 +27,7 @@ import org.knowm.xchange.dto.marketdata.Ticker.Builder;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
 
 /**
@@ -67,7 +68,7 @@ public final class CoinbaseAdapters {
   }
 
   public static Trade adaptTrade(CoinbaseMarketTrade marketTrade) {
-    return new Trade.Builder().id(marketTrade.getTradeId())
+    return UserTrade.builder().id(marketTrade.getTradeId())
         .instrument(new CurrencyPair(marketTrade.getProductId())).price(marketTrade.getPrice())
         .originalAmount(marketTrade.getSize()).timestamp(
             Date.from(DateTimeFormatter.ISO_INSTANT.parse(marketTrade.getTime(), Instant::from)))

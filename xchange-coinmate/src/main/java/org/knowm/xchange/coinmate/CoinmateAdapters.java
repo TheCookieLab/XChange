@@ -33,6 +33,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.knowm.xchange.coinmate.dto.account.CoinmateBalance;
 import org.knowm.xchange.coinmate.dto.account.CoinmateBalanceDataEntry;
+import org.knowm.xchange.coinmate.dto.account.CoinmateCurrencies;
+import org.knowm.xchange.coinmate.dto.account.CoinmateCurrencyInfo;
+import org.knowm.xchange.coinmate.dto.account.CoinmateWithdrawFee;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateOrderBook;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateOrderBookEntry;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTicker;
@@ -41,6 +44,8 @@ import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTickers;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTradeStatistics;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTransactions;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTransactionsEntry;
+import org.knowm.xchange.coinmate.dto.metadata.CoinmateTradingPairs;
+import org.knowm.xchange.coinmate.dto.metadata.CoinmateTradingPairsEntry;
 import org.knowm.xchange.coinmate.dto.trade.CoinmateOpenOrders;
 import org.knowm.xchange.coinmate.dto.trade.CoinmateOpenOrdersEntry;
 import org.knowm.xchange.coinmate.dto.trade.CoinmateOrderHistoryEntry;
@@ -60,11 +65,16 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.dto.meta.CurrencyMetaData;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
+import org.knowm.xchange.dto.meta.WalletHealth;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsSorted;
 
 /**
@@ -106,7 +116,7 @@ public class CoinmateAdapters {
     Date timestamp = new Date(data.getTimestamp() * 1000L);
 
     return new Ticker.Builder()
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .last(last)
         .bid(bid)
         .ask(ask)
@@ -155,7 +165,7 @@ public class CoinmateAdapters {
   }
 
   public static Trade adaptTrade(CoinmateTransactionsEntry coinmateEntry) {
-    return new Trade.Builder()
+    return Trade.builder()
         .originalAmount(coinmateEntry.getAmount())
         .instrument(CoinmateUtils.getPair(coinmateEntry.getCurrencyPair()))
         .price(coinmateEntry.getPrice())
@@ -206,7 +216,7 @@ public class CoinmateAdapters {
                     UserTrade.builder()
                         .type(typeToOrderTypeOrNull(entry.getTransactionType()))
                         .originalAmount(entry.getAmount())
-                        .currencyPair(
+                        .instrument(
                             CoinmateUtils.getPair(
                                 entry.getAmountCurrency() + "_" + entry.getPriceCurrency()))
                         .price(entry.getPrice())
@@ -231,7 +241,7 @@ public class CoinmateAdapters {
                     UserTrade.builder()
                         .type(typeToOrderTypeOrNull(entry.getType()))
                         .originalAmount(entry.getAmount())
-                        .currencyPair(CoinmateUtils.getPair(entry.getCurrencyPair()))
+                        .instrument(CoinmateUtils.getPair(entry.getCurrencyPair()))
                         .price(entry.getPrice())
                         .timestamp(new Date(entry.getCreatedTimestamp()))
                         .id(Long.toString(entry.getTransactionId()))
@@ -312,19 +322,19 @@ public class CoinmateAdapters {
       }
 
       FundingRecord funding =
-          new FundingRecord(
-              address,
-              addressTag,
-              new Date(entry.getTimestamp()),
-              Currency.getInstance(entry.getAmountCurrency()),
-              entry.getAmount(),
-              transactionId,
-              externalId,
-              type,
-              status,
-              null,
-              entry.getFee(),
-              description);
+          FundingRecord.builder()
+              .address(address)
+              .addressTag(addressTag)
+              .date(new Date(entry.getTimestamp()))
+              .currency(Currency.getInstance(entry.getAmountCurrency()))
+              .amount(entry.getAmount())
+              .internalId(transactionId)
+              .blockchainTransactionHash(externalId)
+              .type(type)
+              .status(status)
+              .fee(entry.getFee())
+              .description(description)
+              .build();
 
       fundings.add(funding);
     }
@@ -371,19 +381,17 @@ public class CoinmateAdapters {
     }
 
     FundingRecord funding =
-        new FundingRecord(
-            entry.getDestination(),
-            entry.getDestinationTag(),
-            new Date(entry.getTimestamp()),
-            Currency.getInstance(entry.getAmountCurrency()),
-            entry.getAmount(),
-            Long.toString(entry.getId()),
-            null,
-            type,
-            status,
-            null,
-            entry.getFee(),
-            null);
+        FundingRecord.builder()
+            .address(entry.getDestination())
+            .addressTag(entry.getDestinationTag())
+            .date(new Date(entry.getTimestamp()))
+            .currency(Currency.getInstance(entry.getAmountCurrency()))
+            .amount(entry.getAmount())
+            .internalId(Long.toString(entry.getId()))
+            .type(type)
+            .status(status)
+            .fee(entry.getFee())
+            .build();
 
     return Collections.singletonList(funding);
   }
@@ -549,5 +557,133 @@ public class CoinmateAdapters {
         .open(tradeStatistics.getTodaysOpen())
         .percentageChange(tradeStatistics.getDailyChange())
         .build();
+  }
+
+  /**
+   * Adapts CoinmateCurrencies to XChange CurrencyMetaData map.
+   *
+   * @param coinmateCurrencies The Coinmate currency information
+   * @return Map of Currency to CurrencyMetaData
+   */
+  public static Map<Currency, CurrencyMetaData> adaptCurrencies(
+      CoinmateCurrencies coinmateCurrencies) {
+    if (coinmateCurrencies == null || coinmateCurrencies.getData() == null) {
+      return Collections.emptyMap();
+    }
+
+    Map<Currency, CurrencyMetaData> currencies = new java.util.HashMap<>();
+
+    for (CoinmateCurrencyInfo currencyInfo : coinmateCurrencies.getData()) {
+      Currency currency = Currency.getInstance(currencyInfo.getCurrency());
+
+      // Get withdrawal fee from first network if available
+      BigDecimal withdrawalFee = null;
+      BigDecimal minWithdrawalAmount = null;
+
+      if (currencyInfo.getNetworks() != null && !currencyInfo.getNetworks().isEmpty()) {
+        // Use first network's withdrawal info
+        var network = currencyInfo.getNetworks().get(0);
+        if (network.getWithdraw() != null && network.getWithdraw().isEnabled()) {
+          minWithdrawalAmount = network.getWithdraw().getMinAmount();
+
+          // Get first fee variant
+          if (network.getWithdraw().getFee() != null && !network.getWithdraw().getFee().isEmpty()) {
+            CoinmateWithdrawFee feeInfo = network.getWithdraw().getFee().get(0);
+            withdrawalFee = feeInfo.getFixFee();
+          }
+        }
+      }
+
+      CurrencyMetaData metadata =
+          getCurrencyMetaData(currencyInfo, withdrawalFee, minWithdrawalAmount);
+
+      currencies.put(currency, metadata);
+    }
+
+    return currencies;
+  }
+
+  /**
+   * Adapts CoinmateTradingPairs to XChange InstrumentMetaData map.
+   *
+   * @param coinmateTradingPairs The Coinmate trading pairs information
+   * @return Map of Instrument to InstrumentMetaData
+   */
+  public static Map<Instrument, InstrumentMetaData> adaptTradingPairs(
+      CoinmateTradingPairs coinmateTradingPairs) {
+    if (coinmateTradingPairs == null || coinmateTradingPairs.getData() == null) {
+      return Collections.emptyMap();
+    }
+
+    Map<Instrument, InstrumentMetaData> pairs = new java.util.HashMap<>();
+
+    for (CoinmateTradingPairsEntry pairInfo : coinmateTradingPairs.getData()) {
+      CurrencyPair currencyPair = CoinmateUtils.getPair(pairInfo.getName());
+
+      InstrumentMetaData metadata =
+          new InstrumentMetaData(
+              null, // tradingFee
+              null, // feeTiers
+              BigDecimal.valueOf(pairInfo.getMinAmount()), // minimumAmount
+              null, // maximumAmount
+              null, // counterMinimumAmount
+              null, // counterMaximumAmount
+              pairInfo.getPriceScale(), // priceScale
+              pairInfo.getVolumeScale(), // volumeScale
+              null, // amountStepSize
+              null, // priceStepSize
+              null, // tradingFeeCurrency
+              true, // marketOrderEnabled - Coinmate supports market orders
+              null // contractValue
+              );
+
+      pairs.put(currencyPair, metadata);
+    }
+
+    return pairs;
+  }
+
+  /**
+   * Adapts Coinmate metadata to XChange ExchangeMetaData. Similar to Kraken's
+   * adaptToExchangeMetaData method.
+   *
+   * @param originalMetaData Original metadata (for rate limits)
+   * @param coinmateCurrencies Coinmate currency information
+   * @param coinmateTradingPairs Coinmate trading pairs information
+   * @return ExchangeMetaData with adapted information
+   */
+  public static ExchangeMetaData adaptToExchangeMetaData(
+      ExchangeMetaData originalMetaData,
+      CoinmateCurrencies coinmateCurrencies,
+      CoinmateTradingPairs coinmateTradingPairs) {
+
+    Map<Currency, CurrencyMetaData> currencies = adaptCurrencies(coinmateCurrencies);
+    Map<Instrument, InstrumentMetaData> pairs = adaptTradingPairs(coinmateTradingPairs);
+
+    return new ExchangeMetaData(
+        pairs,
+        currencies,
+        originalMetaData == null ? null : originalMetaData.getPublicRateLimits(),
+        originalMetaData == null ? null : originalMetaData.getPrivateRateLimits(),
+        originalMetaData == null ? null : originalMetaData.isShareRateLimits());
+  }
+
+  private static CurrencyMetaData getCurrencyMetaData(
+      CoinmateCurrencyInfo currencyInfo, BigDecimal withdrawalFee, BigDecimal minWithdrawalAmount) {
+    boolean depositsEnabled = currencyInfo.isDepositEnabled();
+    boolean withdrawalsEnabled = currencyInfo.isWithdrawEnabled();
+    WalletHealth walletHealth;
+    if (depositsEnabled && withdrawalsEnabled) {
+      walletHealth = WalletHealth.ONLINE;
+    } else if (!depositsEnabled && !withdrawalsEnabled) {
+      walletHealth = WalletHealth.OFFLINE;
+    } else if (depositsEnabled) {
+      walletHealth = WalletHealth.WITHDRAWALS_DISABLED;
+    } else {
+      walletHealth = WalletHealth.DEPOSITS_DISABLED;
+    }
+
+    return new CurrencyMetaData(
+        currencyInfo.getPrecision(), withdrawalFee, minWithdrawalAmount, walletHealth);
   }
 }

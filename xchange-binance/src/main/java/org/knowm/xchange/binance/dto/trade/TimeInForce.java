@@ -6,10 +6,14 @@ import org.knowm.xchange.dto.Order.IOrderFlags;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
 public enum TimeInForce implements IOrderFlags {
-  GTC,
-  GTX,
-  FOK,
-  IOC;
+  GTC, // Good Till Cancel
+  GTX, // Good Till Crossing (Post Only)
+  FOK, // Fill or Kill
+  IOC, // Immediate or Cancel
+  GTE_GTC, // Good Till Expired or Canceled
+  DAY, // Day Order
+  GTD, // Good Till Date
+  ;
 
   @JsonCreator
   public static TimeInForce getTimeInForce(String s) {

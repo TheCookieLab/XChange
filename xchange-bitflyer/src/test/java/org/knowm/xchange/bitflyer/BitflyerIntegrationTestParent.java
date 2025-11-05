@@ -13,7 +13,9 @@ public class BitflyerIntegrationTestParent {
 
   @BeforeAll
   static void init() {
-    exchange = ExchangeFactory.INSTANCE.createExchange(BitflyerExchange.class);
+    if (exchange == null) {
+      exchange = ExchangeFactory.INSTANCE.createExchange(BitflyerExchange.class);
+    }
   }
 
   @BeforeEach
