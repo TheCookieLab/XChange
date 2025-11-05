@@ -40,7 +40,10 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
   }
 
   void resubscribe() {
-    // No-op: streaming service handles reconnection automatically.
+    // Clear the tracking map on reconnection to prevent memory leaks.
+    // The streaming service will send a fresh snapshot with current state,
+    // so we don't need to maintain stale cumulative quantity data.
+    lastCumulativeQuantity.clear();
   }
 
   public Observable<CoinbaseUserOrderEvent> getUserOrderEvents(List<String> productIds) {
@@ -241,6 +244,13 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
       lastCumulativeQuantity.put(orderId, currentCumulative);
     }
     
+    // Remove entries for completed orders to prevent memory leaks
+    // Terminal states: FILLED, CANCELLED, CANCELED, REJECTED, EXPIRED, SETTLED
+    String status = event.getStatus();
+    if (status != null && isTerminalStatus(status)) {
+      lastCumulativeQuantity.remove(orderId);
+    }
+    
     return UserTrade.builder()
         .type(event.getSide())
         .instrument(event.getProduct())
@@ -258,6 +268,24 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
       throw new ExchangeSecurityException(
           "Coinbase streaming private channels require API credentials");
     }
+  }
+
+  /**
+   * Checks if an order status indicates the order is in a terminal state.
+   * Terminal orders will no longer receive updates, so we can safely remove
+   * their tracking data to prevent memory leaks.
+   */
+  private static boolean isTerminalStatus(String status) {
+    if (status == null) {
+      return false;
+    }
+    String upperStatus = status.toUpperCase();
+    return upperStatus.equals("FILLED")
+        || upperStatus.equals("CANCELLED")
+        || upperStatus.equals("CANCELED")
+        || upperStatus.equals("REJECTED")
+        || upperStatus.equals("EXPIRED")
+        || upperStatus.equals("SETTLED");
   }
 
   private static java.util.stream.Stream<JsonNode> stream(JsonNode array) {
