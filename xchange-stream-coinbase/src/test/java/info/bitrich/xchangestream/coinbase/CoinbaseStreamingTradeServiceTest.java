@@ -245,6 +245,376 @@ class CoinbaseStreamingTradeServiceTest {
     assertEquals("BTC-USD", request.getProductIds().get(0));
   }
 
+  @Test
+  void getUserTradesEmitsDeltaForPartialFills() throws Exception {
+    ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+    spec.setApiKey("key");
+    spec.setSecretKey("secret");
+
+    // Simulate multiple updates for the same order with increasing cumulative quantity
+    JsonNode message1 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-123\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"order_type\": \"limit\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"2.0\",\n"
+                + "          \"cumulative_quantity\": \"0.5\",\n"
+                + "          \"leaves_quantity\": \"1.5\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:01Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    JsonNode message2 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-123\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"order_type\": \"limit\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"2.0\",\n"
+                + "          \"cumulative_quantity\": \"1.0\",\n"
+                + "          \"leaves_quantity\": \"1.0\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:02Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    JsonNode message3 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-123\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"order_type\": \"limit\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"2.0\",\n"
+                + "          \"cumulative_quantity\": \"1.5\",\n"
+                + "          \"leaves_quantity\": \"0.5\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:03Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    // Also include a duplicate update (same cumulative quantity) that should be filtered out
+    JsonNode message4 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-123\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"order_type\": \"limit\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"2.0\",\n"
+                + "          \"cumulative_quantity\": \"1.5\",\n"
+                + "          \"leaves_quantity\": \"0.5\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:04Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    StubStreamingService streamingService =
+        new StubStreamingService(Observable.just(message1, message2, message3, message4));
+    CoinbaseStreamingTradeService service =
+        new CoinbaseStreamingTradeService(streamingService, spec);
+
+    List<UserTrade> trades =
+        service.getUserTrades(CurrencyPair.BTC_USD).toList().blockingGet();
+
+    // Should emit 3 trades (one for each partial fill, duplicate filtered out)
+    assertEquals(3, trades.size(), "Should emit trades for each incremental fill");
+
+    // First trade: 0.5 BTC (first cumulative quantity)
+    UserTrade first = trades.get(0);
+    assertEquals("order-123", first.getOrderId());
+    assertEquals(new BigDecimal("0.5"), first.getOriginalAmount(), "First event should emit full cumulative amount");
+
+    // Second trade: 0.5 BTC (delta: 1.0 - 0.5 = 0.5)
+    UserTrade second = trades.get(1);
+    assertEquals("order-123", second.getOrderId());
+    assertEquals(new BigDecimal("0.5"), second.getOriginalAmount(), "Second event should emit delta only");
+
+    // Third trade: 0.5 BTC (delta: 1.5 - 1.0 = 0.5)
+    UserTrade third = trades.get(2);
+    assertEquals("order-123", third.getOrderId());
+    assertEquals(new BigDecimal("0.5"), third.getOriginalAmount(), "Third event should emit delta only");
+
+    // Total should be 1.5 BTC (not 4.5 BTC which would be the buggy behavior)
+    BigDecimal totalAmount =
+        trades.stream()
+            .map(UserTrade::getOriginalAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    assertEquals(new BigDecimal("1.5"), totalAmount, "Total should match final cumulative quantity");
+  }
+
+  @Test
+  void getUserTradesTracksMultipleOrdersSeparately() throws Exception {
+    ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+    spec.setApiKey("key");
+    spec.setSecretKey("secret");
+
+    // Two different orders with overlapping updates
+    JsonNode message1 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-1\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"1.0\",\n"
+                + "          \"cumulative_quantity\": \"0.3\",\n"
+                + "          \"leaves_quantity\": \"0.7\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:01Z\"\n"
+                + "        },\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-2\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"sell\",\n"
+                + "          \"avg_price\": \"51000\",\n"
+                + "          \"size\": \"2.0\",\n"
+                + "          \"cumulative_quantity\": \"0.5\",\n"
+                + "          \"leaves_quantity\": \"1.5\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:01Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    JsonNode message2 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-1\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"1.0\",\n"
+                + "          \"cumulative_quantity\": \"0.6\",\n"
+                + "          \"leaves_quantity\": \"0.4\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:02Z\"\n"
+                + "        },\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-2\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"sell\",\n"
+                + "          \"avg_price\": \"51000\",\n"
+                + "          \"size\": \"2.0\",\n"
+                + "          \"cumulative_quantity\": \"1.0\",\n"
+                + "          \"leaves_quantity\": \"1.0\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:02Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    StubStreamingService streamingService =
+        new StubStreamingService(Observable.just(message1, message2));
+    CoinbaseStreamingTradeService service =
+        new CoinbaseStreamingTradeService(streamingService, spec);
+
+    List<UserTrade> trades =
+        service.getUserTrades(CurrencyPair.BTC_USD).toList().blockingGet();
+
+    // Should have 4 trades total (2 orders × 2 updates each)
+    assertEquals(4, trades.size(), "Should track both orders separately");
+
+    // Verify order-1 trades
+    List<UserTrade> order1Trades =
+        trades.stream()
+            .filter(t -> "order-1".equals(t.getOrderId()))
+            .collect(java.util.stream.Collectors.toList());
+    assertEquals(2, order1Trades.size());
+    assertEquals(new BigDecimal("0.3"), order1Trades.get(0).getOriginalAmount());
+    assertEquals(new BigDecimal("0.3"), order1Trades.get(1).getOriginalAmount()); // delta: 0.6 - 0.3
+
+    // Verify order-2 trades
+    List<UserTrade> order2Trades =
+        trades.stream()
+            .filter(t -> "order-2".equals(t.getOrderId()))
+            .collect(java.util.stream.Collectors.toList());
+    assertEquals(2, order2Trades.size());
+    assertEquals(new BigDecimal("0.5"), order2Trades.get(0).getOriginalAmount());
+    assertEquals(new BigDecimal("0.5"), order2Trades.get(1).getOriginalAmount()); // delta: 1.0 - 0.5
+  }
+
+  @Test
+  void getUserTradesFiltersOutNonIncreasingCumulativeQuantity() throws Exception {
+    ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+    spec.setApiKey("key");
+    spec.setSecretKey("secret");
+
+    // First update with cumulative quantity
+    JsonNode message1 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-123\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"1.0\",\n"
+                + "          \"cumulative_quantity\": \"0.5\",\n"
+                + "          \"leaves_quantity\": \"0.5\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:01Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    // Second update with same cumulative quantity (should be filtered out)
+    JsonNode message2 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-123\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"1.0\",\n"
+                + "          \"cumulative_quantity\": \"0.5\",\n"
+                + "          \"leaves_quantity\": \"0.5\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:02Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    // Third update with decreasing cumulative quantity (should be filtered out)
+    JsonNode message3 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-123\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"1.0\",\n"
+                + "          \"cumulative_quantity\": \"0.3\",\n"
+                + "          \"leaves_quantity\": \"0.7\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:03Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    // Fourth update with increasing cumulative quantity (should be emitted)
+    JsonNode message4 =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"user\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"update\",\n"
+                + "      \"orders\": [\n"
+                + "        {\n"
+                + "          \"order_id\": \"order-123\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"order_side\": \"buy\",\n"
+                + "          \"avg_price\": \"50000\",\n"
+                + "          \"size\": \"1.0\",\n"
+                + "          \"cumulative_quantity\": \"0.7\",\n"
+                + "          \"leaves_quantity\": \"0.3\",\n"
+                + "          \"status\": \"OPEN\",\n"
+                + "          \"event_time\": \"2024-01-01T00:00:04Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    StubStreamingService streamingService =
+        new StubStreamingService(Observable.just(message1, message2, message3, message4));
+    CoinbaseStreamingTradeService service =
+        new CoinbaseStreamingTradeService(streamingService, spec);
+
+    List<UserTrade> trades =
+        service.getUserTrades(CurrencyPair.BTC_USD).toList().blockingGet();
+
+    // Should only emit 2 trades (first and fourth, second and third filtered out)
+    assertEquals(2, trades.size(), "Should filter out non-increasing cumulative quantities");
+
+    assertEquals(new BigDecimal("0.5"), trades.get(0).getOriginalAmount());
+    assertEquals(new BigDecimal("0.2"), trades.get(1).getOriginalAmount()); // delta: 0.7 - 0.5
+  }
+
   private static final class StubStreamingService extends CoinbaseStreamingService {
     private final Observable<JsonNode> response;
     private CoinbaseSubscriptionRequest lastRequest;

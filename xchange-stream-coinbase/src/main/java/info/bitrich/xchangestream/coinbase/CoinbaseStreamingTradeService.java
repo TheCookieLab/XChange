@@ -7,11 +7,11 @@ import info.bitrich.xchangestream.coinbase.dto.CoinbaseUserOrderEvent;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import io.reactivex.rxjava3.core.Observable;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -28,6 +28,9 @@ class CoinbaseStreamingTradeService implements StreamingTradeService {
 
   private final CoinbaseStreamingService streamingService;
   private final org.knowm.xchange.ExchangeSpecification specification;
+  
+  // Track last seen cumulative quantity per order ID to calculate deltas
+  private final ConcurrentHashMap<String, BigDecimal> lastCumulativeQuantity = new ConcurrentHashMap<>();
 
   CoinbaseStreamingTradeService(
       CoinbaseStreamingService streamingService,
@@ -87,7 +90,7 @@ class CoinbaseStreamingTradeService implements StreamingTradeService {
     String productId = CoinbaseProductIds.productId(currencyPair);
     return streamFilledTrades(Collections.singletonList(productId))
         .filter(event -> currencyPair.equals(event.getProduct()))
-        .map(CoinbaseStreamingTradeService::toUserTrade);
+        .map(this::toUserTrade);
   }
 
   @Override
@@ -101,15 +104,33 @@ class CoinbaseStreamingTradeService implements StreamingTradeService {
   @Override
   public Observable<UserTrade> getUserTrades() {
     ensureAuthenticated();
-    return streamFilledTrades(Collections.emptyList()).map(CoinbaseStreamingTradeService::toUserTrade);
+    return streamFilledTrades(Collections.emptyList()).map(this::toUserTrade);
   }
 
   private Observable<CoinbaseUserOrderEvent> streamFilledTrades(List<String> productIds) {
     return getUserOrderEvents(productIds)
         .filter(
-            event ->
-                event.getFilledSize() != null
-                    && event.getFilledSize().compareTo(BigDecimal.ZERO) > 0);
+            event -> {
+              if (event.getFilledSize() == null
+                  || event.getFilledSize().compareTo(BigDecimal.ZERO) <= 0) {
+                return false;
+              }
+              
+              // Check if there's a new fill (delta > 0)
+              // We'll calculate the actual delta in toUserTrade to avoid double-processing
+              String orderId = event.getOrderId();
+              BigDecimal currentCumulative = event.getFilledSize();
+              BigDecimal lastCumulative = lastCumulativeQuantity.get(orderId);
+              
+              if (lastCumulative == null) {
+                // First time seeing this order - emit if it has any fills
+                return currentCumulative.compareTo(BigDecimal.ZERO) > 0;
+              }
+              
+              // Only emit if there's a positive delta (new fill occurred)
+              BigDecimal delta = currentCumulative.subtract(lastCumulative);
+              return delta.compareTo(BigDecimal.ZERO) > 0;
+            });
   }
 
   private List<CoinbaseUserOrderEvent> extractOrderEvents(JsonNode message) {
@@ -193,16 +214,38 @@ class CoinbaseStreamingTradeService implements StreamingTradeService {
         price);
   }
 
-  private static UserTrade toUserTrade(CoinbaseUserOrderEvent event) {
+  private UserTrade toUserTrade(CoinbaseUserOrderEvent event) {
     BigDecimal price =
         Optional.ofNullable(event.getAveragePrice()).orElse(event.getLimitPrice());
-    BigDecimal amount =
-        Optional.ofNullable(event.getFilledSize()).orElse(BigDecimal.ZERO);
+    
+    // Calculate delta: current cumulative - last cumulative
+    // This represents only the incremental fill, not the total
+    String orderId = event.getOrderId();
+    BigDecimal currentCumulative = event.getFilledSize();
+    BigDecimal lastCumulative = lastCumulativeQuantity.get(orderId);
+    
+    BigDecimal deltaAmount;
+    if (lastCumulative == null) {
+      // First event for this order - use the full cumulative amount
+      deltaAmount = currentCumulative != null ? currentCumulative : BigDecimal.ZERO;
+    } else {
+      // Calculate the incremental fill amount (delta since last update)
+      deltaAmount = currentCumulative != null 
+          ? currentCumulative.subtract(lastCumulative) 
+          : BigDecimal.ZERO;
+    }
+    
+    // Update the tracking map with the new cumulative quantity
+    // This must happen after calculating the delta
+    if (currentCumulative != null) {
+      lastCumulativeQuantity.put(orderId, currentCumulative);
+    }
+    
     return UserTrade.builder()
         .type(event.getSide())
         .instrument(event.getProduct())
         .price(price)
-        .originalAmount(amount)
+        .originalAmount(deltaAmount)
         .timestamp(event.getEventTime() == null ? null : Date.from(event.getEventTime()))
         .orderId(event.getOrderId())
         .build();
