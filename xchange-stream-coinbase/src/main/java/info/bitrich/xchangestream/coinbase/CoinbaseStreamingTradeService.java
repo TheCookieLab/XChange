@@ -175,8 +175,19 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
 
   private Optional<CoinbaseUserOrderEvent> toUserOrderEvent(JsonNode orderNode, JsonNode event) {
     try {
+      String orderId = orderNode.path("order_id").asText(null);
+      if (orderId == null || orderId.isEmpty()) {
+        LOG.warn("Skipping Coinbase user order event without order_id: {}", orderNode);
+        return Optional.empty();
+      }
+
       String productId = orderNode.path("product_id").asText(null);
       CurrencyPair pair = CoinbaseStreamingAdapters.toCurrencyPair(productId);
+      if (pair == null) {
+        LOG.warn("Skipping Coinbase user order event with unknown product_id: {}", orderNode);
+        return Optional.empty();
+      }
+
       Order.OrderType side =
           CoinbaseStreamingAdapters.parseOrderSide(orderNode.path("order_side").asText(null));
       BigDecimal orderSize =
@@ -184,7 +195,7 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
               .orElse(Optional.ofNullable(CoinbaseStreamingAdapters.asBigDecimal(orderNode, "order_total")).orElse(null));
       return Optional.of(
           new CoinbaseUserOrderEvent(
-              orderNode.path("order_id").asText(null),
+              orderId,
               orderNode.path("client_order_id").asText(null),
               pair,
               side,

@@ -11,13 +11,15 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -292,8 +294,9 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   static final class OrderBookState {
     private final CurrencyPair currencyPair;
     private final OrderBookSnapshotProvider snapshotProvider;
-    private final Map<BigDecimal, LimitOrder> bids = new ConcurrentHashMap<>();
-    private final Map<BigDecimal, LimitOrder> asks = new ConcurrentHashMap<>();
+    private final NavigableMap<BigDecimal, LimitOrder> bids =
+        new ConcurrentSkipListMap<>(Collections.reverseOrder());
+    private final NavigableMap<BigDecimal, LimitOrder> asks = new ConcurrentSkipListMap<>();
     // Use AtomicLong to ensure thread-safe access to sequence number
     // This prevents race conditions when process() is called concurrently from
     // multiple subscribers or different schedulers
@@ -383,8 +386,8 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       }
       OrderBook orderBook = new OrderBook(
           null,
-          sortedOrders(asks, Order.OrderType.ASK),
-          sortedOrders(bids, Order.OrderType.BID));
+          new ArrayList<>(asks.values()),
+          new ArrayList<>(bids.values()));
       return Maybe.just(orderBook);
     }
 
@@ -400,7 +403,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     }
 
     private void populateSnapshotSide(
-        Map<BigDecimal, LimitOrder> side,
+        NavigableMap<BigDecimal, LimitOrder> side,
         JsonNode levels,
         Order.OrderType orderType,
         CurrencyPair pair) {
@@ -449,7 +452,8 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       return changed;
     }
 
-    private boolean applyUpdatesToSide(Map<BigDecimal, LimitOrder> side, List<LimitOrder> updates) {
+    private boolean applyUpdatesToSide(
+        NavigableMap<BigDecimal, LimitOrder> side, List<LimitOrder> updates) {
       boolean changed = false;
       for (LimitOrder update : updates) {
         BigDecimal price = update.getLimitPrice();
@@ -466,16 +470,6 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         }
       }
       return changed;
-    }
-
-    private List<LimitOrder> sortedOrders(
-        Map<BigDecimal, LimitOrder> side, Order.OrderType orderType) {
-      return side.values().stream()
-          .sorted(
-              orderType == Order.OrderType.BID
-                  ? (l, r) -> r.getLimitPrice().compareTo(l.getLimitPrice())
-                  : (l, r) -> l.getLimitPrice().compareTo(r.getLimitPrice()))
-          .collect(Collectors.toList());
     }
 
     private boolean ensureInitialized(long nextSequence) {

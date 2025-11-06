@@ -100,6 +100,41 @@ class CoinbaseStreamingTradeServiceTest {
     }
 
     @Test
+    void userTradeEventsWithoutOrderIdAreIgnored() throws Exception {
+        ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+        spec.setApiKey("key");
+        spec.setSecretKey("secret");
+
+        String payload = "{\n"
+            + "  \"channel\": \"user\",\n"
+            + "  \"events\": [\n"
+            + "    {\n"
+            + "      \"type\": \"update\",\n"
+            + "      \"orders\": [\n"
+            + "        {\n"
+            + "          \"client_order_id\": \"no-server-id\",\n"
+            + "          \"product_id\": \"BTC-USD\",\n"
+            + "          \"order_side\": \"buy\",\n"
+            + "          \"avg_price\": \"101\",\n"
+            + "          \"cumulative_quantity\": \"0.5\",\n"
+            + "          \"leaves_quantity\": \"0.5\",\n"
+            + "          \"status\": \"FILLED\",\n"
+            + "          \"event_time\": \"2024-01-01T00:00:01Z\"\n"
+            + "        }\n"
+            + "      ]\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+        JsonNode message = MAPPER.readTree(payload);
+        StubStreamingService streamingService = new StubStreamingService(Observable.just(message));
+        CoinbaseStreamingTradeService service = new CoinbaseStreamingTradeService(streamingService, spec);
+
+        List<UserTrade> trades = service.getUserTrades().toList().blockingGet();
+        assertTrue(trades.isEmpty(), "Events without order_id should be ignored");
+    }
+
+    @Test
     void getUserTradesFiltersByCurrencyPair() throws Exception {
         ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
         spec.setApiKey("key");
