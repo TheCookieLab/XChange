@@ -39,6 +39,8 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
       "Coinbase_Default_Candle_Granularity";
   public static final String PARAM_DEFAULT_CANDLE_PRODUCT_TYPE =
       "Coinbase_Default_Candle_Product_Type";
+  public static final String PARAM_WEBSOCKET_JWT_SUPPLIER =
+      "Coinbase_Websocket_Jwt_Supplier";
 
   public static final String PROD_WS_URI = "wss://advanced-trade-ws.coinbase.com";
   public static final String SANDBOX_WS_URI = "wss://advanced-trade-ws.sandbox.coinbase.com";
@@ -245,8 +247,29 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   }
 
   private Supplier<String> resolveJwtSupplier(ExchangeSpecification specification) {
+    Supplier<String> injectedSupplier = extractInjectedJwtSupplier(specification);
+    if (injectedSupplier != null) {
+      return injectedSupplier;
+    }
+
     Supplier<String> helperSupplier = attemptHelperJwtSupplier(specification);
     return helperSupplier != null ? helperSupplier : createLocalJwtSupplier(specification);
+  }
+
+  @SuppressWarnings("unchecked")
+  private Supplier<String> extractInjectedJwtSupplier(ExchangeSpecification specification) {
+    Object param =
+        specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_JWT_SUPPLIER);
+    if (param == null) {
+      return null;
+    }
+    if (param instanceof Supplier) {
+      return (Supplier<String>) param;
+    }
+    LOG.warn(
+        "Ignoring Coinbase websocket JWT supplier parameter of unsupported type: {}",
+        param.getClass().getName());
+    return null;
   }
 
   private CoinbaseStreamingMarketDataService.OrderBookSnapshotProvider createSnapshotProvider() {
