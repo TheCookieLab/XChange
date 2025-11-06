@@ -218,16 +218,41 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
    * JWT token expiration time in seconds (2 minutes).
    * This is the recommended expiry time for Coinbase Advanced Trade API JWT tokens.
    */
-  private static final int JWT_EXPIRY_SECONDS = 120;
+  public static final int JWT_EXPIRY_SECONDS = 120;
 
   private String generateJWT(String method, String uri) {
+    return generateJwtInternal(method + " " + uri);
+  }
+
+  /**
+   * Generates a JWT token for Coinbase Advanced Trade WebSocket authentication using the ES256
+   * algorithm without an {@code uri} claim.
+   *
+   * @return Signed JWT string suitable for WebSocket authentication payloads
+   */
+  public String generateWebsocketJwt() {
+    return generateJwtInternal(null);
+  }
+
+  private String generateJwtInternal(String uriClaim) {
     long now = Instant.now().getEpochSecond();
     Date nbf = Date.from(Instant.ofEpochSecond(now));
     Date exp = Date.from(Instant.ofEpochSecond(now + JWT_EXPIRY_SECONDS));
 
-    return JWT.create().withKeyId(keyName).withIssuer("cdp").withSubject(keyName).withNotBefore(nbf)
-        .withExpiresAt(exp).withClaim("uri", method + " " + uri)
-        .withHeader(Collections.singletonMap("nonce", randomHex(16))).sign(alg);
+    com.auth0.jwt.JWTCreator.Builder builder =
+        JWT.create()
+            .withKeyId(keyName)
+            .withIssuer("cdp")
+            .withSubject(keyName)
+            .withNotBefore(nbf)
+            .withExpiresAt(exp)
+            .withHeader(Collections.singletonMap("nonce", randomHex(16)));
+
+    if (uriClaim != null) {
+      builder.withClaim("uri", uriClaim);
+    }
+
+    return builder.sign(alg);
   }
 
   /**

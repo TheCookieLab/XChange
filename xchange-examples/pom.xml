@@ -95,6 +95,11 @@
             <artifactId>xchange-bitz</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>xchange-stream-coinbase</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- XChange Blockchain support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
