@@ -28,14 +28,43 @@ import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
 
+/**
+ * Account service implementation for Coinbase Advanced Trade (v3) API.
+ * <p>
+ * This service provides access to account-related operations including account information,
+ * balances, withdrawals, and trading fees. It extends {@link CoinbaseAccountServiceRaw} to provide
+ * high-level XChange DTOs mapped from Coinbase-specific responses.
+ * </p>
+ * <p>
+ * All methods in this service map Coinbase API responses to standard XChange account objects
+ * such as {@link AccountInfo}, {@link Wallet}, {@link Balance}, and {@link Fee}.
+ * </p>
+ */
 public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw implements
     AccountService {
 
+  /**
+   * Constructs a new account service using the exchange's default configuration.
+   *
+   * @param exchange The exchange instance containing API credentials and configuration.
+   */
   public CoinbaseAccountService(Exchange exchange) {
 
     super(exchange);
   }
 
+  /**
+   * Retrieves account information including all wallets and balances for the authenticated user.
+   * <p>
+   * This method fetches all accounts from Coinbase and maps them to XChange {@link Wallet} objects,
+   * each containing balance information for a specific currency. The accounts are retrieved with
+   * automatic pagination to ensure all accounts are included.
+   * </p>
+   *
+   * @return An {@link AccountInfo} object containing a list of wallets, each representing an account
+   *         with its balance for a specific currency.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
   @Override
   public AccountInfo getAccountInfo() throws IOException {
     List<Wallet> wallets = new ArrayList<>();
@@ -52,6 +81,22 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
     return new AccountInfo(wallets);
   }
 
+  /**
+   * Withdraws funds from the account to an external address.
+   * <p>
+   * This method supports withdrawals using {@link DefaultWithdrawFundsParams}, which includes
+   * the currency, amount, and destination address. Other parameter types are not currently supported.
+   * </p>
+   *
+   * @param params Withdrawal parameters. Must be an instance of {@link DefaultWithdrawFundsParams}
+   *               containing the currency, amount, and destination address.
+   * @return The transaction ID or withdrawal identifier as a string.
+   * @throws ExchangeException                  If the exchange returns an error response.
+   * @throws NotAvailableFromExchangeException  If withdrawal is not available for this exchange.
+   * @throws NotYetImplementedForExchangeException If the withdrawal operation is not yet implemented.
+   * @throws IOException                        If there is an error communicating with the Coinbase API.
+   * @throws IllegalStateException              If the provided params are not of a supported type.
+   */
   @Override
   public String withdrawFunds(WithdrawFundsParams params)
       throws ExchangeException, NotAvailableFromExchangeException, NotYetImplementedForExchangeException, IOException {
@@ -63,11 +108,39 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
     throw new IllegalStateException("Don't know how to withdraw: " + params);
   }
 
+  /**
+   * Creates parameters for retrieving funding history (deposits and withdrawals).
+   * <p>
+   * This operation is not currently available for Coinbase Advanced Trade API.
+   * </p>
+   *
+   * @return This method always throws {@link NotAvailableFromExchangeException}.
+   * @throws NotAvailableFromExchangeException Always thrown, as funding history is not available.
+   */
   @Override
   public TradeHistoryParams createFundingHistoryParams() {
     throw new NotAvailableFromExchangeException();
   }
 
+  /**
+   * Retrieves dynamic trading fees by instrument.
+   * <p>
+   * This method fetches the current fee tier from the transaction summary endpoint and returns
+   * a map that provides the same maker and taker fee rates for all instruments. Coinbase Advanced
+   * Trade uses a global fee structure, so all trading pairs share the same fee rates based on the
+   * user's fee tier.
+   * </p>
+   * <p>
+   * The returned map is an unmodifiable view that returns the same {@link Fee} object for any
+   * instrument key. The fee rates are determined by the user's current fee tier, which is based
+   * on their trading volume and other factors.
+   * </p>
+   *
+   * @return An unmodifiable map that provides the same {@link Fee} (with maker and taker rates)
+   *         for any instrument key. The map contains a single representative entry for
+   *         {@link CurrencyPair#BTC_USD}.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
   public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
     CoinbaseTransactionSummaryResponse response = getTransactionSummary();
     CoinbaseFeeTier feeTier = response.getFeeTier();

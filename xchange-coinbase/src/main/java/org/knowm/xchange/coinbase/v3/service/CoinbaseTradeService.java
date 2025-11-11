@@ -31,26 +31,79 @@ import org.knowm.xchange.service.trade.params.CancelAllOrders;
 import org.knowm.xchange.service.trade.params.DefaultCancelOrderParamId;
 import si.mazi.rescu.ParamsDigest;
 
+/**
+ * Trade service implementation for Coinbase Advanced Trade (v3) API.
+ * <p>
+ * This service provides access to trading operations including order placement, cancellation,
+ * order queries, trade history, and open orders. It extends {@link CoinbaseTradeServiceRaw} to
+ * provide high-level XChange DTOs mapped from Coinbase-specific responses.
+ * </p>
+ * <p>
+ * All methods in this service map Coinbase API responses to standard XChange trade objects
+ * such as {@link Order}, {@link OpenOrders}, {@link UserTrades}, and {@link UserTrade}.
+ * </p>
+ */
 public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements TradeService {
 
+  /**
+   * Constructs a new trade service using the exchange's default configuration.
+   *
+   * @param exchange The exchange instance containing API credentials and configuration.
+   */
   public CoinbaseTradeService(Exchange exchange) {
     super(exchange);
   }
 
+  /**
+   * Constructs a new trade service with a custom authenticated API client.
+   *
+   * @param exchange              The exchange instance containing API credentials and configuration.
+   * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
+   */
   public CoinbaseTradeService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade) {
     super(exchange, coinbaseAdvancedTrade);
   }
 
+  /**
+   * Constructs a new trade service with a custom authenticated API client and token creator.
+   *
+   * @param exchange              The exchange instance containing API credentials and configuration.
+   * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
+   * @param authTokenCreator      The parameter digest for creating authentication tokens.
+   */
   public CoinbaseTradeService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade,
       ParamsDigest authTokenCreator) {
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
   }
 
+  /**
+   * Creates a new instance of trade history parameters for querying user trades.
+   * <p>
+   * The returned parameters object can be configured with filters such as currency pairs,
+   * time ranges, order IDs, trade IDs, and pagination cursors before being passed to
+   * {@link #getTradeHistory(TradeHistoryParams)}.
+   * </p>
+   *
+   * @return A new {@link CoinbaseTradeHistoryParams} instance for configuring trade history queries.
+   */
   @Override
   public TradeHistoryParams createTradeHistoryParams() {
     return new CoinbaseTradeHistoryParams();
   }
 
+  /**
+   * Retrieves one or more orders by their query parameters.
+   * <p>
+   * This method accepts multiple {@link OrderQueryParams} and returns a collection of orders.
+   * Each parameter must contain a valid order ID via {@link OrderQueryParams#getOrderId()}.
+   * Parameters with null or missing order IDs are skipped.
+   * </p>
+   *
+   * @param orderQueryParams One or more order query parameters, each containing an order ID.
+   * @return A collection of {@link Order} objects corresponding to the provided order IDs.
+   *         Orders are adapted from Coinbase order details to XChange order objects.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
   @Override
   public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {
     List<Order> orders = new ArrayList<>(orderQueryParams.length);
@@ -114,15 +167,31 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   }
 
   /**
-   * Returns open orders by listing historical orders and selecting those in an open status.
-   * Note: Advanced Trade historical orders include current open ones; we filter accordingly.
+   * Retrieves all currently open orders for the authenticated user.
+   * <p>
+   * This method fetches historical orders from Coinbase Advanced Trade and filters them to
+   * return only those in an open status. The Advanced Trade API includes current open orders
+   * in the historical orders list, so this method filters accordingly to provide only active orders.
+   * </p>
+   *
+   * @return An {@link OpenOrders} object containing all open limit, market, and stop orders.
+   * @throws IOException If there is an error communicating with the Coinbase API.
    */
   @Override
   public OpenOrders getOpenOrders() throws IOException {
     return CoinbaseAdapters.adaptOpenOrders(super.listOrders());
   }
 
-  /** Convenience delegator to fetch raw list orders response. */
+  /**
+   * Convenience method to fetch the raw list orders response from Coinbase.
+   * <p>
+   * This method delegates to the raw service method and returns the unmodified Coinbase response.
+   * Use this when you need access to Coinbase-specific fields that are not mapped to XChange DTOs.
+   * </p>
+   *
+   * @return A {@link CoinbaseListOrdersResponse} containing the raw order list response from Coinbase.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
   public CoinbaseListOrdersResponse listOrders()
       throws IOException {
     return super.listOrders();
@@ -139,24 +208,77 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     return super.getOrder(orderId);
   }
 
+  /**
+   * Places a market order on the exchange.
+   * <p>
+   * A market order is executed immediately at the current market price. The order will be filled
+   * as soon as possible, potentially across multiple price levels in the order book.
+   * </p>
+   *
+   * @param marketOrder The market order to place, containing the instrument, side (buy/sell),
+   *                    and quantity.
+   * @return The order ID assigned by Coinbase Advanced Trade as a string.
+   * @throws IOException If there is an error communicating with the Coinbase API or if the order
+   *                     placement fails.
+   */
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
     Object request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
+  /**
+   * Places a limit order on the exchange.
+   * <p>
+   * A limit order specifies a maximum price (for buys) or minimum price (for sells) at which
+   * the order should be executed. The order will only be filled if the market price reaches
+   * the specified limit price or better.
+   * </p>
+   *
+   * @param limitOrder The limit order to place, containing the instrument, side (buy/sell),
+   *                   quantity, and limit price.
+   * @return The order ID assigned by Coinbase Advanced Trade as a string.
+   * @throws IOException If there is an error communicating with the Coinbase API or if the order
+   *                     placement fails.
+   */
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
     Object request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
+  /**
+   * Places a stop order on the exchange.
+   * <p>
+   * A stop order becomes active when the market price reaches a specified stop price. Once
+   * triggered, it behaves like a market order and is executed at the current market price.
+   * Stop orders are commonly used for stop-loss or stop-entry strategies.
+   * </p>
+   *
+   * @param stopOrder The stop order to place, containing the instrument, side (buy/sell),
+   *                  quantity, and stop price.
+   * @return The order ID assigned by Coinbase Advanced Trade as a string.
+   * @throws IOException If there is an error communicating with the Coinbase API or if the order
+   *                     placement fails.
+   */
   @Override
   public String placeStopOrder(StopOrder stopOrder) throws IOException {
     Object request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
+  /**
+   * Verifies a limit order by previewing it without actually placing it.
+   * <p>
+   * This method uses the Coinbase order preview endpoint to validate the order parameters
+   * and check if the order would be accepted. If the preview fails, a {@link RuntimeException}
+   * is thrown with details about the failure.
+   * </p>
+   *
+   * @param limitOrder The limit order to verify, containing the instrument, side, quantity,
+   *                   and limit price.
+   * @throws RuntimeException If the order preview fails, wrapping the underlying {@link IOException}.
+   */
   @Override
   public void verifyOrder(LimitOrder limitOrder) {
     try {
@@ -167,6 +289,17 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     }
   }
 
+  /**
+   * Verifies a market order by previewing it without actually placing it.
+   * <p>
+   * This method uses the Coinbase order preview endpoint to validate the order parameters
+   * and check if the order would be accepted. If the preview fails, a {@link RuntimeException}
+   * is thrown with details about the failure.
+   * </p>
+   *
+   * @param marketOrder The market order to verify, containing the instrument, side, and quantity.
+   * @throws RuntimeException If the order preview fails, wrapping the underlying {@link IOException}.
+   */
   @Override
   public void verifyOrder(MarketOrder marketOrder) {
     try {
@@ -177,6 +310,20 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     }
   }
 
+  /**
+   * Modifies an existing limit order.
+   * <p>
+   * This method allows you to update the parameters of an existing limit order, such as
+   * changing the price or quantity. The order must have a valid ID set via
+   * {@link LimitOrder#setId(String)}.
+   * </p>
+   *
+   * @param limitOrder The limit order to modify, containing the order ID and updated parameters
+   *                   (price, quantity, etc.).
+   * @return The order ID of the modified order (same as the input order's ID).
+   * @throws IOException If there is an error communicating with the Coinbase API or if the order
+   *                     modification fails.
+   */
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException {
     Object request = CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
@@ -184,6 +331,20 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     return limitOrder.getId();
   }
 
+  /**
+   * Cancels an order using the provided cancellation parameters.
+   * <p>
+   * This method supports cancellation by order ID using {@link DefaultCancelOrderParamId}.
+   * Other parameter types may be supported in the future (e.g., cancellation by client order ID).
+   * </p>
+   *
+   * @param orderParams Cancellation parameters. Must be an instance of
+   *                    {@link DefaultCancelOrderParamId} containing the order ID to cancel.
+   * @return {@code true} if the order was successfully cancelled, {@code false} if the parameter
+   *         type is not supported.
+   * @throws IOException If there is an error communicating with the Coinbase API or if the
+   *                     cancellation fails.
+   */
   @Override
   public boolean cancelOrder(CancelOrderParams orderParams) throws IOException {
     if (orderParams instanceof DefaultCancelOrderParamId) {
@@ -195,6 +356,19 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     return false;
   }
 
+  /**
+   * Cancels all open orders for the authenticated user.
+   * <p>
+   * This method retrieves all currently open orders and cancels them in a single batch operation.
+   * If there are no open orders, an empty collection is returned without making an API call.
+   * </p>
+   *
+   * @param orderParams Cancellation parameters (currently unused, but required by the interface).
+   * @return A collection of order IDs that were cancelled. Returns an empty collection if there
+   *         were no open orders to cancel.
+   * @throws IOException If there is an error communicating with the Coinbase API or if the
+   *                     cancellation fails.
+   */
   @Override
   public Collection<String> cancelAllOrders(CancelAllOrders orderParams)
       throws IOException {

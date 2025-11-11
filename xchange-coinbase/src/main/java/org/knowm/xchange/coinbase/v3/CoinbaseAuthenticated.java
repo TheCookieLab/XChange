@@ -13,7 +13,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.List;
-import org.knowm.xchange.coinbase.v2.dto.CoinbaseException;
+import org.knowm.xchange.coinbase.v3.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteResponse;
@@ -48,6 +48,12 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import si.mazi.rescu.ParamsDigest;
 
+/**
+ * Coinbase Advanced Trade API authenticated endpoints.
+ *
+ * <p>Extends {@link Coinbase} to inherit public endpoints. All methods in this interface require
+ * authentication via the {@code Authorization} header containing a JWT token.
+ */
 @Path("/api/v3/brokerage")
 @Produces(MediaType.APPLICATION_JSON)
 public interface CoinbaseAuthenticated extends Coinbase {
@@ -65,6 +71,8 @@ public interface CoinbaseAuthenticated extends Coinbase {
    * <p><a href=https://docs.cdp.coinbase.com/advanced-trade/docs/api-overview</a></p>
    */
   String CB_AUTHORIZATION_KEY = "Authorization";
+
+  // ========== Account Endpoints ==========
 
   @GET
   @Path("accounts")

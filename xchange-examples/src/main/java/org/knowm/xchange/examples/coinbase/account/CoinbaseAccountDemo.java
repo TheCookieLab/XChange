@@ -16,15 +16,21 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 
 /**
- * @deprecated This example class is deprecated. For code examples and usage, refer to:
+ * Example demonstrating Coinbase Advanced Trade API v3 account operations.
+ *
+ * <p>This example shows how to:
  * <ul>
- *   <li>{@link org.knowm.xchange.coinbase.v3.service.AccountServiceIntegration AccountServiceIntegration}</li>
- *   <li>{@link org.knowm.xchange.coinbase.v3.service.AccountServiceSandboxIntegration AccountServiceSandboxIntegration}</li>
+ *   <li>Get account information</li>
+ *   <li>List accounts</li>
+ *   <li>Get account details</li>
+ *   <li>Retrieve payment methods</li>
+ *   <li>Get transaction summaries and fee information</li>
  * </ul>
+ *
+ * <p><b>Note:</b> Account operations require API authentication.
+ *
  * @author jamespedwards42
  */
-@SuppressWarnings("JavadocReference")
-@Deprecated
 public class CoinbaseAccountDemo {
 
   public static void main(String[] args) throws IOException {

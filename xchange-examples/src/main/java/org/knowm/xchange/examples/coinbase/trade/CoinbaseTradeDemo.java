@@ -13,15 +13,20 @@ import org.knowm.xchange.examples.coinbase.CoinbaseDemoUtils;
 import org.knowm.xchange.service.trade.TradeService;
 
 /**
- * @deprecated This example class is deprecated. For code examples and usage, refer to:
+ * Example demonstrating Coinbase Advanced Trade API v3 trade operations.
+ *
+ * <p>This example shows how to:
  * <ul>
- *   <li>{@link org.knowm.xchange.coinbase.v3.service.TradeServiceIntegration TradeServiceIntegration}</li>
- *   <li>{@link org.knowm.xchange.coinbase.v3.service.TradeServiceSandboxIntegration TradeServiceSandboxIntegration}</li>
+ *   <li>Get open orders</li>
+ *   <li>Get trade history</li>
+ *   <li>List orders (raw API access)</li>
+ *   <li>Get order details</li>
  * </ul>
+ *
+ * <p><b>Note:</b> Trade operations require API authentication.
+ *
  * @author jamespedwards42
  */
-@SuppressWarnings("JavadocReference")
-@Deprecated
 public class CoinbaseTradeDemo {
 
   public static void main(String[] args) throws IOException {

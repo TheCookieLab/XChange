@@ -23,6 +23,8 @@ import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.knowm.xchange.service.BaseParamsDigest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import si.mazi.rescu.RestInvocation;
 
 /**
@@ -38,6 +40,7 @@ import si.mazi.rescu.RestInvocation;
 
 public class CoinbaseV3Digest extends BaseParamsDigest {
 
+  private static final Logger LOG = LoggerFactory.getLogger(CoinbaseV3Digest.class);
   private static final SecureRandom RNG = new SecureRandom();
 
   static {
@@ -87,7 +90,7 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
 
   public static CoinbaseV3Digest createInstance(String keyName, String secretKey) {
     if (keyName == null || secretKey == null) {
-      Coinbase.LOG.warn("Missing api and/or secret key");
+      LOG.warn("Missing api and/or secret key");
       return null;
     }
     try {
