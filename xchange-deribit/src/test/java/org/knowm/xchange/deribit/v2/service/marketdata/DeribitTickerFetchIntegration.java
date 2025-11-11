@@ -3,8 +3,8 @@ package org.knowm.xchange.deribit.v2.service.marketdata;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -20,7 +20,7 @@ public class DeribitTickerFetchIntegration {
   private static Exchange exchange;
   private static DeribitMarketDataService deribitMarketDataService;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     exchange = ExchangeFactory.INSTANCE.createExchange(DeribitExchange.class);
     exchange.applySpecification(((DeribitExchange) exchange).getSandboxExchangeSpecification());
