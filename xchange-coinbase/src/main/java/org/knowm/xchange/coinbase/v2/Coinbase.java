@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
  * Advanced Trade API instead.
  */
 @Deprecated
-@Path("/")
+@Path("/v2")
 @Produces(MediaType.APPLICATION_JSON)
 public interface Coinbase {
 
