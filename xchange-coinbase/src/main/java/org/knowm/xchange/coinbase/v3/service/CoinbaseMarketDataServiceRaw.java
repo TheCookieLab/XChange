@@ -15,26 +15,85 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
 import si.mazi.rescu.ParamsDigest;
 
+/**
+ * Raw market data service implementation for Coinbase Advanced Trade (v3) API.
+ * <p>
+ * This service provides direct access to Coinbase market data API endpoints, returning
+ * Coinbase-specific DTOs without mapping to XChange objects. It extends {@link CoinbaseBaseService}
+ * to provide authenticated access to market data endpoints.
+ * </p>
+ * <p>
+ * This is a "raw" service layer that returns Coinbase DTOs directly. For high-level XChange DTOs,
+ * use {@link CoinbaseMarketDataService} which wraps this service and provides adapters.
+ * </p>
+ */
 class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
 
+  /**
+   * Constructs a new raw market data service using the exchange's default configuration.
+   *
+   * @param exchange The exchange instance containing API credentials and configuration.
+   */
   public CoinbaseMarketDataServiceRaw(Exchange exchange) {
     super(exchange);
   }
 
+  /**
+   * Constructs a new raw market data service with a custom authenticated API client.
+   *
+   * @param exchange              The exchange instance containing API credentials and configuration.
+   * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
+   */
   public CoinbaseMarketDataServiceRaw(Exchange exchange,
       CoinbaseAuthenticated coinbaseAdvancedTrade) {
     super(exchange, coinbaseAdvancedTrade);
   }
 
+  /**
+   * Constructs a new raw market data service with a custom authenticated API client and token creator.
+   *
+   * @param exchange              The exchange instance containing API credentials and configuration.
+   * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
+   * @param authTokenCreator      The parameter digest for creating authentication tokens.
+   */
   public CoinbaseMarketDataServiceRaw(Exchange exchange,
       CoinbaseAuthenticated coinbaseAdvancedTrade, ParamsDigest authTokenCreator) {
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
   }
 
+  /**
+   * Retrieves detailed information about a specific product (trading pair).
+   * <p>
+   * This method authenticates the request using the stored API credentials and returns
+   * product details such as display name, base currency, quote currency, status, and
+   * trading configuration.
+   * </p>
+   *
+   * @param productId The product identifier (e.g., "BTC-USD") for which to fetch product details.
+   * @return A {@link CoinbaseProductResponse} containing detailed information about the product,
+   *         including trading status, currency information, and configuration.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
   public CoinbaseProductResponse getProduct(String productId) throws IOException {
     return coinbaseAdvancedTrade.getProduct(authTokenCreator, productId, false);
   }
 
+  /**
+   * Lists products (trading pairs) available on Coinbase Advanced Trade.
+   * <p>
+   * This method authenticates the request using the stored API credentials and returns
+   * a list of products that match the specified product type filter. The response includes
+   * pagination support for large result sets.
+   * </p>
+   *
+   * @param productType Optional filter for product type (e.g., "SPOT"). If null, all product
+   *                    types are returned.
+   * @return A {@link CoinbaseProductsResponse} containing a list of products and pagination
+   *         information. Each product includes details such as product ID, display name, base
+   *         currency, quote currency, and trading status.
+   * @throws Exception If there is an error communicating with the Coinbase API or processing
+   *                   the response.
+   */
   public CoinbaseProductsResponse listProducts(String productType) throws Exception {
     return coinbaseAdvancedTrade.listProducts(authTokenCreator, null, null, productType, null, null, null, null, null, null);
   }

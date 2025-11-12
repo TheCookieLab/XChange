@@ -13,7 +13,6 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import si.mazi.rescu.ParamsDigest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
-import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import java.util.HashMap;
 import java.util.Map;
 
