@@ -52,7 +52,6 @@ import org.knowm.xchange.instrument.Instrument;
 public class DeribitAdapters {
   private static final String IMPLIED_COUNTER = "USD";
   private static final String PERPETUAL = "PERPETUAL";
-  private static final int CURRENCY_SCALE = 8;
   private static final ThreadLocal<DateFormat> DATE_PARSER =
       ThreadLocal.withInitial(() -> new SimpleDateFormat("ddMMMyy", Locale.US));
 
@@ -248,7 +247,7 @@ public class DeribitAdapters {
   }
 
   public static CurrencyMetaData adaptMeta(DeribitCurrency currency) {
-    return new CurrencyMetaData(CURRENCY_SCALE, currency.getWithdrawalFee());
+    return new CurrencyMetaData(currency.getDecimals(), currency.getWithdrawalFee());
   }
 
   public static FuturesContract adaptFuturesContract(DeribitInstrument instrument) {
@@ -349,6 +348,10 @@ public class DeribitAdapters {
             .map(DeribitAdapters::adaptUserTrade)
             .collect(Collectors.toList()),
         Trades.TradeSortType.SortByTimestamp);
+  }
+
+  public static Currency toCurrency(DeribitCurrency deribitCurrency) {
+    return Currency.getInstance(deribitCurrency.getCurrency());
   }
 
   private static UserTrade adaptUserTrade(org.knowm.xchange.deribit.v2.dto.trade.Trade trade) {

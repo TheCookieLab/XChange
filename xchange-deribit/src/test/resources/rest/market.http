@@ -1,0 +1,4 @@
+### Get currencies
+GET {{api_v2}}/public/get_currencies
+
+
