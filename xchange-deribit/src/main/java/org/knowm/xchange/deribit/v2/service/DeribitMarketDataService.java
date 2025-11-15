@@ -2,11 +2,14 @@ package org.knowm.xchange.deribit.v2.service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.deribit.v2.DeribitAdapters;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.dto.DeribitException;
+import org.knowm.xchange.deribit.v2.dto.Kind;
+import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitInstrument;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitOrderBook;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitTicker;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitTrades;
@@ -43,6 +46,21 @@ public class DeribitMarketDataService extends DeribitMarketDataServiceRaw
     }
 
     return ExchangeHealth.OFFLINE;
+  }
+
+  public List<Instrument> getInstruments() throws IOException {
+    try {
+      List<DeribitInstrument> deribitInstruments = getDeribitInstruments(null, null, null);
+
+      return deribitInstruments.stream()
+          .filter(DeribitInstrument::isActive)
+          .filter( deribitInstrument -> Set.of(Kind.SPOT, Kind.OPTIONS, Kind.FUTURES).contains(deribitInstrument.getKind()))
+          .map(DeribitAdapters::toInstrument)
+          .distinct()
+          .collect(Collectors.toList());
+    } catch (DeribitException ex) {
+      throw new ExchangeException(ex);
+    }
   }
 
   @Override

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.knowm.xchange.BaseExchange;
-import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitCurrency;
@@ -17,7 +16,7 @@ import org.knowm.xchange.dto.meta.CurrencyMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.instrument.Instrument;
 
-public class DeribitExchange extends BaseExchange implements Exchange {
+public class DeribitExchange extends BaseExchange {
 
   @Override
   public void applySpecification(ExchangeSpecification exchangeSpecification) {

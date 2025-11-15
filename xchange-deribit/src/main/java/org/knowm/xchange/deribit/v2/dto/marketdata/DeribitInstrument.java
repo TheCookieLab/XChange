@@ -1,13 +1,11 @@
 package org.knowm.xchange.deribit.v2.dto.marketdata;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.util.Date;
 import lombok.Data;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @Data
 public class DeribitInstrument {
 
@@ -25,6 +23,9 @@ public class DeribitInstrument {
   /** The currency in which the instrument prices are quoted */
   @JsonProperty("quote_currency")
   private String quoteCurrency;
+
+  @JsonProperty("counter_currency")
+  private String counterCurrency;
 
   /**
    * Minimum amount for trading. For perpetual and futures - in USD units, for options it is amount

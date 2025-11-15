@@ -17,6 +17,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.deribit.v2.dto.DeribitError;
 import org.knowm.xchange.deribit.v2.dto.DeribitException;
 import org.knowm.xchange.deribit.v2.dto.Direction;
+import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.account.AccountSummary;
 import org.knowm.xchange.deribit.v2.dto.account.Position;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitCurrency;
@@ -29,6 +30,7 @@ import org.knowm.xchange.deribit.v2.dto.trade.OrderState;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderType;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
+import org.knowm.xchange.derivative.OptionsContract.OptionType;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Fee;
@@ -352,6 +354,28 @@ public class DeribitAdapters {
 
   public static Currency toCurrency(DeribitCurrency deribitCurrency) {
     return Currency.getInstance(deribitCurrency.getCurrency());
+  }
+
+  public static Instrument toInstrument(DeribitInstrument deribitInstrument) {
+    if (deribitInstrument == null) {
+      return null;
+    }
+
+    var currencyPair = new CurrencyPair(deribitInstrument.getBaseCurrency(), deribitInstrument.getCounterCurrency());
+    if (deribitInstrument.getKind() == Kind.SPOT) {
+      return currencyPair;
+    }
+
+    if (deribitInstrument.getKind() == Kind.FUTURES) {
+      var prompt = deribitInstrument.getInstrumentName().split("-")[1];
+      return new FuturesContract(currencyPair, prompt);
+    }
+
+    if (deribitInstrument.getKind() == Kind.OPTIONS) {
+      return new OptionsContract(currencyPair, deribitInstrument.getExpirationTimestamp(), deribitInstrument.getStrike(), "call".equals(deribitInstrument.getOptionType()) ? OptionType.CALL : OptionType.PUT);
+    }
+
+    return null;
   }
 
   private static UserTrade adaptUserTrade(org.knowm.xchange.deribit.v2.dto.trade.Trade trade) {

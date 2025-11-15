@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.deribit.DeribitIntegrationTestParent;
+import org.knowm.xchange.instrument.Instrument;
 
 public class DeribitMarketDataServiceIntegration extends DeribitIntegrationTestParent {
 
@@ -18,5 +19,15 @@ public class DeribitMarketDataServiceIntegration extends DeribitIntegrationTestP
     assertThat(currencies).isNotEmpty();
     assertThat(currencies.stream().distinct().count()).isEqualTo(currencies.size());
   }
+
+  @Test
+  void valid_instruments() throws IOException {
+    List<Instrument> instruments =
+        ((DeribitMarketDataService) exchange.getMarketDataService()).getInstruments();
+
+    assertThat(instruments).isNotEmpty();
+    assertThat(instruments.stream().distinct().count()).isEqualTo(instruments.size());
+  }
+
 
 }

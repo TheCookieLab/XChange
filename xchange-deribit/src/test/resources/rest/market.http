@@ -2,3 +2,7 @@
 GET {{api_v2}}/public/get_currencies
 
 
+### Get instruments
+GET {{api_v2}}/public/get_instruments
+
+
