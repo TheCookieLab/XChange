@@ -77,9 +77,13 @@ public class DeribitExchange extends BaseExchange {
               .getDeribitInstruments(deribitCurrency.getCurrency(), null, null);
 
       for (DeribitInstrument deribitInstrument : deribitInstruments) {
-        instruments.put(
-            DeribitAdapters.adaptFuturesContract(deribitInstrument),
-            DeribitAdapters.adaptMeta(deribitInstrument));
+        var instrument = DeribitAdapters.toInstrument(deribitInstrument);
+
+        if (instrument != null) {
+          DeribitAdapters.putSymbolMapping(deribitInstrument.getInstrumentName(), instrument);
+          instruments.put(instrument, DeribitAdapters.adaptMeta(deribitInstrument));
+        }
+
       }
     }
   }

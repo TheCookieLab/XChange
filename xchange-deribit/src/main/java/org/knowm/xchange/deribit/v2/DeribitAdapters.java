@@ -8,8 +8,10 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.currency.Currency;
@@ -56,11 +58,25 @@ public class DeribitAdapters {
   private static final ThreadLocal<DateFormat> DATE_PARSER =
       ThreadLocal.withInitial(() -> new SimpleDateFormat("ddMMMyy", Locale.US));
 
+
+  public static final Map<String, Instrument> SYMBOL_TO_INSTRUMENT = new HashMap<>();
+  private static final Map<Instrument, String> INSTRUMENT_TO_SYMBOL = new HashMap<>();
+
+  public static void putSymbolMapping(String symbol, Instrument instrument) {
+    SYMBOL_TO_INSTRUMENT.put(symbol, instrument);
+    INSTRUMENT_TO_SYMBOL.put(instrument, symbol);
+  }
+
+
   public static String adaptInstrumentName(Instrument instrument) {
     if (instrument instanceof FuturesContract) {
       return adaptInstrumentName((FuturesContract) instrument);
-    } else if (instrument instanceof OptionsContract) {
+    }
+    if (instrument instanceof OptionsContract) {
       return adaptInstrumentName((OptionsContract) instrument);
+    }
+    if (instrument instanceof CurrencyPair) {
+      return toString((CurrencyPair) instrument);
     }
     throw new IllegalArgumentException("Unsupported instrument '" + instrument.toString() + "'");
   }
@@ -88,7 +104,7 @@ public class DeribitAdapters {
 
   public static Ticker adaptTicker(DeribitTicker deribitTicker) {
     return new Ticker.Builder()
-        .instrument(adaptInstrument(deribitTicker.getInstrumentName()))
+        .instrument(toInstrument(deribitTicker.getInstrumentName()))
         .open(deribitTicker.getOpenInterest())
         .last(deribitTicker.getLastPrice())
         .bid(deribitTicker.getBestBidPrice())
@@ -103,7 +119,7 @@ public class DeribitAdapters {
   }
 
   public static OrderBook adaptOrderBook(DeribitOrderBook deribitOrderBook) {
-    Instrument instrument = adaptInstrument(deribitOrderBook.getInstrumentName());
+    Instrument instrument = toInstrument(deribitOrderBook.getInstrumentName());
     List<LimitOrder> bids =
         adaptOrdersList(deribitOrderBook.getBids(), Order.OrderType.BID, instrument);
     List<LimitOrder> asks =
@@ -349,6 +365,14 @@ public class DeribitAdapters {
             .map(DeribitAdapters::adaptUserTrade)
             .collect(Collectors.toList()),
         Trades.TradeSortType.SortByTimestamp);
+  }
+
+  public static String toString(Instrument instrument) {
+    return INSTRUMENT_TO_SYMBOL.get(instrument);
+  }
+
+  public static Instrument toInstrument(String symbol) {
+    return SYMBOL_TO_INSTRUMENT.get(symbol);
   }
 
   public static Currency toCurrency(DeribitCurrency deribitCurrency) {
