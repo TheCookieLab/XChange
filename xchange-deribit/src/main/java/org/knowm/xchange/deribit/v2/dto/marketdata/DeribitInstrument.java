@@ -1,10 +1,13 @@
 package org.knowm.xchange.deribit.v2.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import java.util.Date;
 import lombok.Data;
+import org.knowm.xchange.deribit.v2.config.converter.StringToOptionTypeConverter;
 import org.knowm.xchange.deribit.v2.dto.Kind;
+import org.knowm.xchange.derivative.OptionsContract.OptionType;
 
 @Data
 public class DeribitInstrument {
@@ -68,7 +71,8 @@ public class DeribitInstrument {
 
   /** The option type (only for options) */
   @JsonProperty("option_type")
-  private String optionType;
+  @JsonDeserialize(converter = StringToOptionTypeConverter.class)
+  private OptionType optionType;
 
   /** Maker commission for instrument */
   @JsonProperty("maker_commission")

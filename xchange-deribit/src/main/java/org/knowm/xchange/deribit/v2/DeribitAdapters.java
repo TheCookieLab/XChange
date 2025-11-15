@@ -30,7 +30,6 @@ import org.knowm.xchange.deribit.v2.dto.trade.OrderState;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderType;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
-import org.knowm.xchange.derivative.OptionsContract.OptionType;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Fee;
@@ -372,7 +371,7 @@ public class DeribitAdapters {
     }
 
     if (deribitInstrument.getKind() == Kind.OPTIONS) {
-      return new OptionsContract(currencyPair, deribitInstrument.getExpirationTimestamp(), deribitInstrument.getStrike(), "call".equals(deribitInstrument.getOptionType()) ? OptionType.CALL : OptionType.PUT);
+      return new OptionsContract(currencyPair, deribitInstrument.getExpirationTimestamp(), deribitInstrument.getStrike(), deribitInstrument.getOptionType());
     }
 
     return null;
