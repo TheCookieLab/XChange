@@ -11,6 +11,7 @@ import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.deribit.v2.Deribit;
 import org.knowm.xchange.deribit.v2.DeribitAuthenticated;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
+import org.knowm.xchange.deribit.v2.config.DeribitJacksonObjectMapperFactory;
 import org.knowm.xchange.deribit.v2.dto.DeribitException;
 import org.knowm.xchange.deribit.v2.dto.GrantType;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAuthentication;
@@ -45,6 +46,10 @@ public class DeribitBaseService extends BaseExchangeService<DeribitExchange>
     deribitAuthenticated =
         ExchangeRestProxyBuilder.forInterface(
                 DeribitAuthenticated.class, exchange.getExchangeSpecification())
+            .clientConfigCustomizer(
+                clientConfig ->
+                    clientConfig.setJacksonObjectMapperFactory(
+                        new DeribitJacksonObjectMapperFactory()))
             .build();
 
     deribitAuth =
