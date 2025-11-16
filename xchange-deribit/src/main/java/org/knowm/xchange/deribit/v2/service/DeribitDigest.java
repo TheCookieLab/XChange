@@ -11,12 +11,12 @@ import si.mazi.rescu.SynchronizedValueFactory;
 
 public class DeribitDigest extends BaseParamsDigest {
   private final String clientId;
-  private final SynchronizedValueFactory<Long> nonce;
+  private final SynchronizedValueFactory<Long> timestampFactory;
 
-  private DeribitDigest(String clientId, String clientSecret, SynchronizedValueFactory<Long> nonce) {
+  private DeribitDigest(String clientId, String clientSecret, SynchronizedValueFactory<Long> timestampFactory) {
     super(clientSecret, HMAC_SHA_256);
     this.clientId = clientId;
-    this.nonce = nonce;
+    this.timestampFactory = timestampFactory;
   }
 
   public static DeribitDigest createDeribitAuth(
@@ -29,8 +29,8 @@ public class DeribitDigest extends BaseParamsDigest {
   @Override
   public String digestParams(RestInvocation restInvocation) {
 
-    String timestamp = "" + System.currentTimeMillis();
-    String nonce = "" + this.nonce.createValue();
+    String timestamp = String.valueOf(timestampFactory.createValue());
+    String nonce = String.valueOf(timestampFactory.createValue());
     String uri = restInvocation.getPath() + "?" + restInvocation.getQueryString();
     String body = restInvocation.getRequestBody();
     String httpMethod = restInvocation.getHttpMethod();
