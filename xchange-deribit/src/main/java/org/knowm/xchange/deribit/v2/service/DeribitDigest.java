@@ -9,21 +9,21 @@ import org.knowm.xchange.utils.DigestUtils;
 import si.mazi.rescu.RestInvocation;
 import si.mazi.rescu.SynchronizedValueFactory;
 
-public class DeribitAuth extends BaseParamsDigest {
+public class DeribitDigest extends BaseParamsDigest {
   private final String clientId;
   private final SynchronizedValueFactory<Long> nonce;
 
-  private DeribitAuth(String clientId, String clientSecret, SynchronizedValueFactory<Long> nonce) {
+  private DeribitDigest(String clientId, String clientSecret, SynchronizedValueFactory<Long> nonce) {
     super(clientSecret, HMAC_SHA_256);
     this.clientId = clientId;
     this.nonce = nonce;
   }
 
-  public static DeribitAuth createDeribitAuth(
+  public static DeribitDigest createDeribitAuth(
       String clientId, String clientSecret, SynchronizedValueFactory<Long> nonce) {
     return clientId == null || clientSecret == null
         ? null
-        : new DeribitAuth(clientId, clientSecret, nonce);
+        : new DeribitDigest(clientId, clientSecret, nonce);
   }
 
   @Override

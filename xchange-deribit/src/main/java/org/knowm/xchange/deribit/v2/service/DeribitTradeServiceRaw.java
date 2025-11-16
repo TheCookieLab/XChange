@@ -54,7 +54,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
             trigger,
             advanced,
             mmp,
-            deribitAuth)
+            deribitDigest)
         .getResult();
   }
 
@@ -90,7 +90,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
             trigger,
             advanced,
             mmp,
-            deribitAuth)
+            deribitDigest)
         .getResult();
   }
 
@@ -116,33 +116,33 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
             triggerPrice,
             advanced,
             mmp,
-            deribitAuth)
+            deribitDigest)
         .getResult();
   }
 
   public Order cancel(String orderId) throws IOException {
-    return deribitAuthenticated.cancel(orderId, deribitAuth).getResult();
+    return deribitAuthenticated.cancel(orderId, deribitDigest).getResult();
   }
 
   public Integer cancelByLabel(String label) throws IOException {
-    return deribitAuthenticated.cancelByLabel(label, deribitAuth).getResult();
+    return deribitAuthenticated.cancelByLabel(label, deribitDigest).getResult();
   }
 
   public Integer cancelAll() throws IOException {
-    return deribitAuthenticated.cancelAll(deribitAuth).getResult();
+    return deribitAuthenticated.cancelAll(deribitDigest).getResult();
   }
 
   public List<Order> getOpenOrdersByCurrency(String currency, Kind kind, String type)
       throws IOException {
     return deribitAuthenticated
-        .getOpenOrdersByCurrency(currency, kind, type, deribitAuth)
+        .getOpenOrdersByCurrency(currency, kind, type, deribitDigest)
         .getResult();
   }
 
   public List<Order> getOpenOrdersByInstrument(String instrumentName, String type)
       throws IOException {
     return deribitAuthenticated
-        .getOpenOrdersByInstrument(instrumentName, type, deribitAuth)
+        .getOpenOrdersByInstrument(instrumentName, type, deribitDigest)
         .getResult();
   }
 
@@ -157,7 +157,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
       throws IOException {
     return deribitAuthenticated
         .getUserTradesByCurrency(
-            currency, kind, startId, endId, count, includeOld, sorting, deribitAuth)
+            currency, kind, startId, endId, count, includeOld, sorting, deribitDigest)
         .getResult();
   }
 
@@ -179,7 +179,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
             count,
             includeOld,
             sorting,
-            deribitAuth)
+            deribitDigest)
         .getResult();
   }
 
@@ -193,7 +193,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
       throws IOException {
     return deribitAuthenticated
         .getUserTradesByInstrument(
-            instrumentName, startSeq, endSeq, count, includeOld, sorting, deribitAuth)
+            instrumentName, startSeq, endSeq, count, includeOld, sorting, deribitDigest)
         .getResult();
   }
 
@@ -213,7 +213,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
             count,
             includeOld,
             sorting,
-            deribitAuth)
+            deribitDigest)
         .getResult();
   }
 
@@ -221,7 +221,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
       String instrumentName, SettlementType type, Integer count, String continuation)
       throws IOException {
     return deribitAuthenticated
-        .getSettlementHistoryByInstrument(instrumentName, type, count, continuation, deribitAuth)
+        .getSettlementHistoryByInstrument(instrumentName, type, count, continuation, deribitDigest)
         .getResult();
   }
 
@@ -235,7 +235,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
       throws IOException {
     return deribitAuthenticated
         .getOrderHistoryByCurrency(
-            currency, kind, count, offset, includeOld, includeUnfilled, deribitAuth)
+            currency, kind, count, offset, includeOld, includeUnfilled, deribitDigest)
         .getResult();
   }
 
@@ -248,11 +248,11 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
       throws IOException {
     return deribitAuthenticated
         .getOrderHistoryByInstrument(
-            instrumentName, count, offset, includeOld, includeUnfilled, deribitAuth)
+            instrumentName, count, offset, includeOld, includeUnfilled, deribitDigest)
         .getResult();
   }
 
   public Order getOrderState(String orderId) throws IOException {
-    return deribitAuthenticated.getOrderState(orderId, deribitAuth).getResult();
+    return deribitAuthenticated.getOrderState(orderId, deribitDigest).getResult();
   }
 }

@@ -14,10 +14,10 @@ public class DeribitAccountServiceRaw extends DeribitBaseService {
   }
 
   public AccountSummary getAccountSummary(String currency, Boolean extended) throws IOException {
-    return deribitAuthenticated.getAccountSummary(currency, extended, deribitAuth).getResult();
+    return deribitAuthenticated.getAccountSummary(currency, extended, deribitDigest).getResult();
   }
 
   public List<Position> getPositions(String currency, Kind kind) throws IOException {
-    return deribitAuthenticated.getPositions(currency, kind, deribitAuth).getResult();
+    return deribitAuthenticated.getPositions(currency, kind, deribitDigest).getResult();
   }
 }

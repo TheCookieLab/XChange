@@ -28,7 +28,7 @@ public class DeribitBaseService extends BaseExchangeService<DeribitExchange>
 
   protected final Deribit deribit;
   protected final DeribitAuthenticated deribitAuthenticated;
-  @Getter protected final DeribitAuth deribitAuth;
+  @Getter protected final DeribitDigest deribitDigest;
   private DeribitAuthentication deribitAuthentication;
 
   /**
@@ -52,8 +52,8 @@ public class DeribitBaseService extends BaseExchangeService<DeribitExchange>
                         new DeribitJacksonObjectMapperFactory()))
             .build();
 
-    deribitAuth =
-        DeribitAuth.createDeribitAuth(
+    deribitDigest =
+        DeribitDigest.createDeribitAuth(
             exchange.getExchangeSpecification().getApiKey(),
             exchange.getExchangeSpecification().getSecretKey(),
             exchange.getNonceFactory());
