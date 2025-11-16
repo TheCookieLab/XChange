@@ -14,7 +14,7 @@ import org.knowm.xchange.deribit.v2.dto.DeribitResponse;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummary;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummaryList;
-import org.knowm.xchange.deribit.v2.dto.account.Position;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
 import org.knowm.xchange.deribit.v2.dto.trade.Order;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderPlacement;
@@ -329,7 +329,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_positions")
-  DeribitResponse<List<Position>> getPositions(
+  DeribitResponse<List<DeribitPosition>> getPositions(
       @QueryParam("currency") String currency,
       @QueryParam("kind") Kind kind,
       @HeaderParam("Authorization") ParamsDigest auth)

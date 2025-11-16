@@ -7,7 +7,7 @@ import org.knowm.xchange.deribit.v2.dto.Direction;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 
 @Data
-public class Position {
+public class DeribitPosition {
   /** Profit or loss from position */
   @JsonProperty("total_profit_loss")
   private BigDecimal totalProfitLoss;

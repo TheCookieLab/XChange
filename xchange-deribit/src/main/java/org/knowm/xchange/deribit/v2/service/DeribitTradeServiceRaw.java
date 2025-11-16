@@ -6,7 +6,7 @@ import java.util.Date;
 import java.util.List;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.dto.Kind;
-import org.knowm.xchange.deribit.v2.dto.account.Position;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
 import org.knowm.xchange.deribit.v2.dto.trade.Order;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderPlacement;
@@ -257,7 +257,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
     return deribitAuthenticated.getOrderState(orderId, deribitDigest).getResult();
   }
 
-  public List<Position> getPositions(String currency, Kind kind) throws IOException {
+  public List<DeribitPosition> getPositions(String currency, Kind kind) throws IOException {
     return deribitAuthenticated.getPositions(currency, kind, deribitDigest).getResult();
   }
 
