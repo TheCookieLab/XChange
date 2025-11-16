@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.deribit.v2.DeribitAdapters;
@@ -91,8 +92,11 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
 
   @Override
   public OpenPositions getOpenPositions() throws IOException {
-    return new OpenPositions(
-        ((DeribitAccountService) exchange.getAccountService()).openPositions());
+    var positions = getPositions(null, null).stream()
+        .map(DeribitAdapters::adapt)
+        .collect(Collectors.toList());
+
+    return new OpenPositions(positions);
   }
 
   @Override
