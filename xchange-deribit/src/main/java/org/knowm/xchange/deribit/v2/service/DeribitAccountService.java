@@ -22,14 +22,14 @@ public class DeribitAccountService extends DeribitAccountServiceRaw implements A
 
   @Override
   public AccountInfo getAccountInfo() throws IOException {
-    Wallet wallet = Wallet.Builder.from(balances()).build();
+    Wallet wallet = Wallet.Builder.from(balances()).id("main").build();
     return new AccountInfo(null, null, Collections.singleton(wallet), openPositions(), null);
   }
 
   List<Balance> balances() throws IOException {
     List<Balance> balances = new ArrayList<>();
     for (Currency c : currencies()) {
-      balances.add(DeribitAdapters.adapt(super.getAccountSummary(c.getCurrencyCode(), false)));
+      balances.add(DeribitAdapters.adapt(getAccountSummary(c.getCurrencyCode(), false)));
     }
     return balances;
   }
