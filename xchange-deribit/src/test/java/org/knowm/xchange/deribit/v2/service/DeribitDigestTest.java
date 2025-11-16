@@ -17,6 +17,22 @@ class DeribitDigestTest {
   RestInvocation restInvocation;
 
   @Test
+  void signature_path() {
+    DeribitDigest bitgetDigest = DeribitDigest.createDeribitAuth("id", "secret", new LongValueIncFactory());
+
+    when(restInvocation.getHttpMethod()).thenReturn("GET");
+    when(restInvocation.getPath()).thenReturn("/api/v2/private/get_positions");
+    when(restInvocation.getQueryString()).thenReturn("");
+    when(restInvocation.getRequestBody()).thenReturn("");
+
+    String actual = bitgetDigest.digestParams(restInvocation);
+    String expected = "deri-hmac-sha256 id=id,ts=1763296256773,sig=95917e891b4edbdc6f023077b73f45e432364f8ab0ebe3c9f51b24f5032e1ff6,nonce=1763296256774";
+
+    assertThat(actual).isEqualTo(expected);
+  }
+
+
+  @Test
   void signature_path_query() {
     DeribitDigest bitgetDigest = DeribitDigest.createDeribitAuth("id", "secret", new LongValueIncFactory());
 

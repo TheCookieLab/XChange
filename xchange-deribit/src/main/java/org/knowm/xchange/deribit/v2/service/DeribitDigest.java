@@ -3,6 +3,7 @@ package org.knowm.xchange.deribit.v2.service;
 import java.io.UnsupportedEncodingException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.service.BaseParamsDigest;
 import org.knowm.xchange.utils.DigestUtils;
@@ -31,7 +32,15 @@ public class DeribitDigest extends BaseParamsDigest {
 
     String timestamp = String.valueOf(timestampFactory.createValue());
     String nonce = String.valueOf(timestampFactory.createValue());
-    String uri = restInvocation.getPath() + "?" + restInvocation.getQueryString();
+    String path = restInvocation.getPath();
+
+    String query = StringUtils.defaultIfEmpty(restInvocation.getQueryString(), "");
+    if (StringUtils.isNotEmpty(query)) {
+      query = "?" + query;
+    }
+
+    String uri = path + query;
+
     String body = restInvocation.getRequestBody();
     String httpMethod = restInvocation.getHttpMethod();
     // ${Timestamp}\n${Nonce}\n${HttpMethod}\n${URI}\n${Body}\n
