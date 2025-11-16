@@ -1,11 +1,14 @@
 package org.knowm.xchange.deribit.v2.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import lombok.Data;
+import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.deribit.v2.config.converter.StringToCurrencyConverter;
 
 @Data
-public class AccountSummary {
+public class DeribitAccountSummary {
 
   /** Profit and loss */
   @JsonProperty("total_pl")
@@ -93,7 +96,8 @@ public class AccountSummary {
 
   /** The selected currency */
   @JsonProperty("currency")
-  private String currency;
+  @JsonDeserialize(converter = StringToCurrencyConverter.class)
+  private Currency currency;
 
   /** The account's balance */
   @JsonProperty("balance")

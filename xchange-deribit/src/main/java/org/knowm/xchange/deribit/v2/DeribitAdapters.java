@@ -20,7 +20,7 @@ import org.knowm.xchange.deribit.v2.dto.DeribitError;
 import org.knowm.xchange.deribit.v2.dto.DeribitException;
 import org.knowm.xchange.deribit.v2.dto.Direction;
 import org.knowm.xchange.deribit.v2.dto.Kind;
-import org.knowm.xchange.deribit.v2.dto.account.AccountSummary;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummary;
 import org.knowm.xchange.deribit.v2.dto.account.Position;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitCurrency;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitInstrument;
@@ -250,9 +250,8 @@ public class DeribitAdapters {
     return new ExchangeException("Operation failed without any error message", ex);
   }
 
-  public static Balance adapt(AccountSummary as) {
-    return new Balance(
-        Currency.getInstance(as.getCurrency()), as.getBalance(), as.getAvailableFunds());
+  public static Balance adapt(DeribitAccountSummary deribitAccountSummary) {
+    return new Balance(deribitAccountSummary.getCurrency(), deribitAccountSummary.getBalance(), deribitAccountSummary.getAvailableFunds());
   }
 
   public static OpenPosition adapt(Position p) {

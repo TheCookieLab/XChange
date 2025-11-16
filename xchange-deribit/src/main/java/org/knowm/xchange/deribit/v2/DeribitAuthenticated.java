@@ -12,7 +12,8 @@ import java.util.List;
 import org.knowm.xchange.deribit.v2.dto.DeribitException;
 import org.knowm.xchange.deribit.v2.dto.DeribitResponse;
 import org.knowm.xchange.deribit.v2.dto.Kind;
-import org.knowm.xchange.deribit.v2.dto.account.AccountSummary;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummary;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummaryList;
 import org.knowm.xchange.deribit.v2.dto.account.Position;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
 import org.knowm.xchange.deribit.v2.dto.trade.Order;
@@ -38,8 +39,18 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_account_summary")
-  DeribitResponse<AccountSummary> getAccountSummary(
+  DeribitResponse<DeribitAccountSummary> getAccountSummary(
       @QueryParam("currency") String currency,
+      @QueryParam("extended") Boolean extended,
+      @HeaderParam("Authorization") ParamsDigest auth)
+      throws DeribitException, IOException;
+
+  /**
+   * Retrieves a per-currency list of user account summaries
+   */
+  @GET
+  @Path("get_account_summaries")
+  DeribitResponse<DeribitAccountSummaryList> getAccountSummaries(
       @QueryParam("extended") Boolean extended,
       @HeaderParam("Authorization") ParamsDigest auth)
       throws DeribitException, IOException;

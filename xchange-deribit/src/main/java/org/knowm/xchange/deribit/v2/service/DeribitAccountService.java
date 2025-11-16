@@ -5,11 +5,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.deribit.v2.DeribitAdapters;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.dto.account.AccountInfo;
-import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.service.account.AccountService;
@@ -22,16 +22,12 @@ public class DeribitAccountService extends DeribitAccountServiceRaw implements A
 
   @Override
   public AccountInfo getAccountInfo() throws IOException {
-    Wallet wallet = Wallet.Builder.from(balances()).id("main").build();
-    return new AccountInfo(null, null, Collections.singleton(wallet), openPositions(), null);
-  }
+    var balances = getAccountSummaries(false).stream()
+        .map(DeribitAdapters::adapt)
+        .collect(Collectors.toList());
 
-  List<Balance> balances() throws IOException {
-    List<Balance> balances = new ArrayList<>();
-    for (Currency c : currencies()) {
-      balances.add(DeribitAdapters.adapt(getAccountSummary(c.getCurrencyCode(), false)));
-    }
-    return balances;
+    Wallet wallet = Wallet.Builder.from(balances).id("main").build();
+    return new AccountInfo(null, null, Collections.singleton(wallet), openPositions(), null);
   }
 
   List<OpenPosition> openPositions() throws IOException {
