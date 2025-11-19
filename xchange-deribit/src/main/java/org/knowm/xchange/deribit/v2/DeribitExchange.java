@@ -71,20 +71,20 @@ public class DeribitExchange extends BaseExchange {
     for (DeribitCurrency deribitCurrency : activeDeribitCurrencies) {
       currencies.put(
           new Currency(deribitCurrency.getCurrency()), DeribitAdapters.adaptMeta(deribitCurrency));
+    }
 
       List<DeribitInstrument> deribitInstruments =
           ((DeribitMarketDataServiceRaw) marketDataService)
-              .getDeribitInstruments(deribitCurrency.getCurrency(), null, null);
+              .getDeribitInstruments(null, null, null);
 
-      for (DeribitInstrument deribitInstrument : deribitInstruments) {
-        var instrument = DeribitAdapters.toInstrument(deribitInstrument);
+    for (DeribitInstrument deribitInstrument : deribitInstruments) {
+      var instrument = DeribitAdapters.toInstrument(deribitInstrument);
 
-        if (instrument != null) {
-          DeribitAdapters.putSymbolMapping(deribitInstrument.getInstrumentName(), instrument);
-          instruments.put(instrument, DeribitAdapters.adaptMeta(deribitInstrument));
-        }
-
+      if (instrument != null) {
+        DeribitAdapters.putSymbolMapping(deribitInstrument.getInstrumentName(), instrument);
+        instruments.put(instrument, DeribitAdapters.adaptMeta(deribitInstrument));
       }
+
     }
   }
 }
