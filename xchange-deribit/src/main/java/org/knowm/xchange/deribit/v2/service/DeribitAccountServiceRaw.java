@@ -6,6 +6,7 @@ import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummary;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitDeposit;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitTransfer;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitWithdrawal;
 
 public class DeribitAccountServiceRaw extends DeribitBaseService {
 
@@ -27,6 +28,10 @@ public class DeribitAccountServiceRaw extends DeribitBaseService {
 
   public List<DeribitTransfer> getTransfers(String currency, Integer count, Long offset) throws IOException {
     return deribitAuthenticated.getTransfers(currency, count, offset, deribitDigest).getResult().getData();
+  }
+
+  public List<DeribitWithdrawal> getWithdrawals(String currency, Integer count, Long offset) throws IOException {
+    return deribitAuthenticated.getWithdrawals(currency, count, offset, deribitDigest).getResult().getData();
   }
 
 }

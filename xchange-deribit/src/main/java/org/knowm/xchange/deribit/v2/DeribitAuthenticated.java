@@ -18,6 +18,7 @@ import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummaryList;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitDeposit;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitTransfer;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitWithdrawal;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
 import org.knowm.xchange.deribit.v2.dto.trade.Order;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderPlacement;
@@ -411,7 +412,7 @@ public interface DeribitAuthenticated {
 
   @GET
   @Path("get_deposits")
-  DeribitResponse<DeribitDataListResponse<DeribitDeposit>> getDeposits (
+  DeribitResponse<DeribitDataListResponse<DeribitDeposit>> getDeposits(
       @QueryParam("currency") String currency,
       @QueryParam("count") Integer count,
       @QueryParam("offset") Long offset,
@@ -420,7 +421,16 @@ public interface DeribitAuthenticated {
 
   @GET
   @Path("get_transfers")
-  DeribitResponse<DeribitDataListResponse<DeribitTransfer>> getTransfers (
+  DeribitResponse<DeribitDataListResponse<DeribitTransfer>> getTransfers(
+      @QueryParam("currency") String currency,
+      @QueryParam("count") Integer count,
+      @QueryParam("offset") Long offset,
+      @HeaderParam("Authorization") ParamsDigest auth)
+      throws DeribitException, IOException;
+
+  @GET
+  @Path("get_withdrawals")
+  DeribitResponse<DeribitDataListResponse<DeribitWithdrawal>> getWithdrawals(
       @QueryParam("currency") String currency,
       @QueryParam("count") Integer count,
       @QueryParam("offset") Long offset,

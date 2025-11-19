@@ -11,6 +11,7 @@ import org.knowm.xchange.deribit.v2.DeribitAdapters;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitDeposit;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitTransfer;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitWithdrawal;
 import org.knowm.xchange.deribit.v2.service.params.DeribitFundingHistoryParams;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.FundingRecord;
@@ -84,7 +85,14 @@ public class DeribitAccountService extends DeribitAccountServiceRaw implements A
       transfers.stream()
           .map(DeribitAdapters::toFundingRecord)
           .forEach(fundingRecords::add);
+
+      // withdrawals
+      List<DeribitWithdrawal> withrawals = getWithdrawals(currencyCode, limit, offset);
+      withrawals.stream()
+          .map(DeribitAdapters::toFundingRecord)
+          .forEach(fundingRecords::add);
     }
+
     return fundingRecords;
   }
 

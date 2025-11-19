@@ -11,13 +11,18 @@ public class StringToFundingRecordStatusConverter extends StdConverter<String, S
   public Status convert(String value) {
 
     switch (value.toUpperCase(Locale.ROOT)) {
+      case "CONFIRMED":
       case "PENDING":
       case "REPLACED":
+      case "UNCONFIRMED":
         return Status.PROCESSING;
+      case "CANCELLED":
       case "REJECTED":
         return Status.CANCELLED;
       case "COMPLETED":
         return Status.COMPLETE;
+      case "INTERRUPTED":
+        return Status.FAILED;
       default:
         throw new IllegalArgumentException("Can't map " + value);
     }

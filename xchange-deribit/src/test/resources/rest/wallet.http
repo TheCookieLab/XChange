@@ -18,3 +18,13 @@ Authorization: {{auth_header}}
 Accept: application/json
 
 
+### Get withdrawals
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+GET {{api_v2}}/private/get_withdrawals?currency=USDT
+Authorization: {{auth_header}}
+Accept: application/json
+
+

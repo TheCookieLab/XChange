@@ -26,6 +26,7 @@ import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummary;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitDeposit;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitTransfer;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitWithdrawal;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitCurrency;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitInstrument;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitOrderBook;
@@ -430,6 +431,21 @@ public class DeribitAdapters {
         .internalId(deribitTransfer.getId())
         .type(toFundingRecordType(deribitTransfer))
         .status(toFundingRecordStatus(deribitTransfer.getState()))
+        .build();
+  }
+
+  public static FundingRecord toFundingRecord(DeribitWithdrawal deribitWithdrawal) {
+
+    return FundingRecord.builder()
+        .address(deribitWithdrawal.getTargetAddress())
+        .date(toDate(deribitWithdrawal.getCreatedAt()))
+        .currency(deribitWithdrawal.getCurrency())
+        .amount(deribitWithdrawal.getAmount())
+        .internalId(deribitWithdrawal.getId())
+        .blockchainTransactionHash(deribitWithdrawal.getTransactionId())
+        .type(Type.WITHDRAWAL)
+        .status(deribitWithdrawal.getStatus())
+        .fee(deribitWithdrawal.getFee())
         .build();
   }
 
