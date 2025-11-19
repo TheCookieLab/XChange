@@ -9,11 +9,13 @@ import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
+import org.knowm.xchange.deribit.v2.dto.DeribitDataListResponse;
 import org.knowm.xchange.deribit.v2.dto.DeribitException;
 import org.knowm.xchange.deribit.v2.dto.DeribitResponse;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummary;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummaryList;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitDeposit;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
 import org.knowm.xchange.deribit.v2.dto.trade.Order;
@@ -405,4 +407,15 @@ public interface DeribitAuthenticated {
   DeribitResponse<Order> getOrderState(
       @QueryParam("order_id") String orderId, @HeaderParam("Authorization") ParamsDigest auth)
       throws DeribitException, IOException;
+
+  @GET
+  @Path("get_deposits")
+  DeribitResponse<DeribitDataListResponse<DeribitDeposit>> getDeposits (
+      @QueryParam("currency") String currency,
+      @QueryParam("count") Integer count,
+      @QueryParam("offset") Long offset,
+      @HeaderParam("Authorization") ParamsDigest auth)
+      throws DeribitException, IOException;
+
+
 }

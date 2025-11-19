@@ -26,7 +26,7 @@ class DeribitDigestTest {
     when(restInvocation.getRequestBody()).thenReturn("");
 
     String actual = bitgetDigest.digestParams(restInvocation);
-    String expected = "deri-hmac-sha256 id=id,ts=1763296256773,sig=95917e891b4edbdc6f023077b73f45e432364f8ab0ebe3c9f51b24f5032e1ff6,nonce=1763296256774";
+    String expected = "deri-hmac-sha256 id=id,ts=1763296256773,sig=dd3eb83ab5101101cb37551e473fb22dcffb5db4c9e831acd8a9773e8924df9e,nonce=1763296256774";
 
     assertThat(actual).isEqualTo(expected);
   }

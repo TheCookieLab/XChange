@@ -1,0 +1,10 @@
+### Get deposits
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+GET {{api_v2}}/private/get_deposits?currency=USDT
+Authorization: {{auth_header}}
+Accept: application/json
+
+

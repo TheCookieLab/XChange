@@ -6,12 +6,14 @@ import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.currency.Currency;
@@ -21,6 +23,7 @@ import org.knowm.xchange.deribit.v2.dto.DeribitException;
 import org.knowm.xchange.deribit.v2.dto.Direction;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummary;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitDeposit;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitCurrency;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitInstrument;
@@ -35,6 +38,8 @@ import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Fee;
+import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.dto.account.FundingRecord.Type;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -400,6 +405,19 @@ public class DeribitAdapters {
     return null;
   }
 
+  public static FundingRecord toFundingRecord(DeribitDeposit deribitDeposit) {
+    return FundingRecord.builder()
+        .address(deribitDeposit.getAddress())
+        .addressTag(deribitDeposit.getNote())
+        .date(toDate(deribitDeposit.getCreatedAt()))
+        .currency(deribitDeposit.getCurrency())
+        .amount(deribitDeposit.getAmount())
+        .internalId(deribitDeposit.getTransactionId())
+        .type(Type.DEPOSIT)
+        .status(deribitDeposit.getStatus())
+        .build();
+  }
+
   private static UserTrade adaptUserTrade(org.knowm.xchange.deribit.v2.dto.trade.Trade trade) {
     return UserTrade.builder()
         .type(adapt(trade.getDirection()))
@@ -414,6 +432,12 @@ public class DeribitAdapters {
         .orderUserReference(trade.getLabel())
         .build();
   }
+
+  public static Date toDate(Instant instant) {
+    return Optional.ofNullable(instant).map(Date::from).orElse(null);
+  }
+
+
 
   private static Date parseDate(String source) throws ParseException {
     if (!Character.isDigit(source.charAt(1))) {
