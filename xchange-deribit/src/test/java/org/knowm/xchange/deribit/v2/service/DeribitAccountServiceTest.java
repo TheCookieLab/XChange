@@ -39,7 +39,7 @@ class DeribitAccountServiceTest extends DeribitExchangeWiremock {
             .status(Status.COMPLETE)
             .build();
 
-    assertThat(actual).hasSize(1);
+    assertThat(actual).hasSize(3);
     assertThat(actual).first().usingRecursiveComparison().isEqualTo(expected);
   }
 

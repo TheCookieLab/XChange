@@ -10,6 +10,7 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.deribit.v2.DeribitAdapters;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitDeposit;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitTransfer;
 import org.knowm.xchange.deribit.v2.service.params.DeribitFundingHistoryParams;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.FundingRecord;
@@ -72,8 +73,15 @@ public class DeribitAccountService extends DeribitAccountServiceRaw implements A
     for (Currency currency : currencies) {
       String currencyCode = currency.getCurrencyCode();
 
+      // deposits
       List<DeribitDeposit> deposits = getDeposits(currencyCode, limit, offset);
       deposits.stream()
+          .map(DeribitAdapters::toFundingRecord)
+          .forEach(fundingRecords::add);
+
+      // transfers
+      List<DeribitTransfer> transfers = getTransfers(currencyCode, limit, offset);
+      transfers.stream()
           .map(DeribitAdapters::toFundingRecord)
           .forEach(fundingRecords::add);
     }
