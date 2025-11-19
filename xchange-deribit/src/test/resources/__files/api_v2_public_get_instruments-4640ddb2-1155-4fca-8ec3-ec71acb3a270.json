@@ -1,0 +1,31 @@
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "base_currency": "BTC",
+      "block_trade_commission": 0.0,
+      "block_trade_min_trade_amount": 1,
+      "block_trade_tick_size": 1.0,
+      "contract_size": 1.0E-4,
+      "counter_currency": "USDT",
+      "creation_timestamp": 1702374650000,
+      "expiration_timestamp": 32503708800000,
+      "instrument_id": 282196,
+      "instrument_name": "BTC_USDT",
+      "instrument_type": "linear",
+      "is_active": true,
+      "kind": "spot",
+      "maker_commission": 0.0,
+      "min_trade_amount": 1.0E-4,
+      "price_index": "btc_usdt",
+      "quote_currency": "USDT",
+      "taker_commission": 0.0,
+      "tick_size": 1.0,
+      "tick_size_steps": []
+    }
+  ],
+  "testnet": false,
+  "usDiff": 143,
+  "usIn": 1763590663106738,
+  "usOut": 1763590663106881
+}
