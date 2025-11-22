@@ -491,6 +491,76 @@ public class DeribitAdapters {
     return fundingRecordType;
   }
 
+  public static FundingRecord toFundingRecord(DeribitTransfer deribitTransfer) {
+
+    return FundingRecord.builder()
+        .address(deribitTransfer.getOtherSide())
+        .date(toDate(deribitTransfer.getCreatedAt()))
+        .currency(deribitTransfer.getCurrency())
+        .amount(deribitTransfer.getAmount())
+        .internalId(deribitTransfer.getId())
+        .type(toFundingRecordType(deribitTransfer))
+        .status(toFundingRecordStatus(deribitTransfer.getState()))
+        .build();
+  }
+
+  public static FundingRecord toFundingRecord(DeribitWithdrawal deribitWithdrawal) {
+
+    return FundingRecord.builder()
+        .address(deribitWithdrawal.getTargetAddress())
+        .date(toDate(deribitWithdrawal.getCreatedAt()))
+        .currency(deribitWithdrawal.getCurrency())
+        .amount(deribitWithdrawal.getAmount())
+        .internalId(deribitWithdrawal.getId())
+        .blockchainTransactionHash(deribitWithdrawal.getTransactionId())
+        .type(Type.WITHDRAWAL)
+        .status(deribitWithdrawal.getStatus())
+        .fee(deribitWithdrawal.getFee())
+        .build();
+  }
+
+  public static FundingRecord.Status toFundingRecordStatus(DeribitTransfer.State state) {
+    switch (state) {
+      case CONFIRMED:
+        return Status.COMPLETE;
+
+      case CANCELLED:
+        return Status.CANCELLED;
+
+      case PREPARED:
+      case WAITING_FOR_ADMIN:
+        return Status.PROCESSING;
+
+      case WITHDRAWAL_LIMIT:
+      case INSUFFICIENT_FUNDS:
+        return Status.FAILED;
+
+      case UNKNOWN:
+      default:
+        throw new IllegalArgumentException("Can't map " + state);
+    }
+
+  }
+
+  private static Type toFundingRecordType(DeribitTransfer deribitTransfer) {
+    Type fundingRecordType;
+    if (deribitTransfer.getType() == DeribitTransfer.Type.SUBACCOUNT) {
+      fundingRecordType = Type.INTERNAL_SUB_ACCOUNT_TRANSFER;
+    }
+    else if (deribitTransfer.getType() == DeribitTransfer.Type.USER) {
+      if (deribitTransfer.getDirection() == DeribitTransfer.Direction.INCOME) {
+        fundingRecordType = Type.INTERNAL_DEPOSIT;
+      }
+      else {
+        fundingRecordType = Type.INTERNAL_WITHDRAWAL;
+      }
+    }
+    else {
+      fundingRecordType = null;
+    }
+    return fundingRecordType;
+  }
+
   private static UserTrade adaptUserTrade(org.knowm.xchange.deribit.v2.dto.trade.Trade trade) {
     return UserTrade.builder()
         .type(adapt(trade.getDirection()))
