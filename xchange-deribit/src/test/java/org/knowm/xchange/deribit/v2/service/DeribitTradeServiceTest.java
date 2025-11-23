@@ -75,6 +75,20 @@ class DeribitTradeServiceTest extends DeribitExchangeWiremock {
 
 
   @Test
+  void place_limit_buy_order() throws IOException {
+    LimitOrder limitOrder =
+        new LimitOrder.Builder(OrderType.BID, new CurrencyPair("XRP/USDC"))
+            .originalAmount(new BigDecimal("1"))
+            .limitPrice(new BigDecimal("1.8"))
+            .userReference("c1d14121-c076-4c13-974b-c80cda36e09a")
+            .build();
+
+    String actualResponse = tradeService.placeLimitOrder(limitOrder);
+    assertThat(actualResponse).isEqualTo("XRP_USDC-6476518126");
+  }
+
+
+  @Test
   void trade_history() throws IOException {
     UserTrades userTrades =
         exchange
