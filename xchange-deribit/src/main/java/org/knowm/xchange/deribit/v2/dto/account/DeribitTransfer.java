@@ -5,11 +5,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import java.time.Instant;
+import lombok.Builder;
 import lombok.Data;
+import lombok.extern.jackson.Jacksonized;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.deribit.v2.config.converter.StringToCurrencyConverter;
 
 @Data
+@Builder
+@Jacksonized
 public class DeribitTransfer {
 
   @JsonProperty("id")
@@ -24,6 +28,9 @@ public class DeribitTransfer {
 
   @JsonProperty("direction")
   private Direction direction;
+
+  @JsonProperty("note")
+  private String note;
 
   @JsonProperty("type")
   private Type type;
