@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
-import org.knowm.xchange.deribit.v2.dto.Direction;
+import org.knowm.xchange.dto.Order.OrderType;
 
 public class DeribitTradeTest {
 
@@ -31,7 +31,7 @@ public class DeribitTradeTest {
     assertThat(trade.getPrice()).isEqualTo(new BigDecimal("3610"));
     assertThat(trade.getInstrumentName()).isEqualTo("BTC-PERPETUAL");
     assertThat(trade.getIndexPrice()).isEqualTo(new BigDecimal("3579.08"));
-    assertThat(trade.getDirection()).isEqualTo(Direction.sell);
+    assertThat(trade.getOrderSide()).isEqualTo(OrderType.ASK);
     assertThat(trade.getAmount()).isEqualTo(new BigDecimal("10"));
   }
 }

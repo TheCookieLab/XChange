@@ -8,6 +8,7 @@ import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
+import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrades;
 import org.knowm.xchange.deribit.v2.dto.trade.Order;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderPlacement;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderType;
@@ -15,7 +16,6 @@ import org.knowm.xchange.deribit.v2.dto.trade.SettlementType;
 import org.knowm.xchange.deribit.v2.dto.trade.TimeInForce;
 import org.knowm.xchange.deribit.v2.dto.trade.Trigger;
 import org.knowm.xchange.deribit.v2.dto.trade.UserSettlements;
-import org.knowm.xchange.deribit.v2.dto.trade.UserTrades;
 
 public class DeribitTradeServiceRaw extends DeribitBaseService {
 
@@ -147,7 +147,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
         .getResult();
   }
 
-  public UserTrades getUserTradesByCurrency(
+  public DeribitUserTrades getUserTradesByCurrency(
       String currency,
       Kind kind,
       String startId,
@@ -162,7 +162,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
         .getResult();
   }
 
-  public UserTrades getUserTradesByCurrencyAndTime(
+  public DeribitUserTrades getUserTradesByCurrencyAndTime(
       String currency,
       Kind kind,
       Date startTimestamp,
@@ -184,7 +184,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
         .getResult();
   }
 
-  public UserTrades getUserTradesByInstrument(
+  public DeribitUserTrades getUserTradesByInstrument(
       String instrumentName,
       Integer startSeq,
       Integer endSeq,
@@ -198,7 +198,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
         .getResult();
   }
 
-  public UserTrades getUserTradesByInstrumentAndTime(
+  public DeribitUserTrades getUserTradesByInstrumentAndTime(
       String instrumentName,
       Date startTimestamp,
       Date endTimestamp,

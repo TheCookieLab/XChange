@@ -2,10 +2,12 @@ package org.knowm.xchange.deribit.v2.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import java.util.Date;
 import lombok.Data;
-import org.knowm.xchange.deribit.v2.dto.Direction;
+import org.knowm.xchange.deribit.v2.config.converter.StringToOrderTypeConverter;
+import org.knowm.xchange.dto.Order;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Data
@@ -56,7 +58,8 @@ public class DeribitTrade {
 
   /** direction, buy or sell */
   @JsonProperty("direction")
-  private Direction direction;
+  @JsonDeserialize(converter = StringToOrderTypeConverter.class)
+  private Order.OrderType orderSide;
 
   /**
    * Trade amount. For perpetual and futures - in USD units, for options it is amount of

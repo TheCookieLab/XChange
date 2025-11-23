@@ -1,17 +1,21 @@
 package org.knowm.xchange.deribit.v2.dto.trade;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.Instant;
+import lombok.Builder;
 import lombok.Data;
-import org.knowm.xchange.deribit.v2.dto.Direction;
+import lombok.extern.jackson.Jacksonized;
+import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.deribit.v2.config.converter.StringToCurrencyConverter;
+import org.knowm.xchange.deribit.v2.config.converter.StringToOrderTypeConverter;
+import org.knowm.xchange.dto.Order;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonIgnoreProperties(ignoreUnknown = true)
 @Data
-public class Trade {
+@Builder
+@Jacksonized
+public class DeribitUserTrade {
 
   /**
    * Trade amount. For perpetual and futures - in USD units, for options it is amount of
@@ -20,14 +24,18 @@ public class Trade {
   private BigDecimal amount;
 
   /** direction, buy or sell */
-  private Direction direction;
+  @JsonProperty("direction")
+  @JsonDeserialize(converter = StringToOrderTypeConverter.class)
+  private Order.OrderType orderSide;
+
 
   /** User's fee in units of the specified fee_currency */
   private BigDecimal fee;
 
   /** Currency, i.e "BTC", "ETH" */
   @JsonProperty("fee_currency")
-  private String feeCurrency;
+  @JsonDeserialize(converter = StringToCurrencyConverter.class)
+  private Currency feeCurrency;
 
   /** Index Price at the moment of trade */
   @JsonProperty("index_price")
@@ -98,7 +106,8 @@ public class Trade {
   private Integer tickDirection;
 
   /** The timestamp of the trade */
-  private long timestamp;
+  @JsonProperty("timestamp")
+  private Instant timestamp;
 
   /** Unique (per currency) trade identifier */
   @JsonProperty("trade_id")
@@ -108,7 +117,4 @@ public class Trade {
   @JsonProperty("trade_seq")
   private long tradeSeq;
 
-  public Date getTimestamp() {
-    return new Date(timestamp);
-  }
 }

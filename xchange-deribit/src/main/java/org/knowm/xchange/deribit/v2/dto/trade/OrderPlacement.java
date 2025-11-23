@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 public class OrderPlacement {
 
-  private List<Trade> trades;
+  private List<DeribitUserTrade> trades;
   private Order order;
 }

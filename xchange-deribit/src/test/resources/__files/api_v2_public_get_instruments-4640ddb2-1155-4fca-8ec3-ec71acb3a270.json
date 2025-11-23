@@ -22,6 +22,28 @@
       "taker_commission": 0.0,
       "tick_size": 1.0,
       "tick_size_steps": []
+    },
+    {
+      "base_currency" : "USDC",
+      "block_trade_commission" : 0.0,
+      "block_trade_min_trade_amount" : 100000,
+      "block_trade_tick_size" : 1.0E-4,
+      "contract_size" : 1,
+      "counter_currency" : "USDT",
+      "creation_timestamp" : 1702374687000,
+      "expiration_timestamp" : 32503708800000,
+      "instrument_id" : 282198,
+      "instrument_name" : "USDC_USDT",
+      "instrument_type" : "linear",
+      "is_active" : true,
+      "kind" : "spot",
+      "maker_commission" : 0.0,
+      "min_trade_amount" : 1,
+      "price_index" : "usdc_usdt",
+      "quote_currency" : "USDT",
+      "taker_commission" : 0.0,
+      "tick_size" : 1.0E-4,
+      "tick_size_steps" : [ ]
     }
   ],
   "testnet": false,

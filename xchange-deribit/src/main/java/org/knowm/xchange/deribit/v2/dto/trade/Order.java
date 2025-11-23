@@ -1,9 +1,10 @@
 package org.knowm.xchange.deribit.v2.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import lombok.Data;
-import org.knowm.xchange.deribit.v2.dto.Direction;
+import org.knowm.xchange.deribit.v2.config.converter.StringToOrderTypeConverter;
 
 @Data
 public class Order {
@@ -84,7 +85,9 @@ public class Order {
   private BigDecimal filledAmount;
 
   /** direction, buy or sell */
-  private Direction direction;
+  @JsonProperty("direction")
+  @JsonDeserialize(converter = StringToOrderTypeConverter.class)
+  private org.knowm.xchange.dto.Order.OrderType orderSide;
 
   /** The timestamp (seconds since the Unix epoch, with millisecond precision) */
   @JsonProperty("creation_timestamp")

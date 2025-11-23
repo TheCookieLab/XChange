@@ -14,6 +14,7 @@ import org.knowm.xchange.deribit.v2.DeribitAdapters;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
+import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrades;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderFlags;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderPlacement;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderState;
@@ -33,8 +34,8 @@ import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamInstrument;
+import org.knowm.xchange.service.trade.params.InstrumentParam;
+import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrency;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamLimit;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsIdSpan;
@@ -228,8 +229,8 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
   @Override
   public UserTrades getTradeHistory(TradeHistoryParams params) throws IOException {
     String instrumentName = null;
-    if (params instanceof TradeHistoryParamInstrument) {
-      Instrument instrument = ((TradeHistoryParamInstrument) params).getInstrument();
+    if (params instanceof InstrumentParam) {
+      Instrument instrument = ((InstrumentParam) params).getInstrument();
       if (instrument != null) {
         instrumentName = DeribitAdapters.adaptInstrumentName(instrument);
       }
@@ -237,11 +238,8 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
 
     String currency = null;
     Kind kind = null; // not implemented
-    if (params instanceof TradeHistoryParamCurrencyPair) {
-      CurrencyPair currencyPair = ((TradeHistoryParamCurrencyPair) params).getCurrencyPair();
-      if (currencyPair != null) {
-        currency = currencyPair.getBase().getCurrencyCode();
-      }
+    if (params instanceof TradeHistoryParamCurrency) {
+      currency = ((TradeHistoryParamCurrency) params).getCurrency().getCurrencyCode();
     }
 
     Date startTime = null;
@@ -277,15 +275,15 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
       includeOld = ((DeribitTradeHistoryParamsOld) params).isIncludeOld();
     }
 
-    org.knowm.xchange.deribit.v2.dto.trade.UserTrades userTrades = null;
+    DeribitUserTrades deribitUserTrades = null;
 
     if (startTime != null && endTime != null) {
       if (instrumentName != null) {
-        userTrades =
+        deribitUserTrades =
             super.getUserTradesByInstrumentAndTime(
                 instrumentName, startTime, endTime, limit, includeOld, sorting);
       } else if (currency != null) {
-        userTrades =
+        deribitUserTrades =
             super.getUserTradesByCurrencyAndTime(
                 currency, kind, startTime, endTime, limit, includeOld, sorting);
       }
@@ -294,21 +292,21 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
         Integer startSeq = startId != null ? Integer.valueOf(startId) : null;
         Integer endSeq = endId != null ? Integer.valueOf(endId) : null;
 
-        userTrades =
+        deribitUserTrades =
             super.getUserTradesByInstrument(
                 instrumentName, startSeq, endSeq, limit, includeOld, sorting);
       } else if (currency != null) {
-        userTrades =
+        deribitUserTrades =
             super.getUserTradesByCurrency(
                 currency, kind, startId, endId, limit, includeOld, sorting);
       }
     }
 
-    if (userTrades == null) {
+    if (deribitUserTrades == null) {
       throw new ExchangeException("You should specify either instrument or currency pair");
     }
 
-    return DeribitAdapters.adaptUserTrades(userTrades);
+    return DeribitAdapters.adaptUserTrades(deribitUserTrades);
   }
 
   @Override

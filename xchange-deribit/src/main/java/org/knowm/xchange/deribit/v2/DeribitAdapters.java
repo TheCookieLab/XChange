@@ -20,7 +20,6 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.deribit.v2.dto.DeribitError;
 import org.knowm.xchange.deribit.v2.dto.DeribitException;
-import org.knowm.xchange.deribit.v2.dto.Direction;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummary;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitDeposit;
@@ -33,6 +32,8 @@ import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitOrderBook;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitTicker;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitTrade;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitTrades;
+import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrade;
+import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrades;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderState;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderType;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -145,7 +146,7 @@ public class DeribitAdapters {
 
   public static Trade adaptTrade(DeribitTrade deribitTrade, Instrument instrument) {
     return Trade.builder()
-        .type(adapt(deribitTrade.getDirection()))
+        .type(deribitTrade.getOrderSide())
         .originalAmount(deribitTrade.getAmount())
         .instrument(instrument)
         .price(deribitTrade.getPrice())
@@ -181,7 +182,7 @@ public class DeribitAdapters {
   }
 
   public static Order adaptOrder(org.knowm.xchange.deribit.v2.dto.trade.Order order) {
-    Order.OrderType type = adapt(order.getDirection());
+    Order.OrderType type = order.getOrderSide();
     Instrument instrument = adaptInstrument(order.getInstrumentName());
     Order.Builder builder;
     if (order.getOrderType().equals(OrderType.market)) {
@@ -202,17 +203,6 @@ public class DeribitAdapters {
         .fee(order.getCommission());
 
     return builder.build();
-  }
-
-  public static Order.OrderType adapt(Direction direction) {
-    switch (direction) {
-      case buy:
-        return Order.OrderType.BID;
-      case sell:
-        return Order.OrderType.ASK;
-      default:
-        throw new RuntimeException("Not supported order direction: " + direction);
-    }
   }
 
   public static Order.OrderStatus adaptOrderStatus(OrderState state) {
@@ -365,10 +355,9 @@ public class DeribitAdapters {
         .build();
   }
 
-  public static UserTrades adaptUserTrades(
-      org.knowm.xchange.deribit.v2.dto.trade.UserTrades userTrades) {
+  public static UserTrades adaptUserTrades(DeribitUserTrades deribitUserTrades) {
     return new UserTrades(
-        userTrades.getTrades().stream()
+        deribitUserTrades.getTrades().stream()
             .map(DeribitAdapters::adaptUserTrade)
             .collect(Collectors.toList()),
         Trades.TradeSortType.SortByTimestamp);
@@ -563,16 +552,16 @@ public class DeribitAdapters {
 
   private static UserTrade adaptUserTrade(org.knowm.xchange.deribit.v2.dto.trade.Trade trade) {
     return UserTrade.builder()
-        .type(adapt(trade.getDirection()))
-        .originalAmount(trade.getAmount())
-        .instrument(adaptInstrument(trade.getInstrumentName()))
-        .price(trade.getPrice())
-        .timestamp(trade.getTimestamp())
-        .id(trade.getTradeId())
-        .orderId(trade.getOrderId())
-        .feeAmount(trade.getFee())
-        .feeCurrency(new Currency(trade.getFeeCurrency()))
-        .orderUserReference(trade.getLabel())
+        .type(deribitDeribitUserTrade.getOrderSide())
+        .originalAmount(deribitDeribitUserTrade.getAmount())
+        .instrument(toInstrument(deribitDeribitUserTrade.getInstrumentName()))
+        .price(deribitDeribitUserTrade.getPrice())
+        .timestamp(toDate(deribitDeribitUserTrade.getTimestamp()))
+        .id(deribitDeribitUserTrade.getTradeId())
+        .orderId(deribitDeribitUserTrade.getOrderId())
+        .feeAmount(deribitDeribitUserTrade.getFee())
+        .feeCurrency(deribitDeribitUserTrade.getFeeCurrency())
+        .orderUserReference(deribitDeribitUserTrade.getLabel())
         .build();
   }
 

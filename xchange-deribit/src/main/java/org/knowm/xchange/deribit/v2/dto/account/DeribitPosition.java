@@ -1,10 +1,12 @@
 package org.knowm.xchange.deribit.v2.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import lombok.Data;
-import org.knowm.xchange.deribit.v2.dto.Direction;
+import org.knowm.xchange.deribit.v2.config.converter.StringToOrderTypeConverter;
 import org.knowm.xchange.deribit.v2.dto.Kind;
+import org.knowm.xchange.dto.Order;
 
 @Data
 public class DeribitPosition {
@@ -66,7 +68,9 @@ public class DeribitPosition {
   private BigDecimal estimatedLiquidationPrice;
 
   /** direction, buy or sell */
-  private Direction direction;
+  @JsonProperty("direction")
+  @JsonDeserialize(converter = StringToOrderTypeConverter.class)
+  private Order.OrderType orderSide;
 
   /** Delta parameter */
   private BigDecimal delta;

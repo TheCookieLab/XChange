@@ -5,9 +5,9 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class UserTrades {
+public class DeribitUserTrades {
 
-  private List<Trade> trades;
+  private List<DeribitUserTrade> trades;
 
   @JsonProperty("has_more")
   private boolean hasMore;

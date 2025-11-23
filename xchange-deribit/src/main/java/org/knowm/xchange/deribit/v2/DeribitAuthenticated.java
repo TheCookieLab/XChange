@@ -20,6 +20,7 @@ import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitTransfer;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitWithdrawal;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
+import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrades;
 import org.knowm.xchange.deribit.v2.dto.trade.Order;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderPlacement;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderType;
@@ -27,7 +28,6 @@ import org.knowm.xchange.deribit.v2.dto.trade.SettlementType;
 import org.knowm.xchange.deribit.v2.dto.trade.TimeInForce;
 import org.knowm.xchange.deribit.v2.dto.trade.Trigger;
 import org.knowm.xchange.deribit.v2.dto.trade.UserSettlements;
-import org.knowm.xchange.deribit.v2.dto.trade.UserTrades;
 import si.mazi.rescu.ParamsDigest;
 
 @Path("/api/v2/private")
@@ -242,7 +242,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_user_trades_by_currency")
-  DeribitResponse<UserTrades> getUserTradesByCurrency(
+  DeribitResponse<DeribitUserTrades> getUserTradesByCurrency(
       @QueryParam("currency") String currency,
       @QueryParam("kind") Kind kind,
       @QueryParam("start_id") String startId,
@@ -262,7 +262,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_user_trades_by_currency")
-  DeribitResponse<UserTrades> getUserTradesByCurrencyAndTime(
+  DeribitResponse<DeribitUserTrades> getUserTradesByCurrencyAndTime(
       @QueryParam("currency") String currency,
       @QueryParam("kind") Kind kind,
       @QueryParam("start_timestamp") long startTimestamp,
@@ -288,7 +288,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_user_trades_by_instrument")
-  DeribitResponse<UserTrades> getUserTradesByInstrument(
+  DeribitResponse<DeribitUserTrades> getUserTradesByInstrument(
       @QueryParam("instrument_name") String instrumentName,
       @QueryParam("start_seq") Integer startSeq,
       @QueryParam("end_seq") Integer endSeq,
@@ -314,7 +314,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_user_trades_by_instrument_and_time")
-  DeribitResponse<UserTrades> getUserTradesByInstrumentAndTime(
+  DeribitResponse<DeribitUserTrades> getUserTradesByInstrumentAndTime(
       @QueryParam("instrument_name") String instrumentName,
       @QueryParam("start_timestamp") long startTimestamp,
       @QueryParam("end_timestamp") long endTimestamp,
