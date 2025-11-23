@@ -2,18 +2,19 @@ package org.knowm.xchange.deribit.v2.config.converter;
 
 import com.fasterxml.jackson.databind.util.StdConverter;
 import java.util.Locale;
-import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPosition.Type;
 
-/** Converts string to {@code OrderType} */
-public class StringToOrderTypeConverter extends StdConverter<String, OrderType> {
+/** Converts string to {@code OpenPosition.Type} */
+public class StringToPositionTypeConverter extends StdConverter<String, OpenPosition.Type> {
 
   @Override
-  public OrderType convert(String value) {
+  public OpenPosition.Type convert(String value) {
     switch (value.toUpperCase(Locale.ROOT)) {
       case "BUY":
-        return OrderType.BID;
+        return Type.LONG;
       case "SELL":
-        return OrderType.ASK;
+        return Type.SHORT;
       case "ZERO":
         return null;
       default:

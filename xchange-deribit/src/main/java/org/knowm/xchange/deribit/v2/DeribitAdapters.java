@@ -45,6 +45,7 @@ import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.dto.account.FundingRecord.Status;
 import org.knowm.xchange.dto.account.FundingRecord.Type;
 import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPosition.MarginMode;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
@@ -183,7 +184,7 @@ public class DeribitAdapters {
 
   public static Order adaptOrder(org.knowm.xchange.deribit.v2.dto.trade.Order order) {
     Order.OrderType type = order.getOrderSide();
-    Instrument instrument = adaptInstrument(order.getInstrumentName());
+    Instrument instrument = toInstrument(order.getInstrumentName());
     Order.Builder builder;
     if (order.getOrderType().equals(OrderType.market)) {
       builder = new MarketOrder.Builder(type, instrument);
@@ -252,11 +253,16 @@ public class DeribitAdapters {
     return new Balance(deribitAccountSummary.getCurrency(), deribitAccountSummary.getBalance(), deribitAccountSummary.getAvailableFunds());
   }
 
-  public static OpenPosition adapt(DeribitPosition p) {
+  public static OpenPosition adapt(DeribitPosition deribitPosition) {
+    var size = deribitPosition.getSizeCurrency() != null ? deribitPosition.getSizeCurrency() : deribitPosition.getSize();
     return OpenPosition.builder()
-        .instrument(adaptInstrument(p.getInstrumentName()))
-        .size(p.getSize())
-        .price(p.getMarkPrice())
+        .instrument(toInstrument(deribitPosition.getInstrumentName()))
+        .type(deribitPosition.getPositionType())
+        .size(size)
+        .marginMode(MarginMode.CROSS)
+        .price(deribitPosition.getMarkPrice())
+        .liquidationPrice(deribitPosition.getEstimatedLiquidationPrice())
+        .unRealisedPnl(deribitPosition.getFloatingProfitLoss())
         .build();
   }
 

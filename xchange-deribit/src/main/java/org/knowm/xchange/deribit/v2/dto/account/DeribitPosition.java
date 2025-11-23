@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import lombok.Data;
-import org.knowm.xchange.deribit.v2.config.converter.StringToOrderTypeConverter;
+import org.knowm.xchange.deribit.v2.config.converter.StringToPositionTypeConverter;
 import org.knowm.xchange.deribit.v2.dto.Kind;
-import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.account.OpenPosition;
 
 @Data
 public class DeribitPosition {
@@ -69,8 +69,8 @@ public class DeribitPosition {
 
   /** direction, buy or sell */
   @JsonProperty("direction")
-  @JsonDeserialize(converter = StringToOrderTypeConverter.class)
-  private Order.OrderType orderSide;
+  @JsonDeserialize(converter = StringToPositionTypeConverter.class)
+  private OpenPosition.Type positionType;
 
   /** Delta parameter */
   private BigDecimal delta;
