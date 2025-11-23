@@ -11,17 +11,47 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.deribit.DeribitExchangeWiremock;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPosition.MarginMode;
 import org.knowm.xchange.dto.account.OpenPosition.Type;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.service.trade.TradeService;
+import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 
 class DeribitTradeServiceTest extends DeribitExchangeWiremock {
 
   TradeService tradeService = exchange.getTradeService();
+
+  @Test
+  void open_orders_by_symbol() throws IOException {
+    DefaultOpenOrdersParamInstrument params =
+        (DefaultOpenOrdersParamInstrument) tradeService.createOpenOrdersParams();
+    params.setInstrument(new CurrencyPair("XRP/USDC"));
+    OpenOrders actual = tradeService.getOpenOrders(params);
+
+    LimitOrder expected =
+        new LimitOrder.Builder(OrderType.BID, new CurrencyPair("XRP/USDC"))
+            .id("XRP_USDC-6476136171")
+            .userReference("018af0fd-9ad8-4dec-94ce-90ce41306ce1")
+            .limitPrice(new BigDecimal("2.008"))
+            .originalAmount(new BigDecimal("2.0"))
+            .cumulativeAmount(new BigDecimal("0.0"))
+            .timestamp(Date.from(Instant.parse("2025-11-23T11:16:08.815Z")))
+            .orderStatus(OrderStatus.OPEN)
+            .averagePrice(new BigDecimal("0.0"))
+            .build();
+
+    assertThat(actual.getOpenOrders()).hasSize(1);
+    assertThat(actual.getHiddenOrders()).isEmpty();
+
+    assertThat(actual.getOpenOrders()).first().usingRecursiveComparison().isEqualTo(expected);
+  }
+
 
   @Test
   void open_positions() throws IOException {

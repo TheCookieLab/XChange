@@ -3,14 +3,19 @@ package org.knowm.xchange.deribit.v2.dto.trade;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
+import java.time.Instant;
+import lombok.Builder;
 import lombok.Data;
+import lombok.extern.jackson.Jacksonized;
 import org.knowm.xchange.deribit.v2.config.converter.StringToOrderTypeConverter;
 
 @Data
-public class Order {
+@Builder
+@Jacksonized
+public class DeribitOrder {
   /** Order time in force: "good_til_cancelled", "fill_or_kill", "immediate_or_cancel" */
   @JsonProperty("time_in_force")
-  private TimeInForce time_in_force;
+  private TimeInForce timeInForce;
 
   /** true for reduce-only orders only */
   @JsonProperty("reduce_only")
@@ -21,15 +26,8 @@ public class Order {
   private BigDecimal profitLoss;
 
   /** Price in base currency */
-  private String price;
-
-  public BigDecimal getPrice() {
-    try {
-      return new BigDecimal(price);
-    } catch (NumberFormatException e) {
-      return null;
-    }
-  }
+  @JsonProperty("price")
+  private BigDecimal price;
 
   /** true for post-only orders only */
   @JsonProperty("post_only")
@@ -64,7 +62,7 @@ public class Order {
 
   /** The timestamp (seconds since the Unix epoch, with millisecond precision) */
   @JsonProperty("last_update_timestamp")
-  private long lastUpdateTimestamp; //      <- millis
+  private Instant updatedAt;
 
   /** user defined label (up to 32 characters) */
   private String label;
@@ -91,7 +89,7 @@ public class Order {
 
   /** The timestamp (seconds since the Unix epoch, with millisecond precision) */
   @JsonProperty("creation_timestamp")
-  private long creationTimestamp; //      <- millis
+  private Instant createdAt;
 
   /** Commission paid so far (in base currency) */
   private BigDecimal commission;
@@ -120,7 +118,7 @@ public class Order {
 
   /** stop price (Only for future stop orders) */
   @JsonProperty("stop_price")
-  private BigDecimal stop_price;
+  private BigDecimal stopPrice;
 
   /**
    * Trigger type (Only for stop orders). Allowed values: "index_price", "mark_price", "last_price".

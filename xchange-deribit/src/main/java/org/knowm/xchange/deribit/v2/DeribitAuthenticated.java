@@ -20,8 +20,8 @@ import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitTransfer;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitWithdrawal;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
+import org.knowm.xchange.deribit.v2.dto.trade.DeribitOrder;
 import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrades;
-import org.knowm.xchange.deribit.v2.dto.trade.Order;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderPlacement;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderType;
 import org.knowm.xchange.deribit.v2.dto.trade.SettlementType;
@@ -168,7 +168,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("cancel")
-  DeribitResponse<Order> cancel(
+  DeribitResponse<DeribitOrder> cancel(
       @QueryParam("order_id") String orderId, @HeaderParam("Authorization") ParamsDigest auth)
       throws DeribitException, IOException;
 
@@ -209,7 +209,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_open_orders_by_currency")
-  DeribitResponse<List<Order>> getOpenOrdersByCurrency(
+  DeribitResponse<List<DeribitOrder>> getOpenOrdersByCurrency(
       @QueryParam("currency") String currency,
       @QueryParam("kind") Kind kind,
       @QueryParam("type") String type,
@@ -227,7 +227,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_open_orders_by_instrument")
-  DeribitResponse<List<Order>> getOpenOrdersByInstrument(
+  DeribitResponse<List<DeribitOrder>> getOpenOrdersByInstrument(
       @QueryParam("instrument_name") String instrumentName,
       @QueryParam("type") String type,
       @HeaderParam("Authorization") ParamsDigest auth)
@@ -367,7 +367,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_order_history_by_instrument")
-  DeribitResponse<List<Order>> getOrderHistoryByCurrency(
+  DeribitResponse<List<DeribitOrder>> getOrderHistoryByCurrency(
       @QueryParam("currency") String currency,
       @QueryParam("kind") Kind kind,
       @QueryParam("count") Integer count,
@@ -390,7 +390,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_order_history_by_instrument")
-  DeribitResponse<List<Order>> getOrderHistoryByInstrument(
+  DeribitResponse<List<DeribitOrder>> getOrderHistoryByInstrument(
       @QueryParam("instrument_name") String instrumentName,
       @QueryParam("count") Integer count,
       @QueryParam("offset") Integer offset,
@@ -406,7 +406,7 @@ public interface DeribitAuthenticated {
    */
   @GET
   @Path("get_order_state")
-  DeribitResponse<Order> getOrderState(
+  DeribitResponse<DeribitOrder> getOrderState(
       @QueryParam("order_id") String orderId, @HeaderParam("Authorization") ParamsDigest auth)
       throws DeribitException, IOException;
 

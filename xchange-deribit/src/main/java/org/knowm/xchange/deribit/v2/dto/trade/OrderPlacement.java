@@ -7,5 +7,5 @@ import lombok.Data;
 public class OrderPlacement {
 
   private List<DeribitUserTrade> trades;
-  private Order order;
+  private DeribitOrder order;
 }

@@ -14,6 +14,7 @@ import org.knowm.xchange.deribit.v2.DeribitAdapters;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
+import org.knowm.xchange.deribit.v2.dto.trade.DeribitOrder;
 import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrades;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderFlags;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderPlacement;
@@ -60,22 +61,21 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
-    List<org.knowm.xchange.deribit.v2.dto.trade.Order> openOrders;
+    List<DeribitOrder> openDeribitOrders;
 
     if (params instanceof OpenOrdersParamCurrencyPair) {
       OpenOrdersParamCurrencyPair pairParams = (OpenOrdersParamCurrencyPair) params;
       CurrencyPair pair = pairParams.getCurrencyPair();
-      openOrders = super.getOpenOrdersByCurrency(pair.getBase().getCurrencyCode(), null, null);
+      openDeribitOrders = getOpenOrdersByCurrency(pair.getBase().getCurrencyCode(), null, null);
     } else if (params instanceof OpenOrdersParamInstrument) {
       OpenOrdersParamInstrument instrumentParams = (OpenOrdersParamInstrument) params;
       Instrument instrument = instrumentParams.getInstrument();
-      openOrders =
-          super.getOpenOrdersByInstrument(DeribitAdapters.adaptInstrumentName(instrument), null);
+      openDeribitOrders = getOpenOrdersByInstrument(DeribitAdapters.adaptInstrumentName(instrument), null);
     } else {
-      openOrders = openOrders();
+      openDeribitOrders = openOrders();
     }
 
-    return DeribitAdapters.adaptOpenOrders(openOrders);
+    return DeribitAdapters.adaptOpenOrders(openDeribitOrders);
   }
 
   @Override
@@ -83,12 +83,12 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
     return new DefaultOpenOrdersParamInstrument();
   }
 
-  private List<org.knowm.xchange.deribit.v2.dto.trade.Order> openOrders() throws IOException {
-    List<org.knowm.xchange.deribit.v2.dto.trade.Order> openOrders = new ArrayList<>();
+  private List<DeribitOrder> openOrders() throws IOException {
+    List<DeribitOrder> openDeribitOrders = new ArrayList<>();
     for (Currency c : ((DeribitAccountService) exchange.getAccountService()).currencies()) {
-      openOrders.addAll(super.getOpenOrdersByCurrency(c.getCurrencyCode(), null, null));
+      openDeribitOrders.addAll(super.getOpenOrdersByCurrency(c.getCurrencyCode(), null, null));
     }
-    return openOrders;
+    return openDeribitOrders;
   }
 
   @Override

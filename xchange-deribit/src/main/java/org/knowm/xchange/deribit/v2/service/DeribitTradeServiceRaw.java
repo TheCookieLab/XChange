@@ -8,8 +8,8 @@ import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
+import org.knowm.xchange.deribit.v2.dto.trade.DeribitOrder;
 import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrades;
-import org.knowm.xchange.deribit.v2.dto.trade.Order;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderPlacement;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderType;
 import org.knowm.xchange.deribit.v2.dto.trade.SettlementType;
@@ -121,7 +121,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
         .getResult();
   }
 
-  public Order cancel(String orderId) throws IOException {
+  public DeribitOrder cancel(String orderId) throws IOException {
     return deribitAuthenticated.cancel(orderId, deribitDigest).getResult();
   }
 
@@ -133,14 +133,14 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
     return deribitAuthenticated.cancelAll(deribitDigest).getResult();
   }
 
-  public List<Order> getOpenOrdersByCurrency(String currency, Kind kind, String type)
+  public List<DeribitOrder> getOpenOrdersByCurrency(String currency, Kind kind, String type)
       throws IOException {
     return deribitAuthenticated
         .getOpenOrdersByCurrency(currency, kind, type, deribitDigest)
         .getResult();
   }
 
-  public List<Order> getOpenOrdersByInstrument(String instrumentName, String type)
+  public List<DeribitOrder> getOpenOrdersByInstrument(String instrumentName, String type)
       throws IOException {
     return deribitAuthenticated
         .getOpenOrdersByInstrument(instrumentName, type, deribitDigest)
@@ -226,7 +226,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
         .getResult();
   }
 
-  public List<Order> getOrderHistoryByCurrency(
+  public List<DeribitOrder> getOrderHistoryByCurrency(
       String currency,
       Kind kind,
       Integer count,
@@ -240,7 +240,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
         .getResult();
   }
 
-  public List<Order> getOrderHistoryByInstrument(
+  public List<DeribitOrder> getOrderHistoryByInstrument(
       String instrumentName,
       Integer count,
       Integer offset,
@@ -253,7 +253,7 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
         .getResult();
   }
 
-  public Order getOrderState(String orderId) throws IOException {
+  public DeribitOrder getOrderState(String orderId) throws IOException {
     return deribitAuthenticated.getOrderState(orderId, deribitDigest).getResult();
   }
 

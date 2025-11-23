@@ -71,6 +71,28 @@
       "taker_commission" : 5.0E-4,
       "tick_size" : 0.5,
       "tick_size_steps" : [ ]
+    },
+    {
+      "base_currency" : "XRP",
+      "block_trade_commission" : 0.0,
+      "block_trade_min_trade_amount" : 50000,
+      "block_trade_tick_size" : 1.0E-4,
+      "contract_size" : 1,
+      "counter_currency" : "USDC",
+      "creation_timestamp" : 1709035226000,
+      "expiration_timestamp" : 32503708800000,
+      "instrument_id" : 296589,
+      "instrument_name" : "XRP_USDC",
+      "instrument_type" : "linear",
+      "is_active" : true,
+      "kind" : "spot",
+      "maker_commission" : 0.0,
+      "min_trade_amount" : 1,
+      "price_index" : "xrp_usdc",
+      "quote_currency" : "USDC",
+      "taker_commission" : 0.0,
+      "tick_size" : 1.0E-4,
+      "tick_size_steps" : [ ]
     }
   ],
   "testnet": false,

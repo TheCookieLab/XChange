@@ -32,6 +32,7 @@ import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitOrderBook;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitTicker;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitTrade;
 import org.knowm.xchange.deribit.v2.dto.marketdata.DeribitTrades;
+import org.knowm.xchange.deribit.v2.dto.trade.DeribitOrder;
 import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrade;
 import org.knowm.xchange.deribit.v2.dto.trade.DeribitUserTrades;
 import org.knowm.xchange.deribit.v2.dto.trade.OrderState;
@@ -164,12 +165,11 @@ public class DeribitAdapters {
             .collect(Collectors.toList()));
   }
 
-  public static OpenOrders adaptOpenOrders(
-      List<org.knowm.xchange.deribit.v2.dto.trade.Order> orders) {
+  public static OpenOrders adaptOpenOrders(List<DeribitOrder> deribitOrders) {
     List<LimitOrder> limitOrders = new ArrayList<>();
     List<Order> otherOrders = new ArrayList<>();
 
-    orders.forEach(
+    deribitOrders.forEach(
         o -> {
           Order order = DeribitAdapters.adaptOrder(o);
           if (order instanceof LimitOrder) {
@@ -182,26 +182,26 @@ public class DeribitAdapters {
     return new OpenOrders(limitOrders, otherOrders);
   }
 
-  public static Order adaptOrder(org.knowm.xchange.deribit.v2.dto.trade.Order order) {
-    Order.OrderType type = order.getOrderSide();
-    Instrument instrument = toInstrument(order.getInstrumentName());
+  public static Order adaptOrder(DeribitOrder deribitOrder) {
+    Order.OrderType type = deribitOrder.getOrderSide();
+    Instrument instrument = toInstrument(deribitOrder.getInstrumentName());
     Order.Builder builder;
-    if (order.getOrderType().equals(OrderType.market)) {
+    if (deribitOrder.getOrderType().equals(OrderType.market)) {
       builder = new MarketOrder.Builder(type, instrument);
-    } else if (order.getOrderType().equals(OrderType.limit)) {
-      builder = new LimitOrder.Builder(type, instrument).limitPrice(order.getPrice());
+    } else if (deribitOrder.getOrderType().equals(OrderType.limit)) {
+      builder = new LimitOrder.Builder(type, instrument).limitPrice(deribitOrder.getPrice());
     } else {
-      throw new ExchangeException("Unsupported order type: \"" + order.getOrderType() + "\"");
+      throw new ExchangeException("Unsupported deribitOrder type: \"" + deribitOrder.getOrderType() + "\"");
     }
     builder
-        .orderStatus(adaptOrderStatus(order.getOrderState()))
-        .id(order.getOrderId())
-        .userReference(order.getLabel())
-        .timestamp(new Date(order.getCreationTimestamp()))
-        .averagePrice(order.getAveragePrice())
-        .originalAmount(order.getAmount())
-        .cumulativeAmount(order.getFilledAmount())
-        .fee(order.getCommission());
+        .orderStatus(adaptOrderStatus(deribitOrder.getOrderState()))
+        .id(deribitOrder.getOrderId())
+        .userReference(deribitOrder.getLabel())
+        .timestamp(toDate(deribitOrder.getCreatedAt()))
+        .averagePrice(deribitOrder.getAveragePrice())
+        .originalAmount(deribitOrder.getAmount())
+        .cumulativeAmount(deribitOrder.getFilledAmount())
+        .fee(deribitOrder.getCommission());
 
     return builder.build();
   }
