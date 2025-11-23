@@ -123,7 +123,7 @@ public class DeribitAdapters {
         .volume(deribitTicker.getStats().getVolume())
         .bidSize(deribitTicker.getBestBidAmount())
         .askSize(deribitTicker.getBestAskAmount())
-        .timestamp(deribitTicker.getTimestamp())
+        .timestamp(toDate(deribitTicker.getTimestamp()))
         .build();
   }
 
@@ -133,7 +133,7 @@ public class DeribitAdapters {
         adaptOrdersList(deribitOrderBook.getBids(), Order.OrderType.BID, instrument);
     List<LimitOrder> asks =
         adaptOrdersList(deribitOrderBook.getAsks(), Order.OrderType.ASK, instrument);
-    return new OrderBook(deribitOrderBook.getTimestamp(), asks, bids);
+    return new OrderBook(toDate(deribitOrderBook.getTimestamp()), asks, bids);
   }
 
   /** convert orders map (price -> amount) to a list of limit orders */
@@ -150,7 +150,7 @@ public class DeribitAdapters {
         .originalAmount(deribitTrade.getAmount())
         .instrument(instrument)
         .price(deribitTrade.getPrice())
-        .timestamp(deribitTrade.getTimestamp())
+        .timestamp(toDate(deribitTrade.getTimestamp()))
         .id(deribitTrade.getTradeId())
         .build();
   }

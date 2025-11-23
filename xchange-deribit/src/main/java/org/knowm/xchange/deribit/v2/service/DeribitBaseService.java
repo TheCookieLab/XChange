@@ -41,6 +41,10 @@ public class DeribitBaseService extends BaseExchangeService<DeribitExchange>
     super(exchange);
     deribit =
         ExchangeRestProxyBuilder.forInterface(Deribit.class, exchange.getExchangeSpecification())
+            .clientConfigCustomizer(
+                clientConfig ->
+                    clientConfig.setJacksonObjectMapperFactory(
+                        new DeribitJacksonObjectMapperFactory()))
             .build();
 
     deribitAuthenticated =
