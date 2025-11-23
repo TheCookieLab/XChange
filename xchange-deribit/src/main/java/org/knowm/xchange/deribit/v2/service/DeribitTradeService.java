@@ -319,4 +319,13 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
     return getOrder(
         Arrays.stream(orderQueryParams).map(OrderQueryParams::getOrderId).toArray(String[]::new));
   }
+
+  @Override
+  public Collection<Order> getOrder(String... orderIds) throws IOException {
+    var orders = new ArrayList<Order>();
+    for (String orderId : orderIds) {
+      orders.add(DeribitAdapters.adaptOrder(getOrderState(orderId)));
+    }
+    return orders;
+  }
 }

@@ -5,18 +5,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Date;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.deribit.DeribitExchangeWiremock;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPosition.MarginMode;
 import org.knowm.xchange.dto.account.OpenPosition.Type;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
@@ -87,6 +90,27 @@ class DeribitTradeServiceTest extends DeribitExchangeWiremock {
     assertThat(actualResponse).isEqualTo("XRP_USDC-6476518126");
   }
 
+  @Test
+  void buy_order_details() throws IOException {
+    var expected =
+        new MarketOrder.Builder(OrderType.BID, new CurrencyPair("USDC/USDT"))
+            .id("USDC_USDT-6470719424")
+            .userReference("bfa2eaeb-7586-4552-9525-c0c7b4bc5df2")
+            .timestamp(Date.from(Instant.parse("2025-11-22T23:38:35.497Z")))
+            .originalAmount(new BigDecimal("2.0"))
+            .orderStatus(OrderStatus.FILLED)
+            .cumulativeAmount(new BigDecimal("2.0"))
+            .averagePrice(new BigDecimal("1.0008"))
+            .build();
+
+    Collection<Order> orders = tradeService.getOrder("USDC_USDT-6470719424");
+    assertThat(orders).hasSize(1);
+    assertThat(orders)
+        .first()
+//        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .usingRecursiveComparison()
+        .isEqualTo(expected);
+  }
 
   @Test
   void trade_history() throws IOException {
