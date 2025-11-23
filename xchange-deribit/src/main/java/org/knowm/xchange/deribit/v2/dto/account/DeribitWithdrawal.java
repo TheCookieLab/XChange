@@ -39,7 +39,7 @@ public class DeribitWithdrawal {
   @JsonProperty("transaction_id")
   private String transactionId;
 
-  @JsonProperty("received_timestamp")
+  @JsonProperty("created_timestamp")
   private Instant createdAt;
 
   @JsonProperty("updated_timestamp")
