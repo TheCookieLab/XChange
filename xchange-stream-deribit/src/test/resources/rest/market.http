@@ -1,0 +1,30 @@
+### Subscribe Ticker Channel
+WEBSOCKET {{api_v2}}
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "public/subscribe",
+  "params": {
+    "channels": [
+      "ticker.BTC-PERPETUAL.agg2"
+    ]
+  }
+}
+
+
+### Subscribe Order Book Channel
+WEBSOCKET {{api_v2}}
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "public/subscribe",
+  "params": {
+    "channels": [
+      "book.BTC-PERPETUAL.none.10.agg2"
+    ]
+  }
+}
+
+

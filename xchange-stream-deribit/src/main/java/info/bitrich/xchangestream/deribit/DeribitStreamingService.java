@@ -1,0 +1,103 @@
+package info.bitrich.xchangestream.deribit;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import info.bitrich.xchangestream.deribit.config.Config;
+import info.bitrich.xchangestream.deribit.dto.request.DeribitWsRequest;
+import info.bitrich.xchangestream.deribit.dto.request.DeribitWsRequest.Method;
+import info.bitrich.xchangestream.deribit.dto.request.DeribitWsRequest.Params;
+import info.bitrich.xchangestream.deribit.dto.response.DeribitEventNotification;
+import info.bitrich.xchangestream.deribit.dto.response.DeribitWsNotification;
+import info.bitrich.xchangestream.service.netty.NettyStreamingService;
+import java.io.IOException;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class DeribitStreamingService extends NettyStreamingService<DeribitWsNotification> {
+
+  protected final ObjectMapper objectMapper = Config.getInstance().getObjectMapper();
+
+  public DeribitStreamingService(String apiUri) {
+    super(apiUri, Integer.MAX_VALUE);
+  }
+
+  @Override
+  protected String getChannelNameFromMessage(DeribitWsNotification message) {
+      return message.getParams().getChannel();
+  }
+
+  @Override
+  public String getSubscribeMessage(String channelName, Object... args) throws IOException {
+    var deribitWsRequest = DeribitWsRequest.builder()
+        .method(Method.SUBSCRIBE)
+        .params(Params.builder().channels(List.of(channelName)).build())
+        .build();
+    return objectMapper.writeValueAsString(deribitWsRequest);
+  }
+
+  @Override
+  public String getUnsubscribeMessage(String channelName, Object... args) throws IOException {
+    var deribitWsRequest = DeribitWsRequest.builder()
+        .method(Method.UNSUBSCRIBE)
+        .params(Params.builder().channels(List.of(channelName)).build())
+        .build();
+    return objectMapper.writeValueAsString(deribitWsRequest);
+  }
+
+  @Override
+  protected void handleMessage(DeribitWsNotification message) {
+    log.debug("Processing {}", message.toString());
+    // no special processing of event messages
+    if (message instanceof DeribitEventNotification) {
+      return;
+    }
+    super.handleMessage(message);
+  }
+
+  @Override
+  protected void handleChannelMessage(String channel, DeribitWsNotification message) {
+    super.handleChannelMessage(channel, message);
+  }
+
+  /**
+   * @param channelName name of channel
+   * @param args array with [{@code MarketType}, {@code Instrument}, ...]
+   * @return subscription id in form of "marketType_channelName_instrument1_instrumentX"
+   */
+  @Override
+  public String getSubscriptionUniqueId(String channelName, Object... args) {
+      return channelName;
+  }
+
+  @Override
+  public void messageHandler(String message) {
+    log.debug("Received message: {}", message);
+    DeribitWsNotification deribitWsNotification;
+
+    // Parse incoming message to JSON
+    try {
+      JsonNode jsonNode = objectMapper.readTree(message);
+
+      // try to parse event
+      if (jsonNode.has("result")) {
+        ((ObjectNode) jsonNode).put("messageType", "event");
+      }
+      // copy nested value of params.channel to the root of json to detect deserialization type
+      else if (jsonNode.has("params") && jsonNode.get("params").has("channel")) {
+          var channelText = jsonNode.get("params").get("channel").asText().split("\\.")[0];
+        ((ObjectNode) jsonNode).put("messageType", channelText);
+      }
+
+      deribitWsNotification = objectMapper.treeToValue(jsonNode, DeribitWsNotification.class);
+
+    } catch (IOException e) {
+      log.error("Error parsing incoming message to JSON: {}", message);
+      log.error(e.getMessage(), e);
+      return;
+    }
+
+    handleMessage(deribitWsNotification);
+  }
+}

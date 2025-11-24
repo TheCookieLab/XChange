@@ -1,0 +1,37 @@
+package info.bitrich.xchangestream.deribit;
+
+import info.bitrich.xchangestream.deribit.dto.response.DeribitTickerNotification;
+import lombok.experimental.UtilityClass;
+import org.knowm.xchange.deribit.v2.DeribitAdapters;
+import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.instrument.Instrument;
+
+@UtilityClass
+public class DeribitStreamingAdapters {
+
+  public Ticker toTicker(DeribitTickerNotification notification) {
+    DeribitTickerNotification.TickerData tickerData = notification.getParams().getData();
+
+    Instrument instrument = DeribitAdapters.toInstrument(tickerData.getInstrumentName());
+    if (instrument == null) {
+      return null;
+    }
+
+    return new Ticker.Builder()
+        .instrument(instrument)
+        .last(tickerData.getLastPrice())
+        .bid(tickerData.getBestBidPrice())
+        .ask(tickerData.getBestAskPrice())
+        .high(tickerData.getStats().getHigh())
+        .low(tickerData.getStats().getLow())
+        .volume(tickerData.getStats().getVolume())
+        .quoteVolume(tickerData.getStats().getVolumeNotional())
+        .timestamp(DeribitAdapters.toDate(tickerData.getTimestamp()))
+        .bidSize(tickerData.getBestBidSize())
+        .askSize(tickerData.getBestAskSize())
+        .percentageChange(tickerData.getStats().getPriceChange())
+        .build();
+  }
+
+
+}
