@@ -70,7 +70,7 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
     } else if (params instanceof OpenOrdersParamInstrument) {
       OpenOrdersParamInstrument instrumentParams = (OpenOrdersParamInstrument) params;
       Instrument instrument = instrumentParams.getInstrument();
-      openDeribitOrders = getOpenOrdersByInstrument(DeribitAdapters.adaptInstrumentName(instrument), null);
+      openDeribitOrders = getOpenOrdersByInstrument(DeribitAdapters.toString(instrument), null);
     } else {
       openDeribitOrders = openOrders();
     }
@@ -113,7 +113,7 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
   private String placeOrder(
       OrderType type, Order order, BigDecimal price, Trigger trigger, BigDecimal triggerPrice)
       throws IOException {
-    String instrumentName = DeribitAdapters.adaptInstrumentName(order.getInstrument());
+    String instrumentName = DeribitAdapters.toString(order.getInstrument());
     BigDecimal amount = order.getOriginalAmount();
     String label = order.getUserReference();
     TimeInForce timeInForce = findOrderFlagValue(order, TimeInForce.class);
@@ -232,7 +232,7 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
     if (params instanceof InstrumentParam) {
       Instrument instrument = ((InstrumentParam) params).getInstrument();
       if (instrument != null) {
-        instrumentName = DeribitAdapters.adaptInstrumentName(instrument);
+        instrumentName = DeribitAdapters.toString(instrument);
       }
     }
 

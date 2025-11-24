@@ -16,7 +16,9 @@ import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummary;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitAccountSummaryList;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitDeposit;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitLogListResponse;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitPosition;
+import org.knowm.xchange.deribit.v2.dto.account.DeribitTransactionLog;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitTransfer;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitWithdrawal;
 import org.knowm.xchange.deribit.v2.dto.trade.AdvancedOptions;
@@ -434,6 +436,16 @@ public interface DeribitAuthenticated {
       @QueryParam("currency") String currency,
       @QueryParam("count") Integer count,
       @QueryParam("offset") Long offset,
+      @HeaderParam("Authorization") ParamsDigest auth)
+      throws DeribitException, IOException;
+
+  @GET
+  @Path("get_transaction_log")
+  DeribitResponse<DeribitLogListResponse<DeribitTransactionLog>> getTransactionLogs(
+      @QueryParam("currency") String currency,
+      @QueryParam("start_timestamp") long startTimestamp,
+      @QueryParam("end_timestamp") long endTimestamp,
+      @QueryParam("count") Integer count,
       @HeaderParam("Authorization") ParamsDigest auth)
       throws DeribitException, IOException;
 
