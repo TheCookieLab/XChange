@@ -25,7 +25,7 @@ public class DeribitStreamingMarketDataService implements StreamingMarketDataSer
 
   @Override
   public Observable<Ticker> getTicker(Instrument instrument, Object... args) {
-    var channelName = String.format("ticker.%s.agg2", DeribitAdapters.toString(instrument));
+    var channelName = String.format("ticker.%s.100ms", DeribitAdapters.toString(instrument));
     return service
         .subscribeChannel(channelName)
         .map(DeribitTickerNotification.class::cast)

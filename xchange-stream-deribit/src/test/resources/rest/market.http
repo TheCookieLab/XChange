@@ -7,7 +7,7 @@ Content-Type: application/json
   "method": "public/subscribe",
   "params": {
     "channels": [
-      "ticker.BTC-PERPETUAL.agg2"
+      "ticker.BTC-PERPETUAL.100ms"
     ]
   }
 }
@@ -22,7 +22,7 @@ Content-Type: application/json
   "method": "public/subscribe",
   "params": {
     "channels": [
-      "book.BTC-PERPETUAL.none.10.agg2"
+      "book.BTC-PERPETUAL.none.10.100ms"
     ]
   }
 }

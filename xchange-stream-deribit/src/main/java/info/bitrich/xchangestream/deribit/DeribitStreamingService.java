@@ -57,21 +57,6 @@ public class DeribitStreamingService extends NettyStreamingService<DeribitWsNoti
   }
 
   @Override
-  protected void handleChannelMessage(String channel, DeribitWsNotification message) {
-    super.handleChannelMessage(channel, message);
-  }
-
-  /**
-   * @param channelName name of channel
-   * @param args array with [{@code MarketType}, {@code Instrument}, ...]
-   * @return subscription id in form of "marketType_channelName_instrument1_instrumentX"
-   */
-  @Override
-  public String getSubscriptionUniqueId(String channelName, Object... args) {
-      return channelName;
-  }
-
-  @Override
   public void messageHandler(String message) {
     log.debug("Received message: {}", message);
     DeribitWsNotification deribitWsNotification;
