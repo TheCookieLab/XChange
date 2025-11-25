@@ -3,10 +3,14 @@ package info.bitrich.xchangestream.deribit;
 import info.bitrich.xchangestream.deribit.dto.response.DeribitTickerNotification;
 import info.bitrich.xchangestream.deribit.dto.response.DeribitTradeNotification;
 import info.bitrich.xchangestream.deribit.dto.response.DeribitTradeNotification.TradeData;
+import info.bitrich.xchangestream.deribit.dto.response.DeribitUserChangeNotification;
 import info.bitrich.xchangestream.deribit.dto.response.DeribitUserTradeNotification;
 import info.bitrich.xchangestream.deribit.dto.response.DeribitUserTradeNotification.UserTradeData;
+import java.util.Optional;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.deribit.v2.DeribitAdapters;
+import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPosition.MarginMode;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.UserTrade;
@@ -73,5 +77,26 @@ public class DeribitStreamingAdapters {
         .id(userTradeData.getTradeId())
         .build();
   }
+
+  public OpenPosition toOpenPosition(DeribitUserChangeNotification notification) {
+    var deribitPosition = Optional.ofNullable(notification.getParams().getData().getPositions())
+        .map(deribitPositions -> deribitPositions.get(0))
+        .orElse(null);
+
+    if (deribitPosition == null) {
+      return null;
+    }
+
+    var size = deribitPosition.getSizeCurrency() != null ? deribitPosition.getSizeCurrency() : deribitPosition.getSize();
+    return OpenPosition.builder()
+        .instrument(DeribitAdapters.toInstrument(deribitPosition.getInstrumentName()))
+        .type(deribitPosition.getPositionType())
+        .marginMode(MarginMode.CROSS)
+        .size(size)
+        .price(deribitPosition.getAveragePrice())
+        .unRealisedPnl(deribitPosition.getFloatingProfitLoss())
+        .build();
+  }
+
 
 }

@@ -20,6 +20,7 @@ import lombok.extern.jackson.Jacksonized;
     @Type(value = DeribitEventNotification.class, name = "event"),
     @Type(value = DeribitTickerNotification.class, name = "ticker"),
     @Type(value = DeribitTradeNotification.class, name = "trades"),
+    @Type(value = DeribitUserChangeNotification.class, name = "user.changes"),
     @Type(value = DeribitUserTradeNotification.class, name = "user.trades"),
 })
 @Data
