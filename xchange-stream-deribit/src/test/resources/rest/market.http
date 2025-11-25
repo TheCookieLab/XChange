@@ -28,3 +28,18 @@ Content-Type: application/json
 }
 
 
+### Subscribe Trades Channel
+WEBSOCKET {{api_v2}}
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "public/subscribe",
+  "params": {
+    "channels": [
+      "trades.BTC-PERPETUAL.100ms"
+    ]
+  }
+}
+
+

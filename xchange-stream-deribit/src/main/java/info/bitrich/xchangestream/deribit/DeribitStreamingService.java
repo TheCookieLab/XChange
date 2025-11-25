@@ -98,6 +98,15 @@ public class DeribitStreamingService extends NettyStreamingService<DeribitWsNoti
       return;
     }
 
-    handleMessage(deribitWsNotification);
+    if (deribitWsNotification.hasSinglePayload()) {
+      handleMessage(deribitWsNotification);
+    } else {
+      // process several payloads separately
+      ((List) deribitWsNotification.getParams().getData()).stream().forEach(payload -> {
+        var singleNotification = deribitWsNotification.toBuilder().build();
+        singleNotification.getParams().setData(List.of(payload));
+        handleMessage(singleNotification);
+      });
+    }
   }
 }

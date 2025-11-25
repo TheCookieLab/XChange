@@ -1,9 +1,12 @@
 package info.bitrich.xchangestream.deribit;
 
 import info.bitrich.xchangestream.deribit.dto.response.DeribitTickerNotification;
+import info.bitrich.xchangestream.deribit.dto.response.DeribitTradeNotification;
+import info.bitrich.xchangestream.deribit.dto.response.DeribitTradeNotification.TradeData;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.deribit.v2.DeribitAdapters;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.instrument.Instrument;
 
 @UtilityClass
@@ -33,5 +36,23 @@ public class DeribitStreamingAdapters {
         .build();
   }
 
+  public Trade toTrade(DeribitTradeNotification notification) {
+    TradeData tradeData = notification.getParams().getData().get(0);
+
+    Instrument instrument = DeribitAdapters.toInstrument(tradeData.getInstrumentName());
+    if (instrument == null) {
+      return null;
+    }
+
+
+    return Trade.builder()
+        .type(tradeData.getOrderSide())
+        .originalAmount(tradeData.getAmount())
+        .instrument(instrument)
+        .price(tradeData.getPrice())
+        .timestamp(DeribitAdapters.toDate(tradeData.getTimestamp()))
+        .id(tradeData.getTradeId())
+        .build();
+  }
 
 }

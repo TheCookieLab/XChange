@@ -2,6 +2,7 @@ package info.bitrich.xchangestream.deribit.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import info.bitrich.xchangestream.deribit.dto.response.DeribitTickerNotification.TickerData;
 import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.Builder;
@@ -12,7 +13,7 @@ import lombok.extern.jackson.Jacksonized;
 @Data
 @SuperBuilder(toBuilder = true)
 @Jacksonized
-public class DeribitTickerNotification extends DeribitWsNotification<DeribitTickerNotification.TickerData> {
+public class DeribitTickerNotification extends DeribitWsNotification<TickerData> {
 
   @Data
   @Builder
