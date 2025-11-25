@@ -9,4 +9,4 @@ jobs:
     name: Run integration tests
     uses: ./.github/workflows/it-template.yaml
     with:
-      module-name: xchange-deribit
+      module-name: xchange-stream-deribit
