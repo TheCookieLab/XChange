@@ -71,7 +71,14 @@ public class DeribitStreamingService extends NettyStreamingService<DeribitWsNoti
       }
       // copy nested value of params.channel to the root of json to detect deserialization type
       else if (jsonNode.has("params") && jsonNode.get("params").has("channel")) {
-          var channelText = jsonNode.get("params").get("channel").asText().split("\\.")[0];
+        var channelWords = jsonNode.get("params").get("channel").asText().split("\\.");
+        var channelText = channelWords[0];
+
+        // if name starts with 'user.' it is a 2-words name
+        if ("user".equals(channelWords[0]) && channelWords.length > 1) {
+          channelText += "." + channelWords[1];
+        }
+
         ((ObjectNode) jsonNode).put("messageType", channelText);
       }
 

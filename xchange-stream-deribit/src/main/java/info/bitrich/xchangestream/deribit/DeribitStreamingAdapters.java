@@ -3,10 +3,13 @@ package info.bitrich.xchangestream.deribit;
 import info.bitrich.xchangestream.deribit.dto.response.DeribitTickerNotification;
 import info.bitrich.xchangestream.deribit.dto.response.DeribitTradeNotification;
 import info.bitrich.xchangestream.deribit.dto.response.DeribitTradeNotification.TradeData;
+import info.bitrich.xchangestream.deribit.dto.response.DeribitUserTradeNotification;
+import info.bitrich.xchangestream.deribit.dto.response.DeribitUserTradeNotification.UserTradeData;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.deribit.v2.DeribitAdapters;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
+import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
 
 @UtilityClass
@@ -52,6 +55,22 @@ public class DeribitStreamingAdapters {
         .price(tradeData.getPrice())
         .timestamp(DeribitAdapters.toDate(tradeData.getTimestamp()))
         .id(tradeData.getTradeId())
+        .build();
+  }
+
+  public UserTrade toUserTrade(DeribitUserTradeNotification notification) {
+    UserTradeData userTradeData = notification.getParams().getData().get(0);
+    return UserTrade.builder()
+        .orderId(userTradeData.getOrderId())
+        .feeAmount(userTradeData.getFee())
+        .feeCurrency(userTradeData.getFeeCurrency())
+        .orderUserReference(userTradeData.getLabel())
+        .type(userTradeData.getOrderSide())
+        .originalAmount(userTradeData.getAmount())
+        .instrument(DeribitAdapters.toInstrument(userTradeData.getInstrumentName()))
+        .price(userTradeData.getPrice())
+        .timestamp(DeribitAdapters.toDate(userTradeData.getTimestamp()))
+        .id(userTradeData.getTradeId())
         .build();
   }
 

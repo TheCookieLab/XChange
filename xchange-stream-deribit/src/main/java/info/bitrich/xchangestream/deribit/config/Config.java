@@ -11,7 +11,7 @@ import lombok.Data;
 @Data
 public final class Config {
 
-  public static final String V2_PUBLIC_WS_URL = "wss://www.deribit.com/ws/api/v2";
+  public static final String V2_WS_URL = "wss://www.deribit.com/ws/api/v2";
 
   private ObjectMapper objectMapper;
   private Clock clock;
