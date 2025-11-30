@@ -21,6 +21,7 @@ import org.knowm.xchange.binance.dto.account.AssetDividendResponse;
 import org.knowm.xchange.binance.dto.account.BinanceAccountInformation;
 import org.knowm.xchange.binance.dto.account.BinanceCurrencyInfo;
 import org.knowm.xchange.binance.dto.account.BinanceDeposit;
+import org.knowm.xchange.binance.dto.account.BinanceFiatOrdersResponse;
 import org.knowm.xchange.binance.dto.account.BinanceFlexiblePositionResponse;
 import org.knowm.xchange.binance.dto.account.BinanceLockedPositionResponse;
 import org.knowm.xchange.binance.dto.account.BinanceSimpleAccount;
@@ -482,6 +483,36 @@ public interface BinanceAuthenticated extends Binance {
       @QueryParam("startTime") Long startTime,
       @QueryParam("endTime") Long endTime,
       @QueryParam("limit") Integer limit,
+      @QueryParam("recvWindow") Long recvWindow,
+      @QueryParam("timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam(X_MBX_APIKEY) String apiKey,
+      @QueryParam(SIGNATURE) ParamsDigest signature)
+      throws IOException, BinanceException;
+
+  /**
+   * Fetch fiat deposit/withdraw history.
+   *
+   * @param transactionType 0-deposit, 1-withdraw
+   * @param beginTime optional
+   * @param endTime optional
+   * @param page optional, default 1
+   * @param rows optional, default 100, max 500
+   * @param recvWindow optional
+   * @param timestamp
+   * @param apiKey
+   * @param signature
+   * @return
+   * @throws IOException
+   * @throws BinanceException
+   */
+  @GET
+  @Path("/sapi/v1/fiat/orders")
+  BinanceFiatOrdersResponse fiatOrders(
+      @QueryParam("transactionType") String transactionType,
+      @QueryParam("beginTime") Long beginTime,
+      @QueryParam("endTime") Long endTime,
+      @QueryParam("page") Integer page,
+      @QueryParam("rows") Integer rows,
       @QueryParam("recvWindow") Long recvWindow,
       @QueryParam("timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam(X_MBX_APIKEY) String apiKey,

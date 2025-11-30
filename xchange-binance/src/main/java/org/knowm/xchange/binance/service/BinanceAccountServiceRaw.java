@@ -18,6 +18,8 @@ import org.knowm.xchange.binance.dto.account.AssetDividendResponse;
 import org.knowm.xchange.binance.dto.account.BinanceAccountInformation;
 import org.knowm.xchange.binance.dto.account.BinanceCurrencyInfo;
 import org.knowm.xchange.binance.dto.account.BinanceDeposit;
+import org.knowm.xchange.binance.dto.account.BinanceFiatOrder;
+import org.knowm.xchange.binance.dto.account.BinanceFiatOrdersResponse;
 import org.knowm.xchange.binance.dto.account.BinanceFlexiblePositionResponse;
 import org.knowm.xchange.binance.dto.account.BinanceLockedPositionResponse;
 import org.knowm.xchange.binance.dto.account.BinanceSimpleAccount;
@@ -248,6 +250,28 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
         .withRetry(retry("transferSubUserHistory"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
+  }
+
+  public List<BinanceFiatOrder> getFiatOrders(
+      String transactionType, Long beginTime, Long endTime, Integer page, Integer rows)
+      throws BinanceException, IOException {
+    BinanceFiatOrdersResponse response =
+        decorateApiCall(
+                () ->
+                    binance.fiatOrders(
+                        transactionType,
+                        beginTime,
+                        endTime,
+                        page,
+                        rows,
+                        getRecvWindow(),
+                        getTimestampFactory(),
+                        super.apiKey,
+                        super.signatureCreator))
+            .withRetry(retry("fiatOrders"))
+            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
+            .call();
+    return response != null ? response.getData() : List.of();
   }
 
   protected List<BinanceCurrencyInfo> getCurrencyInfoCached() throws IOException {
