@@ -21,8 +21,13 @@ import org.knowm.xchange.binance.dto.ExchangeType;
 import org.knowm.xchange.binance.dto.account.AssetDetail;
 import org.knowm.xchange.binance.dto.account.BinanceCurrencyInfo;
 import org.knowm.xchange.binance.dto.account.BinanceCurrencyInfo.Network;
+import org.knowm.xchange.binance.dto.account.BinanceFlexiblePosition;
+import org.knowm.xchange.binance.dto.account.BinanceFlexiblePositionResponse;
 import org.knowm.xchange.binance.dto.account.BinanceFundingHistoryParams;
+import org.knowm.xchange.binance.dto.account.BinanceLockedPosition;
+import org.knowm.xchange.binance.dto.account.BinanceLockedPositionResponse;
 import org.knowm.xchange.binance.dto.account.BinanceMasterAccountTransferHistoryParams;
+import org.knowm.xchange.binance.dto.account.BinanceSimpleAccount;
 import org.knowm.xchange.binance.dto.account.BinanceSubAccountTransferHistoryParams;
 import org.knowm.xchange.binance.dto.account.BinanceTradeFee;
 import org.knowm.xchange.binance.dto.account.DepositAddress;
@@ -487,5 +492,35 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
     if (instrument instanceof FuturesContract) {
       return setLeverageRaw(instrument, leverage).leverage == leverage;
     } else return false;
+  }
+
+  public BinanceSimpleAccount getSimpleAccount() throws IOException {
+    try {
+      return super.getSimpleAccount();
+    } catch (BinanceException e) {
+      throw BinanceErrorAdapter.adapt(e);
+    }
+  }
+
+  public List<BinanceFlexiblePosition> getFlexiblePositions(
+      String asset, String productId, Long current, Long size) throws IOException {
+    try {
+      BinanceFlexiblePositionResponse response =
+          super.getFlexiblePositionsRaw(asset, productId, current, size);
+      return response != null ? response.getData() : List.of();
+    } catch (BinanceException e) {
+      throw BinanceErrorAdapter.adapt(e);
+    }
+  }
+
+  public List<BinanceLockedPosition> getLockedPositions(
+      String asset, Long positionId, String projectId, Long current, Long size) throws IOException {
+    try {
+      BinanceLockedPositionResponse response =
+          super.getLockedPositionsRaw(asset, positionId, projectId, current, size);
+      return response != null ? response.getData() : List.of();
+    } catch (BinanceException e) {
+      throw BinanceErrorAdapter.adapt(e);
+    }
   }
 }
