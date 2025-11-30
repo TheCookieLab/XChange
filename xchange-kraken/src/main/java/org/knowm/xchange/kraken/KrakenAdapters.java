@@ -493,7 +493,6 @@ public class KrakenAdapters {
       KrakenAssetPair krakenPair, InstrumentMetaData originalMeta) {
     // Normalize order minimum into base units
     BigDecimal minimumAmount = krakenPair.getOrderMin().multiply(krakenPair.getVolumeMultiplier());
-    BigDecimal counterMinimumAmount = krakenPair.getCostMin();
     // effective step size in base units
     // stepSize = lot_multiplier × 10^(-lot_decimals)
     BigDecimal volumeStepSize =
@@ -512,7 +511,7 @@ public class KrakenAdapters {
         .tradingFeeCurrency(
             KrakenUtils.translateKrakenCurrencyCode(krakenPair.getFeeVolumeCurrency()))
         .minimumAmount(minimumAmount)
-        .counterMinimumAmount(counterMinimumAmount)
+        .counterMinimumAmount(krakenPair.getCostMin())
         .priceScale(krakenPair.getPairScale())
         .priceStepSize(krakenPair.getTickSize())
         .volumeScale(krakenPair.getVolumeLotScale())
