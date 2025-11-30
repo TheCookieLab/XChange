@@ -115,6 +115,34 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
     }
   }
 
+  /**
+   * Maps fiat order status to FundingRecord.Status. Status values: Processing, Failed, Successful,
+   * Finished, Refunding, Refunded, Refund Failed, Order Partial credit Stopped, Expired
+   */
+  private static FundingRecord.Status fiatOrderStatus(String status) {
+    if (status == null) {
+      return Status.FAILED;
+    }
+    switch (status) {
+      case "Processing":
+      case "Refunding":
+      case "Order Partial credit Stopped":
+        return Status.PROCESSING;
+      case "Successful":
+      case "Finished":
+        return Status.COMPLETE;
+      case "Failed":
+      case "Refund Failed":
+      case "Expired":
+        return Status.FAILED;
+      case "Refunded":
+        return Status.CANCELLED;
+      default:
+        Status resolved = Status.resolveStatus(status);
+        return resolved != null ? resolved : Status.FAILED;
+    }
+  }
+
   @Override
   public AccountInfo getAccountInfo() throws IOException {
     try {
@@ -478,6 +506,41 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
                                     ? Type.INTERNAL_DEPOSIT
                                     : Type.INTERNAL_WITHDRAWAL)
                             .status(Status.COMPLETE)
+                            .build()));
+      }
+
+      // Fetch fiat deposit/withdrawal history
+      if (deposits) {
+        super.getFiatOrders("0", startTime, endTime, page, limit)
+            .forEach(
+                f ->
+                    result.add(
+                        FundingRecord.builder()
+                            .internalId(f.getOrderNo())
+                            .date(new Date(f.getCreateTime()))
+                            .currency(Currency.getInstance(f.getFiatCurrency()))
+                            .amount(f.getAmount())
+                            .fee(f.getTotalFee())
+                            .type(Type.DEPOSIT)
+                            .status(fiatOrderStatus(f.getStatus()))
+                            .description(f.getMethod())
+                            .build()));
+      }
+
+      if (withdrawals) {
+        super.getFiatOrders("1", startTime, endTime, page, limit)
+            .forEach(
+                f ->
+                    result.add(
+                        FundingRecord.builder()
+                            .internalId(f.getOrderNo())
+                            .date(new Date(f.getCreateTime()))
+                            .currency(Currency.getInstance(f.getFiatCurrency()))
+                            .amount(f.getAmount())
+                            .fee(f.getTotalFee())
+                            .type(Type.WITHDRAWAL)
+                            .status(fiatOrderStatus(f.getStatus()))
+                            .description(f.getMethod())
                             .build()));
       }
 
