@@ -98,6 +98,7 @@ public class DaseTradeService extends DaseTradeServiceRaw implements TradeServic
     body.type = "market";
     body.side = marketOrder.getType() == Order.OrderType.BID ? "buy" : "sell";
     body.size = toStringOrNull(marketOrder.getOriginalAmount());
+    body.postOnly = marketOrder.hasFlag(DaseOrderFlags.POST_ONLY);
     body.funds = null;
     body.clientId = isUuid(marketOrder.getUserReference()) ? marketOrder.getUserReference() : null;
     try {
