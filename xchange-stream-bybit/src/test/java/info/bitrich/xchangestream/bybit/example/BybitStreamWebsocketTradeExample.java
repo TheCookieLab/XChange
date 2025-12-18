@@ -1,15 +1,8 @@
 package info.bitrich.xchangestream.bybit.example;
 
-import static info.bitrich.xchangestream.bybit.Utils.getMinAmount;
-import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectMainApi;
-
 import info.bitrich.xchangestream.bybit.BybitStreamingExchange;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderParams;
@@ -21,8 +14,18 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.LimitOrder.Builder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static info.bitrich.xchangestream.bybit.Utils.getMinAmount;
+import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectMainApi;
 
 public class BybitStreamWebsocketTradeExample {
 
@@ -38,6 +41,7 @@ public class BybitStreamWebsocketTradeExample {
       }
       // main(not demo) api only
       websocketTradeExample();
+      Thread.sleep(100000000);
       websocketBatchTradeExample();
       exchange.disconnect().blockingAwait();
     } catch (InterruptedException e) {
@@ -49,7 +53,7 @@ public class BybitStreamWebsocketTradeExample {
 
   private static void websocketBatchTradeExample() throws IOException, InterruptedException {
     CompositeDisposable compositeDisposable = new CompositeDisposable();
-    // switch mode to two-way
+    // switch mode to one-way
     ((BybitAccountService) exchange.getAccountService())
         .switchPositionMode(BybitCategory.LINEAR, instrument, "USDT", 0);
     BigDecimal minAmount =
@@ -65,14 +69,14 @@ public class BybitStreamWebsocketTradeExample {
     LimitOrder limitOrder1 =
         new Builder(OrderType.ASK, instrument)
             .originalAmount(minAmount)
-            .limitPrice(ticker.getHigh())
+            .limitPrice(ticker.getHigh().multiply(new BigDecimal("1.02")))
             .userReference(limitOrder1UserId)
             .build();
     String limitOrder2UserId = RandomStringUtils.randomAlphanumeric(20);
     LimitOrder limitOrder2 =
         new Builder(OrderType.ASK, instrument)
             .originalAmount(minAmount)
-            .limitPrice(ticker.getHigh().add(BigDecimal.ONE))
+            .limitPrice(ticker.getHigh().multiply(new BigDecimal("1.03")))
             .userReference(limitOrder2UserId)
             .build();
     compositeDisposable.add(
@@ -97,13 +101,12 @@ public class BybitStreamWebsocketTradeExample {
     LimitOrder changeOrder1 =
         new Builder(OrderType.ASK, instrument)
             .originalAmount(minAmount)
-            .limitPrice(ticker.getHigh().add(new BigDecimal("0.01")))
+            .limitPrice(ticker.getHigh().multiply(new BigDecimal("1.031")))
             .userReference(limitOrder1UserId)
             .build();
     LimitOrder changeOrder2 =
         new Builder(OrderType.ASK, instrument)
-            .originalAmount(new BigDecimal("0.01"))
-            .limitPrice(ticker.getHigh())
+            .originalAmount(minAmount.add(new BigDecimal("1")))
             .userReference(limitOrder2UserId)
             .build();
     compositeDisposable.add(
@@ -113,6 +116,19 @@ public class BybitStreamWebsocketTradeExample {
             .subscribe(
                 result -> {
                   LOG.info("changeOrder(1,2) is send, retCode: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable)));
+    Thread.sleep(1000);
+    List<CancelOrderParams> ordersToCancel = new ArrayList<>();
+    ordersToCancel.add(new BybitCancelOrderParams(instrument, "",limitOrder1UserId));
+    ordersToCancel.add(new BybitCancelOrderParams(instrument, "",limitOrder2UserId));
+    compositeDisposable.add(
+        exchange
+            .getStreamingTradeService()
+            .batchCancelOrder(ordersToCancel)
+            .subscribe(
+                result -> {
+                  LOG.info("cancelOrder(1,2) is send, retCode: {}", result);
                 },
                 throwable -> LOG.error("throwable", throwable)));
     Thread.sleep(1000);

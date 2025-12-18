@@ -1,5 +1,7 @@
 package dto.trade;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -9,13 +11,15 @@ import lombok.Getter;
 @Getter
 public class BybitOrderMessage<T> {
   private final String reqId;
-  private final Header header;
+  private final BybitHeader header;
   private final String op;
   private final List<T> args;
 
   @Getter
   @AllArgsConstructor
-  public static class Header {
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY, getterVisibility = Visibility.NONE, setterVisibility = Visibility.NONE)
+  public static class BybitHeader {
+
     @JsonProperty("X-BAPI-TIMESTAMP")
     private String X_BAPI_TIMESTAMP;
 
@@ -24,5 +28,6 @@ public class BybitOrderMessage<T> {
 
     @JsonProperty("Referer")
     private String referer;
+
   }
 }
