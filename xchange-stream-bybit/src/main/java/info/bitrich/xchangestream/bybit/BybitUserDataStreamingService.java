@@ -1,7 +1,5 @@
 package info.bitrich.xchangestream.bybit;
 
-import static org.knowm.xchange.utils.DigestUtils.bytesToHex;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import dto.BybitSubscribeMessage;
@@ -13,6 +11,17 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableSource;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
+import lombok.Getter;
+import lombok.Setter;
+import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.service.BaseParamsDigest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -24,16 +33,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import lombok.Getter;
-import lombok.Setter;
-import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.exceptions.ExchangeException;
-import org.knowm.xchange.service.BaseParamsDigest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static org.knowm.xchange.utils.DigestUtils.bytesToHex;
 
 public class BybitUserDataStreamingService extends JsonNettyStreamingService {
 
@@ -136,27 +137,18 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
         case "auth":
           {
             isAuthorized = true;
+            LOG.info("Successfully authenticated to data URI");
             resubscribeChannelsAfterLogin();
             break;
           }
       }
       return;
     } else {
-      switch (op) {
-        // different op result of public channels and private channels
-        // https://bybit-exchange.github.io/docs/v5/ws/connect#how-to-send-the-heartbeat-packet
-        case "pong":
-          {
+      if(op.equals("pong")) {
             LOG.debug("Received PONG message: {}", message);
             return;
           }
-        case "auth":
-          {
-            LOG.error("Received AUTH message: {}", jsonNode.get("ret_msg"));
-            return;
-          }
       }
-    }
     handleMessage(jsonNode);
   }
 
