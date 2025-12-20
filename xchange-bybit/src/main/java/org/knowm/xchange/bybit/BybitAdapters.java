@@ -166,7 +166,6 @@ public class BybitAdapters {
   }
 
   public static CurrencyPair guessSymbol(String symbol) {
-    // SPOT Only
     for (String quoteCurrency : QUOTE_CURRENCIES) {
       if (symbol.endsWith(quoteCurrency)) {
         int splitIndex = symbol.lastIndexOf(quoteCurrency);
@@ -175,6 +174,27 @@ public class BybitAdapters {
     }
     int splitIndex = symbol.length() - 3;
     return new CurrencyPair(symbol.substring(0, splitIndex), symbol.substring(splitIndex));
+  }
+
+  public static Instrument guessSymbol(String symbol, BybitCategory category) {
+    switch (category) {
+      case SPOT:
+        {
+          return guessSymbol(symbol);
+        }
+      case LINEAR:
+        {
+          if (symbol.endsWith("USDT")) {
+            int splitIndex = symbol.lastIndexOf("USDT");
+            return new FuturesContract(
+                (symbol.substring(0, splitIndex) + "/" + symbol.substring(splitIndex) + "/PERP"));
+          } else if (symbol.endsWith("PERP")) {
+            int splitIndex = symbol.lastIndexOf("PERP");
+            return new FuturesContract((symbol.substring(0, splitIndex) + "/" + "USDC/PERP"));
+          }
+        }
+    }
+    return null;
   }
 
   public static Instrument adaptInstrumentInfo(BybitInstrumentInfo instrumentInfo) {
