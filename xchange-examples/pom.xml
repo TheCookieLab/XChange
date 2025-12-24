@@ -227,11 +227,7 @@
             <artifactId>xchange-kucoin</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-livecoin</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <!-- XChange Mercado Bitcoin exchange support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
