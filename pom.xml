@@ -94,7 +94,6 @@
         <module>xchange-kraken</module>
         <module>xchange-krakenfutures</module>
         <module>xchange-kucoin</module>
-        <module>xchange-kuna</module>
         <module>xchange-latoken</module>
         <module>xchange-luno</module>
         <module>xchange-mercadobitcoin</module>
