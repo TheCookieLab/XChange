@@ -8,12 +8,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.Collections;
 import org.junit.Test;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
+import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.instrument.Instrument;
 
 /**
  * Unit tests for CoinbaseAdapters.
@@ -208,6 +214,73 @@ public class CoinbaseAdaptersTest {
   }
 
   @Test
+  public void testAdaptInstrumentForFuturesContract() {
+    Instrument instrument = CoinbaseAdapters.adaptInstrument("BTC-USD-PERP");
+    assertNotNull("Instrument should not be null", instrument);
+    assertEquals("Instrument should be FuturesContract", FuturesContract.class, instrument.getClass());
+    assertEquals("BTC/USD/PERP", instrument.toString());
+  }
+
+  @Test
+  public void testAdaptFuturesOpenPositions() {
+    CoinbaseFuturesPosition position =
+        new CoinbaseFuturesPosition(
+            "BTC-USD-240628",
+            "1",
+            "LONG",
+            new BigDecimal("2"),
+            new BigDecimal("30000"),
+            new BigDecimal("31000"),
+            new BigDecimal("150"),
+            "2024-06-28T00:00:00Z",
+            new BigDecimal("2"),
+            new BigDecimal("50"),
+            new BigDecimal("30000"));
+
+    OpenPositions positions =
+        CoinbaseAdapters.adaptFuturesOpenPositions(Collections.singletonList(position));
+
+    assertNotNull("Open positions should not be null", positions);
+    assertEquals(1, positions.getOpenPositions().size());
+    OpenPosition open = positions.getOpenPositions().get(0);
+    assertEquals("BTC-USD-240628", open.getId());
+    assertEquals(OpenPosition.Type.LONG, open.getType());
+    assertEquals(new BigDecimal("2"), open.getSize());
+    assertEquals(new BigDecimal("30000"), open.getPrice());
+    assertEquals(new BigDecimal("150"), open.getUnRealisedPnl());
+  }
+
+  @Test
+  public void testAdaptPerpetualsOpenPositions() {
+    CoinbasePerpetualsPosition position =
+        new CoinbasePerpetualsPosition(
+            "BTC-USD-PERP",
+            "product-uuid",
+            "portfolio-uuid",
+            "BTC-USD-PERP",
+            "30010",
+            "SHORT",
+            new BigDecimal("-1.5"),
+            "30000",
+            new BigDecimal("45000"),
+            new BigDecimal("2"),
+            new BigDecimal("25"),
+            null);
+
+    OpenPositions positions =
+        CoinbaseAdapters.adaptPerpetualsOpenPositions(Collections.singletonList(position));
+
+    assertNotNull("Open positions should not be null", positions);
+    assertEquals(1, positions.getOpenPositions().size());
+    OpenPosition open = positions.getOpenPositions().get(0);
+    assertEquals("BTC-USD-PERP", open.getId());
+    assertEquals(OpenPosition.Type.SHORT, open.getType());
+    assertEquals(new BigDecimal("1.5"), open.getSize());
+    assertEquals(new BigDecimal("30000"), open.getPrice());
+    assertEquals(new BigDecimal("25"), open.getUnRealisedPnl());
+  }
+
+  @Test
   public void testAdaptTickerWithAllProductFieldsNull() {
     // Given: Product with all nullable fields as null
     CoinbaseProductResponse product = new CoinbaseProductResponse(
@@ -313,4 +386,3 @@ public class CoinbaseAdaptersTest {
         new BigDecimal("5.3"), ticker3.getPercentageChange());
   }
 }
-

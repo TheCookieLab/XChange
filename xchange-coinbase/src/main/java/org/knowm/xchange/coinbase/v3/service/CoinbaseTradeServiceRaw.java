@@ -11,6 +11,12 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteResponse;
+import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertTradeResponse;
 import si.mazi.rescu.ParamsDigest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import java.util.HashMap;
@@ -34,13 +40,6 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   /**
    * Lists fills for the authenticated user using Coinbase Advanced Trade.
    *
-   * <p>Gotcha: Although the Coinbase endpoint accepts multiple values for filters like product,
-   * order, or trade IDs, this implementation forwards at most one value per filter. If
-   * {@link CoinbaseTradeHistoryParams} contains multiple currency pairs, only the first is used to
-   * derive the {@code product_id}. Likewise, only a single {@code order_id} and a single
-   * {@code trade_id} are forwarded if present. This means the returned fills reflect only the first
-   * provided values.
-   *
    * @param params trade history parameters including optional product/order/trade filters,
    *               pagination cursor, time span, and limit
    * @return a {@link CoinbaseOrdersResponse} containing fills and a cursor for pagination
@@ -49,10 +48,9 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   public CoinbaseOrdersResponse listFills(CoinbaseTradeHistoryParams params) throws IOException {
     List<String> productIds = null;
     if (params.getCurrencyPairs() != null && !params.getCurrencyPairs().isEmpty()) {
-      List<String> pids = params.getCurrencyPairs().stream().map(CoinbaseAdapters::adaptProductId)
+      productIds = params.getCurrencyPairs().stream()
+          .map(CoinbaseAdapters::adaptProductId)
           .collect(Collectors.toList());
-      // Only allow at most one product_id
-      productIds = Collections.singletonList(pids.get(0));
     }
 
     List<String> orderIds =
@@ -182,6 +180,71 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   /** Convenience overload to cancel a single order id. */
   public CoinbaseOrdersResponse cancelOrderById(String orderId) throws IOException {
     return cancelOrders(Collections.singletonList(orderId), null);
+  }
+
+  /**
+   * Lists futures positions for the authenticated user.
+   */
+  public CoinbaseFuturesPositionsResponse listFuturesPositions() throws IOException {
+    return coinbaseAdvancedTrade.listFuturesPositions(authTokenCreator);
+  }
+
+  /**
+   * Retrieves a futures position by product id.
+   */
+  public CoinbaseFuturesPositionResponse getFuturesPosition(String productId) throws IOException {
+    return coinbaseAdvancedTrade.getFuturesPosition(authTokenCreator, productId);
+  }
+
+  /**
+   * Lists perpetuals positions for the specified portfolio.
+   */
+  public CoinbasePerpetualsPositionsResponse listPerpetualsPositions(String portfolioUuid)
+      throws IOException {
+    return coinbaseAdvancedTrade.listPerpetualsPositions(authTokenCreator, portfolioUuid);
+  }
+
+  /**
+   * Retrieves a perpetuals position by portfolio and symbol.
+   */
+  public CoinbasePerpetualsPositionResponse getPerpetualsPosition(
+      String portfolioUuid, String symbol) throws IOException {
+    return coinbaseAdvancedTrade.getPerpetualsPosition(authTokenCreator, portfolioUuid, symbol);
+  }
+
+  /**
+   * Creates a convert quote.
+   *
+   * @param payload Convert quote request payload.
+   * @return The convert quote response.
+   * @throws IOException if a network or serialization error occurs.
+   */
+  public CoinbaseConvertQuoteResponse createConvertQuote(Object payload) throws IOException {
+    return coinbaseAdvancedTrade.createConvertQuote(authTokenCreator, payload);
+  }
+
+  /**
+   * Commits a convert trade.
+   *
+   * @param tradeId Convert trade id returned from the quote request.
+   * @param payload Commit request payload.
+   * @return The convert trade response.
+   * @throws IOException if a network or serialization error occurs.
+   */
+  public CoinbaseConvertTradeResponse commitConvertTrade(String tradeId, Object payload)
+      throws IOException {
+    return coinbaseAdvancedTrade.commitConvertTrade(authTokenCreator, tradeId, payload);
+  }
+
+  /**
+   * Retrieves a convert trade by id.
+   *
+   * @param tradeId Convert trade id.
+   * @return The convert trade response.
+   * @throws IOException if a network or serialization error occurs.
+   */
+  public CoinbaseConvertTradeResponse getConvertTrade(String tradeId) throws IOException {
+    return coinbaseAdvancedTrade.getConvertTrade(authTokenCreator, tradeId);
   }
 
 }

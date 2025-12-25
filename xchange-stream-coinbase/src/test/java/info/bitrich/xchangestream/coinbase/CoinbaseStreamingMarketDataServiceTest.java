@@ -23,6 +23,7 @@ import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import info.bitrich.xchangestream.coinbase.CoinbaseStreamingTestUtils.StubStreamingService;
+import info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters;
 
 class CoinbaseStreamingMarketDataServiceTest {
 
@@ -58,7 +59,8 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    Maybe<OrderBook> maybeSnapshot = state.process(snapshot);
+    Maybe<OrderBook> maybeSnapshot =
+        state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot));
     assertNotNull(maybeSnapshot);
     OrderBook book = maybeSnapshot.blockingGet();
     assertNotNull(book);
@@ -99,7 +101,8 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    Maybe<OrderBook> maybeUpdate = state.process(update);
+    Maybe<OrderBook> maybeUpdate =
+        state.process(CoinbaseStreamingAdapters.toStreamingMessage(update));
     assertNotNull(maybeUpdate);
     OrderBook updated = maybeUpdate.blockingGet();
     assertNotNull(updated);
@@ -145,7 +148,8 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook first = state.process(firstUpdate).blockingGet();
+    OrderBook first =
+        state.process(CoinbaseStreamingAdapters.toStreamingMessage(firstUpdate)).blockingGet();
     assertEquals(1, provider.callCount());
     assertEquals("2.5", first.getBids().get(0).getOriginalAmount().toPlainString());
     assertEquals("3", first.getAsks().get(0).getOriginalAmount().toPlainString());
@@ -165,7 +169,8 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook recovered = state.process(gapUpdate).blockingGet();
+    OrderBook recovered =
+        state.process(CoinbaseStreamingAdapters.toStreamingMessage(gapUpdate)).blockingGet();
     assertEquals(2, provider.callCount());
     assertEquals(2, recovered.getBids().size());
     assertEquals("1.8", recovered.getAsks().get(0).getOriginalAmount().toPlainString());
@@ -259,7 +264,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    Maybe<OrderBook> result = state.process(snapshot);
+    Maybe<OrderBook> result = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot));
     assertNotNull(result, "Snapshot should produce an OrderBook");
     
     OrderBook book = result.blockingGet();
@@ -314,7 +319,8 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook book = state.process(snapshot).blockingGet();
+    OrderBook book =
+        state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     
     // Zero-size levels should be excluded
     assertEquals(1, book.getBids().size(), "Zero-size bid levels should be excluded");
@@ -345,7 +351,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook book = state.process(snapshot).blockingGet();
+    OrderBook book = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     
     assertTrue(book.getBids().isEmpty(), "Empty bids array should result in empty bids");
     assertEquals(1, book.getAsks().size(), "Asks should still be populated");
@@ -379,7 +385,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook book = state.process(snapshot).blockingGet();
+    OrderBook book = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     
     // Only valid levels should be included
     assertEquals(2, book.getBids().size(), "Malformed levels should be skipped");
@@ -412,7 +418,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "}");
 
     // Missing product_id should cause snapshot to be skipped
-    Maybe<OrderBook> result = state.process(snapshot);
+    Maybe<OrderBook> result = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot));
     assertNotNull(result);
     // The book should still be created but empty or unchanged
     OrderBook book = result.blockingGet();
@@ -447,7 +453,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook firstBook = state.process(firstSnapshot).blockingGet();
+    OrderBook firstBook = state.process(CoinbaseStreamingAdapters.toStreamingMessage(firstSnapshot)).blockingGet();
     assertEquals(1, firstBook.getBids().size());
     assertEquals(1, firstBook.getAsks().size());
 
@@ -471,7 +477,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook secondBook = state.process(secondSnapshot).blockingGet();
+    OrderBook secondBook = state.process(CoinbaseStreamingAdapters.toStreamingMessage(secondSnapshot)).blockingGet();
     
     // Previous state should be cleared
     assertEquals(2, secondBook.getBids().size());
@@ -508,7 +514,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    state.process(snapshot).blockingGet();
+    state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     
     Long lastSequence = getLastSequence(state);
     assertEquals(12345L, lastSequence, "Sequence should be tracked from snapshot");
@@ -529,7 +535,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    state.process(update).blockingGet();
+    state.process(CoinbaseStreamingAdapters.toStreamingMessage(update)).blockingGet();
     Long updatedSequence = getLastSequence(state);
     assertEquals(12346L, updatedSequence, "Sequence should be updated after l2update");
   }
@@ -557,7 +563,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook book = state.process(snapshot).blockingGet();
+    OrderBook book = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     assertNotNull(book);
     assertEquals(1, book.getBids().size());
     assertEquals(1, book.getAsks().size());
@@ -642,7 +648,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook book = state.process(snapshot).blockingGet();
+    OrderBook book = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     assertEquals(1, book.getBids().size());
     assertEquals(new BigDecimal("2.0"), book.getBids().get(0).getOriginalAmount());
 
@@ -662,7 +668,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook updated = state.process(update).blockingGet();
+    OrderBook updated = state.process(CoinbaseStreamingAdapters.toStreamingMessage(update)).blockingGet();
     assertEquals(1, updated.getBids().size());
     assertEquals(new BigDecimal("5.5"), updated.getBids().get(0).getOriginalAmount(),
         "Price 100.00 should update the same level as 100.0");
@@ -698,7 +704,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook book = state.process(snapshot).blockingGet();
+    OrderBook book = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     assertEquals(2, book.getBids().size());
 
     // Remove with price "100.0" (scale 1) - should match and remove
@@ -717,7 +723,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook updated = state.process(update).blockingGet();
+    OrderBook updated = state.process(CoinbaseStreamingAdapters.toStreamingMessage(update)).blockingGet();
     assertEquals(1, updated.getBids().size(), "Price 100.0 should remove the same level as 100.00");
     assertEquals(new BigDecimal("99.50"), updated.getBids().get(0).getLimitPrice());
   }
@@ -747,7 +753,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    state.process(snapshot).blockingGet();
+    state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
 
     // Multiple updates with different scales for same price
     JsonNode update1 =
@@ -765,7 +771,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook updated1 = state.process(update1).blockingGet();
+    OrderBook updated1 = state.process(CoinbaseStreamingAdapters.toStreamingMessage(update1)).blockingGet();
     assertEquals(1, updated1.getBids().size());
     assertEquals(new BigDecimal("5.0"), updated1.getBids().get(0).getOriginalAmount());
 
@@ -785,7 +791,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook updated2 = state.process(update2).blockingGet();
+    OrderBook updated2 = state.process(CoinbaseStreamingAdapters.toStreamingMessage(update2)).blockingGet();
     assertEquals(1, updated2.getBids().size());
     assertEquals(new BigDecimal("7.5"), updated2.getBids().get(0).getOriginalAmount(),
         "Price 100.00 should update the same level as 100.000 and 100.0");
@@ -820,7 +826,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook recovered = state.process(update).blockingGet();
+    OrderBook recovered = state.process(CoinbaseStreamingAdapters.toStreamingMessage(update)).blockingGet();
     
     // The snapshot had "100.0" and the update has "100.00" - they should match after normalization
     assertEquals(1, recovered.getBids().size());
@@ -857,7 +863,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook book = state.process(snapshot).blockingGet();
+    OrderBook book = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     assertEquals(3, book.getBids().size());
     assertEquals(3, book.getAsks().size());
 
@@ -882,7 +888,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook updated = state.process(update).blockingGet();
+    OrderBook updated = state.process(CoinbaseStreamingAdapters.toStreamingMessage(update)).blockingGet();
     assertEquals(3, updated.getBids().size());
     assertEquals(3, updated.getAsks().size());
     
@@ -920,7 +926,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook book = state.process(snapshot).blockingGet();
+    OrderBook book = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     assertEquals(1, book.getBids().size());
 
     // Update with decimal price "100.0" - should match
@@ -939,7 +945,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook updated = state.process(update).blockingGet();
+    OrderBook updated = state.process(CoinbaseStreamingAdapters.toStreamingMessage(update)).blockingGet();
     assertEquals(1, updated.getBids().size());
     assertEquals(new BigDecimal("5.0"), updated.getBids().get(0).getOriginalAmount(),
         "Price 100.0 should match integer price 100");
@@ -968,7 +974,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook book = state.process(snapshot).blockingGet();
+    OrderBook book = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).blockingGet();
     assertEquals(1, book.getBids().size());
 
     // Update with "100.00" - should not create a duplicate
@@ -987,7 +993,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "  ]\n"
                 + "}");
 
-    OrderBook updated = state.process(update).blockingGet();
+    OrderBook updated = state.process(CoinbaseStreamingAdapters.toStreamingMessage(update)).blockingGet();
     assertEquals(1, updated.getBids().size(),
         "Should not create duplicate entry for same price with different scale");
     assertEquals(new BigDecimal("5.0"), updated.getBids().get(0).getOriginalAmount());

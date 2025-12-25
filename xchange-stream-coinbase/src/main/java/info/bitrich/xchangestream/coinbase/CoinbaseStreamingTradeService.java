@@ -1,8 +1,10 @@
 package info.bitrich.xchangestream.coinbase;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters;
 import info.bitrich.xchangestream.coinbase.dto.CoinbaseFuturesBalanceSummary;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingEvent;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingMessage;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingUserOrder;
 import info.bitrich.xchangestream.coinbase.dto.CoinbaseUserOrderEvent;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import io.reactivex.rxjava3.core.Observable;
@@ -69,6 +71,7 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
 
     return streamingService
         .observeChannel(request)
+        .map(CoinbaseStreamingAdapters::toStreamingMessage)
         .flatMapIterable(this::extractOrderEvents);
   }
 
@@ -80,6 +83,7 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
 
     return streamingService
         .observeChannel(request)
+        .map(CoinbaseStreamingAdapters::toStreamingMessage)
         .flatMapIterable(this::extractBalanceSummaries);
   }
 
@@ -135,80 +139,64 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
             });
   }
 
-  private List<CoinbaseUserOrderEvent> extractOrderEvents(JsonNode message) {
-    JsonNode events = message.path("events");
-    if (!events.isArray()) {
+  private List<CoinbaseUserOrderEvent> extractOrderEvents(CoinbaseStreamingMessage message) {
+    if (message == null || message.getEvents().isEmpty()) {
       return Collections.emptyList();
     }
-    return stream(events)
-        .filter(event -> event.path("orders").isArray())
-        .flatMap(
-            event ->
-                stream(event.path("orders"))
-                    .map(orderNode -> toUserOrderEvent(orderNode, event)))
+    return message.getEvents().stream()
+        .flatMap(event -> event.getOrders().stream().map(this::toUserOrderEvent))
         .filter(Optional::isPresent)
         .map(Optional::get)
         .collect(Collectors.toList());
   }
 
-  private List<CoinbaseFuturesBalanceSummary> extractBalanceSummaries(JsonNode message) {
-    JsonNode events = message.path("events");
-    if (!events.isArray()) {
+  private List<CoinbaseFuturesBalanceSummary> extractBalanceSummaries(
+      CoinbaseStreamingMessage message) {
+    if (message == null || message.getEvents().isEmpty()) {
       return Collections.emptyList();
     }
-    return stream(events)
-        .map(event -> event.path("fcm_balance_summary"))
-        .filter(JsonNode::isObject)
-        .map(this::toBalanceSummary)
+    return message.getEvents().stream()
+        .map(CoinbaseStreamingEvent::getFcmBalanceSummary)
+        .filter(summary -> summary != null)
         .collect(Collectors.toList());
   }
 
-  private CoinbaseFuturesBalanceSummary toBalanceSummary(JsonNode summaryNode) {
-    return new CoinbaseFuturesBalanceSummary(
-        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "futures_buying_power"),
-        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "total_usd_balance"),
-        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "unrealized_pnl"),
-        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "daily_realized_pnl"),
-        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "initial_margin"),
-        CoinbaseStreamingAdapters.asBigDecimal(summaryNode, "available_margin"));
-  }
-
-  private Optional<CoinbaseUserOrderEvent> toUserOrderEvent(JsonNode orderNode, JsonNode event) {
+  private Optional<CoinbaseUserOrderEvent> toUserOrderEvent(CoinbaseStreamingUserOrder order) {
     try {
-      String orderId = orderNode.path("order_id").asText(null);
+      String orderId = order.getOrderId();
       if (orderId == null || orderId.isEmpty()) {
-        LOG.warn("Skipping Coinbase user order event without order_id: {}", orderNode);
+        LOG.warn("Skipping Coinbase user order event without order_id: {}", order);
         return Optional.empty();
       }
 
-      String productId = orderNode.path("product_id").asText(null);
+      String productId = order.getProductId();
       CurrencyPair pair = CoinbaseStreamingAdapters.toCurrencyPair(productId);
       if (pair == null) {
-        LOG.warn("Skipping Coinbase user order event with unknown product_id: {}", orderNode);
+        LOG.warn("Skipping Coinbase user order event with unknown product_id: {}", order);
         return Optional.empty();
       }
 
       Order.OrderType side =
-          CoinbaseStreamingAdapters.parseOrderSide(orderNode.path("order_side").asText(null));
+          CoinbaseStreamingAdapters.parseOrderSide(order.getOrderSide());
       BigDecimal orderSize =
-          Optional.ofNullable(CoinbaseStreamingAdapters.asBigDecimal(orderNode, "size"))
-              .orElse(Optional.ofNullable(CoinbaseStreamingAdapters.asBigDecimal(orderNode, "order_total")).orElse(null));
+          Optional.ofNullable(order.getSize())
+              .orElse(Optional.ofNullable(order.getOrderTotal()).orElse(null));
       return Optional.of(
           new CoinbaseUserOrderEvent(
               orderId,
-              orderNode.path("client_order_id").asText(null),
+              order.getClientOrderId(),
               pair,
               side,
-              orderNode.path("order_type").asText(null),
-              CoinbaseStreamingAdapters.asBigDecimal(orderNode, "limit_price"),
-              CoinbaseStreamingAdapters.asBigDecimal(orderNode, "avg_price"),
+              order.getOrderType(),
+              order.getLimitPrice(),
+              order.getAvgPrice(),
               orderSize,
-              CoinbaseStreamingAdapters.asBigDecimal(orderNode, "cumulative_quantity"),
-              CoinbaseStreamingAdapters.asBigDecimal(orderNode, "leaves_quantity"),
-              orderNode.path("status").asText(null),
-              CoinbaseStreamingAdapters.asInstant(orderNode.path("event_time")).orElse(null)));
+              order.getCumulativeQuantity(),
+              order.getLeavesQuantity(),
+              order.getStatus(),
+              CoinbaseStreamingAdapters.parseInstant(order.getEventTime()).orElse(null)));
     } catch (Exception ex) {
-      LOG.warn("Failed to map user order event: {}", orderNode, ex);
+      LOG.warn("Failed to map user order event: {}", order, ex);
       return Optional.empty();
     }
   }
@@ -400,8 +388,4 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
         || upperStatus.equals("SETTLED");
   }
 
-  private static java.util.stream.Stream<JsonNode> stream(JsonNode array) {
-    Iterable<JsonNode> iterable = array::elements;
-    return java.util.stream.StreamSupport.stream(iterable.spliterator(), false);
-  }
 }

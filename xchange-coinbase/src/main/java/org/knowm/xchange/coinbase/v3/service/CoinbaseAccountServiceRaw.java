@@ -8,6 +8,10 @@ import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethod;
+import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodResponse;
+import org.knowm.xchange.coinbase.v3.dto.permissions.CoinbaseKeyPermissionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 
 /**
@@ -81,6 +85,97 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    */
   public List<CoinbasePaymentMethod> getCoinbasePaymentMethods() throws IOException {
     return coinbaseAdvancedTrade.getPaymentMethods(authTokenCreator).getPaymentMethods();
+  }
+
+  /**
+   * Retrieves a single payment method by ID.
+   *
+   * @param paymentMethodId Coinbase payment method id.
+   * @return The payment method details.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbasePaymentMethod getCoinbasePaymentMethod(String paymentMethodId) throws IOException {
+    CoinbasePaymentMethodResponse response =
+        coinbaseAdvancedTrade.getPaymentMethod(authTokenCreator, paymentMethodId);
+    return response == null ? null : response.getPaymentMethod();
+  }
+
+  /**
+   * Retrieves API key permissions for the current user.
+   *
+   * @return The key permissions response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseKeyPermissionsResponse getKeyPermissions() throws IOException {
+    return coinbaseAdvancedTrade.getKeyPermissions(authTokenCreator);
+  }
+
+  /**
+   * Lists portfolios for the authenticated user.
+   *
+   * @param portfolioType Optional portfolio type filter.
+   * @return The portfolios response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbasePortfoliosResponse listPortfolios(String portfolioType) throws IOException {
+    return coinbaseAdvancedTrade.listPortfolios(authTokenCreator, portfolioType);
+  }
+
+  /**
+   * Retrieves a portfolio breakdown by portfolio UUID.
+   *
+   * @param portfolioUuid Portfolio UUID.
+   * @return The portfolio breakdown response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbasePortfolioResponse getPortfolioBreakdown(String portfolioUuid) throws IOException {
+    return coinbaseAdvancedTrade.getPortfolioBreakdown(authTokenCreator, portfolioUuid);
+  }
+
+  /**
+   * Creates a new portfolio.
+   *
+   * @param payload Request payload.
+   * @return The create portfolio response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbasePortfolioResponse createPortfolio(Object payload) throws IOException {
+    return coinbaseAdvancedTrade.createPortfolio(authTokenCreator, payload);
+  }
+
+  /**
+   * Edits an existing portfolio.
+   *
+   * @param portfolioUuid Portfolio UUID.
+   * @param payload Request payload.
+   * @return The edit portfolio response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbasePortfolioResponse editPortfolio(String portfolioUuid, Object payload)
+      throws IOException {
+    return coinbaseAdvancedTrade.editPortfolio(authTokenCreator, portfolioUuid, payload);
+  }
+
+  /**
+   * Deletes an existing portfolio.
+   *
+   * @param portfolioUuid Portfolio UUID.
+   * @return The delete portfolio response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbasePortfolioResponse deletePortfolio(String portfolioUuid) throws IOException {
+    return coinbaseAdvancedTrade.deletePortfolio(authTokenCreator, portfolioUuid);
+  }
+
+  /**
+   * Moves funds between portfolios.
+   *
+   * @param payload Request payload.
+   * @return The move portfolio funds response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbasePortfolioResponse movePortfolioFunds(Object payload) throws IOException {
+    return coinbaseAdvancedTrade.movePortfolioFunds(authTokenCreator, payload);
   }
 
   /**

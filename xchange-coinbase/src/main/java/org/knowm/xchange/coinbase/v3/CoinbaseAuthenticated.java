@@ -30,6 +30,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
+import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodResponse;
 import org.knowm.xchange.coinbase.v3.dto.permissions.CoinbaseKeyPermissionsResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseAllocatePortfolioResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralResponse;
@@ -220,6 +221,13 @@ public interface CoinbaseAuthenticated extends Coinbase {
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
       throws IOException, CoinbaseException;
 
+  @GET
+  @Path("payment_methods/{payment_method_id}")
+  CoinbasePaymentMethodResponse getPaymentMethod(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @PathParam("payment_method_id") String paymentMethodId)
+      throws IOException, CoinbaseException;
+
   // ========== Portfolio Endpoints ==========
 
   @GET
@@ -255,7 +263,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
       throws IOException, CoinbaseException;
 
   @POST
-  @Path("portfolios/move")
+  @Path("portfolios/move_funds")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbasePortfolioResponse movePortfolioFunds(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
@@ -271,14 +279,14 @@ public interface CoinbaseAuthenticated extends Coinbase {
       throws IOException, CoinbaseException;
 
   @POST
-  @Path("convert/{trade_id}")
+  @Path("convert/trade/{trade_id}")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseConvertTradeResponse commitConvertTrade(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("trade_id") String tradeId, Object payload) throws IOException, CoinbaseException;
 
   @GET
-  @Path("convert/{trade_id}")
+  @Path("convert/trade/{trade_id}")
   CoinbaseConvertTradeResponse getConvertTrade(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("trade_id") String tradeId) throws IOException, CoinbaseException;

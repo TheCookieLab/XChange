@@ -24,7 +24,6 @@ import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
-import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
 
@@ -100,12 +99,7 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
   @Override
   public String withdrawFunds(WithdrawFundsParams params)
       throws ExchangeException, NotAvailableFromExchangeException, NotYetImplementedForExchangeException, IOException {
-    if (params instanceof DefaultWithdrawFundsParams) {
-      DefaultWithdrawFundsParams defaultParams = (DefaultWithdrawFundsParams) params;
-      return withdrawFunds(defaultParams.getCurrency(), defaultParams.getAmount(),
-          defaultParams.getAddress());
-    }
-    throw new IllegalStateException("Don't know how to withdraw: " + params);
+    throw new NotAvailableFromExchangeException("withdrawFunds");
   }
 
   /**
@@ -141,7 +135,9 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
    *         {@link CurrencyPair#BTC_USD}.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument() throws IOException {
+  @Override
+  public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
+      throws IOException {
     CoinbaseTransactionSummaryResponse response = getTransactionSummary();
     CoinbaseFeeTier feeTier = response.getFeeTier();
 
