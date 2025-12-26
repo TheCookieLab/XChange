@@ -6,11 +6,16 @@ import java.util.Map;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethod;
+import org.knowm.xchange.coinbase.v3.dto.permissions.CoinbaseKeyPermissionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolio;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import org.knowm.xchange.coinbase.v3.service.CoinbaseAccountService;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
+import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.examples.coinbase.CoinbaseDemoUtils;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
@@ -25,6 +30,8 @@ import org.knowm.xchange.service.account.AccountService;
  *   <li>Get account details</li>
  *   <li>Retrieve payment methods</li>
  *   <li>Get transaction summaries and fee information</li>
+ *   <li>Inspect API key permissions and portfolio metadata</li>
+ *   <li>Fetch futures and perpetuals wallet snapshots (if enabled)</li>
  * </ul>
  *
  * <p><b>Note:</b> Account operations require API authentication.
@@ -36,6 +43,11 @@ public class CoinbaseAccountDemo {
   public static void main(String[] args) throws IOException {
 
     Exchange coinbase = CoinbaseDemoUtils.createExchange();
+    if (!CoinbaseDemoUtils.isAuthConfigured(coinbase)) {
+      System.out.println("No API credentials found (secret.keys). Account examples require auth.");
+      System.out.println("Add a secret.keys file or set API credentials before running.");
+      return;
+    }
     AccountService accountService = coinbase.getAccountService();
 
     generic(accountService);
@@ -52,6 +64,14 @@ public class CoinbaseAccountDemo {
   }
 
   public static void raw(CoinbaseAccountService accountService) throws IOException {
+
+    // API key permissions
+    try {
+      CoinbaseKeyPermissionsResponse permissions = accountService.getKeyPermissions();
+      System.out.println("Key Permissions: " + permissions);
+    } catch (Exception e) {
+      System.out.println("Key permissions not available: " + e.getMessage());
+    }
 
     // List all accounts
     List<CoinbaseAccount> accounts = accountService.getCoinbaseAccounts();
@@ -103,5 +123,67 @@ public class CoinbaseAccountDemo {
     } catch (Exception e) {
       System.out.println("Dynamic trading fees not available: " + e.getMessage());
     }
+
+    // List portfolios and fetch breakdown for the first portfolio
+    try {
+      CoinbasePortfoliosResponse portfolios = accountService.listPortfolios(null);
+      System.out.println("Portfolios: " + portfolios);
+      if (!portfolios.getPortfolios().isEmpty()) {
+        CoinbasePortfolio portfolio = portfolios.getPortfolios().get(0);
+        CoinbasePortfolioResponse breakdown =
+            accountService.getPortfolioBreakdown(portfolio.getUuid());
+        System.out.println("Portfolio Breakdown (" + portfolio.getUuid() + "): " + breakdown);
+      }
+    } catch (Exception e) {
+      System.out.println("Portfolio data not available: " + e.getMessage());
+    }
+
+    // Futures wallet snapshot (CFM accounts only)
+    try {
+      Wallet futuresWallet = accountService.getFuturesWallet();
+      System.out.println("Futures Wallet: " + futuresWallet);
+    } catch (Exception e) {
+      System.out.println("Futures wallet not available: " + e.getMessage());
+    }
+
+    // Perpetuals wallet snapshot (requires a perpetuals portfolio UUID)
+    try {
+      String portfolioUuid = resolvePortfolioUuid(accountService);
+      if (portfolioUuid != null) {
+        Wallet perpWallet = accountService.getPerpetualsWallet(portfolioUuid);
+        System.out.println("Perpetuals Wallet (" + portfolioUuid + "): " + perpWallet);
+      } else {
+        System.out.println("Perpetuals wallet skipped: no PERP/INTX portfolio UUID found.");
+      }
+    } catch (Exception e) {
+      System.out.println("Perpetuals wallet not available: " + e.getMessage());
+    }
+  }
+
+  private static String resolvePortfolioUuid(CoinbaseAccountService accountService)
+      throws IOException {
+    String override = readOptional("coinbase.perpPortfolioUuid", "COINBASE_PERP_PORTFOLIO_UUID");
+    if (override != null) {
+      return override;
+    }
+    CoinbasePortfoliosResponse portfolios = accountService.listPortfolios(null);
+    for (CoinbasePortfolio portfolio : portfolios.getPortfolios()) {
+      String type = portfolio.getType();
+      if ("PERP".equalsIgnoreCase(type) || "INTX".equalsIgnoreCase(type)) {
+        return portfolio.getUuid();
+      }
+    }
+    return null;
+  }
+
+  private static String readOptional(String propertyKey, String envKey) {
+    String value = System.getProperty(propertyKey);
+    if (value == null || value.trim().isEmpty()) {
+      value = System.getenv(envKey);
+    }
+    if (value == null || value.trim().isEmpty()) {
+      return null;
+    }
+    return value.trim();
   }
 }

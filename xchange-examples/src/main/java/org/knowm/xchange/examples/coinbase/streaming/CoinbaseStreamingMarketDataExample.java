@@ -1,6 +1,8 @@
 package org.knowm.xchange.examples.coinbase.streaming;
 
+import info.bitrich.xchangestream.coinbase.CoinbaseCandleGranularity;
 import info.bitrich.xchangestream.coinbase.CoinbaseStreamingExchange;
+import info.bitrich.xchangestream.coinbase.CoinbaseStreamingMarketDataService;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
@@ -17,10 +19,10 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 
 /**
  * Demonstrates how to connect to Coinbase Advanced Trade streaming APIs using the {@code
- * xchange-stream-coinbase} module. The example subscribes to ticker, trades and order book updates
- * for BTC/USD and logs incoming events to standard out.
+ * xchange-stream-coinbase} module. The example subscribes to ticker, trades, order book, and
+ * candle updates for BTC/USD and logs incoming events to standard out.
  *
- * <p>Run against production:
+ * <p>Run against sandbox (default):
  *
  * <pre>{@code
  * mvn -pl xchange-examples -am \
@@ -28,13 +30,13 @@ import org.knowm.xchange.dto.trade.LimitOrder;
  *   -Dexec.mainClass=org.knowm.xchange.examples.coinbase.streaming.CoinbaseStreamingMarketDataExample
  * }</pre>
  *
- * <p>Run against the sandbox (if available):
+ * <p>Run against production:
  *
  * <pre>{@code
  * mvn -pl xchange-examples -am \
  *   org.codehaus.mojo:exec-maven-plugin:3.1.0:java \
  *   -Dexec.mainClass=org.knowm.xchange.examples.coinbase.streaming.CoinbaseStreamingMarketDataExample \
- *   -Dcoinbase.streaming.sandbox=true
+ *   -Dcoinbase.streaming.sandbox=false
  * }</pre>
  *
  * <p>The process will keep running until interrupted (Ctrl+C). When stopping, subscriptions and the
@@ -68,34 +70,41 @@ public final class CoinbaseStreamingMarketDataExample {
             .build();
 
     exchange.connect(subscription).timeout(30, TimeUnit.SECONDS).blockingAwait();
-    System.out.println("Connected. Subscribed channels: ticker, trades, order book.");
+    System.out.println("Connected. Subscribed channels: ticker, trades, order book, candles.");
+
+    CoinbaseStreamingMarketDataService marketDataService =
+        (CoinbaseStreamingMarketDataService) exchange.getStreamingMarketDataService();
 
     Disposable tickerSubscription =
-        exchange
-            .getStreamingMarketDataService()
+        marketDataService
             .getTicker(PAIR)
             .subscribe(
                 ticker -> System.out.println("Ticker: " + ticker),
                 error -> logError("ticker", error));
 
     Disposable tradesSubscription =
-        exchange
-            .getStreamingMarketDataService()
+        marketDataService
             .getTrades(PAIR)
             .subscribe(
                 trade -> System.out.println("Trade: " + trade),
                 error -> logError("trades", error));
 
     Disposable orderBookSubscription =
-        exchange
-            .getStreamingMarketDataService()
+        marketDataService
             .getOrderBook(PAIR)
             .subscribe(
                 orderBook -> System.out.println("Order book: " + summarizeBook(orderBook)),
                 error -> logError("order book", error));
 
+    Disposable candleSubscription =
+        marketDataService
+            .getCandles(PAIR, CoinbaseCandleGranularity.ONE_MINUTE)
+            .subscribe(
+                candle -> System.out.println("Candle: " + candle),
+                error -> logError("candles", error));
+
     List<Disposable> disposables =
-        Arrays.asList(tickerSubscription, tradesSubscription, orderBookSubscription);
+        Arrays.asList(tickerSubscription, tradesSubscription, orderBookSubscription, candleSubscription);
     CountDownLatch shutdown = new CountDownLatch(1);
 
     Runtime.getRuntime()
@@ -121,8 +130,14 @@ public final class CoinbaseStreamingMarketDataExample {
   }
 
   private static boolean useSandbox() {
-    return parseFlag(System.getProperty("coinbase.streaming.sandbox"))
-        || parseFlag(System.getenv("COINBASE_STREAMING_SANDBOX"));
+    String value = readOptional("coinbase.streaming.sandbox", "COINBASE_STREAMING_SANDBOX");
+    if (value == null) {
+      value = readOptional("coinbase.sandbox", "COINBASE_SANDBOX");
+    }
+    if (value == null) {
+      return true;
+    }
+    return parseFlag(value);
   }
 
   private static boolean parseFlag(String value) {
@@ -131,6 +146,17 @@ public final class CoinbaseStreamingMarketDataExample {
     }
     String normalized = value.trim().toLowerCase();
     return "true".equals(normalized) || "1".equals(normalized) || "yes".equals(normalized);
+  }
+
+  private static String readOptional(String propertyKey, String envKey) {
+    String value = System.getProperty(propertyKey);
+    if (value == null || value.trim().isEmpty()) {
+      value = System.getenv(envKey);
+    }
+    if (value == null || value.trim().isEmpty()) {
+      return null;
+    }
+    return value.trim();
   }
 
   private static void logError(String channel, Throwable error) {

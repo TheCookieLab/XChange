@@ -4,7 +4,6 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.coinbase.v3.Coinbase;
-import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.CoinbaseTimeResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
@@ -19,7 +18,6 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.examples.coinbase.CoinbaseDemoUtils;
-import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
 
@@ -27,12 +25,13 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Example demonstrating Coinbase Advanced Trade API v3 public endpoints.
+ * Example demonstrating Coinbase Advanced Trade API v3 market data access.
  *
  * <p>This example shows two approaches:
  * <ul>
- *   <li>Using the public endpoints directly (no authentication required)</li>
- *   <li>Using the XChange service layer (which uses authenticated endpoints)</li>
+ *   <li>Using the XChange {@link MarketDataService} (no authentication required; falls back to
+ *       public endpoints when unauthenticated)</li>
+ *   <li>Using the public endpoints directly via a REST proxy</li>
  * </ul>
  *
  * <p>Public endpoints include:
@@ -51,17 +50,17 @@ public class CoinbaseMarketDataDemo {
 
     public static void main(String[] args) throws IOException {
 
-        // Example 1: Using public endpoints directly (no authentication required)
-        System.out.println("=== Using Public Endpoints (No Auth Required) ===");
-        publicEndpoints();
-
-        // Example 2: Using XChange service layer (requires authentication for some endpoints)
-        System.out.println("\n=== Using XChange Service Layer ===");
-        Exchange coinbaseExchange = CoinbaseDemoUtils.createExchange();
+        // Example 1: Using XChange MarketDataService (no auth required for market data)
+        System.out.println("=== Using XChange MarketDataService (Public Fallback) ===");
+        Exchange coinbaseExchange = CoinbaseDemoUtils.createExchangeWithoutAuth();
         MarketDataService marketDataService = coinbaseExchange.getMarketDataService();
 
         generic(marketDataService);
         raw((CoinbaseMarketDataService) marketDataService);
+
+        // Example 2: Using public endpoints directly (no authentication required)
+        System.out.println("\n=== Using Public Endpoints (Direct REST) ===");
+        publicEndpoints();
     }
 
     /**
@@ -70,7 +69,8 @@ public class CoinbaseMarketDataDemo {
      */
     private static void publicEndpoints() throws IOException {
         // Create exchange specification (no API keys needed for public endpoints)
-        ExchangeSpecification spec = new CoinbaseExchange().getDefaultExchangeSpecification();
+        // Sandbox is preferred by default; override via -Dcoinbase.sandbox=false or COINBASE_SANDBOX=false.
+        ExchangeSpecification spec = CoinbaseDemoUtils.createExchangeSpecification();
 
         // Build the public Coinbase interface proxy
         Coinbase coinbase = ExchangeRestProxyBuilder.forInterface(Coinbase.class, spec).build();
@@ -109,20 +109,23 @@ public class CoinbaseMarketDataDemo {
 
     /**
      * Demonstrates using the XChange service layer for market data.
-     * This approach uses authenticated endpoints and provides XChange DTOs.
+     * This approach uses public endpoints when no credentials are configured and provides XChange DTOs.
      */
     private static void generic(MarketDataService marketDataService) throws IOException {
 
-        Ticker ticker = marketDataService.getTicker((Instrument) CurrencyPair.BTC_USD);
+        Ticker ticker = marketDataService.getTicker(CurrencyPair.BTC_USD);
         System.out.println("Ticker: " + ticker);
 
-        OrderBook orderBook = marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USD, 10);
+        OrderBook orderBook = marketDataService.getOrderBook(CurrencyPair.BTC_USD, 10);
         System.out.println("Order Book: " + orderBook);
 
-        Trades trades = marketDataService.getTrades((Instrument) CurrencyPair.BTC_USD, 5);
+        Trades trades = marketDataService.getTrades(CurrencyPair.BTC_USD, 5);
         System.out.println("Recent Trades: " + trades);
 
-        CandleStickData candleStickData = marketDataService.getCandleStickData(CurrencyPair.BTC_USD, new DefaultCandleStickParamWithLimit(null, null, 3600L, 10)); // 1 hour candles, limit 10
+        // 1 hour candles, limit 10
+        CandleStickData candleStickData = marketDataService.getCandleStickData(
+            CurrencyPair.BTC_USD,
+            new DefaultCandleStickParamWithLimit(null, null, 3600L, 10));
         System.out.println("Candlestick Data: " + candleStickData);
     }
 
