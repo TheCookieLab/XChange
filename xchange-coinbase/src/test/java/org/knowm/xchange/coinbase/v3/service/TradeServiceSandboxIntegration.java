@@ -8,6 +8,11 @@ import org.junit.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolio;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.trade.OpenOrders;
@@ -28,6 +33,9 @@ import org.knowm.xchange.dto.trade.UserTrades;
  *   <li>GET /api/v3/brokerage/orders/historical/fills - List fills/trades</li>
  *   <li>POST /api/v3/brokerage/orders - Create order (simulated)</li>
  *   <li>POST /api/v3/brokerage/orders/batch_cancel - Cancel orders (simulated)</li>
+ *   <li>GET /api/v3/brokerage/portfolios - List portfolios (lookup INTX portfolio)</li>
+ *   <li>GET /api/v3/brokerage/intx/positions/{portfolio_uuid} - List perpetuals positions</li>
+ *   <li>GET /api/v3/brokerage/intx/positions/{portfolio_uuid}/{symbol} - Get perpetuals position</li>
  * </ul>
  * 
  * <p><b>Usage:</b>
@@ -41,6 +49,7 @@ public class TradeServiceSandboxIntegration {
 
   static CoinbaseExchange exchange;
   static CoinbaseTradeService tradeService;
+  static CoinbaseAccountService accountService;
   private static final String SANDBOX_URL = "https://api-sandbox.coinbase.com";
 
   @BeforeClass
@@ -57,6 +66,7 @@ public class TradeServiceSandboxIntegration {
     
     exchange = (CoinbaseExchange) ExchangeFactory.INSTANCE.createExchange(spec);
     tradeService = (CoinbaseTradeService) exchange.getTradeService();
+    accountService = (CoinbaseAccountService) exchange.getAccountService();
   }
 
   @Test
@@ -174,5 +184,65 @@ public class TradeServiceSandboxIntegration {
       }
     }
   }
-}
 
+  @Test
+  public void testListPerpetualsPositions() throws Exception {
+    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+
+    String portfolioUuid = findPerpetualsPortfolioUuid();
+    org.junit.Assume.assumeNotNull(portfolioUuid);
+
+    try {
+      CoinbasePerpetualsPositionsResponse response =
+          tradeService.listPerpetualsPositions(portfolioUuid);
+      assertNotNull("Perpetuals positions response should not be null", response);
+      assertNotNull("Positions list should not be null", response.getPositions());
+    } catch (Exception e) {
+      System.out.println("Perpetuals positions not fully supported in sandbox: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetPerpetualsPosition() throws Exception {
+    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+
+    String portfolioUuid = findPerpetualsPortfolioUuid();
+    org.junit.Assume.assumeNotNull(portfolioUuid);
+
+    try {
+      CoinbasePerpetualsPositionsResponse response =
+          tradeService.listPerpetualsPositions(portfolioUuid);
+      if (response.getPositions().isEmpty()) {
+        return;
+      }
+      CoinbasePerpetualsPosition position = response.getPositions().get(0);
+      String symbol = position.getSymbol() != null ? position.getSymbol() : position.getProductId();
+      if (symbol == null) {
+        return;
+      }
+      CoinbasePerpetualsPositionResponse detail =
+          tradeService.getPerpetualsPosition(portfolioUuid, symbol);
+      assertNotNull("Perpetuals position response should not be null", detail);
+      assertNotNull("Position should not be null", detail.getPosition());
+    } catch (Exception e) {
+      System.out.println("Perpetuals position not fully supported in sandbox: " + e.getMessage());
+    }
+  }
+
+  private static String findPerpetualsPortfolioUuid() throws Exception {
+    CoinbasePortfoliosResponse response = accountService.listPortfolios(null);
+    if (response == null || response.getPortfolios() == null) {
+      return null;
+    }
+    for (CoinbasePortfolio portfolio : response.getPortfolios()) {
+      if (portfolio.getType() == null) {
+        continue;
+      }
+      String type = portfolio.getType().toUpperCase();
+      if (type.contains("INTX") || type.contains("PERP")) {
+        return portfolio.getUuid();
+      }
+    }
+    return null;
+  }
+}

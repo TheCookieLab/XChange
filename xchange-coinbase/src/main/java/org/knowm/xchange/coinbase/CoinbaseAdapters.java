@@ -15,7 +15,9 @@ import java.util.stream.Collectors;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
@@ -23,11 +25,14 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPositions;
+import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -231,6 +236,50 @@ public final class CoinbaseAdapters {
     return new OpenPositions(openPositions);
   }
 
+  /**
+   * Adapt a futures balance summary response to a futures wallet.
+   */
+  public static Wallet adaptFuturesWallet(CoinbaseFuturesBalanceSummaryResponse response) {
+    if (response == null) {
+      return null;
+    }
+    Balance balance = buildBalance(Currency.USD, response.getTotalUsdBalance(),
+        response.getAvailableMargin());
+    if (balance == null) {
+      return null;
+    }
+    return new Wallet.Builder()
+        .balances(Collections.singletonList(balance))
+        .id("futures")
+        .name("futures")
+        .features(Collections.singleton(Wallet.WalletFeature.FUTURES_TRADING))
+        .build();
+  }
+
+  /**
+   * Adapt a perpetuals balances response to a futures wallet.
+   */
+  public static Wallet adaptPerpetualsWallet(CoinbasePerpetualsBalancesResponse response) {
+    if (response == null || response.getBalances() == null) {
+      return null;
+    }
+    CoinbasePerpetualsBalancesResponse.CoinbasePerpetualsBalances balances =
+        response.getBalances();
+    String currencyCode = balances.getCollateralCurrency();
+    Currency currency = currencyCode == null ? null : Currency.getInstance(currencyCode);
+    Balance balance = buildBalance(currency, balances.getCollateralValue(),
+        balances.getAvailableCollateral());
+    if (balance == null) {
+      return null;
+    }
+    return new Wallet.Builder()
+        .balances(Collections.singletonList(balance))
+        .id(balances.getPortfolioUuid())
+        .name("perpetuals")
+        .features(Collections.singleton(Wallet.WalletFeature.FUTURES_TRADING))
+        .build();
+  }
+
   private static OpenPosition adaptFuturesOpenPosition(CoinbaseFuturesPosition position) {
     if (position == null) {
       return null;
@@ -304,6 +353,22 @@ public final class CoinbaseAdapters {
     } catch (NumberFormatException e) {
       return null;
     }
+  }
+
+  private static Balance buildBalance(Currency currency, BigDecimal total, BigDecimal available) {
+    if (currency == null) {
+      return null;
+    }
+    if (total != null && available != null) {
+      return new Balance(currency, total, available);
+    }
+    if (total != null) {
+      return new Balance(currency, total);
+    }
+    if (available != null) {
+      return new Balance(currency, available);
+    }
+    return null;
   }
 
   public static String adaptProductCandleGranularity(Long candleIntervalSeconds) {

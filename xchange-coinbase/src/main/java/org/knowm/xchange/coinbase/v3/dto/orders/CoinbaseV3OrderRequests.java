@@ -1,7 +1,5 @@
 package org.knowm.xchange.coinbase.v3.dto.orders;
 
-import java.util.HashMap;
-import java.util.Map;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
@@ -12,50 +10,33 @@ public final class CoinbaseV3OrderRequests {
 
   private CoinbaseV3OrderRequests() {}
 
-  public static Object marketOrderRequest(MarketOrder order) {
-    Map<String, Object> root = commonRoot(order);
-    Map<String, Object> config = new HashMap<>();
-    Map<String, Object> market = new HashMap<>();
-    
-    // For BUY orders, use quote_size (amount of quote currency to spend)
-    // For SELL orders, use base_size (amount of base currency to sell)
-    if (order.getType() == Order.OrderType.BID) {
-      market.put("quote_size", order.getOriginalAmount());
-    } else {
-      market.put("base_size", order.getOriginalAmount());
-    }
-    
-    config.put("market_market_ioc", market);
-    root.put("order_configuration", config);
-    return root;
+  public static CoinbaseOrderRequest marketOrderRequest(MarketOrder order) {
+    CoinbaseMarketMarketIoc configPayload = order.getType() == Order.OrderType.BID
+        ? new CoinbaseMarketMarketIoc(order.getOriginalAmount(), null)
+        : new CoinbaseMarketMarketIoc(null, order.getOriginalAmount());
+
+    CoinbaseOrderConfiguration config = CoinbaseOrderConfiguration.marketMarketIoc(configPayload);
+    return commonOrderRequest(order, config, true);
   }
 
-  public static Object limitOrderRequest(LimitOrder order) {
-    Map<String, Object> root = commonRoot(order);
-    Map<String, Object> config = new HashMap<>();
-    Map<String, Object> limit = new HashMap<>();
-    limit.put("base_size", order.getOriginalAmount());
-    limit.put("limit_price", order.getLimitPrice());
-    limit.put("post_only", Boolean.FALSE);
-    config.put("limit_limit_gtc", limit);
-    root.put("order_configuration", config);
-    return root;
+  public static CoinbaseOrderRequest limitOrderRequest(LimitOrder order) {
+    CoinbaseLimitLimitGtc limit = new CoinbaseLimitLimitGtc(
+        null,
+        order.getOriginalAmount(),
+        order.getLimitPrice(),
+        Boolean.FALSE);
+    CoinbaseOrderConfiguration config = CoinbaseOrderConfiguration.limitLimitGtc(limit);
+    return commonOrderRequest(order, config, true);
   }
 
-  public static Object editLimitOrderRequest(LimitOrder order) {
-    Map<String, Object> root = new HashMap<>();
-    root.put("order_id", order.getId());
-    Map<String, Object> editConfig = new HashMap<>();
-    Map<String, Object> limit = new HashMap<>();
-    if (order.getOriginalAmount() != null) {
-      limit.put("base_size", order.getOriginalAmount());
-    }
-    if (order.getLimitPrice() != null) {
-      limit.put("limit_price", order.getLimitPrice());
-    }
-    editConfig.put("limit_limit_gtc", limit);
-    root.put("order_configuration", editConfig);
-    return root;
+  public static CoinbaseEditOrderRequest editLimitOrderRequest(LimitOrder order) {
+    return new CoinbaseEditOrderRequest(
+        order.getId(),
+        order.getLimitPrice(),
+        order.getOriginalAmount(),
+        null,
+        null,
+        null);
   }
 
   /**
@@ -66,27 +47,63 @@ public final class CoinbaseV3OrderRequests {
    * For SELL orders, the stop triggers when price falls below stop_price.
    * 
    * @param order the stop order containing size, limit price, and stop price
-   * @return the request payload as a Map
+   * @return the request payload
    */
-  public static Object stopOrderRequest(StopOrder order) {
-    Map<String, Object> root = commonRoot(order);
-    Map<String, Object> config = new HashMap<>();
-    Map<String, Object> stop = new HashMap<>();
-    stop.put("base_size", order.getOriginalAmount());
-    stop.put("limit_price", order.getLimitPrice());
-    stop.put("stop_price", order.getStopPrice());
-    config.put("stop_limit_stop_limit_gtc", stop);
-    root.put("order_configuration", config);
-    return root;
+  public static CoinbaseOrderRequest stopOrderRequest(StopOrder order) {
+    CoinbaseStopLimitStopLimitGtc stop = new CoinbaseStopLimitStopLimitGtc(
+        order.getOriginalAmount(),
+        order.getLimitPrice(),
+        order.getStopPrice(),
+        null);
+    CoinbaseOrderConfiguration config = CoinbaseOrderConfiguration.stopLimitStopLimitGtc(stop);
+    return commonOrderRequest(order, config, true);
   }
 
-  private static Map<String, Object> commonRoot(Order order) {
-    Map<String, Object> root = new HashMap<>();
-    root.put("client_order_id", order.getUserReference());
-    root.put("product_id", CoinbaseAdapters.adaptProductId(order.getInstrument()));
-    root.put("side", order.getType() == Order.OrderType.BID ? "BUY" : "SELL");
-    return root;
+  public static CoinbaseOrderRequest previewMarketOrderRequest(MarketOrder order) {
+    CoinbaseMarketMarketIoc configPayload = order.getType() == Order.OrderType.BID
+        ? new CoinbaseMarketMarketIoc(order.getOriginalAmount(), null)
+        : new CoinbaseMarketMarketIoc(null, order.getOriginalAmount());
+
+    CoinbaseOrderConfiguration config = CoinbaseOrderConfiguration.marketMarketIoc(configPayload);
+    return commonOrderRequest(order, config, false);
+  }
+
+  public static CoinbaseOrderRequest previewLimitOrderRequest(LimitOrder order) {
+    CoinbaseLimitLimitGtc limit = new CoinbaseLimitLimitGtc(
+        null,
+        order.getOriginalAmount(),
+        order.getLimitPrice(),
+        Boolean.FALSE);
+    CoinbaseOrderConfiguration config = CoinbaseOrderConfiguration.limitLimitGtc(limit);
+    return commonOrderRequest(order, config, false);
+  }
+
+  public static CoinbaseOrderRequest previewStopOrderRequest(StopOrder order) {
+    CoinbaseStopLimitStopLimitGtc stop = new CoinbaseStopLimitStopLimitGtc(
+        order.getOriginalAmount(),
+        order.getLimitPrice(),
+        order.getStopPrice(),
+        null);
+    CoinbaseOrderConfiguration config = CoinbaseOrderConfiguration.stopLimitStopLimitGtc(stop);
+    return commonOrderRequest(order, config, false);
+  }
+
+  private static CoinbaseOrderRequest commonOrderRequest(
+      Order order, CoinbaseOrderConfiguration config, boolean includeClientOrderId) {
+    String clientOrderId = includeClientOrderId ? order.getUserReference() : null;
+    CoinbaseOrderSide side =
+        order.getType() == Order.OrderType.BID ? CoinbaseOrderSide.BUY : CoinbaseOrderSide.SELL;
+    return new CoinbaseOrderRequest(
+        clientOrderId,
+        CoinbaseAdapters.adaptProductId(order.getInstrument()),
+        side,
+        config,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 }
-
-

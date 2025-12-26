@@ -7,10 +7,25 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseCurrentMarginWindowResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesSweepRequest;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesSweepResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesSweepsResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseIntradayMarginSettingRequest;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseIntradayMarginSettingResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethod;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodResponse;
 import org.knowm.xchange.coinbase.v3.dto.permissions.CoinbaseKeyPermissionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseAllocatePortfolioRequest;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseAllocatePortfolioResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralRequest;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPortfolioSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbaseMovePortfolioFundsRequest;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioRequest;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 
@@ -135,25 +150,26 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
   /**
    * Creates a new portfolio.
    *
-   * @param payload Request payload.
+   * @param request Request payload.
    * @return The create portfolio response.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public CoinbasePortfolioResponse createPortfolio(Object payload) throws IOException {
-    return coinbaseAdvancedTrade.createPortfolio(authTokenCreator, payload);
+  public CoinbasePortfolioResponse createPortfolio(CoinbasePortfolioRequest request)
+      throws IOException {
+    return coinbaseAdvancedTrade.createPortfolio(authTokenCreator, request);
   }
 
   /**
    * Edits an existing portfolio.
    *
    * @param portfolioUuid Portfolio UUID.
-   * @param payload Request payload.
+   * @param request Request payload.
    * @return The edit portfolio response.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public CoinbasePortfolioResponse editPortfolio(String portfolioUuid, Object payload)
-      throws IOException {
-    return coinbaseAdvancedTrade.editPortfolio(authTokenCreator, portfolioUuid, payload);
+  public CoinbasePortfolioResponse editPortfolio(String portfolioUuid,
+      CoinbasePortfolioRequest request) throws IOException {
+    return coinbaseAdvancedTrade.editPortfolio(authTokenCreator, portfolioUuid, request);
   }
 
   /**
@@ -170,12 +186,13 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
   /**
    * Moves funds between portfolios.
    *
-   * @param payload Request payload.
+   * @param request Request payload.
    * @return The move portfolio funds response.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public CoinbasePortfolioResponse movePortfolioFunds(Object payload) throws IOException {
-    return coinbaseAdvancedTrade.movePortfolioFunds(authTokenCreator, payload);
+  public CoinbasePortfolioResponse movePortfolioFunds(CoinbaseMovePortfolioFundsRequest request)
+      throws IOException {
+    return coinbaseAdvancedTrade.movePortfolioFunds(authTokenCreator, request);
   }
 
   /**
@@ -215,6 +232,130 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseTransactionSummaryResponse getTransactionSummary() throws IOException {
     return this.getTransactionSummary(null, null, null);
+  }
+
+  /**
+   * Retrieves futures (CFM) balance summary information.
+   *
+   * @return The futures balance summary response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseFuturesBalanceSummaryResponse getFuturesBalanceSummary() throws IOException {
+    return coinbaseAdvancedTrade.getFuturesBalanceSummary(authTokenCreator);
+  }
+
+  /**
+   * Schedules a futures sweep.
+   *
+   * @param request Request payload.
+   * @return The sweep response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseFuturesSweepResponse scheduleFuturesSweep(CoinbaseFuturesSweepRequest request)
+      throws IOException {
+    return coinbaseAdvancedTrade.scheduleFuturesSweep(authTokenCreator, request);
+  }
+
+  /**
+   * Lists futures sweeps.
+   *
+   * @return The sweeps response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseFuturesSweepsResponse listFuturesSweeps() throws IOException {
+    return coinbaseAdvancedTrade.listFuturesSweeps(authTokenCreator);
+  }
+
+  /**
+   * Cancels a futures sweep.
+   *
+   * @return The sweep response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseFuturesSweepResponse cancelFuturesSweep() throws IOException {
+    return coinbaseAdvancedTrade.cancelFuturesSweep(authTokenCreator);
+  }
+
+  /**
+   * Retrieves the intraday margin setting.
+   *
+   * @return The intraday margin setting response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseIntradayMarginSettingResponse getIntradayMarginSetting() throws IOException {
+    return coinbaseAdvancedTrade.getIntradayMarginSetting(authTokenCreator);
+  }
+
+  /**
+   * Updates the intraday margin setting.
+   *
+   * @param request Request payload.
+   * @return The intraday margin setting response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseIntradayMarginSettingResponse setIntradayMarginSetting(
+      CoinbaseIntradayMarginSettingRequest request)
+      throws IOException {
+    return coinbaseAdvancedTrade.setIntradayMarginSetting(authTokenCreator, request);
+  }
+
+  /**
+   * Retrieves the current margin window.
+   *
+   * @return The current margin window response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseCurrentMarginWindowResponse getCurrentMarginWindow() throws IOException {
+    return coinbaseAdvancedTrade.getCurrentMarginWindow(authTokenCreator);
+  }
+
+  /**
+   * Retrieves a perpetuals portfolio summary.
+   *
+   * @param portfolioUuid Portfolio UUID.
+   * @return The portfolio summary response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbasePerpetualsPortfolioSummaryResponse getPerpetualsPortfolioSummary(
+      String portfolioUuid) throws IOException {
+    return coinbaseAdvancedTrade.getPerpetualsPortfolioSummary(authTokenCreator, portfolioUuid);
+  }
+
+  /**
+   * Retrieves perpetuals portfolio balances.
+   *
+   * @param portfolioUuid Portfolio UUID.
+   * @return The perpetuals balances response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbasePerpetualsBalancesResponse getPerpetualsPortfolioBalances(String portfolioUuid)
+      throws IOException {
+    return coinbaseAdvancedTrade.getPerpetualsPortfolioBalances(authTokenCreator, portfolioUuid);
+  }
+
+  /**
+   * Opts in to multi-asset collateral for perpetuals.
+   *
+   * @param request Request payload.
+   * @return The multi-asset collateral response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseMultiAssetCollateralResponse optInMultiAssetCollateral(
+      CoinbaseMultiAssetCollateralRequest request)
+      throws IOException {
+    return coinbaseAdvancedTrade.optInMultiAssetCollateral(authTokenCreator, request);
+  }
+
+  /**
+   * Allocates a portfolio for perpetuals.
+   *
+   * @param request Request payload.
+   * @return The allocation response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseAllocatePortfolioResponse allocatePortfolio(CoinbaseAllocatePortfolioRequest request)
+      throws IOException {
+    return coinbaseAdvancedTrade.allocatePortfolio(authTokenCreator, request);
   }
 
 }

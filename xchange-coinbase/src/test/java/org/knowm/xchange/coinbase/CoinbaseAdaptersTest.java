@@ -9,15 +9,19 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import org.junit.Test;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPositions;
+import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.instrument.Instrument;
 
@@ -278,6 +282,57 @@ public class CoinbaseAdaptersTest {
     assertEquals(new BigDecimal("1.5"), open.getSize());
     assertEquals(new BigDecimal("30000"), open.getPrice());
     assertEquals(new BigDecimal("25"), open.getUnRealisedPnl());
+  }
+
+  @Test
+  public void testAdaptFuturesWallet() {
+    CoinbaseFuturesBalanceSummaryResponse response =
+        new CoinbaseFuturesBalanceSummaryResponse(
+            new BigDecimal("5000"),
+            new BigDecimal("8000"),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            new BigDecimal("3000"),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    Wallet wallet = CoinbaseAdapters.adaptFuturesWallet(response);
+    assertNotNull("Wallet should not be null", wallet);
+    assertEquals("futures", wallet.getId());
+    assertNotNull("Wallet features should not be null", wallet.getFeatures());
+    assertEquals(1, wallet.getFeatures().size());
+    assertEquals(Wallet.WalletFeature.FUTURES_TRADING, wallet.getFeatures().iterator().next());
+    assertEquals(new BigDecimal("8000"), wallet.getBalance(Currency.USD).getTotal());
+    assertEquals(new BigDecimal("3000"), wallet.getBalance(Currency.USD).getAvailable());
+  }
+
+  @Test
+  public void testAdaptPerpetualsWallet() {
+    CoinbasePerpetualsBalancesResponse.CoinbasePerpetualsBalances balances =
+        new CoinbasePerpetualsBalancesResponse.CoinbasePerpetualsBalances(
+            "portfolio-uuid",
+            "USD",
+            new BigDecimal("1500"),
+            new BigDecimal("1200"),
+            null,
+            null,
+            null);
+    CoinbasePerpetualsBalancesResponse response =
+        new CoinbasePerpetualsBalancesResponse(balances);
+
+    Wallet wallet = CoinbaseAdapters.adaptPerpetualsWallet(response);
+    assertNotNull("Wallet should not be null", wallet);
+    assertEquals("portfolio-uuid", wallet.getId());
+    assertEquals(new BigDecimal("1500"), wallet.getBalance(Currency.USD).getTotal());
+    assertEquals(new BigDecimal("1200"), wallet.getBalance(Currency.USD).getAvailable());
   }
 
   @Test

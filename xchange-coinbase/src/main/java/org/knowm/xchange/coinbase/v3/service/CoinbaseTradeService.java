@@ -7,35 +7,38 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseV3OrderRequests;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolio;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.dto.Order;
-import org.knowm.xchange.coinbase.CoinbaseAdapters;
-import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPositions;
-import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.service.trade.TradeService;
-import org.knowm.xchange.service.trade.params.TradeHistoryParams;
-
-import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
-import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.knowm.xchange.service.trade.params.CancelAllOrders;
+import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.knowm.xchange.service.trade.params.DefaultCancelOrderParamId;
+import org.knowm.xchange.service.trade.params.TradeHistoryParams;
+import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 import si.mazi.rescu.ParamsDigest;
-import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolio;
-import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 
 /**
  * Trade service implementation for Coinbase Advanced Trade (v3) API.
@@ -248,6 +251,30 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
       throws IOException {
     return super.listOrders();
   }
+
+  /**
+   * Previews an order edit without modifying the live order.
+   *
+   * @param request Edit order request payload.
+   * @return The preview response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseOrdersResponse previewEditOrder(CoinbaseEditOrderRequest request) throws IOException {
+    return super.previewEditOrder(request);
+  }
+
+  /**
+   * Closes an open position using the Advanced Trade close_position endpoint.
+   *
+   * @param request Close position request payload.
+   * @return The create order response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseCreateOrderResponse closePosition(CoinbaseClosePositionRequest request)
+      throws IOException {
+    return super.closePosition(request);
+  }
+
   /**
    * Retrieves a historical order by its id and adapts it to XChange {@link Order}.
    *
@@ -275,7 +302,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
-    Object request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
+    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
@@ -295,7 +322,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
-    Object request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
+    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
@@ -315,7 +342,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String placeStopOrder(StopOrder stopOrder) throws IOException {
-    Object request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder);
+    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
@@ -334,7 +361,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   @Override
   public void verifyOrder(LimitOrder limitOrder) {
     try {
-      Object request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
+      CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewLimitOrderRequest(limitOrder);
       super.previewOrder(request);
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview limit order", e);
@@ -355,7 +382,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   @Override
   public void verifyOrder(MarketOrder marketOrder) {
     try {
-      Object request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
+      CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewMarketOrderRequest(marketOrder);
       super.previewOrder(request);
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview market order", e);
@@ -378,7 +405,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException {
-    Object request = CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
+    CoinbaseEditOrderRequest request = CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
     super.editOrder(request);
     return limitOrder.getId();
   }

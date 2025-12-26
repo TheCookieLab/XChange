@@ -9,8 +9,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseFeeTier;
 import org.knowm.xchange.currency.Currency;
@@ -162,6 +165,35 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
         return 1;
       }
     });
+  }
+
+  /**
+   * Retrieves the futures balance summary and adapts it to an XChange futures wallet.
+   *
+   * @return Futures wallet with USD balance and futures feature.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public Wallet getFuturesWallet() throws IOException {
+    if (!hasAuthentication()) {
+      throw new NotAvailableFromExchangeException("Futures balances require authentication");
+    }
+    CoinbaseFuturesBalanceSummaryResponse response = getFuturesBalanceSummary();
+    return CoinbaseAdapters.adaptFuturesWallet(response);
+  }
+
+  /**
+   * Retrieves perpetuals portfolio balances and adapts them to an XChange futures wallet.
+   *
+   * @param portfolioUuid Portfolio UUID.
+   * @return Perpetuals wallet with collateral balance and futures feature.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public Wallet getPerpetualsWallet(String portfolioUuid) throws IOException {
+    if (!hasAuthentication()) {
+      throw new NotAvailableFromExchangeException("Perpetuals balances require authentication");
+    }
+    CoinbasePerpetualsBalancesResponse response = getPerpetualsPortfolioBalances(portfolioUuid);
+    return CoinbaseAdapters.adaptPerpetualsWallet(response);
   }
 
 }
