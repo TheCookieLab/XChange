@@ -1,6 +1,7 @@
 package org.knowm.xchange.bybit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.knowm.xchange.bybit.BybitAdapters.convertBybitSymbolToInstrument;
 import static org.knowm.xchange.bybit.BybitAdapters.guessSymbol;
 
 import org.junit.Test;
@@ -19,9 +20,9 @@ public class BybitAdaptersTest {
     assertThat(guessSymbol("BTCDAI")).isEqualTo(new CurrencyPair("BTC", "DAI"));
     assertThat(guessSymbol("ABCDEFG")).isEqualTo(new CurrencyPair("ABCD", "EFG"));
 
-    assertThat(guessSymbol("BTCUSDT", BybitCategory.LINEAR))
+    assertThat(convertBybitSymbolToInstrument("BTCUSDT", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("BTC/USDT/PERP"));
-    assertThat(guessSymbol("ETHPERP", BybitCategory.LINEAR))
+    assertThat(convertBybitSymbolToInstrument("ETHPERP", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDC/PERP"));
   }
 
@@ -47,18 +48,18 @@ public class BybitAdaptersTest {
 
   @Test
   public void testConvertToInstrument() {
-    assertThat(BybitAdapters.convertBybitSymbolToInstrument("BTCUSDC", BybitCategory.SPOT))
+    assertThat(convertBybitSymbolToInstrument("BTCUSDC", BybitCategory.SPOT))
         .isEqualTo(new CurrencyPair("BTC/USDC"));
-    assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETHUSDT", BybitCategory.LINEAR))
+    assertThat(convertBybitSymbolToInstrument("ETHUSDT", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDT/PERP"));
-    assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETHPERP", BybitCategory.LINEAR))
+    assertThat(convertBybitSymbolToInstrument("ETHPERP", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDC/PERP"));
-    assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETH-02FEB24", BybitCategory.LINEAR))
+    assertThat(convertBybitSymbolToInstrument("ETH-02FEB24", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDC/02FEB24"));
     assertThat(
-            BybitAdapters.convertBybitSymbolToInstrument("ETHUSDT-02FEB24", BybitCategory.LINEAR))
+            convertBybitSymbolToInstrument("ETHUSDT-02FEB24", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDT/02FEB24"));
-    assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETHUSDH24", BybitCategory.INVERSE))
+    assertThat(convertBybitSymbolToInstrument("ETHUSDH24", BybitCategory.INVERSE))
         .isEqualTo(new FuturesContract("ETH/USD/H24"));
   }
 }

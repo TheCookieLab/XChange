@@ -4,7 +4,6 @@ import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitOrderStatus;
 import static org.knowm.xchange.bybit.BybitAdapters.convertBybitSymbolToInstrument;
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 import static org.knowm.xchange.bybit.BybitAdapters.getOrderType;
-import static org.knowm.xchange.bybit.BybitAdapters.guessSymbol;
 
 import dto.marketdata.BybitOrderbook;
 import dto.marketdata.BybitPublicOrder;
@@ -102,11 +101,12 @@ public class BybitStreamAdapters {
           builder =
               new LimitOrder.Builder(
                       orderType,
-                      guessSymbol(bybitOrderChange.getSymbol(), bybitOrderChange.getCategory()))
+                  convertBybitSymbolToInstrument(bybitOrderChange.getSymbol(), bybitOrderChange.getCategory()))
                   .limitPrice(new BigDecimal(bybitOrderChange.getPrice()));
           break;
         case MARKET:
-          builder = new MarketOrder.Builder(orderType, guessSymbol(bybitOrderChange.getSymbol()));
+          builder = new MarketOrder.Builder(orderType, convertBybitSymbolToInstrument(bybitOrderChange.getSymbol(),
+              bybitOrderChange.getCategory()));
           break;
       }
       if (!bybitOrderChange.getAvgPrice().isEmpty()) {
