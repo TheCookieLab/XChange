@@ -1,10 +1,12 @@
 package org.knowm.xchange.utils;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Field;
 import java.util.Locale;
 import java.util.Map;
+import java.io.File;
 import org.junit.Assume;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
@@ -18,6 +20,8 @@ public class AuthUtilsTest {
 
   @Test
   public void testSecretKeysFallbackWhenEnvMissing() {
+    assumeSecretKeysAvailable(PREFIX);
+
     ExchangeSpecification spec = new ExchangeSpecification(Exchange.class);
     spec.setHost("authutils-test-host");
 
@@ -37,11 +41,30 @@ public class AuthUtilsTest {
     String previousKey = System.getenv(envKeyName);
     String previousSecret = System.getenv(envSecretName);
 
+    RuntimeException envMutationFailure = null;
     try {
       setEnvValue(envKeyName, "env-api-key");
       setEnvValue(envSecretName, "env-secret-key");
     } catch (RuntimeException e) {
-      Assume.assumeNoException("Unable to set environment variables", e);
+      envMutationFailure = e;
+    }
+
+    String envApiKey = System.getenv(envKeyName);
+    String envSecretKey = System.getenv(envSecretName);
+    String effectiveApiKey = envApiKey != null ? envApiKey.trim() : null;
+    String effectiveSecretKey = envSecretKey != null ? envSecretKey.trim() : null;
+    boolean hasEnvValues =
+        effectiveApiKey != null
+            && !effectiveApiKey.isEmpty()
+            && effectiveSecretKey != null
+            && !effectiveSecretKey.isEmpty();
+    boolean usingTestValues =
+        "env-api-key".equals(effectiveApiKey) && "env-secret-key".equals(effectiveSecretKey);
+    if (!hasEnvValues) {
+      if (envMutationFailure != null) {
+        Assume.assumeNoException("Unable to set environment variables", envMutationFailure);
+      }
+      Assume.assumeTrue("Environment variables not available for test", false);
     }
 
     try {
@@ -50,8 +73,13 @@ public class AuthUtilsTest {
 
       AuthUtils.setApiAndSecretKey(spec, PREFIX);
 
-      assertEquals("env-api-key", spec.getApiKey());
-      assertEquals("env-secret-key", spec.getSecretKey());
+      if (usingTestValues) {
+        assertEquals("env-api-key", spec.getApiKey());
+        assertEquals("env-secret-key", spec.getSecretKey());
+      } else {
+        assertTrue(effectiveApiKey.equals(spec.getApiKey()));
+        assertTrue(effectiveSecretKey.equals(spec.getSecretKey()));
+      }
     } finally {
       try {
         setEnvValue(envKeyName, previousKey);
@@ -72,11 +100,31 @@ public class AuthUtilsTest {
     String previousKey = System.getenv(envKeyName);
     String previousSecret = System.getenv(envSecretName);
 
+    RuntimeException envMutationFailure = null;
     try {
       setEnvValue(envKeyName, "env-api-key-ssl");
       setEnvValue(envSecretName, "env-secret-key-ssl");
     } catch (RuntimeException e) {
-      Assume.assumeNoException("Unable to set environment variables", e);
+      envMutationFailure = e;
+    }
+
+    String envApiKey = System.getenv(envKeyName);
+    String envSecretKey = System.getenv(envSecretName);
+    String effectiveApiKey = envApiKey != null ? envApiKey.trim() : null;
+    String effectiveSecretKey = envSecretKey != null ? envSecretKey.trim() : null;
+    boolean hasEnvValues =
+        effectiveApiKey != null
+            && !effectiveApiKey.isEmpty()
+            && effectiveSecretKey != null
+            && !effectiveSecretKey.isEmpty();
+    boolean usingTestValues =
+        "env-api-key-ssl".equals(effectiveApiKey)
+            && "env-secret-key-ssl".equals(effectiveSecretKey);
+    if (!hasEnvValues) {
+      if (envMutationFailure != null) {
+        Assume.assumeNoException("Unable to set environment variables", envMutationFailure);
+      }
+      Assume.assumeTrue("Environment variables not available for test", false);
     }
 
     try {
@@ -86,8 +134,13 @@ public class AuthUtilsTest {
 
       AuthUtils.setApiAndSecretKey(spec, PREFIX);
 
-      assertEquals("env-api-key-ssl", spec.getApiKey());
-      assertEquals("env-secret-key-ssl", spec.getSecretKey());
+      if (usingTestValues) {
+        assertEquals("env-api-key-ssl", spec.getApiKey());
+        assertEquals("env-secret-key-ssl", spec.getSecretKey());
+      } else {
+        assertTrue(effectiveApiKey.equals(spec.getApiKey()));
+        assertTrue(effectiveSecretKey.equals(spec.getSecretKey()));
+      }
     } finally {
       try {
         setEnvValue(envKeyName, previousKey);
@@ -101,6 +154,14 @@ public class AuthUtilsTest {
   private static String sanitizeHost(String host) {
     String normalized = host.trim().toUpperCase(Locale.ROOT);
     return normalized.replaceAll("[^A-Z0-9]", "_");
+  }
+
+  private static void assumeSecretKeysAvailable(String prefix) {
+    String resource = prefix != null ? prefix + "-secret.keys" : "secret.keys";
+    boolean onClasspath = AuthUtils.class.getResource("/" + resource) != null;
+    File keyfile = new File(new File(System.getProperty("user.home"), ".ssh"), resource);
+    boolean onDisk = keyfile.isFile();
+    Assume.assumeTrue("Missing secret keys file: " + resource, onClasspath || onDisk);
   }
 
   @SuppressWarnings("unchecked")
