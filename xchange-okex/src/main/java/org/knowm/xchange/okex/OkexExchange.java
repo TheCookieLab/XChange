@@ -20,8 +20,7 @@ import si.mazi.rescu.SynchronizedValueFactory;
 public class OkexExchange extends BaseExchange {
 
   public static final String PARAM_USE_AWS = "Use_AWS";
-  public static final String PARAM_AWS_SSL_URI = "AWSSslUri";
-  public static final String PARAM_AWS_HOST = "AWSHost";
+
   public static final String PARAM_SIMULATED = "simulated";
   public static final String PARAM_PASSPHRASE = "passphrase";
   private static ResilienceRegistries RESILIENCE_REGISTRIES;
@@ -30,17 +29,7 @@ public class OkexExchange extends BaseExchange {
 
   /** Adjust host parameters depending on exchange specific parameters */
   protected void concludeHostParams(ExchangeSpecification exchangeSpecification) {
-    if (exchangeSpecification.getExchangeSpecificParameters() != null) {
-      final boolean useAWS =
-          Boolean.TRUE.equals(
-              exchangeSpecification.getExchangeSpecificParametersItem(PARAM_USE_AWS));
-      if (useAWS) {
-        exchangeSpecification.setSslUri(
-            (String) exchangeSpecification.getExchangeSpecificParametersItem(PARAM_AWS_SSL_URI));
-        exchangeSpecification.setHost(
-            (String) exchangeSpecification.getExchangeSpecificParametersItem(PARAM_AWS_HOST));
-      }
-    }
+
   }
 
   @Override
@@ -71,12 +60,8 @@ public class OkexExchange extends BaseExchange {
     exchangeSpecification.setPort(80);
     exchangeSpecification.setExchangeName("Okex");
     exchangeSpecification.setExchangeDescription("Okx Exchange");
-
+    // not supported anymore
     exchangeSpecification.setExchangeSpecificParametersItem(PARAM_USE_AWS, false);
-    exchangeSpecification.setExchangeSpecificParametersItem(
-        PARAM_AWS_SSL_URI, "https://aws.okx.com");
-    exchangeSpecification.setExchangeSpecificParametersItem(PARAM_AWS_HOST, "aws.okx.com");
-
     return exchangeSpecification;
   }
 
