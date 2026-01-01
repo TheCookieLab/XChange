@@ -14,26 +14,24 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderParams;
-import org.knowm.xchange.bybit.service.BybitAccountService;
-import org.knowm.xchange.derivative.FuturesContract;
-import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.trade.LimitOrder;
-import org.knowm.xchange.dto.trade.LimitOrder.Builder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BybitStreamWebsocketTradeExample {
-
-  private static final Logger LOG = LoggerFactory.getLogger(BybitStreamWebsocketTradeExample.class);
-  static Instrument instrument = new FuturesContract("XRP/USDT/PERP");
+public class BybitStreamSpotWebsocketTradeExample {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BybitStreamSpotWebsocketTradeExample.class);
+  static Instrument instrument = new CurrencyPair("XRP/USDT");
   static BybitStreamingExchange exchange;
 
   public static void main(String[] args) throws IOException {
-    exchange = (BybitStreamingExchange) connectMainApi(BybitCategory.LINEAR, true);
+    exchange = (BybitStreamingExchange) connectMainApi(BybitCategory.SPOT, true);
     try {
       while (!exchange.isAlive()) {
         TimeUnit.MILLISECONDS.sleep(100);
@@ -52,30 +50,27 @@ public class BybitStreamWebsocketTradeExample {
 
   private static void websocketBatchTradeExample() throws IOException, InterruptedException {
     CompositeDisposable compositeDisposable = new CompositeDisposable();
-    // switch mode to one-way
-    ((BybitAccountService) exchange.getAccountService())
-        .switchPositionMode(BybitCategory.LINEAR, instrument, "USDT", 0);
     BigDecimal minAmount =
         exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
     minAmount =
         getMinAmount(
-            new BigDecimal("5"),
+            new BigDecimal("12"),
             minAmount,
             ticker,
             exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
     String limitOrder1UserId = RandomStringUtils.randomAlphanumeric(20);
     LimitOrder limitOrder1 =
-        new Builder(OrderType.ASK, instrument)
+        new LimitOrder.Builder(Order.OrderType.BID, instrument)
             .originalAmount(minAmount)
-            .limitPrice(ticker.getHigh().multiply(new BigDecimal("1.02")))
+            .limitPrice(ticker.getLow())
             .userReference(limitOrder1UserId)
             .build();
     String limitOrder2UserId = RandomStringUtils.randomAlphanumeric(20);
     LimitOrder limitOrder2 =
-        new Builder(OrderType.ASK, instrument)
+        new LimitOrder.Builder(Order.OrderType.BID, instrument)
             .originalAmount(minAmount)
-            .limitPrice(ticker.getHigh().multiply(new BigDecimal("1.03")))
+            .limitPrice(ticker.getLow().add(new BigDecimal("0.03")))
             .userReference(limitOrder2UserId)
             .build();
     compositeDisposable.add(
@@ -98,13 +93,13 @@ public class BybitStreamWebsocketTradeExample {
                 throwable -> LOG.error("throwable", throwable)));
     Thread.sleep(1000);
     LimitOrder changeOrder1 =
-        new Builder(OrderType.ASK, instrument)
+        new LimitOrder.Builder(Order.OrderType.BID, instrument)
             .originalAmount(minAmount)
-            .limitPrice(ticker.getHigh().multiply(new BigDecimal("1.031")))
+            .limitPrice(ticker.getLow().add(new BigDecimal("0.01")))
             .userReference(limitOrder1UserId)
             .build();
     LimitOrder changeOrder2 =
-        new Builder(OrderType.ASK, instrument)
+        new LimitOrder.Builder(Order.OrderType.BID, instrument)
             .originalAmount(minAmount.add(new BigDecimal("1")))
             .userReference(limitOrder2UserId)
             .build();
@@ -135,23 +130,22 @@ public class BybitStreamWebsocketTradeExample {
   }
 
   private static void websocketTradeExample() throws IOException, InterruptedException {
-    // switch mode to two-way
-    ((BybitAccountService) exchange.getAccountService())
-        .switchPositionMode(BybitCategory.LINEAR, instrument, "USDT", 0);
     BigDecimal minAmount =
         exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
     minAmount =
         getMinAmount(
-            new BigDecimal("5"),
+            new BigDecimal("12"),
             minAmount,
             ticker,
             exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
+    BigDecimal priceStepSize =
+        exchange.getExchangeMetaData().getInstruments().get(instrument).getPriceStepSize();
     String limitOrder1UserId = RandomStringUtils.randomAlphanumeric(20);
     LimitOrder limitOrder1 =
-        new Builder(OrderType.ASK, instrument)
+        new LimitOrder.Builder(Order.OrderType.BID, instrument)
             .originalAmount(minAmount)
-            .limitPrice(ticker.getHigh())
+            .limitPrice(ticker.getLow())
             .userReference(limitOrder1UserId)
             .build();
     Disposable limitOrder1Disposable =
@@ -166,8 +160,8 @@ public class BybitStreamWebsocketTradeExample {
     Thread.sleep(1000);
     LOG.info("limitOrder1 is disposed: {}", limitOrder1Disposable.isDisposed());
     LimitOrder changeOrder1 =
-        new Builder(OrderType.ASK, instrument)
-            .limitPrice(ticker.getHigh().add(BigDecimal.ONE))
+        new LimitOrder.Builder(Order.OrderType.BID, instrument)
+            .limitPrice(ticker.getLow().add(priceStepSize))
             .userReference(limitOrder1UserId)
             .build();
     Disposable changeOrder1Disposable =
@@ -193,7 +187,7 @@ public class BybitStreamWebsocketTradeExample {
     Thread.sleep(1000);
     LOG.info("cancelOrder1 is disposed: {}", cancelOrder1Disposable.isDisposed());
     Thread.sleep(1000);
-    MarketOrder marketOrder = new MarketOrder(OrderType.ASK, minAmount, instrument);
+    MarketOrder marketOrder = new MarketOrder(Order.OrderType.BID, minAmount, instrument);
     Disposable marketOrderDisposable =
         exchange
             .getStreamingTradeService()

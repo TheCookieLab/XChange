@@ -101,16 +101,12 @@ public class BybitStreamAdapters {
           builder =
               new LimitOrder.Builder(
                       orderType,
-                      convertBybitSymbolToInstrument(
-                          bybitOrderChange.getSymbol(), bybitOrderChange.getCategory()))
+                  convertBybitSymbolToInstrument(bybitOrderChange.getSymbol(), bybitOrderChange.getCategory()))
                   .limitPrice(new BigDecimal(bybitOrderChange.getPrice()));
           break;
         case MARKET:
-          builder =
-              new MarketOrder.Builder(
-                  orderType,
-                  convertBybitSymbolToInstrument(
-                      bybitOrderChange.getSymbol(), bybitOrderChange.getCategory()));
+          builder = new MarketOrder.Builder(orderType, convertBybitSymbolToInstrument(bybitOrderChange.getSymbol(),
+              bybitOrderChange.getCategory()));
           break;
       }
       if (!bybitOrderChange.getAvgPrice().isEmpty()) {
