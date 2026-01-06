@@ -137,13 +137,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- XChange CoinEgg support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-coinegg</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>xchange-coinmate</artifactId>
