@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 public class CoinbaseStreamingExchange extends CoinbaseExchange implements StreamingExchange {
   private static final Logger LOG = LoggerFactory.getLogger(CoinbaseStreamingExchange.class);
 
-  public static final String PARAM_SANDBOX = "Use_Sandbox_Websocket";
   public static final String PARAM_PUBLIC_RATE_LIMIT = "Coinbase_Public_Subscriptions_Per_Second";
   public static final String PARAM_PRIVATE_RATE_LIMIT = "Coinbase_Private_Subscriptions_Per_Second";
   public static final String PARAM_MANUAL_HEARTBEAT = "Coinbase_Disable_Auto_Heartbeat";
@@ -42,8 +41,13 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   public static final String PARAM_WEBSOCKET_JWT_SUPPLIER =
       "Coinbase_Websocket_Jwt_Supplier";
 
-  public static final String PROD_WS_URI = "wss://advanced-trade-ws.coinbase.com";
-  public static final String SANDBOX_WS_URI = "wss://advanced-trade-ws.sandbox.coinbase.com";
+  // WebSocket endpoints for Coinbase Advanced Trade
+  // Note: There is no sandbox environment for WebSocket connections
+  public static final String MARKET_DATA_WS_URI = "wss://advanced-trade-ws.coinbase.com";
+  public static final String USER_ORDER_DATA_WS_URI = "wss://advanced-trade-ws-user.coinbase.com";
+  
+  // Default to market data endpoint for backward compatibility
+  public static final String PROD_WS_URI = MARKET_DATA_WS_URI;
 
   private final AtomicReference<Disposable> reconnectSubscription = new AtomicReference<>();
   private final List<Disposable> productSubscriptions = new CopyOnWriteArrayList<>();
@@ -102,6 +106,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   protected CoinbaseStreamingService createStreamingService(
       ExchangeSpecification exchangeSpecification) {
     String websocketUrl = resolveWebsocketUrl(exchangeSpecification);
+    LOG.info("Creating CoinbaseStreamingService with WebSocket endpoint: {}", websocketUrl);
 
     int publicRateLimit =
         Optional.ofNullable(
@@ -116,6 +121,9 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
             .map(Object::toString)
             .map(Integer::parseInt)
             .orElse(750);
+
+    LOG.info("Coinbase WebSocket rate limits - Public: {} per second, Private: {} per second", 
+        publicRateLimit, privateRateLimit);
 
     CoinbaseStreamingService service =
         new CoinbaseStreamingService(
@@ -303,31 +311,38 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   }
 
   private Supplier<String> createLocalJwtSupplier(ExchangeSpecification specification) {
-    CoinbaseV3Digest digest =
-        CoinbaseV3Digest.createInstance(specification.getApiKey(), specification.getSecretKey());
-    if (digest == null) {
-      LOG.debug("Inline Coinbase JWT supplier unavailable - missing API credentials");
+    try {
+      CoinbaseV3Digest digest =
+          CoinbaseV3Digest.createInstance(specification.getApiKey(), specification.getSecretKey());
+      if (digest == null) {
+        LOG.debug("Inline Coinbase JWT supplier unavailable - missing API credentials");
+        return () -> null;
+      }
+      return () -> {
+        try {
+          return digest.generateWebsocketJwt();
+        } catch (Exception ex) {
+          LOG.warn("Inline Coinbase JWT supplier failed to generate token", ex);
+          return null;
+        }
+      };
+    } catch (IllegalStateException e) {
+      // Handle case where keys are invalid (e.g., in tests with dummy keys)
+      LOG.debug("Inline Coinbase JWT supplier unavailable - invalid API credentials: {}", e.getMessage());
       return () -> null;
     }
-    return () -> {
-      try {
-        return digest.generateWebsocketJwt();
-      } catch (Exception ex) {
-        LOG.warn("Inline Coinbase JWT supplier failed to generate token", ex);
-        return null;
-      }
-    };
   }
 
   private String resolveWebsocketUrl(ExchangeSpecification specification) {
+    String url;
     if (specification.getOverrideWebsocketApiUri() != null) {
-      return specification.getOverrideWebsocketApiUri();
+      url = specification.getOverrideWebsocketApiUri();
+      LOG.info("Using override WebSocket URI: {}", url);
+    } else {
+      url = PROD_WS_URI;
+      LOG.info("Using default WebSocket URI: {} (market data endpoint)", url);
     }
-    Object useSandbox = specification.getExchangeSpecificParametersItem(PARAM_SANDBOX);
-    if (Boolean.TRUE.equals(useSandbox)) {
-      return SANDBOX_WS_URI;
-    }
-    return PROD_WS_URI;
+    return url;
   }
 
   /**

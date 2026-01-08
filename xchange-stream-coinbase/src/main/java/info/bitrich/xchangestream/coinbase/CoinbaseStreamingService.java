@@ -8,8 +8,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.subjects.PublishSubject;
-import io.reactivex.rxjava3.subjects.Subject;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -105,6 +103,10 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
 
   CoinbaseStreamingService(
       String apiUrl, Supplier<String> jwtSupplier, int unauthenticatedPerSecond, int authenticatedPerSecond) {
+    // Use 100MB max frame payload length as recommended by Coinbase for large order book snapshots
+    // (especially for high-volume products like BTC-USD)
+    // See: https://docs.cdp.coinbase.com/coinbase-app/advanced-trade-apis/websocket/websocket-overview
+    // and: https://github.com/ccxt/ccxt/issues/23597
     this(
         apiUrl,
         jwtSupplier,
@@ -116,6 +118,17 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
         authenticatedPerSecond);
   }
 
+  @Override
+  public void messageHandler(String message) {
+    LOG.info("Coinbase WebSocket received message (length={} bytes): {}", message.length(), 
+        message.length() > 200 ? message.substring(0, 200) + "..." : message);
+    if (message.length() > 10 * 1024 * 1024) { // Log warning for messages > 10MB
+      LOG.warn("Received very large message ({} MB) - this may indicate a large order book snapshot", 
+          message.length() / (1024 * 1024));
+    }
+    super.messageHandler(message);
+  }
+
   Observable<JsonNode> subscribeChannel(CoinbaseSubscriptionRequest request) {
     CoinbaseChannel channel = request.getChannel();
     ChannelState state = channelStates.computeIfAbsent(channel, ChannelState::new);
@@ -123,10 +136,22 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
 
     ensureChannelStream(state);
     // Ensure the remote endpoint is aware of the requested products.
+    // According to Coinbase docs, a subscribe message MUST be sent within 5 seconds
+    // or the connection will be closed. Always send subscribe if we have active subscriptions.
     synchronized (state) {
       List<String> newlySubscribed = state.flushPendingSubscribes();
-      if (!newlySubscribed.isEmpty() || state.requiresAuthentication()) {
-        sendChannelCommand(state, SUBSCRIBE, newlySubscribed.isEmpty() ? state.currentProducts() : newlySubscribed);
+      List<String> productsToSubscribe = newlySubscribed.isEmpty() ? state.currentProducts() : newlySubscribed;
+      LOG.debug("subscribeChannel for {}: newlySubscribed={}, productsToSubscribe={}, requiresAuth={}", 
+          state.channel.channelName(), newlySubscribed, productsToSubscribe, state.requiresAuthentication());
+      // Send subscribe message if:
+      // 1. There are newly subscribed products, OR
+      // 2. Channel requires authentication (needs JWT), OR
+      // 3. We have products to subscribe to (ensures subscribe is sent even if products were already subscribed)
+      if (!newlySubscribed.isEmpty() || state.requiresAuthentication() || !productsToSubscribe.isEmpty()) {
+        LOG.info("Sending subscribe message for channel {} with products: {}", state.channel.channelName(), productsToSubscribe);
+        sendChannelCommand(state, SUBSCRIBE, productsToSubscribe);
+      } else {
+        LOG.warn("NOT sending subscribe message for channel {} - no products and no auth required", state.channel.channelName());
       }
     }
 
@@ -232,21 +257,36 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
       payload.putAll(state.args);
     }
 
-    if (state.requiresAuthentication()) {
+    // Include JWT if channel requires authentication OR if JWT supplier is available
+    // (some channels may work better with JWT even if not strictly required)
+    if (state.requiresAuthentication() || jwtSupplier != null) {
       String jwt = jwtSupplier.get();
-      if (jwt == null || jwt.isEmpty()) {
+      if (jwt != null && !jwt.isEmpty()) {
+        payload.put("jwt", jwt);
+        if (!state.requiresAuthentication()) {
+          LOG.debug("Including JWT for public channel {} (may be required by Coinbase)", state.channel.channelName());
+        }
+      } else if (state.requiresAuthentication()) {
         LOG.warn(
             "Coinbase Advanced Trade websocket channel {} requires authentication but no JWT was available",
             state.channel.channelName());
         return;
       }
-      payload.put("jwt", jwt);
     }
 
     try {
       CoinbaseRateLimiter limiter =
           state.requiresAuthentication() ? privateRateLimiter : publicRateLimiter;
       limiter.acquire();
+      String payloadJson;
+      try {
+        payloadJson = objectMapper.writeValueAsString(payload);
+      } catch (Exception e) {
+        payloadJson = payload.toString();
+      }
+      LOG.info("Sending Coinbase WebSocket {} message for channel {} with products: {} (hasJWT: {})", 
+          type, state.channel.channelName(), sanitized, payload.containsKey("jwt"));
+      LOG.info("Full subscribe payload: {}", payloadJson);
       sendObjectMessage(payload);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -300,9 +340,33 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
   protected String getChannelNameFromMessage(JsonNode message) {
     JsonNode channelNode = message.get("channel");
     if (channelNode == null || channelNode.isNull()) {
+      LOG.debug("Message has no 'channel' field: {}", message);
       return null;
     }
-    return channelNode.asText();
+    String channelName = channelNode.asText();
+    LOG.debug("Extracted channel name from message: {}", channelName);
+    
+    // Coinbase may send "l2_data" even when we subscribe to "level2" or "level2_batch"
+    // Check if we have a subscription for "level2" or "level2_batch" and map "l2_data" accordingly
+    if ("l2_data".equals(channelName)) {
+      // Try to find an existing subscription - prefer "level2_batch" if it exists, otherwise "level2"
+      // The channels map is protected in NettyStreamingService, so we can access it
+      String normalizedChannel = null;
+      if (channels.containsKey("level2_batch")) {
+        normalizedChannel = "level2_batch";
+        LOG.info("Normalizing channel name from 'l2_data' to 'level2_batch' (subscription exists)");
+      } else if (channels.containsKey("level2")) {
+        normalizedChannel = "level2";
+        LOG.info("Normalizing channel name from 'l2_data' to 'level2' (subscription exists)");
+      } else {
+        // Default to "level2" if no subscription found yet (shouldn't happen, but be safe)
+        normalizedChannel = "level2";
+        LOG.warn("Normalizing channel name from 'l2_data' to 'level2' (default - no subscription found)");
+      }
+      channelName = normalizedChannel;
+    }
+    
+    return channelName;
   }
 
   @Override

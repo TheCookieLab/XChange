@@ -1,5 +1,8 @@
 package org.knowm.xchange.examples.coinbase;
 
+import info.bitrich.xchangestream.coinbase.CoinbaseStreamingExchange;
+import info.bitrich.xchangestream.core.StreamingExchange;
+import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
@@ -23,6 +26,8 @@ public class CoinbaseDemoUtils {
   private static final String ENV_SANDBOX = "COINBASE_SANDBOX";
   private static final String PROPERTY_API_URL = "coinbase.api.url";
   private static final String ENV_API_URL = "COINBASE_API_URL";
+
+  // WebSocket endpoints are defined in CoinbaseStreamingExchange - use those constants
 
   /**
    * Creates an exchange instance with authentication if credentials are available.
@@ -107,6 +112,54 @@ public class CoinbaseDemoUtils {
     }
     String uri = exchange.getExchangeSpecification().getSslUri();
     return uri != null && uri.contains("sandbox");
+  }
+
+  /**
+   * Creates a streaming exchange instance for market data with authentication if credentials are available.
+   * <p>
+   * This method creates a streaming exchange configured for the Coinbase Advanced Trade market data
+   * WebSocket endpoint. It loads credentials from {@code secret.keys} (or {@code ~/.ssh/secret.keys})
+   * and applies them to the exchange specification.
+   * <p>
+   * Note: There is no sandbox environment for WebSocket connections, so this always uses the production
+   * market data endpoint.
+   *
+   * @return StreamingExchange instance configured for market data with API keys when available
+   */
+  public static StreamingExchange createStreamingExchangeForMarketData() {
+    StreamingExchange exchange =
+        StreamingExchangeFactory.INSTANCE.createExchange(CoinbaseStreamingExchange.class);
+    ExchangeSpecification spec = exchange.getExchangeSpecification();
+    spec.setOverrideWebsocketApiUri(CoinbaseStreamingExchange.MARKET_DATA_WS_URI);
+    AuthUtils.setApiAndSecretKey(spec);
+    exchange.applySpecification(spec);
+    return exchange;
+  }
+
+  /**
+   * Creates a streaming exchange instance for user order data with authentication if credentials are available.
+   * <p>
+   * This method creates a streaming exchange configured for the Coinbase Advanced Trade user order data
+   * WebSocket endpoint. It loads credentials from {@code secret.keys} (or {@code ~/.ssh/secret.keys})
+   * and applies them to the exchange specification.
+   * <p>
+   * Note: There is no sandbox environment for WebSocket connections, so this always uses the production
+   * user order data endpoint. User order data requires authentication.
+   *
+   * @return StreamingExchange instance configured for user order data with API keys when available
+   */
+  public static StreamingExchange createStreamingExchangeForUserOrderData() {
+    System.out.println("Creating streaming exchange for user order data");
+    System.out.println("WebSocket endpoint: " + CoinbaseStreamingExchange.USER_ORDER_DATA_WS_URI);
+    StreamingExchange exchange =
+        StreamingExchangeFactory.INSTANCE.createExchange(CoinbaseStreamingExchange.class);
+    ExchangeSpecification spec = exchange.getExchangeSpecification();
+    spec.setOverrideWebsocketApiUri(CoinbaseStreamingExchange.USER_ORDER_DATA_WS_URI);
+    AuthUtils.setApiAndSecretKey(spec);
+    exchange.applySpecification(spec);
+    System.out.println("Streaming exchange created with WebSocket endpoint: " + 
+        spec.getOverrideWebsocketApiUri());
+    return exchange;
   }
 
   private static void applySandboxPreference(ExchangeSpecification exSpec) {
