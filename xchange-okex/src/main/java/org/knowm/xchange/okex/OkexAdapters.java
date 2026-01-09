@@ -32,6 +32,7 @@ import org.knowm.xchange.dto.account.Wallet.WalletFeature;
 import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.FundingRate;
+import org.knowm.xchange.dto.marketdata.FundingRate.FundingRateInterval;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -683,18 +684,59 @@ public class OkexAdapters {
   }
 
   public static FundingRate adaptFundingRate(List<OkexFundingRate> okexFundingRate) {
+    int interval =
+        ((int)
+                (okexFundingRate.get(0).getNextFundingTime().getTime()
+                    - okexFundingRate.get(0).getFundingTime().getTime())
+            / 3600000);
+    BigDecimal fundingRate = okexFundingRate.get(0).getFundingRate();
+    FundingRateInterval rateInterval = FundingRateInterval.H8;
+    BigDecimal fundingRate1h = BigDecimal.ZERO;
+    switch (interval) {
+      case 1:
+        {
+          rateInterval = FundingRateInterval.H1;
+          fundingRate1h = fundingRate;
+          break;
+        }
+      case 2:
+        {
+          rateInterval = FundingRateInterval.H2;
+          fundingRate1h =
+              fundingRate.divide(
+                  BigDecimal.valueOf(2), fundingRate.scale(), RoundingMode.HALF_EVEN);
+          break;
+        }
+      case 4:
+        {
+          rateInterval = FundingRateInterval.H4;
+          fundingRate1h =
+              fundingRate.divide(
+                  BigDecimal.valueOf(4), fundingRate.scale(), RoundingMode.HALF_EVEN);
+          break;
+        }
+      case 6:
+        {
+          rateInterval = FundingRateInterval.H6;
+          fundingRate1h =
+              fundingRate.divide(
+                  BigDecimal.valueOf(6), fundingRate.scale(), RoundingMode.HALF_EVEN);
+          break;
+        }
+      case 8:
+        {
+          fundingRate1h =
+              fundingRate.divide(
+                  BigDecimal.valueOf(8), fundingRate.scale(), RoundingMode.HALF_EVEN);
+          break;
+        }
+    }
     return new FundingRate.Builder()
         .instrument(adaptOkexInstrumentId(okexFundingRate.get(0).getInstId()))
-        .fundingRate8h(okexFundingRate.get(0).getFundingRate())
-        .fundingRate1h(
-            okexFundingRate
-                .get(0)
-                .getFundingRate()
-                .divide(
-                    BigDecimal.valueOf(8),
-                    okexFundingRate.get(0).getFundingRate().scale(),
-                    RoundingMode.HALF_EVEN))
+        .fundingRate(fundingRate)
+        .fundingRate1h(fundingRate1h)
         .fundingRateDate(okexFundingRate.get(0).getFundingTime())
+        .fundingRateInterval(rateInterval)
         .build();
   }
 
