@@ -245,8 +245,8 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
     }
   }
 
-  @Override
-  protected WebSocketClientExtensionHandler getWebSocketClientExtensionHandler() {
-    return WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler.INSTANCE;
-  }
+//  @Override
+//  protected WebSocketClientExtensionHandler getWebSocketClientExtensionHandler() {
+//    return WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler.INSTANCE;
+//  }
 }
