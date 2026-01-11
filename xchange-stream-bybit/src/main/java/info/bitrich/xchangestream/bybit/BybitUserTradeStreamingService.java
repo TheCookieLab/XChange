@@ -1,5 +1,12 @@
 package info.bitrich.xchangestream.bybit;
 
+import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptBatchAmendOrder;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
+import static org.knowm.xchange.bybit.BybitAdapters.*;
+import static org.knowm.xchange.utils.DigestUtils.bytesToHex;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -20,6 +27,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,26 +51,6 @@ import org.knowm.xchange.service.BaseParamsDigest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptBatchAmendOrder;
-import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
-import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
-import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
-import static org.knowm.xchange.bybit.BybitAdapters.*;
-import static org.knowm.xchange.utils.DigestUtils.bytesToHex;
-
 public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(BybitUserTradeStreamingService.class);
@@ -79,7 +67,10 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
   private String connId;
 
   public BybitUserTradeStreamingService(String apiUrl, ExchangeSpecification spec) {
-    super(apiUrl, 65536, (Duration) spec.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+    super(
+        apiUrl,
+        65536,
+        (Duration) spec.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
         (Duration) spec.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
         (Integer) spec.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.spec = spec;

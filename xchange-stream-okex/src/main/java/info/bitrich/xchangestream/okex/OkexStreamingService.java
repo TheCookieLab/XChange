@@ -15,19 +15,14 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableSource;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
-import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
-
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OkexStreamingService extends JsonNettyStreamingService {
 
@@ -51,7 +46,10 @@ public class OkexStreamingService extends JsonNettyStreamingService {
   private final ExchangeSpecification xSpec;
 
   public OkexStreamingService(String apiUrl, ExchangeSpecification exchangeSpecification) {
-    super(apiUrl, 65536, (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+    super(
+        apiUrl,
+        65536,
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
         (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
         (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.xSpec = exchangeSpecification;

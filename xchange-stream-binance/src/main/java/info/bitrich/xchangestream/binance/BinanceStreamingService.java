@@ -15,10 +15,6 @@ import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
-import org.knowm.xchange.ExchangeSpecification;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,6 +24,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import org.knowm.xchange.ExchangeSpecification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BinanceStreamingService extends JsonNettyStreamingService {
 
@@ -49,8 +48,12 @@ public class BinanceStreamingService extends JsonNettyStreamingService {
   public BinanceStreamingService(
       String baseUri,
       ProductSubscription productSubscription,
-      KlineSubscription klineSubscription, ExchangeSpecification exchangeSpecification) {
-    super(baseUri, 65536, (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+      KlineSubscription klineSubscription,
+      ExchangeSpecification exchangeSpecification) {
+    super(
+        baseUri,
+        65536,
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
         (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
         (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.productSubscription = productSubscription;

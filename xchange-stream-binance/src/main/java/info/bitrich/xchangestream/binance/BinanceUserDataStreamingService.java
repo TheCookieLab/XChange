@@ -10,23 +10,26 @@ import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import io.reactivex.rxjava3.core.Observable;
+import java.time.Duration;
 import org.knowm.xchange.ExchangeSpecification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.time.Duration;
 
 public class BinanceUserDataStreamingService extends JsonNettyStreamingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceUserDataStreamingService.class);
 
-  public static BinanceUserDataStreamingService create(String baseUri, String listenKey, ExchangeSpecification exchangeSpecification) {
+  public static BinanceUserDataStreamingService create(
+      String baseUri, String listenKey, ExchangeSpecification exchangeSpecification) {
 
     return new BinanceUserDataStreamingService(baseUri + "ws/" + listenKey, exchangeSpecification);
   }
 
   private BinanceUserDataStreamingService(String url, ExchangeSpecification exchangeSpecification) {
-    super(url, 65536, (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+    super(
+        url,
+        65536,
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
         (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
         (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
   }
