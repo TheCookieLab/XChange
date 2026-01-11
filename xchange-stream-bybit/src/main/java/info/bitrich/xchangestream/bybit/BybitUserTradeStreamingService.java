@@ -5,13 +5,30 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import dto.BybitSubscribeMessage;
 import dto.trade.BybitOrderMessage;
-import dto.trade.BybitOrderMessage.Header;
+import dto.trade.BybitOrderMessage.BybitHeader;
 import dto.trade.BybitStreamBatchAmendOrdersPayload;
+import dto.trade.BybitStreamBatchCancelOrdersPayload;
+import dto.trade.BybitStreamBatchCancelOrdersPayload.BybitStreamBatchCancelOrderPayload;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextHandler;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableSource;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.disposables.Disposable;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import lombok.Getter;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bybit.dto.BybitCategory;
@@ -47,10 +64,14 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(BybitUserTradeStreamingService.class);
   private final ExchangeSpecification spec;
+  private Disposable pingPongSubscription;
+  private final Observable<Long> pingPongSrc = Observable.interval(15, 20, TimeUnit.SECONDS);
   public static final String ORDER_CREATE = "order.create";
+  public static final String BATCH_ORDER_CREATE = "order.create-batch";
   public static final String ORDER_CHANGE = "order.amend";
   public static final String BATCH_ORDER_CHANGE = "order.amend-batch";
   public static final String ORDER_CANCEL = "order.cancel";
+  public static final String BATCH_ORDER_CANCEL = "order.cancel-batch";
   @Getter private boolean isAuthorized = false;
   private String connId;
 
@@ -67,6 +88,9 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
             (completable) -> {
               LOG.info("Connect to BybitUserTradeStream with auth");
               login();
+              pingPongDisconnectIfConnected();
+              pingPongSubscription =
+                  pingPongSrc.subscribe(o -> this.sendMessage("{\"op\":\"ping\"}"));
               completable.onComplete();
             });
   }
@@ -103,14 +127,24 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
       LOG.error("Error parsing incoming message to JSON: {}", message);
       return;
     }
-    if (jsonNode.has("op") && jsonNode.get("op").asText().equals("auth")) {
-      if (jsonNode.has("retMsg") && jsonNode.get("retMsg").asText().equals("OK")) {
-        connId = jsonNode.get("connId").asText();
-        isAuthorized = true;
-        LOG.debug("Successfully authenticated to trade URI");
-        return;
-      } else {
-        throw new ExchangeException(jsonNode.get("retMsg").asText());
+    if (jsonNode.has("op")) {
+      switch (jsonNode.get("op").asText()) {
+        case "auth":
+          {
+            if (jsonNode.has("retMsg") && jsonNode.get("retMsg").asText().equals("OK")) {
+              connId = jsonNode.get("connId").asText();
+              isAuthorized = true;
+              LOG.info("Successfully authenticated to trade URI");
+              return;
+            } else {
+              throw new ExchangeException(jsonNode.get("retMsg").asText());
+            }
+          }
+        case "pong":
+          {
+            LOG.debug("Received PONG message: {}", message);
+            return;
+          }
       }
     }
     handleMessage(jsonNode);
@@ -133,7 +167,7 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
 
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
-    Header header = new Header(String.valueOf(System.currentTimeMillis()), "5000", "");
+    BybitHeader header = new BybitHeader(String.valueOf(System.currentTimeMillis()), "5000", "");
     BybitCategory category = (BybitCategory) args[2];
     List<BybitPlaceOrderPayload> bybitPlaceOrderPayload = null;
     BybitOrderMessage<?> bybitOrderMessage = null;
@@ -186,6 +220,25 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
               new BybitOrderMessage<>(reqId, header, channelName, bybitCancelOrderPayload);
           break;
         }
+      case BATCH_ORDER_CANCEL:
+        {
+          BybitCancelOrderParams[] params =
+              objectMapper.readValue(args[0].toString(), new TypeReference<>() {});
+          List<BybitStreamBatchCancelOrderPayload> bybitBatchCancelOrderPayload = new ArrayList<>();
+          for (BybitCancelOrderParams param : params) {
+            bybitBatchCancelOrderPayload.add(
+                new BybitStreamBatchCancelOrderPayload(
+                    convertToBybitSymbol(param.getInstrument()),
+                    param.getOrderId(),
+                    param.getUserReference()));
+          }
+          List<BybitStreamBatchCancelOrdersPayload> bybitBatchCancelOrdersPayload =
+              List.of(
+                  new BybitStreamBatchCancelOrdersPayload(category, bybitBatchCancelOrderPayload));
+          bybitOrderMessage =
+              new BybitOrderMessage<>(reqId, header, channelName, bybitBatchCancelOrdersPayload);
+          break;
+        }
     }
     return objectMapper.writeValueAsString(bybitOrderMessage);
   }
@@ -193,5 +246,18 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
   @Override
   public String getUnsubscribeMessage(String channelName, Object... args) throws IOException {
     return null;
+  }
+
+  public void pingPongDisconnectIfConnected() {
+    if (pingPongSubscription != null && !pingPongSubscription.isDisposed()) {
+      pingPongSubscription.dispose();
+    }
+  }
+
+  @Override
+  public void sendMessage(String message) {
+    if (message != null) {
+      super.sendMessage(message);
+    }
   }
 }

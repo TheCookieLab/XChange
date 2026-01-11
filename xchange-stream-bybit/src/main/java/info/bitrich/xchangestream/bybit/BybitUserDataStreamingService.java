@@ -138,6 +138,7 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
         case "auth":
           {
             isAuthorized = true;
+            LOG.info("Successfully authenticated to data URI");
             resubscribeChannelsAfterLogin();
             break;
           }

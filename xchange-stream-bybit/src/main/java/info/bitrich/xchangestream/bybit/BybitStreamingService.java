@@ -103,7 +103,6 @@ public class BybitStreamingService extends JsonNettyStreamingService {
             break;
           }
       }
-      return;
     } else {
       // different op result of public channels and private channels
       // https://bybit-exchange.github.io/docs/v5/ws/connect#how-to-send-the-heartbeat-packet

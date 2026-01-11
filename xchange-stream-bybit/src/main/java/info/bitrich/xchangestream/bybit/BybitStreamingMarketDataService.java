@@ -102,7 +102,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
       AtomicLong orderBookUpdateIdPrev) {
     OrderBook orderBook = orderBookMap.getOrDefault(channelUniqueId, null);
     if (orderBook == null) {
-      LOG.debug("Failed to get orderBook, channelUniqueId= {}", channelUniqueId);
+      LOG.error("Failed to get orderBook, channelUniqueId= {}", channelUniqueId);
       return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
     }
     if (orderBookUpdateIdPrev.incrementAndGet() == bybitOrderBookUpdate.getData().getU()) {

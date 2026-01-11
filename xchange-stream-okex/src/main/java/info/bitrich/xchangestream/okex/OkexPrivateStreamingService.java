@@ -154,6 +154,7 @@ public class OkexPrivateStreamingService extends JsonNettyStreamingService {
     } catch (IOException e) {
       if ("pong".equals(message)) {
         // ping pong message
+          LOG.debug("Received pong message: {}", message);
         return;
       }
       LOG.error("Error parsing incoming message to JSON: {}", message);
