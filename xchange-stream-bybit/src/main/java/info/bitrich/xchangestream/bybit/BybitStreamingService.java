@@ -24,6 +24,9 @@ import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import static info.bitrich.xchangestream.bybit.BybitStreamingExchange.EXCHANGE_TYPE;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
 
 public class BybitStreamingService extends JsonNettyStreamingService {
 
@@ -35,11 +38,12 @@ public class BybitStreamingService extends JsonNettyStreamingService {
   @Setter private WebSocketClientHandler.WebSocketMessageHandler channelInactiveHandler = null;
 
   public BybitStreamingService(String apiUrl, ExchangeSpecification spec) {
-      super(apiUrl,65536, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
+    super(apiUrl, 65536, (Duration) spec.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+        (Duration) spec.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
+        (Integer) spec.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.exchange_type =
         ((BybitCategory) spec.getExchangeSpecificParametersItem(EXCHANGE_TYPE)).getValue();
     this.spec = spec;
-    //    this.setEnableLoggingHandler(true);
   }
 
   @Override

@@ -1,5 +1,10 @@
 package info.bitrich.xchangestream.binance;
 
+import static info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderCancelAndReplacePayload.CancelReplaceMode.STOP_ON_FAILURE;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,6 +25,7 @@ import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.signers.Ed25519Signer;
 import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.dto.BinanceException;
 import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
@@ -51,8 +57,10 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   private final String privateKey;
   private Disposable loginDisposable;
 
-  public BinanceUserTradeStreamingService(String apiUrl, String apiKey, String privateKey) {
-      super(apiUrl,65536, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
+  public BinanceUserTradeStreamingService(String apiUrl, String apiKey, String privateKey, ExchangeSpecification exchangeSpecification) {
+    super(apiUrl, 65536, (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
+        (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.apiKey = apiKey;
     this.privateKey = privateKey;
   }

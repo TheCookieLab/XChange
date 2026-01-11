@@ -41,12 +41,16 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
   @Override
   protected void initServices() {
     super.initServices();
+    applyWebsocketTimeouts(exchangeSpecification);
     this.streamingService = new BybitStreamingService(getApiUrl(), exchangeSpecification);
+    applyStreamingSpecification(exchangeSpecification, streamingService);
     if (isApiKeyValid()) {
       this.streamingUserDataService =
           new BybitUserDataStreamingService(getApiUrlWithAuth(), exchangeSpecification);
+      applyStreamingSpecification(exchangeSpecification, streamingUserDataService);
       this.streamingUserTradeService =
           new BybitUserTradeStreamingService(getTradeApiUrlWithAuth(), exchangeSpecification);
+      applyStreamingSpecification(exchangeSpecification, streamingUserTradeService);
     }
     this.streamingMarketDataService = new BybitStreamingMarketDataService(streamingService);
     this.streamingTradeService =

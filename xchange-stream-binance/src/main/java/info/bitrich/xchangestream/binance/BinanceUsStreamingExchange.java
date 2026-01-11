@@ -82,6 +82,7 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
     if (fetchOrderBookLimit instanceof Integer) {
       oderBookFetchLimitParameter = (int) fetchOrderBookLimit;
     }
+    applyWebsocketTimeouts(exchangeSpecification);
   }
 
   public Completable connect(KlineSubscription klineSubscription, ProductSubscription... args) {
@@ -169,7 +170,7 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
 
   private Completable createAndConnectUserDataService(String listenKey) {
     userDataStreamingService =
-        BinanceUserDataStreamingService.create(getStreamingBaseUri(), listenKey);
+        BinanceUserDataStreamingService.create(getStreamingBaseUri(), listenKey, getExchangeSpecification());
     applyStreamingSpecification(getExchangeSpecification(), userDataStreamingService);
     return userDataStreamingService
         .connect()
@@ -255,7 +256,7 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
             + buildSubscriptionStreams(subscription, klineSubscription);
 
     BinanceStreamingService streamingService =
-        new BinanceStreamingService(path, subscription, klineSubscription);
+        new BinanceStreamingService(path, subscription, klineSubscription, getExchangeSpecification());
     applyStreamingSpecification(getExchangeSpecification(), streamingService);
     return streamingService;
   }

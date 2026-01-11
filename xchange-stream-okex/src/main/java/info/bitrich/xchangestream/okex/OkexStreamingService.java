@@ -1,5 +1,9 @@
 package info.bitrich.xchangestream.okex;
 
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import info.bitrich.xchangestream.okex.dto.OkexSubscribeMessage;
 import info.bitrich.xchangestream.okex.dto.OkexSubscriptionTopic;
@@ -47,7 +51,9 @@ public class OkexStreamingService extends JsonNettyStreamingService {
   private final ExchangeSpecification xSpec;
 
   public OkexStreamingService(String apiUrl, ExchangeSpecification exchangeSpecification) {
-    super(apiUrl,65536, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
+    super(apiUrl, 65536, (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
+        (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.xSpec = exchangeSpecification;
   }
 

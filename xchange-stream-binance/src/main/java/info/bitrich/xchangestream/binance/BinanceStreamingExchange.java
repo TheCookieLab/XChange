@@ -70,6 +70,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
     if (fetchOrderBookLimit instanceof Integer) {
       oderBookFetchLimitParameter = (int) fetchOrderBookLimit;
     }
+    applyWebsocketTimeouts(getExchangeSpecification());
   }
 
   public Completable connect(KlineSubscription klineSubscription, ProductSubscription... args) {
@@ -161,7 +162,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
 
   private Completable createAndConnectUserDataService(String listenKey) {
     userDataStreamingService =
-        BinanceUserDataStreamingService.create(getStreamingBaseUri(), listenKey);
+        BinanceUserDataStreamingService.create(getStreamingBaseUri(), listenKey, exchangeSpecification);
     applyStreamingSpecification(getExchangeSpecification(), userDataStreamingService);
     return userDataStreamingService
         .connect()
@@ -190,7 +191,8 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
         new BinanceUserTradeStreamingService(
             getTradeStreamingBaseUri(),
             exchangeSpecification.getApiKey(),
-            exchangeSpecification.getSecretKey());
+            exchangeSpecification.getSecretKey(),
+            getExchangeSpecification());
     applyStreamingSpecification(getExchangeSpecification(), userTradeStreamingService);
     return userTradeStreamingService.connect();
   }
@@ -277,7 +279,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
             + buildSubscriptionStreams(subscription, klineSubscription);
 
     BinanceStreamingService streamingService =
-        new BinanceStreamingService(path, subscription, klineSubscription);
+        new BinanceStreamingService(path, subscription, klineSubscription, getExchangeSpecification());
     applyStreamingSpecification(getExchangeSpecification(), streamingService);
     return streamingService;
   }

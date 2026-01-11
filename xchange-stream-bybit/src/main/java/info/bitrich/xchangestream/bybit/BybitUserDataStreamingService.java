@@ -35,6 +35,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
 import static org.knowm.xchange.utils.DigestUtils.bytesToHex;
 
 public class BybitUserDataStreamingService extends JsonNettyStreamingService {
@@ -47,7 +50,9 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
   @Setter private WebSocketClientHandler.WebSocketMessageHandler channelInactiveHandler = null;
 
   public BybitUserDataStreamingService(String url, ExchangeSpecification spec) {
-      super(url,65536, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
+    super(url, 65536, (Duration) spec.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+        (Duration) spec.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
+        (Integer) spec.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.spec = spec;
   }
 

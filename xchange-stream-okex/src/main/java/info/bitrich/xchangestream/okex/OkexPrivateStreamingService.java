@@ -38,6 +38,9 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
 import static info.bitrich.xchangestream.okex.OkexStreamingService.SUBSCRIBE;
 import static info.bitrich.xchangestream.okex.OkexStreamingService.UNSUBSCRIBE;
 
@@ -63,7 +66,9 @@ public class OkexPrivateStreamingService extends JsonNettyStreamingService {
       String privateApiUrl,
       ExchangeSpecification exchangeSpecification,
       OkexExchange okexExchange) {
-      super(privateApiUrl,65536, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
+    super(privateApiUrl, 65536, (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
+        (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.exchangeSpecification = exchangeSpecification;
     this.okexExchange = okexExchange;
   }
