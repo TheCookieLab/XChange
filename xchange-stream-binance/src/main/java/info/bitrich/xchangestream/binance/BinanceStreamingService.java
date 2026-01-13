@@ -203,11 +203,6 @@ public class BinanceStreamingService extends JsonNettyStreamingService {
     // sent.
   }
 
-  @Override
-  protected WebSocketClientExtensionHandler getWebSocketClientExtensionHandler() {
-    return WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler.INSTANCE;
-  }
-
   /**
    * The available subscriptions for this streaming service.
    *

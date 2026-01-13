@@ -675,7 +675,7 @@ public class BinanceAdapters {
                     BigDecimal.valueOf(8),
                     binanceFundingRate.getLastFundingRate().scale(),
                     RoundingMode.HALF_EVEN))
-        .fundingRate8h(binanceFundingRate.getLastFundingRate())
+        .fundingRate(binanceFundingRate.getLastFundingRate())
         .instrument(binanceFundingRate.getInstrument())
         .fundingRateDate(binanceFundingRate.getNextFundingTime())
         .fundingRateEffectiveInMinutes(

@@ -26,9 +26,9 @@ import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BybitStreamWebsocketTradeExample {
+public class BybitStreamWebsocketExample {
 
-  private static final Logger LOG = LoggerFactory.getLogger(BybitStreamWebsocketTradeExample.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BybitStreamWebsocketExample.class);
   static Instrument instrument = new FuturesContract("XRP/USDT/PERP");
   static BybitStreamingExchange exchange;
 
@@ -38,6 +38,7 @@ public class BybitStreamWebsocketTradeExample {
       while (!exchange.isAlive()) {
         TimeUnit.MILLISECONDS.sleep(100);
       }
+      websocketFundingRate();
       // main(not demo) api only
       websocketTradeExample();
       Thread.sleep(1000);
@@ -48,6 +49,20 @@ public class BybitStreamWebsocketTradeExample {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private static void websocketFundingRate() throws IOException, InterruptedException {
+    Disposable fundingRateDisposable =
+        exchange
+            .getStreamingMarketDataService()
+            .getFundingRate(instrument)
+            .subscribe(
+                result -> {
+                  LOG.info("fundingRate: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable));
+    Thread.sleep(1000000);
+    fundingRateDisposable.dispose();
   }
 
   private static void websocketBatchTradeExample() throws IOException, InterruptedException {
