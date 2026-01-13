@@ -5,8 +5,6 @@ import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TI
 import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
 import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
 
-import static info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderCancelAndReplacePayload.CancelReplaceMode.STOP_ON_FAILURE;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,14 +30,7 @@ import java.security.Security;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 import java.util.regex.Pattern;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.security.Security;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Duration;
-import java.util.Base64;
-import java.util.regex.Pattern;
 import lombok.Getter;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.crypto.Signer;
