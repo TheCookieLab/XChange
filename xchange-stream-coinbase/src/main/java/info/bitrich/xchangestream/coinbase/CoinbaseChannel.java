@@ -15,6 +15,7 @@ public enum CoinbaseChannel {
   CANDLES("candles"),
   LEVEL2("level2"),
   LEVEL2_BATCH("level2_batch"),
+  L2_DATA("l2_data"), // Alternative channel name to try
   STATUS("status"),
   HEARTBEATS("heartbeats"),
   USER("user"),

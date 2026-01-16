@@ -5,30 +5,39 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseV3OrderRequests;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolio;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.dto.Order;
-import org.knowm.xchange.coinbase.CoinbaseAdapters;
+import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.marketdata.Trades;
-import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.service.trade.TradeService;
-import org.knowm.xchange.service.trade.params.TradeHistoryParams;
-
-import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
-import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.knowm.xchange.service.trade.params.CancelAllOrders;
+import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.knowm.xchange.service.trade.params.DefaultCancelOrderParamId;
+import org.knowm.xchange.service.trade.params.TradeHistoryParams;
+import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 import si.mazi.rescu.ParamsDigest;
 
 /**
@@ -118,12 +127,6 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   /**
    * Retrieves the user's trade history using the Coinbase Advanced Trade API.
    *
-   * <p>Gotcha: If {@code params} contains multiple {@link org.knowm.xchange.currency.CurrencyPair}
-   * entries, only the first pair is forwarded to the underlying {@code listFills} call. While the
-   * Coinbase REST endpoint supports multi-value filters, this implementation currently forwards at
-   * most one value per filter to avoid repeated parameter encoding. The resulting history therefore
-   * reflects only the first currency pair (and at most one order/trade id) provided.
-   *
    * <p>Pagination is handled automatically via the response cursor until it is exhausted or the
    * optional {@code limit} in {@link CoinbaseTradeHistoryParams} is reached.
    *
@@ -183,6 +186,58 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   }
 
   /**
+   * Retrieves open positions for futures and perpetuals (if available).
+   *
+   * @return Combined open positions.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  @Override
+  public OpenPositions getOpenPositions() throws IOException {
+    if (!hasAuthentication()) {
+      throw new NotAvailableFromExchangeException("Open positions require authentication");
+    }
+
+    List<OpenPosition> openPositions = new ArrayList<>();
+
+    // Futures positions (CFM)
+    openPositions.addAll(
+        CoinbaseAdapters
+            .adaptFuturesOpenPositions(listFuturesPositions().getPositions())
+            .getOpenPositions());
+
+    // Perpetuals positions (INTX) - require portfolio UUIDs
+    for (CoinbasePortfolio portfolio : listPerpetualsPortfolios()) {
+      openPositions.addAll(
+          CoinbaseAdapters
+              .adaptPerpetualsOpenPositions(listPerpetualsPositions(portfolio.getUuid()).getPositions())
+              .getOpenPositions());
+    }
+
+    return new OpenPositions(openPositions);
+  }
+
+  /**
+   * Retrieves futures open positions only.
+   */
+  public OpenPositions getFuturesOpenPositions() throws IOException {
+    if (!hasAuthentication()) {
+      throw new NotAvailableFromExchangeException("Open positions require authentication");
+    }
+    return CoinbaseAdapters.adaptFuturesOpenPositions(listFuturesPositions().getPositions());
+  }
+
+  /**
+   * Retrieves perpetuals open positions for a specific portfolio UUID.
+   */
+  public OpenPositions getPerpetualsOpenPositions(String portfolioUuid) throws IOException {
+    if (!hasAuthentication()) {
+      throw new NotAvailableFromExchangeException("Open positions require authentication");
+    }
+    return CoinbaseAdapters.adaptPerpetualsOpenPositions(
+        listPerpetualsPositions(portfolioUuid).getPositions());
+  }
+
+  /**
    * Convenience method to fetch the raw list orders response from Coinbase.
    * <p>
    * This method delegates to the raw service method and returns the unmodified Coinbase response.
@@ -196,6 +251,30 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
       throws IOException {
     return super.listOrders();
   }
+
+  /**
+   * Previews an order edit without modifying the live order.
+   *
+   * @param request Edit order request payload.
+   * @return The preview response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseOrdersResponse previewEditOrder(CoinbaseEditOrderRequest request) throws IOException {
+    return super.previewEditOrder(request);
+  }
+
+  /**
+   * Closes an open position using the Advanced Trade close_position endpoint.
+   *
+   * @param request Close position request payload.
+   * @return The create order response.
+   * @throws IOException If there is an error communicating with the Coinbase API.
+   */
+  public CoinbaseCreateOrderResponse closePosition(CoinbaseClosePositionRequest request)
+      throws IOException {
+    return super.closePosition(request);
+  }
+
   /**
    * Retrieves a historical order by its id and adapts it to XChange {@link Order}.
    *
@@ -223,7 +302,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
-    Object request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
+    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
@@ -243,7 +322,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
-    Object request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
+    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
@@ -263,7 +342,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String placeStopOrder(StopOrder stopOrder) throws IOException {
-    Object request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder);
+    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder);
     return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
   }
 
@@ -282,7 +361,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   @Override
   public void verifyOrder(LimitOrder limitOrder) {
     try {
-      Object request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
+      CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewLimitOrderRequest(limitOrder);
       super.previewOrder(request);
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview limit order", e);
@@ -303,7 +382,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   @Override
   public void verifyOrder(MarketOrder marketOrder) {
     try {
-      Object request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
+      CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewMarketOrderRequest(marketOrder);
       super.previewOrder(request);
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview market order", e);
@@ -326,7 +405,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException {
-    Object request = CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
+    CoinbaseEditOrderRequest request = CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
     super.editOrder(request);
     return limitOrder.getId();
   }
@@ -380,6 +459,26 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     if (ids.isEmpty()) return Collections.emptyList();
     super.cancelOrders(ids, null);
     return ids;
+  }
+
+  private List<CoinbasePortfolio> listPerpetualsPortfolios() throws IOException {
+    CoinbasePortfoliosResponse response =
+        coinbaseAdvancedTrade.listPortfolios(authTokenCreator, null);
+    if (response == null || response.getPortfolios() == null) {
+      return Collections.emptyList();
+    }
+    return response.getPortfolios().stream()
+        .filter(portfolio -> portfolio.getDeleted() == null || !portfolio.getDeleted())
+        .filter(portfolio -> isPerpetualPortfolioType(portfolio.getType()))
+        .collect(Collectors.toList());
+  }
+
+  private boolean isPerpetualPortfolioType(String type) {
+    if (type == null) {
+      return false;
+    }
+    String normalized = type.toUpperCase();
+    return normalized.contains("INTX") || normalized.contains("PERP");
   }
 
 }

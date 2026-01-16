@@ -1,8 +1,12 @@
 package info.bitrich.xchangestream.coinbase.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.util.Objects;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class CoinbaseFuturesBalanceSummary {
   private final BigDecimal futuresBuyingPower;
   private final BigDecimal totalUsdBalance;
@@ -11,13 +15,14 @@ public final class CoinbaseFuturesBalanceSummary {
   private final BigDecimal initialMargin;
   private final BigDecimal availableMargin;
 
+  @JsonCreator
   public CoinbaseFuturesBalanceSummary(
-      BigDecimal futuresBuyingPower,
-      BigDecimal totalUsdBalance,
-      BigDecimal unrealizedPnl,
-      BigDecimal dailyRealizedPnl,
-      BigDecimal initialMargin,
-      BigDecimal availableMargin) {
+      @JsonProperty("futures_buying_power") BigDecimal futuresBuyingPower,
+      @JsonProperty("total_usd_balance") BigDecimal totalUsdBalance,
+      @JsonProperty("unrealized_pnl") BigDecimal unrealizedPnl,
+      @JsonProperty("daily_realized_pnl") BigDecimal dailyRealizedPnl,
+      @JsonProperty("initial_margin") BigDecimal initialMargin,
+      @JsonProperty("available_margin") BigDecimal availableMargin) {
     this.futuresBuyingPower = futuresBuyingPower;
     this.totalUsdBalance = totalUsdBalance;
     this.unrealizedPnl = unrealizedPnl;
@@ -92,4 +97,3 @@ public final class CoinbaseFuturesBalanceSummary {
         availableMargin);
   }
 }
-

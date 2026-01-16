@@ -40,28 +40,36 @@ exchange.getStreamingMarketDataService()
 
 | Parameter key                               | Description                                               |
 |---------------------------------------------|-----------------------------------------------------------|
-| `Use_Sandbox_Websocket`                     | Attempt to connect to the sandbox endpoint                |
 | `Coinbase_Public_Subscriptions_Per_Second`  | Override public subscription throttle (default `8`)       |
 | `Coinbase_Private_Subscriptions_Per_Second` | Override private subscription throttle (default `750`)    |
 | `Coinbase_Disable_Auto_Heartbeat`           | Skip automatic heartbeat subscription when set to `true`  |
+| `Coinbase_Websocket_Jwt_Supplier`          | Custom JWT supplier for WebSocket authentication          |
 
-### Sandbox endpoint
+### WebSocket endpoints
 
-Coinbase's documentation lists `wss://advanced-trade-ws.sandbox.coinbase.com` as the sandbox host.
-An opt-in smoke test (`CoinbaseSandboxConnectivityTest`) attempts a real connection when enabled via
-`-Dcoinbase.sandbox.smoke=true` or the `COINBASE_SANDBOX_SMOKE=true` environment variable:
+Coinbase Advanced Trade provides two WebSocket endpoints:
 
-```bash
-mvn -pl xchange-stream-coinbase -am test -DskipITs=true -Dcoinbase.sandbox.smoke=true
+- **Market Data Endpoint**: `wss://advanced-trade-ws.coinbase.com`
+  - Used for public market data streams (ticker, trades, order book, candles, etc.)
+  - Does not require authentication for public channels
+  
+- **User Order Data Endpoint**: `wss://advanced-trade-ws-user.coinbase.com`
+  - Used for private user data streams (user trades, order changes, etc.)
+  - Requires authentication via API key and secret key
+
+The default endpoint is the market data endpoint. To use the user order data endpoint, set the
+WebSocket URI override on the exchange specification:
+
+```java
+spec.setOverrideWebsocketApiUri("wss://advanced-trade-ws-user.coinbase.com");
 ```
 
-As of 2025-11-05 the hostname fails DNS resolution (`UnknownHostException`), so the smoke test will
-report that error when enabled. By default the test is skipped and the implementation continues to
-use the production host unless the sandbox flag is set explicitly.
+**Note**: There is no sandbox environment for WebSocket connections. All WebSocket endpoints
+connect to production.
 
 ### Examples
 
-A runnable example is provided under the `xchange-examples` module. Run it against production:
+A runnable example is provided under the `xchange-examples` module:
 
 ```bash
 mvn -pl xchange-examples -am \
@@ -69,9 +77,7 @@ mvn -pl xchange-examples -am \
   -Dexec.mainClass=org.knowm.xchange.examples.coinbase.streaming.CoinbaseStreamingMarketDataExample
 ```
 
-To target the sandbox (if reachable), add `-Dcoinbase.streaming.sandbox=true` or set the
-`COINBASE_STREAMING_SANDBOX=true` environment variable before running the command. The example
-subscribes to ticker, trades, and order book updates for BTC/USD and logs events until interrupted.
+The example subscribes to ticker, trades, and order book updates for BTC/USD and logs events until interrupted.
 
 ## Channel details
 
@@ -84,6 +90,8 @@ subscribes to ticker, trades, and order book updates for BTC/USD and logs events
   `getCandles`.
 - **Level2** – Carries snapshot and incremental `updates` arrays along with `sequence` numbers. The
   module enforces sequencing and automatically falls back to REST snapshots when gaps are detected.
+  The order book Observable uses replay(1) to ensure new subscribers receive the latest state
+  immediately upon subscription.
 - **Heartbeats** – Enabled by default to keep connections warm; can be disabled with the
   `Coinbase_Disable_Auto_Heartbeat` parameter.
 
@@ -110,11 +118,57 @@ Run the tests with:
 mvn -pl xchange-stream-coinbase -am test
 ```
 
+## Order Book Subscription Best Practices
+
+The order book implementation uses `replay(1).refCount()` to cache and replay the last emitted
+OrderBook to new subscribers. This ensures that:
+
+1. **New subscribers receive the latest state immediately** - When you subscribe to an order book
+   that has already received a snapshot, you'll get the current state right away.
+
+2. **Multiple subscribers share the same stream** - All subscribers to the same currency pair share
+   the underlying WebSocket subscription, reducing network overhead.
+
+3. **Automatic cleanup** - When all subscribers unsubscribe, the cached observable is automatically
+   cleaned up.
+
+### Recommended Usage Patterns
+
+**Pattern 1: Subscribe after connecting (recommended)**
+```java
+exchange.connect().blockingAwait();
+// Subscribe immediately after connecting to receive the initial snapshot
+exchange.getStreamingMarketDataService()
+    .getOrderBook(CurrencyPair.BTC_USD)
+    .subscribe(orderBook -> System.out.println("Order book: " + orderBook));
+```
+
+**Pattern 2: Use ProductSubscription for automatic subscription**
+```java
+// ProductSubscription will create a subscription, but you still need to subscribe manually
+// to receive the data. The ProductSubscription just keeps the channel active.
+exchange.connect(ProductSubscription.create()
+    .addOrderbook(CurrencyPair.BTC_USD)
+    .build())
+    .blockingAwait();
+
+// Subscribe to receive the data (will get latest state due to replay)
+exchange.getStreamingMarketDataService()
+    .getOrderBook(CurrencyPair.BTC_USD)
+    .subscribe(orderBook -> System.out.println("Order book: " + orderBook));
+```
+
+**Note**: If you use `ProductSubscription` with order books, the subscription created by
+`processProductSubscriptions()` is a no-op that just keeps the channel active. You still need to
+manually subscribe via `getOrderBook().subscribe()` to receive the data. The replay mechanism
+ensures you'll receive the latest state even if the snapshot was already processed.
+
 ## Notes
 
 - Private channels require Advanced Trade API credentials. The module reuses `CoinbaseV3Digest` to
   mint WebSocket JWTs and refreshes them every 90 seconds while a private subscription is active.
-- Sandbox connectivity is currently unreliable: `advanced-trade-ws.sandbox.coinbase.com` does not
-  resolve as of 2025-11-05. Use the smoke test to verify the latest behaviour.
+- API keys and secret keys are automatically applied from the exchange specification, similar to the
+  REST API implementation. The module uses `CoinbaseV3Digest.createInstance()` to create JWT tokens
+  for authenticated WebSocket connections.
 - Only typed observables are exposed today; access to raw JSON can be added in the future without
-  API breakage.***
+  API breakage.

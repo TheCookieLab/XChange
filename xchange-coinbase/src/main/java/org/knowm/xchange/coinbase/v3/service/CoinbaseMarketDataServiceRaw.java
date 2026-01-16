@@ -1,8 +1,10 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Objects;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.coinbase.v3.Coinbase;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
@@ -13,6 +15,7 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
+import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import si.mazi.rescu.ParamsDigest;
 
 /**
@@ -75,7 +78,10 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
   public CoinbaseProductResponse getProduct(String productId) throws IOException {
-    return coinbaseAdvancedTrade.getProduct(authTokenCreator, productId, false);
+    if (hasAuthentication()) {
+      return coinbaseAdvancedTrade.getProduct(authTokenCreator, productId, false);
+    }
+    return publicClientOrThrow().getPublicProduct(productId);
   }
 
   /**
@@ -95,7 +101,11 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
    *                   the response.
    */
   public CoinbaseProductsResponse listProducts(String productType) throws Exception {
-    return coinbaseAdvancedTrade.listProducts(authTokenCreator, null, null, productType, null, null, null, null, null, null);
+    if (hasAuthentication()) {
+      return coinbaseAdvancedTrade.listProducts(authTokenCreator, null, null, productType, null, null,
+          null, null, null, null);
+    }
+    return publicClientOrThrow().listPublicProducts(null, null, productType, null, null, null, null, null);
   }
 
   /**
@@ -109,7 +119,19 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
   public CoinbaseBestBidAsksResponse getBestBidAsk(String productId) throws IOException {
-    return coinbaseAdvancedTrade.getBestBidAsk(authTokenCreator, productId);
+    if (hasAuthentication()) {
+      return coinbaseAdvancedTrade.getBestBidAsk(authTokenCreator, productId);
+    }
+    if (productId == null) {
+      throw new NotAvailableFromExchangeException(
+          "Public best bid/ask requires a product id");
+    }
+    CoinbaseProductPriceBookResponse response =
+        publicClientOrThrow().getPublicProductBook(productId, 1, null);
+    if (response == null || response.getPriceBook() == null) {
+      return new CoinbaseBestBidAsksResponse(Collections.emptyList());
+    }
+    return new CoinbaseBestBidAsksResponse(Collections.singletonList(response.getPriceBook()));
   }
 
   /**
@@ -132,8 +154,10 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
   public CoinbaseProductMarketTradesResponse getMarketTrades(String productId, Integer limit,
       String start, String end) throws IOException {
     Objects.requireNonNull(productId, "productId cannot be null");
-
-    return coinbaseAdvancedTrade.getMarketTrades(authTokenCreator, productId, limit, start, end);
+    if (hasAuthentication()) {
+      return coinbaseAdvancedTrade.getMarketTrades(authTokenCreator, productId, limit, start, end);
+    }
+    return publicClientOrThrow().getPublicMarketTrades(productId, limit, start, end);
   }
 
   /**
@@ -162,9 +186,11 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
   public CoinbaseProductCandlesResponse getProductCandles(String productId, String granularity,
       Integer limit, String start, String end) throws IOException {
     Objects.requireNonNull(productId, "productId cannot be null");
-
-    return coinbaseAdvancedTrade.getProductCandles(authTokenCreator, productId, start, end,
-        granularity, limit);
+    if (hasAuthentication()) {
+      return coinbaseAdvancedTrade.getProductCandles(authTokenCreator, productId, start, end,
+          granularity, limit);
+    }
+    return publicClientOrThrow().getPublicProductCandles(productId, start, end, granularity, limit);
   }
 
   /**
@@ -186,8 +212,18 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
   public CoinbaseProductPriceBookResponse getProductBook(String productId, Integer limit, Double aggregationPriceIncrement)
       throws IOException {
     Objects.requireNonNull(productId, "productId cannot be null");
-
-    return coinbaseAdvancedTrade.getProductBook(authTokenCreator, productId, limit, aggregationPriceIncrement != null ? aggregationPriceIncrement.toString() : null);
+    String aggregation = aggregationPriceIncrement != null ? aggregationPriceIncrement.toString() : null;
+    if (hasAuthentication()) {
+      return coinbaseAdvancedTrade.getProductBook(authTokenCreator, productId, limit, aggregation);
+    }
+    return publicClientOrThrow().getPublicProductBook(productId, limit, aggregation);
   }
 
+  private Coinbase publicClientOrThrow() {
+    if (coinbasePublic == null) {
+      throw new NotAvailableFromExchangeException(
+          "Public market data requires a configured ExchangeSpecification");
+    }
+    return coinbasePublic;
+  }
 }

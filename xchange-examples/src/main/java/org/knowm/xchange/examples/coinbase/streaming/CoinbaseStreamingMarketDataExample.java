@@ -1,26 +1,28 @@
 package org.knowm.xchange.examples.coinbase.streaming;
 
-import info.bitrich.xchangestream.coinbase.CoinbaseStreamingExchange;
+import info.bitrich.xchangestream.coinbase.CoinbaseStreamingMarketDataService;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
-import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.examples.coinbase.CoinbaseDemoUtils;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.trade.LimitOrder;
 
 /**
  * Demonstrates how to connect to Coinbase Advanced Trade streaming APIs using the {@code
- * xchange-stream-coinbase} module. The example subscribes to ticker, trades and order book updates
- * for BTC/USD and logs incoming events to standard out.
+ * xchange-stream-coinbase} module. The example subscribes to order book and trades for ETH/USD
+ * and logs incoming events to standard out.
  *
- * <p>Run against production:
+ * <p>Note: There is no sandbox environment for WebSocket connections. This example always connects
+ * to the production Coinbase Advanced Trade WebSocket endpoint.
+ *
+ * <p>Run the example:
  *
  * <pre>{@code
  * mvn -pl xchange-examples -am \
@@ -28,74 +30,96 @@ import org.knowm.xchange.dto.trade.LimitOrder;
  *   -Dexec.mainClass=org.knowm.xchange.examples.coinbase.streaming.CoinbaseStreamingMarketDataExample
  * }</pre>
  *
- * <p>Run against the sandbox (if available):
- *
- * <pre>{@code
- * mvn -pl xchange-examples -am \
- *   org.codehaus.mojo:exec-maven-plugin:3.1.0:java \
- *   -Dexec.mainClass=org.knowm.xchange.examples.coinbase.streaming.CoinbaseStreamingMarketDataExample \
- *   -Dcoinbase.streaming.sandbox=true
- * }</pre>
+ * <p>Optional arguments:
+ * <ul>
+ *   <li>First argument: "user" to use user order data endpoint, otherwise uses market data endpoint</li>
+ *   <li>Second argument: "level2", "level2_batch", or "l2_data" to specify order book channel (default: "level2")</li>
+ * </ul>
  *
  * <p>The process will keep running until interrupted (Ctrl+C). When stopping, subscriptions and the
  * WebSocket connection are shut down gracefully.
  */
 public final class CoinbaseStreamingMarketDataExample {
 
-  private static final CurrencyPair PAIR = CurrencyPair.BTC_USD;
+  private static final CurrencyPair PAIR = CurrencyPair.ETH_USD;
 
   private CoinbaseStreamingMarketDataExample() {}
 
   public static void main(String[] args) throws InterruptedException {
-    StreamingExchange exchange =
-        StreamingExchangeFactory.INSTANCE.createExchange(CoinbaseStreamingExchange.class);
+    // Determine which endpoint to use
+    boolean useUserEndpoint = args.length > 0 && "user".equalsIgnoreCase(args[0]);
+    
+    StreamingExchange exchange = useUserEndpoint 
+        ? CoinbaseDemoUtils.createStreamingExchangeForUserOrderData()
+        : CoinbaseDemoUtils.createStreamingExchangeForMarketData();
+    
+    String endpoint = useUserEndpoint ? "user order data" : "market data";
+    System.out.println("Connecting to Coinbase Advanced Trade WebSocket (" + endpoint + " endpoint)...");
 
-    ExchangeSpecification specification = exchange.getExchangeSpecification();
-    if (useSandbox()) {
-      specification.setExchangeSpecificParametersItem(
-          CoinbaseStreamingExchange.PARAM_SANDBOX, true);
-      System.out.println("Connecting to Coinbase sandbox WebSocket...");
-    } else {
-      System.out.println("Connecting to Coinbase production WebSocket...");
-    }
-    exchange.applySpecification(specification);
-
-    ProductSubscription subscription =
-        ProductSubscription.create()
-            .addTicker(PAIR)
-            .addTrades(PAIR)
-            .addOrderbook(PAIR)
-            .build();
-
+    // Connect to initialize services
+    ProductSubscription subscription = ProductSubscription.create().build();
     exchange.connect(subscription).timeout(30, TimeUnit.SECONDS).blockingAwait();
-    System.out.println("Connected. Subscribed channels: ticker, trades, order book.");
+    System.out.println("Connected. Exchange is alive: " + exchange.isAlive());
+    
+    // Monitor connection state changes
+    exchange.connectionStateObservable()
+        .subscribe(state -> System.out.println("Connection state: " + state));
+    
+    // Monitor reconnection failures
+    exchange.reconnectFailure()
+        .subscribe(error -> {
+          System.err.println("Reconnection failure: " + error.getMessage());
+          error.printStackTrace();
+        });
+    
+    // Give the connection a moment to stabilize
+    Thread.sleep(1000);
 
-    Disposable tickerSubscription =
-        exchange
-            .getStreamingMarketDataService()
-            .getTicker(PAIR)
-            .subscribe(
-                ticker -> System.out.println("Ticker: " + ticker),
-                error -> logError("ticker", error));
+    CoinbaseStreamingMarketDataService marketDataService =
+        (CoinbaseStreamingMarketDataService) exchange.getStreamingMarketDataService();
 
-    Disposable tradesSubscription =
-        exchange
-            .getStreamingMarketDataService()
-            .getTrades(PAIR)
-            .subscribe(
-                trade -> System.out.println("Trade: " + trade),
-                error -> logError("trades", error));
+    // Subscribe to order book
+    // Use level2_batch by default (batches updates every 0.05s, recommended for high-volume products)
+    String channelArg = args.length > 1 ? args[1] : "level2";
+    io.reactivex.rxjava3.core.Observable<OrderBook> orderBookObservable;
+    
+    String websocketUrl = exchange.getExchangeSpecification().getOverrideWebsocketApiUri();
+    if (websocketUrl == null) {
+      websocketUrl = info.bitrich.xchangestream.coinbase.CoinbaseStreamingExchange.PROD_WS_URI;
+    }
+    
+    if ("level2_batch".equalsIgnoreCase(channelArg)) {
+      System.out.println("Subscribing to order book for " + PAIR + " using level2_batch channel on " + websocketUrl);
+      System.out.println("(level2_batch batches updates every 0.05s - recommended for high-volume products)");
+      orderBookObservable = marketDataService.getOrderBookBatch(PAIR);
+    } else if ("l2_data".equalsIgnoreCase(channelArg)) {
+      System.out.println("Subscribing to order book for " + PAIR + " using l2_data channel on " + websocketUrl);
+      orderBookObservable = marketDataService.getOrderBook(PAIR, "l2_data");
+    } else {
+      System.out.println("Subscribing to order book for " + PAIR + " using level2 channel on " + websocketUrl);
+      orderBookObservable = marketDataService.getOrderBook(PAIR);
+    }
+    
+    Disposable orderBookSubscription = orderBookObservable
+        .subscribe(
+            orderBook -> {
+              if (orderBook != null && (!orderBook.getBids().isEmpty() || !orderBook.getAsks().isEmpty())) {
+                System.out.println("Order book update: " + summarizeBook(orderBook));
+              }
+            },
+            error -> {
+              System.err.println("Order book error: " + error.getMessage());
+              error.printStackTrace();
+            });
 
-    Disposable orderBookSubscription =
-        exchange
-            .getStreamingMarketDataService()
-            .getOrderBook(PAIR)
-            .subscribe(
-                orderBook -> System.out.println("Order book: " + summarizeBook(orderBook)),
-                error -> logError("order book", error));
+    // Subscribe to trades
+    Disposable tradesSubscription = marketDataService
+        .getTrades(PAIR)
+        .subscribe(
+            trade -> System.out.println("Trade: " + trade),
+            error -> System.err.println("Trades error: " + error.getMessage()));
 
-    List<Disposable> disposables =
-        Arrays.asList(tickerSubscription, tradesSubscription, orderBookSubscription);
+    List<Disposable> disposables = Arrays.asList(orderBookSubscription, tradesSubscription);
     CountDownLatch shutdown = new CountDownLatch(1);
 
     Runtime.getRuntime()
@@ -118,23 +142,6 @@ public final class CoinbaseStreamingMarketDataExample {
 
     System.out.println("Press Ctrl+C to stop.");
     shutdown.await();
-  }
-
-  private static boolean useSandbox() {
-    return parseFlag(System.getProperty("coinbase.streaming.sandbox"))
-        || parseFlag(System.getenv("COINBASE_STREAMING_SANDBOX"));
-  }
-
-  private static boolean parseFlag(String value) {
-    if (value == null) {
-      return false;
-    }
-    String normalized = value.trim().toLowerCase();
-    return "true".equals(normalized) || "1".equals(normalized) || "yes".equals(normalized);
-  }
-
-  private static void logError(String channel, Throwable error) {
-    System.err.printf("Error from %s channel: %s%n", channel, error.getMessage());
   }
 
   private static String summarizeBook(OrderBook orderBook) {

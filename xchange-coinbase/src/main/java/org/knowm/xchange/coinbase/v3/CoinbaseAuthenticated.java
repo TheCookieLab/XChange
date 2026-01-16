@@ -16,28 +16,40 @@ import java.util.List;
 import org.knowm.xchange.coinbase.v3.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
+import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseCommitConvertTradeRequest;
+import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteRequest;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteResponse;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertTradeResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseCurrentMarginWindowResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesSweepRequest;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesSweepResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesSweepsResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseIntradayMarginSettingRequest;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseIntradayMarginSettingResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
+import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodResponse;
 import org.knowm.xchange.coinbase.v3.dto.permissions.CoinbaseKeyPermissionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseAllocatePortfolioRequest;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseAllocatePortfolioResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralRequest;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPortfolioSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbaseMovePortfolioFundsRequest;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioRequest;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
@@ -89,13 +101,13 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("orders")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseCreateOrderResponse createOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      Object payload) throws IOException, CoinbaseException;
+      CoinbaseOrderRequest payload) throws IOException, CoinbaseException;
 
   @POST
   @Path("orders/edit")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseOrdersResponse editOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      Object payload) throws IOException, CoinbaseException;
+      CoinbaseEditOrderRequest payload) throws IOException, CoinbaseException;
 
   @POST
   @Path("orders/batch_cancel")
@@ -147,13 +159,13 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("orders/preview")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseOrdersResponse previewOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      Object payload) throws IOException, CoinbaseException;
+      CoinbaseOrderRequest payload) throws IOException, CoinbaseException;
 
   @POST
   @Path("orders/edit_preview")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseOrdersResponse previewEditOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      Object payload) throws IOException, CoinbaseException;
+      CoinbaseEditOrderRequest payload) throws IOException, CoinbaseException;
 
   @GET
   @Path("best_bid_ask")
@@ -220,6 +232,13 @@ public interface CoinbaseAuthenticated extends Coinbase {
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
       throws IOException, CoinbaseException;
 
+  @GET
+  @Path("payment_methods/{payment_method_id}")
+  CoinbasePaymentMethodResponse getPaymentMethod(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @PathParam("payment_method_id") String paymentMethodId)
+      throws IOException, CoinbaseException;
+
   // ========== Portfolio Endpoints ==========
 
   @GET
@@ -232,7 +251,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("portfolios")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbasePortfolioResponse createPortfolio(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      Object payload) throws IOException, CoinbaseException;
+      CoinbasePortfolioRequest payload) throws IOException, CoinbaseException;
 
   @GET
   @Path("portfolios/{portfolio_uuid}")
@@ -245,7 +264,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("portfolios/{portfolio_uuid}")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbasePortfolioResponse editPortfolio(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      @PathParam("portfolio_uuid") String portfolioUuid, Object payload)
+      @PathParam("portfolio_uuid") String portfolioUuid, CoinbasePortfolioRequest payload)
       throws IOException, CoinbaseException;
 
   @DELETE
@@ -255,10 +274,10 @@ public interface CoinbaseAuthenticated extends Coinbase {
       throws IOException, CoinbaseException;
 
   @POST
-  @Path("portfolios/move")
+  @Path("portfolios/move_funds")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbasePortfolioResponse movePortfolioFunds(
-      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseMovePortfolioFundsRequest payload)
       throws IOException, CoinbaseException;
 
   // ========== Convert Endpoints ==========
@@ -267,18 +286,19 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("convert/quote")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseConvertQuoteResponse createConvertQuote(
-      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseConvertQuoteRequest payload)
       throws IOException, CoinbaseException;
 
   @POST
-  @Path("convert/{trade_id}")
+  @Path("convert/trade/{trade_id}")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseConvertTradeResponse commitConvertTrade(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      @PathParam("trade_id") String tradeId, Object payload) throws IOException, CoinbaseException;
+      @PathParam("trade_id") String tradeId, CoinbaseCommitConvertTradeRequest payload)
+      throws IOException, CoinbaseException;
 
   @GET
-  @Path("convert/{trade_id}")
+  @Path("convert/trade/{trade_id}")
   CoinbaseConvertTradeResponse getConvertTrade(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @PathParam("trade_id") String tradeId) throws IOException, CoinbaseException;
@@ -307,7 +327,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("cfm/sweeps/schedule")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseFuturesSweepResponse scheduleFuturesSweep(
-      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseFuturesSweepRequest payload)
       throws IOException, CoinbaseException;
 
   @GET
@@ -318,9 +338,8 @@ public interface CoinbaseAuthenticated extends Coinbase {
 
   @DELETE
   @Path("cfm/sweeps")
-  @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseFuturesSweepResponse cancelFuturesSweep(
-      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
       throws IOException, CoinbaseException;
 
   @GET
@@ -333,7 +352,8 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("cfm/intraday/margin_setting")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseIntradayMarginSettingResponse setIntradayMarginSetting(
-      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      CoinbaseIntradayMarginSettingRequest payload)
       throws IOException, CoinbaseException;
 
   @GET
@@ -376,14 +396,16 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("intx/multi_asset_collateral")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseMultiAssetCollateralResponse optInMultiAssetCollateral(
-      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      CoinbaseMultiAssetCollateralRequest payload)
       throws IOException, CoinbaseException;
 
   @POST
   @Path("intx/allocate")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseAllocatePortfolioResponse allocatePortfolio(
-      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      CoinbaseAllocatePortfolioRequest payload)
       throws IOException, CoinbaseException;
 
   // ========== Additional Order Endpoints ==========
@@ -392,7 +414,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("orders/close_position")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseCreateOrderResponse closePosition(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      Object payload) throws IOException, CoinbaseException;
+      CoinbaseClosePositionRequest payload) throws IOException, CoinbaseException;
 
   // ========== API Key Permissions ==========
 

@@ -1,25 +1,38 @@
 package org.knowm.xchange.coinbase;
 
+import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.account.OpenPositions;
+import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -27,6 +40,7 @@ import org.knowm.xchange.dto.marketdata.Ticker.Builder;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
 
@@ -69,7 +83,7 @@ public final class CoinbaseAdapters {
 
   public static Trade adaptTrade(CoinbaseMarketTrade marketTrade) {
     return UserTrade.builder().id(marketTrade.getTradeId())
-        .instrument(new CurrencyPair(marketTrade.getProductId())).price(marketTrade.getPrice())
+        .instrument(adaptInstrument(marketTrade.getProductId())).price(marketTrade.getPrice())
         .originalAmount(marketTrade.getSize()).timestamp(
             Date.from(DateTimeFormatter.ISO_INSTANT.parse(marketTrade.getTime(), Instant::from)))
         .type(adaptOrderType(marketTrade.getSide())).build();
@@ -170,12 +184,13 @@ public final class CoinbaseAdapters {
 
   /**
    * Adapts a product ID string into a financial instrument (e.g., CurrencyPair) by splitting the
-   * string on hyphens. Expects the product ID to represent a currency pair in the format
-   * "base-counter".
+   * string on hyphens. For spot products, expects the product ID to represent a currency pair in
+   * the format "base-counter". For futures/perpetuals, supports IDs with a prompt suffix (e.g.
+   * "base-counter-PERP"), which are mapped to {@link FuturesContract}.
    *
    * @param productId the product ID string to adapt, must not be null
-   * @return the corresponding Instrument (CurrencyPair) if the product ID contains exactly two
-   * hyphen-separated tokens, or null if the product ID format is invalid
+   * @return the corresponding Instrument (CurrencyPair or FuturesContract), or null if the format
+   * is invalid
    */
   public static Instrument adaptInstrument(String productId) {
     Objects.requireNonNull(productId, "Cannot create instrument from a null productId");
@@ -184,7 +199,175 @@ public final class CoinbaseAdapters {
     if (tokens.length == 2) {
       return new CurrencyPair(tokens[0], tokens[1]);
     }
+    if (tokens.length >= 3) {
+      String prompt = String.join("-", Arrays.copyOfRange(tokens, 2, tokens.length));
+      return new FuturesContract(new CurrencyPair(tokens[0], tokens[1]), prompt);
+    }
 
+    return null;
+  }
+
+  /**
+   * Adapt a list of futures positions to XChange open positions.
+   */
+  public static OpenPositions adaptFuturesOpenPositions(List<CoinbaseFuturesPosition> positions) {
+    List<OpenPosition> openPositions =
+        positions == null
+            ? Collections.emptyList()
+            : positions.stream()
+                .map(CoinbaseAdapters::adaptFuturesOpenPosition)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    return new OpenPositions(openPositions);
+  }
+
+  /**
+   * Adapt a list of perpetuals positions to XChange open positions.
+   */
+  public static OpenPositions adaptPerpetualsOpenPositions(
+      List<CoinbasePerpetualsPosition> positions) {
+    List<OpenPosition> openPositions =
+        positions == null
+            ? Collections.emptyList()
+            : positions.stream()
+                .map(CoinbaseAdapters::adaptPerpetualsOpenPosition)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    return new OpenPositions(openPositions);
+  }
+
+  /**
+   * Adapt a futures balance summary response to a futures wallet.
+   */
+  public static Wallet adaptFuturesWallet(CoinbaseFuturesBalanceSummaryResponse response) {
+    if (response == null) {
+      return null;
+    }
+    Balance balance = buildBalance(Currency.USD, response.getTotalUsdBalance(),
+        response.getAvailableMargin());
+    if (balance == null) {
+      return null;
+    }
+    return new Wallet.Builder()
+        .balances(Collections.singletonList(balance))
+        .id("futures")
+        .name("futures")
+        .features(Collections.singleton(Wallet.WalletFeature.FUTURES_TRADING))
+        .build();
+  }
+
+  /**
+   * Adapt a perpetuals balances response to a futures wallet.
+   */
+  public static Wallet adaptPerpetualsWallet(CoinbasePerpetualsBalancesResponse response) {
+    if (response == null || response.getBalances() == null) {
+      return null;
+    }
+    CoinbasePerpetualsBalancesResponse.CoinbasePerpetualsBalances balances =
+        response.getBalances();
+    String currencyCode = balances.getCollateralCurrency();
+    Currency currency = currencyCode == null ? null : Currency.getInstance(currencyCode);
+    Balance balance = buildBalance(currency, balances.getCollateralValue(),
+        balances.getAvailableCollateral());
+    if (balance == null) {
+      return null;
+    }
+    return new Wallet.Builder()
+        .balances(Collections.singletonList(balance))
+        .id(balances.getPortfolioUuid())
+        .name("perpetuals")
+        .features(Collections.singleton(Wallet.WalletFeature.FUTURES_TRADING))
+        .build();
+  }
+
+  private static OpenPosition adaptFuturesOpenPosition(CoinbaseFuturesPosition position) {
+    if (position == null) {
+      return null;
+    }
+    Instrument instrument = adaptInstrument(position.getProductId());
+    OpenPosition.Type type = adaptPositionType(position.getSide());
+    BigDecimal size =
+        position.getAmount() != null ? position.getAmount() : position.getNumberOfContracts();
+    BigDecimal price =
+        position.getAvgEntryPrice() != null ? position.getAvgEntryPrice() : position.getEntryPrice();
+    return OpenPosition.builder()
+        .id(position.getProductId())
+        .instrument(instrument)
+        .type(type)
+        .size(size)
+        .price(price)
+        .unRealisedPnl(position.getUnrealizedPnl())
+        .build();
+  }
+
+  private static OpenPosition adaptPerpetualsOpenPosition(CoinbasePerpetualsPosition position) {
+    if (position == null) {
+      return null;
+    }
+    String instrumentId =
+        position.getProductId() != null ? position.getProductId() : position.getSymbol();
+    Instrument instrument = instrumentId == null ? null : adaptInstrument(instrumentId);
+    OpenPosition.Type type = adaptPositionType(position.getSide());
+    BigDecimal size = position.getNetSize();
+    if (size != null) {
+      size = size.abs();
+    }
+    BigDecimal entryPrice =
+        parseBigDecimal(position.getEntryVwap()) != null
+            ? parseBigDecimal(position.getEntryVwap())
+            : parseBigDecimal(position.getVwap());
+    return OpenPosition.builder()
+        .id(instrumentId)
+        .instrument(instrument)
+        .type(type)
+        .size(size)
+        .price(entryPrice)
+        .unRealisedPnl(position.getUnrealizedPnl())
+        .build();
+  }
+
+  private static OpenPosition.Type adaptPositionType(String side) {
+    if (side == null) {
+      return null;
+    }
+    switch (side.toUpperCase(Locale.ROOT)) {
+      case "BUY":
+      case "BID":
+      case "LONG":
+        return OpenPosition.Type.LONG;
+      case "SELL":
+      case "ASK":
+      case "SHORT":
+        return OpenPosition.Type.SHORT;
+      default:
+        return null;
+    }
+  }
+
+  private static BigDecimal parseBigDecimal(String value) {
+    if (value == null || value.isEmpty()) {
+      return null;
+    }
+    try {
+      return new BigDecimal(value);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  private static Balance buildBalance(Currency currency, BigDecimal total, BigDecimal available) {
+    if (currency == null) {
+      return null;
+    }
+    if (total != null && available != null) {
+      return new Balance(currency, total, available);
+    }
+    if (total != null) {
+      return new Balance(currency, total);
+    }
+    if (available != null) {
+      return new Balance(currency, available);
+    }
     return null;
   }
 

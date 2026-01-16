@@ -14,7 +14,15 @@ import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseCurrentMarginWindowResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesSweepsResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseIntradayMarginSettingResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethod;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPortfolioSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolio;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseFeeTier;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -33,8 +41,15 @@ import org.knowm.xchange.instrument.Instrument;
  * <ul>
  *   <li>GET /api/v3/brokerage/accounts - List all accounts</li>
  *   <li>GET /api/v3/brokerage/accounts/{account_id} - Get specific account</li>
+ *   <li>GET /api/v3/brokerage/portfolios - List portfolios</li>
  *   <li>GET /api/v3/brokerage/payment_methods - List payment methods</li>
  *   <li>GET /api/v3/brokerage/transaction_summary - Get fee structure</li>
+ *   <li>GET /api/v3/brokerage/intx/balances/{portfolio_uuid} - Perpetuals balances</li>
+ *   <li>GET /api/v3/brokerage/intx/portfolio/{portfolio_uuid} - Perpetuals portfolio summary</li>
+ *   <li>GET /api/v3/brokerage/cfm/balance_summary - Futures balance summary</li>
+ *   <li>GET /api/v3/brokerage/cfm/sweeps - Futures sweeps</li>
+ *   <li>GET /api/v3/brokerage/cfm/intraday/margin_setting - Intraday margin setting</li>
+ *   <li>GET /api/v3/brokerage/cfm/intraday/current_margin_window - Current margin window</li>
  * </ul>
  * 
  * <p><b>Usage:</b>
@@ -180,5 +195,113 @@ public class AccountServiceSandboxIntegration {
           account.getBalance().getValue().compareTo(BigDecimal.ZERO) >= 0);
     }
   }
-}
 
+  @Test
+  public void testGetFuturesBalanceSummary() throws Exception {
+    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+
+    try {
+      CoinbaseFuturesBalanceSummaryResponse response = accountService.getFuturesBalanceSummary();
+      assertNotNull("Futures balance summary response should not be null", response);
+    } catch (Exception e) {
+      System.out.println("Futures balance summary not supported in sandbox: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testListFuturesSweeps() throws Exception {
+    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+
+    try {
+      CoinbaseFuturesSweepsResponse response = accountService.listFuturesSweeps();
+      assertNotNull("Futures sweeps response should not be null", response);
+      assertNotNull("Sweeps list should not be null", response.getSweeps());
+    } catch (Exception e) {
+      System.out.println("Futures sweeps not supported in sandbox: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetIntradayMarginSetting() throws Exception {
+    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+
+    try {
+      CoinbaseIntradayMarginSettingResponse response = accountService.getIntradayMarginSetting();
+      assertNotNull("Intraday margin setting response should not be null", response);
+    } catch (Exception e) {
+      System.out.println("Intraday margin setting not supported in sandbox: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetCurrentMarginWindow() throws Exception {
+    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+
+    try {
+      CoinbaseCurrentMarginWindowResponse response = accountService.getCurrentMarginWindow();
+      assertNotNull("Current margin window response should not be null", response);
+    } catch (Exception e) {
+      System.out.println("Current margin window not supported in sandbox: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetPerpetualsPortfolioBalances() throws Exception {
+    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+
+    String portfolioUuid = findPerpetualsPortfolioUuid();
+    org.junit.Assume.assumeNotNull(portfolioUuid);
+
+    try {
+      CoinbasePerpetualsBalancesResponse response =
+          accountService.getPerpetualsPortfolioBalances(portfolioUuid);
+      assertNotNull("Perpetuals balances response should not be null", response);
+      assertNotNull("Balances should not be null", response.getBalances());
+      assertEquals("Portfolio UUID should match", portfolioUuid,
+          response.getBalances().getPortfolioUuid());
+      assertNotNull("Collateral currency should not be null",
+          response.getBalances().getCollateralCurrency());
+    } catch (Exception e) {
+      System.out.println("Perpetuals balances not fully supported in sandbox: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetPerpetualsPortfolioSummary() throws Exception {
+    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+
+    String portfolioUuid = findPerpetualsPortfolioUuid();
+    org.junit.Assume.assumeNotNull(portfolioUuid);
+
+    try {
+      CoinbasePerpetualsPortfolioSummaryResponse response =
+          accountService.getPerpetualsPortfolioSummary(portfolioUuid);
+      assertNotNull("Perpetuals summary response should not be null", response);
+      assertTrue("Summary or portfolios should be present",
+          response.getSummary() != null || response.getPortfolios() != null);
+      if (response.getSummary() != null) {
+        assertNotNull("Collateral currency should not be null",
+            response.getSummary().getCollateralCurrency());
+      }
+    } catch (Exception e) {
+      System.out.println("Perpetuals summary not fully supported in sandbox: " + e.getMessage());
+    }
+  }
+
+  private static String findPerpetualsPortfolioUuid() throws Exception {
+    CoinbasePortfoliosResponse response = accountService.listPortfolios(null);
+    if (response == null || response.getPortfolios() == null) {
+      return null;
+    }
+    for (CoinbasePortfolio portfolio : response.getPortfolios()) {
+      if (portfolio.getType() == null) {
+        continue;
+      }
+      String type = portfolio.getType().toUpperCase();
+      if (type.contains("INTX") || type.contains("PERP")) {
+        return portfolio.getUuid();
+      }
+    }
+    return null;
+  }
+}

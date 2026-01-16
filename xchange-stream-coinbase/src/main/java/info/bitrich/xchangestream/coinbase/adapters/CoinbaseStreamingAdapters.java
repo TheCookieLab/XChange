@@ -1,6 +1,15 @@
 package info.bitrich.xchangestream.coinbase.adapters;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingCandle;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingEvent;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingLevel2Update;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingMessage;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingTicker;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingTrade;
+import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.CandleStick;
@@ -15,6 +24,10 @@ import java.time.ZonedDateTime;
 import java.util.*;
 
 public final class CoinbaseStreamingAdapters {
+
+    private static final ObjectMapper OBJECT_MAPPER = StreamingObjectMapperHelper.getObjectMapper();
+    private static final CoinbaseStreamingMessage EMPTY_MESSAGE =
+        new CoinbaseStreamingMessage(null, Collections.emptyList());
 
     private CoinbaseStreamingAdapters() {
     }
@@ -31,31 +44,30 @@ public final class CoinbaseStreamingAdapters {
     }
 
     public static List<Ticker> adaptTickers(JsonNode message) {
-        JsonNode events = message.path("events");
-        if (!events.isArray()) {
+        return adaptTickers(toStreamingMessage(message));
+    }
+
+    public static List<Ticker> adaptTickers(CoinbaseStreamingMessage message) {
+        if (message == null || message.getEvents().isEmpty()) {
             return Collections.emptyList();
         }
         List<Ticker> tickers = new ArrayList<>();
-        for (JsonNode event : events) {
-            JsonNode tickerNodes = event.path("tickers");
-            if (!tickerNodes.isArray()) {
-                continue;
-            }
-            for (JsonNode node : tickerNodes) {
-                CurrencyPair pair = toCurrencyPair(node.path("product_id").asText(null));
+        for (CoinbaseStreamingEvent event : message.getEvents()) {
+            for (CoinbaseStreamingTicker ticker : event.getTickers()) {
+                CurrencyPair pair = toCurrencyPair(ticker.getProductId());
                 if (pair == null) {
                     continue;
                 }
                 Ticker.Builder builder = new Ticker.Builder();
                 builder.instrument(pair);
-                builder.last(asBigDecimal(node, "price"));
-                builder.volume(asBigDecimal(node, "volume_24_h"));
-                builder.high(asBigDecimal(node, "high_24_h"));
-                builder.low(asBigDecimal(node, "low_24_h"));
-                builder.open(asBigDecimal(node, "open_24_h"));
-                builder.bid(asBigDecimal(node, "best_bid"));
-                builder.ask(asBigDecimal(node, "best_ask"));
-                builder.timestamp(asInstant(node.path("time")).map(java.util.Date::from).orElse(null));
+                builder.last(ticker.getPrice());
+                builder.volume(ticker.getVolume24H());
+                builder.high(ticker.getHigh24H());
+                builder.low(ticker.getLow24H());
+                builder.open(ticker.getOpen24H());
+                builder.bid(ticker.getBestBid());
+                builder.ask(ticker.getBestAsk());
+                builder.timestamp(parseInstant(ticker.getTime()).map(java.util.Date::from).orElse(null));
                 tickers.add(builder.build());
             }
         }
@@ -63,73 +75,89 @@ public final class CoinbaseStreamingAdapters {
     }
 
     public static List<Trade> adaptTrades(JsonNode message) {
-        JsonNode events = message.path("events");
-        if (!events.isArray()) {
+        return adaptTrades(toStreamingMessage(message));
+    }
+
+    public static List<Trade> adaptTrades(CoinbaseStreamingMessage message) {
+        if (message == null || message.getEvents().isEmpty()) {
             return Collections.emptyList();
         }
         List<Trade> trades = new ArrayList<>();
-        for (JsonNode event : events) {
-            JsonNode tradeNodes = event.path("trades");
-            if (!tradeNodes.isArray()) {
-                continue;
-            }
-            for (JsonNode node : tradeNodes) {
-                CurrencyPair pair = toCurrencyPair(node.path("product_id").asText(null));
+        for (CoinbaseStreamingEvent event : message.getEvents()) {
+            for (CoinbaseStreamingTrade trade : event.getTrades()) {
+                CurrencyPair pair = toCurrencyPair(trade.getProductId());
                 if (pair == null) {
                     continue;
                 }
-                Trade trade = UserTrade.builder().instrument(pair).id(node.path("trade_id").asText(null)).price(asBigDecimal(node, "price")).originalAmount(asBigDecimal(node, "size")).timestamp(asInstant(node.path("time")).map(java.util.Date::from).orElse(null)).type(parseOrderSide(node.path("side").asText(null))).build();
-                trades.add(trade);
+                Trade mappedTrade = UserTrade.builder()
+                    .instrument(pair)
+                    .id(trade.getTradeId())
+                    .price(trade.getPrice())
+                    .originalAmount(trade.getSize())
+                    .timestamp(parseInstant(trade.getTime()).map(java.util.Date::from).orElse(null))
+                    .type(parseOrderSide(trade.getSide()))
+                    .build();
+                trades.add(mappedTrade);
             }
         }
         return trades;
     }
 
     public static List<CandleStick> adaptCandles(JsonNode message, CurrencyPair targetPair) {
-        JsonNode events = message.path("events");
-        if (!events.isArray()) {
+        return adaptCandles(toStreamingMessage(message), targetPair);
+    }
+
+    public static List<CandleStick> adaptCandles(CoinbaseStreamingMessage message, CurrencyPair targetPair) {
+        if (message == null || message.getEvents().isEmpty()) {
             return Collections.emptyList();
         }
         List<CandleStick> candlesList = new ArrayList<>();
-        for (JsonNode event : events) {
-            JsonNode candles = event.path("candles");
-            if (!candles.isArray()) {
-                continue;
-            }
-            for (JsonNode candleNode : candles) {
-                CurrencyPair pair = toCurrencyPair(candleNode.path("product_id").asText(null));
+        for (CoinbaseStreamingEvent event : message.getEvents()) {
+            for (CoinbaseStreamingCandle candle : event.getCandles()) {
+                CurrencyPair pair = toCurrencyPair(candle.getProductId());
                 if (pair == null) {
                     continue;
                 }
                 if (targetPair != null && !targetPair.equals(pair)) {
                     continue;
                 }
-                candlesList.add(new CandleStick.Builder().open(asBigDecimal(candleNode, "open")).close(asBigDecimal(candleNode, "close")).high(asBigDecimal(candleNode, "high")).low(asBigDecimal(candleNode, "low")).volume(asBigDecimal(candleNode, "volume")).timestamp(parseUnixTimestamp(candleNode.path("start")).map(java.util.Date::from).orElse(null)).build());
+                candlesList.add(new CandleStick.Builder()
+                    .open(candle.getOpen())
+                    .close(candle.getClose())
+                    .high(candle.getHigh())
+                    .low(candle.getLow())
+                    .volume(candle.getVolume())
+                    .timestamp(parseUnixTimestamp(candle.getStart()).map(java.util.Date::from).orElse(null))
+                    .build());
             }
         }
         return candlesList;
     }
 
     public static List<LimitOrder> adaptLevel2Updates(JsonNode eventNode, Order.OrderType side) {
+        CoinbaseStreamingEvent event = toStreamingEvent(eventNode);
+        if (event == null) {
+            return Collections.emptyList();
+        }
+        return adaptLevel2Updates(event, side);
+    }
+
+    public static List<LimitOrder> adaptLevel2Updates(CoinbaseStreamingEvent event, Order.OrderType side) {
         List<LimitOrder> orders = new ArrayList<>();
-        JsonNode updates = eventNode.path("updates");
-        if (!updates.isArray()) {
+        if (event.getUpdates().isEmpty()) {
             return orders;
         }
-        String productId = eventNode.path("product_id").asText(null);
-        CurrencyPair pair = toCurrencyPair(productId);
+        CurrencyPair pair = toCurrencyPair(event.getProductId());
         if (pair == null) {
             return orders;
         }
-        Iterator<JsonNode> iterator = updates.iterator();
-        while (iterator.hasNext()) {
-            JsonNode update = iterator.next();
-            Order.OrderType orderSide = parseOrderSide(update.path("side").asText(null));
+        for (CoinbaseStreamingLevel2Update update : event.getUpdates()) {
+            Order.OrderType orderSide = parseOrderSide(update.getSide());
             if (orderSide != side) {
                 continue;
             }
-            BigDecimal price = asBigDecimal(update, "price_level");
-            BigDecimal amount = asBigDecimal(update, "new_quantity");
+            BigDecimal price = update.getPriceLevel();
+            BigDecimal amount = update.getNewQuantity();
             if (price == null || amount == null) {
                 continue;
             }
@@ -143,34 +171,14 @@ public final class CoinbaseStreamingAdapters {
             return Optional.empty();
         }
         String text = node.asText(null);
-        if (text == null || text.isEmpty()) {
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(Instant.parse(text));
-        } catch (Exception e) {
-            try {
-                return Optional.of(ZonedDateTime.parse(text).toInstant());
-            } catch (Exception ignored) {
-                return Optional.empty();
-            }
-        }
+        return parseInstant(text);
     }
 
     public static Optional<Instant> parseUnixTimestamp(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return Optional.empty();
         }
-        String text = node.asText(null);
-        if (text == null || text.isEmpty()) {
-            return Optional.empty();
-        }
-        try {
-            long epochSeconds = Long.parseLong(text);
-            return Optional.of(Instant.ofEpochSecond(epochSeconds));
-        } catch (NumberFormatException e) {
-            return Optional.empty();
-        }
+        return parseUnixTimestamp(node.asText(null));
     }
 
     public static BigDecimal asBigDecimal(JsonNode node, String field) {
@@ -192,6 +200,33 @@ public final class CoinbaseStreamingAdapters {
         }
     }
 
+    public static Optional<Instant> parseInstant(String text) {
+        if (text == null || text.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Instant.parse(text));
+        } catch (Exception e) {
+            try {
+                return Optional.of(ZonedDateTime.parse(text).toInstant());
+            } catch (Exception ignored) {
+                return Optional.empty();
+            }
+        }
+    }
+
+    public static Optional<Instant> parseUnixTimestamp(String text) {
+        if (text == null || text.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            long epochSeconds = Long.parseLong(text);
+            return Optional.of(Instant.ofEpochSecond(epochSeconds));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
+    }
+
     public static Order.OrderType parseOrderSide(String side) {
         if (side == null) {
             return null;
@@ -208,4 +243,25 @@ public final class CoinbaseStreamingAdapters {
         }
     }
 
+    public static CoinbaseStreamingMessage toStreamingMessage(JsonNode message) {
+        if (message == null || message.isMissingNode() || message.isNull()) {
+            return EMPTY_MESSAGE;
+        }
+        try {
+            return OBJECT_MAPPER.treeToValue(message, CoinbaseStreamingMessage.class);
+        } catch (JsonProcessingException e) {
+            return EMPTY_MESSAGE;
+        }
+    }
+
+    public static CoinbaseStreamingEvent toStreamingEvent(JsonNode event) {
+        if (event == null || event.isMissingNode() || event.isNull()) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.treeToValue(event, CoinbaseStreamingEvent.class);
+        } catch (JsonProcessingException e) {
+            return null;
+        }
+    }
 }

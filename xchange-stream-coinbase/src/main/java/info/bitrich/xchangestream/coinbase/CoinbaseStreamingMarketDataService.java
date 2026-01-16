@@ -4,6 +4,8 @@ import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdap
 
 import com.fasterxml.jackson.databind.JsonNode;
 import info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingEvent;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingMessage;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Observable;
@@ -45,6 +47,9 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   private final OrderBookSnapshotProvider snapshotProvider;
   private final ExchangeSpecification exchangeSpecification;
   private final Map<CurrencyPair, OrderBookState> orderBooks = new ConcurrentHashMap<>();
+  // Cache observables per currency pair to enable replay for new subscribers
+  // Key format: "CURRENCY_PAIR:channel" to differentiate between level2 and level2_batch
+  private final Map<String, Observable<OrderBook>> orderBookObservables = new ConcurrentHashMap<>();
 
   private final List<Disposable> internalSubscriptions = new CopyOnWriteArrayList<>();
 
@@ -69,8 +74,21 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     internalSubscriptions.add(disposable);
   }
 
+  /**
+   * Get an observable for heartbeat messages. Heartbeats help keep the WebSocket connection alive.
+   *
+   * @return Observable that emits heartbeat messages
+   */
+  public Observable<JsonNode> getHeartbeats() {
+    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(CoinbaseChannel.HEARTBEATS,
+        Collections.emptyList(), Collections.emptyMap());
+    return streamingService.observeChannel(request);
+  }
+
   void resubscribe() {
     orderBooks.values().forEach(OrderBookState::reset);
+    // Clear cached observables on resubscribe to ensure fresh state
+    orderBookObservables.clear();
   }
 
   @Override
@@ -82,6 +100,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
     return streamingService
         .observeChannel(request)
+        .map(CoinbaseStreamingAdapters::toStreamingMessage)
         .flatMapIterable(CoinbaseStreamingAdapters::adaptTickers)
         .filter(ticker -> instrumentMatches(ticker.getInstrument(), currencyPair));
   }
@@ -103,6 +122,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
     return streamingService
         .observeChannel(request)
+        .map(CoinbaseStreamingAdapters::toStreamingMessage)
         .flatMapIterable(CoinbaseStreamingAdapters::adaptTrades)
         .filter(trade -> instrumentMatches(trade.getInstrument(), currencyPair));
   }
@@ -133,19 +153,98 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     throw new IllegalArgumentException("Coinbase candle subscriptions support currency pairs only");
   }
 
+  /**
+   * Get an order book representing the current offered exchange rates (market depth).
+   *
+   * <p>The returned Observable uses {@code replay(1).refCount()} to cache and replay the last
+   * emitted OrderBook to new subscribers. This ensures that:
+   * <ul>
+   *   <li>New subscribers receive the latest state immediately upon subscription</li>
+   *   <li>Multiple subscribers share the same underlying WebSocket subscription</li>
+   *   <li>The observable is automatically cleaned up when all subscribers unsubscribe</li>
+   * </ul>
+   *
+   * <p><strong>Best Practice:</strong> Subscribe to the order book after connecting to ensure you
+   * receive the initial snapshot. If you use {@link ProductSubscription} with order books, you
+   * still need to manually subscribe via this method to receive the data - the replay mechanism
+   * ensures you'll get the latest state even if the snapshot was already processed.
+   *
+   * @param currencyPair Currency pair of the order book
+   * @param args Optional arguments (not currently used)
+   * @return Observable that emits OrderBook updates, replaying the last value to new subscribers
+   */
   @Override
   public Observable<OrderBook> getOrderBook(CurrencyPair currencyPair, Object... args) {
-    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
-        CoinbaseChannel.LEVEL2,
-        Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
-        Collections.emptyMap());
+    // Determine which channel to use from args
+    CoinbaseChannel channel = determineChannel(args);
+    
+    // Use cached observable with replay to ensure new subscribers get the latest state
+    // Include channel in cache key to differentiate between level2 and level2_batch
+    final String cacheKey = currencyPair.toString() + ":" + channel.channelName();
+    final CoinbaseChannel finalChannel = channel; // Make final for lambda
+    
+    return orderBookObservables.computeIfAbsent(cacheKey, key -> {
+      CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
+          finalChannel,
+          Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+          Collections.emptyMap());
 
-    OrderBookState state = orderBooks.computeIfAbsent(
-        currencyPair, key -> new OrderBookState(currencyPair, snapshotProvider));
+      OrderBookState state = orderBooks.computeIfAbsent(
+          currencyPair, pair -> new OrderBookState(pair, snapshotProvider));
 
-    return streamingService
-        .observeChannel(request)
-        .flatMapMaybe(state::process);
+      LOG.info("Creating order book observable for {} on channel {}", currencyPair, finalChannel.channelName());
+      return streamingService
+          .observeChannel(request)
+          .doOnNext(msg -> LOG.debug("Raw level2 message received for {}: {}", currencyPair, msg))
+          .map(CoinbaseStreamingAdapters::toStreamingMessage)
+          .doOnNext(msg -> {
+            LOG.debug("Parsed level2 message for {}: {} events", currencyPair, 
+                msg != null && msg.getEvents() != null ? msg.getEvents().size() : 0);
+            if (msg != null && !msg.getEvents().isEmpty()) {
+              for (CoinbaseStreamingEvent event : msg.getEvents()) {
+                LOG.debug("Level2 event: type={}, productId={}, sequence={}, updates={}, bids={}, asks={}",
+                    event.getType(), event.getProductId(), event.getSequence(),
+                    event.getUpdates() != null ? event.getUpdates().size() : 0,
+                    event.getBids() != null ? event.getBids().size() : 0,
+                    event.getAsks() != null ? event.getAsks().size() : 0);
+              }
+            }
+          })
+          .flatMapMaybe(state::process)
+          .doOnNext(ob -> LOG.info("OrderBook emitted for {}: {} bids, {} asks", 
+              currencyPair, ob.getBids().size(), ob.getAsks().size()))
+          .replay(1)
+          .refCount();
+    });
+  }
+  
+  private CoinbaseChannel determineChannel(Object... args) {
+    if (args.length > 0) {
+      if (args[0] instanceof Boolean && (Boolean) args[0]) {
+        return CoinbaseChannel.LEVEL2_BATCH;
+      } else if (args[0] instanceof String) {
+        String channelName = (String) args[0];
+        try {
+          return CoinbaseChannel.fromName(channelName);
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Unknown channel name '{}', defaulting to level2", channelName);
+          return CoinbaseChannel.LEVEL2;
+        }
+      }
+    }
+    return CoinbaseChannel.LEVEL2;
+  }
+  
+  /**
+   * Get an order book using the level2_batch channel, which batches updates every 0.05 seconds.
+   * This is recommended for high-volume products like BTC-USD to avoid exceeding WebSocket
+   * max_msg_size limits with large initial snapshots.
+   *
+   * @param currencyPair Currency pair of the order book
+   * @return Observable that emits OrderBook updates from the batched channel
+   */
+  public Observable<OrderBook> getOrderBookBatch(CurrencyPair currencyPair) {
+    return getOrderBook(currencyPair, true);
   }
 
   @Override
@@ -165,6 +264,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
     return streamingService
         .observeChannel(request)
+        .map(CoinbaseStreamingAdapters::toStreamingMessage)
         .flatMapIterable(message -> adaptCandles(message, currencyPair));
   }
 
@@ -321,20 +421,29 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       return price.stripTrailingZeros();
     }
 
-    Maybe<OrderBook> process(JsonNode message) {
-      JsonNode events = message.path("events");
-      if (!events.isArray()) {
+    Maybe<OrderBook> process(CoinbaseStreamingMessage message) {
+      if (message == null || message.getEvents().isEmpty()) {
         return Maybe.empty();
       }
       boolean changed = false;
-      for (JsonNode event : events) {
-        String productId = event.path("product_id").asText(null);
+      for (CoinbaseStreamingEvent event : message.getEvents()) {
+        String productId = event.getProductId();
         if (productId != null && !productId.equals(CoinbaseProductIds.productId(currencyPair))) {
           continue;
         }
-        String type = event.path("type").asText("");
-        long sequence = event.path("sequence").asLong(-1L);
+        String type = event.getType() == null ? "" : event.getType();
+        long sequence = event.getSequence() == null ? -1L : event.getSequence();
+        LOG.debug("Processing level2 event: type={}, productId={}, sequence={}, updates={}, bids={}, asks={}", 
+            type, productId, sequence, 
+            event.getUpdates() != null ? event.getUpdates().size() : 0,
+            event.getBids() != null ? event.getBids().size() : 0,
+            event.getAsks() != null ? event.getAsks().size() : 0);
         if ("snapshot".equalsIgnoreCase(type)) {
+          LOG.info("Processing level2 snapshot for {}: updates={}, bids={}, asks={}", 
+              currencyPair,
+              event.getUpdates() != null ? event.getUpdates().size() : 0,
+              event.getBids() != null ? event.getBids().size() : 0,
+              event.getAsks() != null ? event.getAsks().size() : 0);
           applySnapshotEvent(event);
           if (sequence >= 0) {
             lastSequence.set(sequence);
@@ -391,31 +500,62 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       return Maybe.just(orderBook);
     }
 
-    private void applySnapshotEvent(JsonNode event) {
+    private void applySnapshotEvent(CoinbaseStreamingEvent event) {
       bids.clear();
       asks.clear();
-      CurrencyPair pair = CoinbaseStreamingAdapters.toCurrencyPair(event.path("product_id").asText(null));
+      CurrencyPair pair = CoinbaseStreamingAdapters.toCurrencyPair(event.getProductId());
       if (pair == null) {
         return;
       }
-      populateSnapshotSide(bids, event.path("bids"), Order.OrderType.BID, pair);
-      populateSnapshotSide(asks, event.path("asks"), Order.OrderType.ASK, pair);
+      // Coinbase level2 snapshots can have either:
+      // 1. bids/asks arrays (List<List<String>>) - traditional format
+      // 2. updates array with price_level/new_quantity - newer format
+      // Handle both formats
+      if (!event.getUpdates().isEmpty()) {
+        // Snapshot uses updates array format
+        LOG.debug("Applying snapshot from updates array ({} updates)", event.getUpdates().size());
+        List<LimitOrder> bidUpdates = CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID);
+        List<LimitOrder> askUpdates = CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK);
+        for (LimitOrder order : bidUpdates) {
+          BigDecimal normalizedPrice = normalizePrice(order.getLimitPrice());
+          if (order.getOriginalAmount().compareTo(BigDecimal.ZERO) > 0) {
+            bids.put(normalizedPrice, order);
+          } else {
+            bids.remove(normalizedPrice);
+          }
+        }
+        for (LimitOrder order : askUpdates) {
+          BigDecimal normalizedPrice = normalizePrice(order.getLimitPrice());
+          if (order.getOriginalAmount().compareTo(BigDecimal.ZERO) > 0) {
+            asks.put(normalizedPrice, order);
+          } else {
+            asks.remove(normalizedPrice);
+          }
+        }
+      } else {
+        // Snapshot uses bids/asks arrays format
+        LOG.debug("Applying snapshot from bids/asks arrays ({} bids, {} asks)", 
+            event.getBids() != null ? event.getBids().size() : 0,
+            event.getAsks() != null ? event.getAsks().size() : 0);
+        populateSnapshotSide(bids, event.getBids(), Order.OrderType.BID, pair);
+        populateSnapshotSide(asks, event.getAsks(), Order.OrderType.ASK, pair);
+      }
     }
 
     private void populateSnapshotSide(
         NavigableMap<BigDecimal, LimitOrder> side,
-        JsonNode levels,
+        List<List<String>> levels,
         Order.OrderType orderType,
         CurrencyPair pair) {
-      if (!levels.isArray()) {
+      if (levels == null || levels.isEmpty()) {
         return;
       }
-      for (JsonNode level : levels) {
-        if (!level.isArray() || level.size() < 2) {
+      for (List<String> level : levels) {
+        if (level == null || level.size() < 2) {
           continue;
         }
-        String priceText = level.get(0).asText(null);
-        String sizeText = level.get(1).asText(null);
+        String priceText = level.get(0);
+        String sizeText = level.get(1);
         if (priceText == null || sizeText == null) {
           continue;
         }
@@ -434,20 +574,28 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       }
     }
 
-    private boolean applyUpdates(JsonNode event) {
+    private boolean applyUpdates(CoinbaseStreamingEvent event) {
       boolean changed = false;
-      List<LimitOrder> bidUpdates = CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID);
+      LOG.debug("Applying level2 updates: {} updates total", 
+          event.getUpdates() != null ? event.getUpdates().size() : 0);
+      List<LimitOrder> bidUpdates =
+          CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID);
       if (!bidUpdates.isEmpty()) {
+        LOG.debug("Applying {} bid updates", bidUpdates.size());
         if (applyUpdatesToSide(bids, bidUpdates)) {
           changed = true;
         }
       }
-
-      List<LimitOrder> askUpdates = CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK);
+      List<LimitOrder> askUpdates =
+          CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK);
       if (!askUpdates.isEmpty()) {
+        LOG.debug("Applying {} ask updates", askUpdates.size());
         if (applyUpdatesToSide(asks, askUpdates)) {
           changed = true;
         }
+      }
+      if (!changed && !event.getUpdates().isEmpty()) {
+        LOG.warn("Received {} updates but none were applied (possibly filtered out)", event.getUpdates().size());
       }
       return changed;
     }

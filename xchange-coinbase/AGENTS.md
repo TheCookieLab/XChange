@@ -90,6 +90,7 @@ Key mapping notes:
 - Do not reuse response DTOs across endpoints if the JSON shape differs; define dedicated response types
 - Timestamp formats vary by endpoint—use ISO‑8601 parsing where documented, but handle UNIX epoch strings for candle `start` and other numeric fields
 - For market‑data vs user endpoints, map to the correct XChange DTOs (`Trade` vs `UserTrade`)
+- Market data raw service now falls back to public endpoints when auth is missing; this requires a non‑null `ExchangeSpecification` so `coinbasePublic` can be built
 
 ### Checklist for a new endpoint
 - [ ] Read docs, list required/optional query params and response fields
@@ -162,6 +163,8 @@ When implementing or modifying endpoints, follow this testing approach:
 ### Sandbox test infrastructure
 - **Sandbox URL**: `https://api-sandbox.coinbase.com`
 - **Endpoints supported**: Accounts, Orders, Fills (limited market data)
+- **INTX note**: Sandbox portfolios include `INTX` and `PERP` types; INTX endpoints may return data once you supply a valid `portfolio_uuid`.
+- **CFM note**: CFM endpoints currently return 404s in sandbox; keep tests tolerant and treat them as best‑effort.
 - **Authentication**: Required but not validated (safe to use production keys)
 - **Rate limits**: None
 - **Data**: Static responses (deterministic)
