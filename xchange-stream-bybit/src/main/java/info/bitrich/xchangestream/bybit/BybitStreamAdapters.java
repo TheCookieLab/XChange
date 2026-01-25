@@ -16,16 +16,21 @@ import dto.trade.BybitStreamBatchAmendOrdersPayload;
 import dto.trade.BybitStreamBatchAmendOrdersPayload.BybitStreamBatchAmendOrderPayload;
 import dto.trade.BybitTrade;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.bybit.dto.trade.details.BybitTimeInForce;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPosition.Type;
 import org.knowm.xchange.dto.account.OpenPositions;
+import org.knowm.xchange.dto.marketdata.FundingRate;
+import org.knowm.xchange.dto.marketdata.FundingRate.FundingRateInterval;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
@@ -38,7 +43,7 @@ public class BybitStreamAdapters {
   public static OrderBook adaptOrderBook(BybitOrderbook bybitOrderBooks, Instrument instrument) {
     List<LimitOrder> asks = new ArrayList<>();
     List<LimitOrder> bids = new ArrayList<>();
-    Date timestamp = new Date(Long.parseLong(bybitOrderBooks.getTs()));
+    Date timestamp = new Date(bybitOrderBooks.getCts());
     bybitOrderBooks
         .getData()
         .getAsk()
@@ -318,5 +323,49 @@ public class BybitStreamAdapters {
               null));
     }
     return new BybitStreamBatchAmendOrdersPayload(category, ordersPayload);
+  }
+
+  public static FundingRate adaptFundingRate(BybitLinearInverseTicker bybitTicker) {
+    int interval = bybitTicker.getFundingIntervalHour();
+    BigDecimal fundingRate = bybitTicker.getFundingRate();
+    FundingRateInterval rateInterval = adaptFundingRateInterval(interval);
+    BigDecimal fundingRate1h =
+        fundingRate.divide(
+            BigDecimal.valueOf(interval), fundingRate.scale(), RoundingMode.HALF_EVEN);
+    return new FundingRate.Builder()
+        .fundingRate1h(fundingRate1h)
+        .fundingRate(fundingRate)
+        .instrument(convertBybitSymbolToInstrument(bybitTicker.getSymbol(), BybitCategory.LINEAR))
+        .fundingRateInterval(rateInterval)
+        .fundingRateDate(bybitTicker.getNextFundingTime())
+        .fundingRateEffectiveInMinutes(
+            TimeUnit.MILLISECONDS.toMinutes(
+                bybitTicker.getNextFundingTime().getTime() - System.currentTimeMillis()))
+        .build();
+  }
+
+  public static FundingRateInterval adaptFundingRateInterval(int interval) {
+    switch (interval) {
+      case 1:
+        {
+          return FundingRateInterval.H1;
+        }
+      case 2:
+        {
+          return FundingRateInterval.H2;
+        }
+      case 4:
+        {
+          return FundingRateInterval.H4;
+        }
+      case 6:
+        {
+          return FundingRateInterval.H6;
+        }
+      default:
+        {
+          return FundingRateInterval.H8;
+        }
+    }
   }
 }

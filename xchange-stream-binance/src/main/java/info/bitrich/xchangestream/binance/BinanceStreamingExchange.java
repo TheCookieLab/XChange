@@ -1,7 +1,5 @@
 package info.bitrich.xchangestream.binance;
 
-import static java.util.Collections.emptyMap;
-
 import info.bitrich.xchangestream.binance.BinanceUserDataChannel.NoActiveChannelException;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
@@ -10,11 +8,8 @@ import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import info.bitrich.xchangestream.util.Events;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.binance.BinanceAuthenticated;
 import org.knowm.xchange.binance.BinanceExchange;
@@ -25,12 +20,20 @@ import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyMap;
+
 public class BinanceStreamingExchange extends BinanceExchange implements StreamingExchange {
 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceStreamingExchange.class);
-  private static final String WS_API_BASE_URI = "wss://stream.binance.com:9443/";
-  private static final String WS_TRADE_API_BASE_URI = WS_API_BASE_URI;
-  private static final String WS_SANDBOX_API_BASE_URI = "wss://stream.testnet.binance.vision:9443/";
+  private static final String WS_API_BASE_URI = "wss://stream.binance.com/";
+  private static final String WS_TRADE_API_BASE_URI = "wss://ws-api.binance.com:443/ws-api/v3";
+  private static final String WS_SANDBOX_API_BASE_URI = "wss://stream.testnet.binance.vision/";
   private static final String WS_SANDBOX_TRADE_API_BASE_URI =
       "wss://ws-api.testnet.binance.vision/ws-api/v3";
   public static final String USE_HIGHER_UPDATE_FREQUENCY = "Binance_Orderbook_Use_Higher_Frequency";
@@ -270,10 +273,11 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
 
   protected BinanceStreamingService createStreamingService(
       ProductSubscription subscription, KlineSubscription klineSubscription) {
+    // new chinese pair, like 币安人生usdt, need urlEncode
     String path =
         getStreamingBaseUri()
             + "stream?streams="
-            + buildSubscriptionStreams(subscription, klineSubscription);
+            + URLEncoder.encode(buildSubscriptionStreams(subscription, klineSubscription), StandardCharsets.UTF_8);
 
     BinanceStreamingService streamingService =
         new BinanceStreamingService(path, subscription, klineSubscription);
