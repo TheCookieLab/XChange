@@ -7,8 +7,6 @@ XChange is a Java library providing a simple and consistent API for interacting 
 
 A big thanks to all the [contributors](CONTRIBUTORS) who have helped make XChange what it is today! ❤️
 
-A big thanks also to our sponsor: https://ai-receptionist.com/.
-
 ## Important!
 
 The world of Bitcoin changes quickly and XChange is no exception. For the latest bugfixes and features you should use the [snapshot jars](https://oss.sonatype.org/content/groups/public/org/knowm/xchange/) or build yourself from the `develop` branch. See below for more details about building with Maven. To report bugs and see what issues people are currently working on see the [issues page](https://github.com/knowm/XChange/issues).
@@ -230,3 +228,15 @@ Please report any bugs or submit feature requests to [XChange's Github issue tra
 If you'd like to submit a new implementation for another exchange, please take a look at [New Implementation Best Practices](https://github.com/knowm/XChange/wiki/New-Implementation-Best-Practices) first, as there are lots of time-saving tips!
 
 For more information such as a contributor list and a list of known projects depending on XChange, visit the [Main Project Wiki](https://github.com/knowm/XChange/wiki).
+
+---
+## Maintained by Knowm Inc.
+
+**XChange** is an open-source project sponsored and maintained by the team at [Knowm Inc.](https://knowm.com), a company dedicated to neuromorphic computing and machine learning research since 2015.
+
+Our team also powers [AI Receptionist](https://ai-receptionist.com/), an AI-driven automated phone system for small businesses. We leverage the same high-performance, resilient technical architecture and design principles used in XChange to ensure AI Receptionist never misses a call.
+
+Learn more about our research at [Knowm.org](https://knowm.org).
+
+**Connect with the Lead Developer:**
+[Tim Molter on LinkedIn](https://www.linkedin.com/in/tmolter/) | [Tim Molter on X (Twitter)](https://x.com/TimMolter)
