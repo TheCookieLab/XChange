@@ -1,9 +1,8 @@
 package org.knowm.xchange.binance;
 
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
-import org.knowm.xchange.client.ResilienceRegistries;
-
 import java.time.Duration;
+import org.knowm.xchange.client.ResilienceRegistries;
 
 public final class BinanceResilience {
 
@@ -39,22 +38,22 @@ public final class BinanceResilience {
                 .limitRefreshPeriod(Duration.ofSeconds(1))
                 .limitForPeriod(10)
                 .build());
-      registries
-              .rateLimiters()
-              .rateLimiter(
-                      ORDERS_PER_10_SECONDS_RATE_LIMITER,
-                      RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                              .limitRefreshPeriod(Duration.ofSeconds(10))
-                              .limitForPeriod(100)
-                              .build());
-      registries
-              .rateLimiters()
-              .rateLimiter(
-                      ORDERS_PER_DAY_RATE_LIMITER,
-                      RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                              .limitRefreshPeriod(Duration.ofSeconds(1))
-                              .limitForPeriod(200000)
-                              .build());
+    registries
+        .rateLimiters()
+        .rateLimiter(
+            ORDERS_PER_10_SECONDS_RATE_LIMITER,
+            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
+                .limitRefreshPeriod(Duration.ofSeconds(10))
+                .limitForPeriod(100)
+                .build());
+    registries
+        .rateLimiters()
+        .rateLimiter(
+            ORDERS_PER_DAY_RATE_LIMITER,
+            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
+                .limitRefreshPeriod(Duration.ofSeconds(1))
+                .limitForPeriod(200000)
+                .build());
     registries
         .rateLimiters()
         .rateLimiter(

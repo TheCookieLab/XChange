@@ -42,7 +42,6 @@ public class BybitResilience {
   public static final String BATCH_ORDER_CANCEL_SPOT_RATE_LIMITER = "batchOrderCancelSpot";
   public static final String BATCH_ORDER_CANCEL_OPTION_LIMITER = "batchOrderCancelOption";
 
-
   // /v5/position/set-leverage
   public static final String POSITION_SET_LEVERAGE_INVERSE_RATE_LIMITER =
       "positionSetLeverageInverse";

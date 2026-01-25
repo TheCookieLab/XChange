@@ -13,7 +13,6 @@ import org.knowm.xchange.deribit.v2.config.converter.StringToPositionTypeConvert
 import org.knowm.xchange.deribit.v2.dto.Kind;
 import org.knowm.xchange.dto.account.OpenPosition;
 
-
 @Data
 @SuperBuilder(toBuilder = true)
 @Jacksonized
@@ -115,6 +114,5 @@ public class DeribitUserChangeNotification extends DeribitWsNotification<UserCha
 
     @JsonProperty("vega")
     private BigDecimal vega;
-
   }
 }

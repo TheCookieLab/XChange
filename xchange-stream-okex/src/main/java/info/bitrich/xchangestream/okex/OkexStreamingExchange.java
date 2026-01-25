@@ -74,7 +74,7 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
     if (useSandbox()) {
       apiUrl = SANDBOX_WS_PUBLIC_CHANNEL_URI;
     } else {
-      apiUrl =  WS_PUBLIC_CHANNEL_URI;
+      apiUrl = WS_PUBLIC_CHANNEL_URI;
     }
     return apiUrl;
   }

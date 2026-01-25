@@ -37,5 +37,4 @@ public class DeribitWsRequest {
     @JsonProperty("channels")
     private List<String> channels;
   }
-
 }

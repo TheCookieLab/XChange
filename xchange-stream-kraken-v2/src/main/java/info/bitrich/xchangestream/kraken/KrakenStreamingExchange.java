@@ -17,9 +17,11 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
 
   @Override
   public Completable connect(ProductSubscription... args) {
-    krakenStreamingService = new KrakenStreamingService(exchangeSpecification.getOverrideWebsocketApiUri());
+    krakenStreamingService =
+        new KrakenStreamingService(exchangeSpecification.getOverrideWebsocketApiUri());
     krakenPrivateStreamingService =
-        new KrakenPrivateStreamingService((String) exchangeSpecification.getParameter("V2_PRIVATE_WS_URL"), this);
+        new KrakenPrivateStreamingService(
+            (String) exchangeSpecification.getParameter("V2_PRIVATE_WS_URL"), this);
 
     streamingTradeService = new KrakenStreamingTradeService(krakenPrivateStreamingService);
     streamingAccountService = new KrakenStreamingAccountService(krakenPrivateStreamingService);
@@ -39,7 +41,8 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
     specification.setExchangeName("Kraken");
     specification.setSslUri("https://api.kraken.com");
     specification.setOverrideWebsocketApiUri("wss://ws.kraken.com/v2");
-    specification.setExchangeSpecificParametersItem("V2_PRIVATE_WS_URL", "wss://ws-auth.kraken.com/v2");
+    specification.setExchangeSpecificParametersItem(
+        "V2_PRIVATE_WS_URL", "wss://ws-auth.kraken.com/v2");
     specification.setShouldLoadRemoteMetaData(false);
     return specification;
   }

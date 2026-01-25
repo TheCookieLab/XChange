@@ -130,7 +130,8 @@ public interface StreamingExchange extends Exchange {
   default void applyWebsocketTimeouts(ExchangeSpecification exchangeSpec) {
     // set by default if not specified
     if (exchangeSpec.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT) == null) {
-      exchangeSpec.setExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT);
+      exchangeSpec.setExchangeSpecificParametersItem(
+          WS_CONNECTION_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT);
     }
     if (exchangeSpec.getExchangeSpecificParametersItem(WS_RETRY_DURATION) == null) {
       exchangeSpec.setExchangeSpecificParametersItem(WS_RETRY_DURATION, DEFAULT_RETRY_DURATION);

@@ -6,15 +6,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import info.bitrich.xchangestream.kraken.dto.common.ChannelType;
-import lombok.Data;
-
 import java.time.Clock;
 import java.util.Set;
+import lombok.Data;
 
 @Data
 public final class Config {
 
-  public static final Set<String> PRIVATE_CHANNELS = Set.of(ChannelType.BALANCES.getValue(), ChannelType.USER_TRADES.getValue());
+  public static final Set<String> PRIVATE_CHANNELS =
+      Set.of(ChannelType.BALANCES.getValue(), ChannelType.USER_TRADES.getValue());
   private ObjectMapper objectMapper;
   private Clock clock;
 

@@ -10,8 +10,8 @@ public class BybitOrderbook {
   private final String dataType;
   private final long ts;
   /*
-The timestamp from the matching engine when this orderbook data is produced. It can be correlated with T from public trade channel
- */
+  The timestamp from the matching engine when this orderbook data is produced. It can be correlated with T from public trade channel
+   */
   private final long cts;
   private final BybitOrderbookData data;
 

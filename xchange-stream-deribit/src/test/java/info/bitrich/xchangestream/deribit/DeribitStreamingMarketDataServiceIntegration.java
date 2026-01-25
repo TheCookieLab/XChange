@@ -36,13 +36,15 @@ class DeribitStreamingMarketDataServiceIntegration extends DeribitStreamingExcha
   @Test
   void trades() {
     Observable<Trade> observable =
-        exchange.getStreamingMarketDataService().getTrades(new FuturesContract(new CurrencyPair("BTC/USD"), "PERPETUAL"));
+        exchange
+            .getStreamingMarketDataService()
+            .getTrades(new FuturesContract(new CurrencyPair("BTC/USD"), "PERPETUAL"));
 
     TestObserver<Trade> testObserver = observable.test();
 
     List<Trade> values =
         testObserver
-//                    .awaitDone(3, TimeUnit.MINUTES)
+            //                    .awaitDone(3, TimeUnit.MINUTES)
             .awaitCount(1)
             .values();
 
@@ -53,7 +55,7 @@ class DeribitStreamingMarketDataServiceIntegration extends DeribitStreamingExcha
     testObserver.dispose();
 
     assertThat(trade).hasNoNullFieldsOrPropertiesExcept("makerOrderId", "takerOrderId");
-    assertThat(trade.getInstrument()).isEqualTo(new FuturesContract(new CurrencyPair("BTC/USD"), "PERPETUAL"));
+    assertThat(trade.getInstrument())
+        .isEqualTo(new FuturesContract(new CurrencyPair("BTC/USD"), "PERPETUAL"));
   }
-
 }

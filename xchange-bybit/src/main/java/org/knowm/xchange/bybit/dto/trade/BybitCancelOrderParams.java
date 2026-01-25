@@ -18,7 +18,6 @@ public class BybitCancelOrderParams extends DefaultCancelOrderByInstrumentAndIdP
     this.userReference = userReference;
   }
 
-
   @Override
   public String toString() {
     return "BybitCancelOrderParams{"

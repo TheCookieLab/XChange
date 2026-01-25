@@ -24,7 +24,6 @@ public class DeribitLoginRequest {
   public enum Method {
     @JsonProperty("public/auth")
     AUTHENTICATE,
-
   }
 
   @Data
@@ -40,7 +39,5 @@ public class DeribitLoginRequest {
 
     @JsonProperty("client_secret")
     private String clientSecret;
-
   }
-
 }

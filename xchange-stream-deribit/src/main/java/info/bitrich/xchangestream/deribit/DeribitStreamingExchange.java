@@ -22,7 +22,11 @@ public class DeribitStreamingExchange extends DeribitExchange implements Streami
   public Completable connect(ProductSubscription... args) {
     publicStreamingService = new DeribitStreamingService(Config.V2_WS_URL);
 
-    privateStreamingService = new DeribitPrivateStreamingService(Config.V2_WS_URL, exchangeSpecification.getApiKey(), exchangeSpecification.getSecretKey());
+    privateStreamingService =
+        new DeribitPrivateStreamingService(
+            Config.V2_WS_URL,
+            exchangeSpecification.getApiKey(),
+            exchangeSpecification.getSecretKey());
     privateStreamingService.connect().blockingAwait();
 
     applyStreamingSpecification(exchangeSpecification, publicStreamingService);

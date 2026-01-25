@@ -55,5 +55,4 @@ public class Settlement {
 
   /** the amount of the socialized losses (in base currency; bankruptcy only) */
   private BigDecimal socialized;
-
 }

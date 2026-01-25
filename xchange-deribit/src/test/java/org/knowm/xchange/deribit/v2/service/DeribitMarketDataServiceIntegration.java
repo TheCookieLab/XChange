@@ -102,9 +102,13 @@ public class DeribitMarketDataServiceIntegration extends DeribitIntegrationTestP
 
   @Test
   void valid_single_ticker_futures() throws IOException {
-    Ticker ticker = exchange.getMarketDataService().getTicker(new FuturesContract(CurrencyPair.BTC_USD, "PERPETUAL"));
+    Ticker ticker =
+        exchange
+            .getMarketDataService()
+            .getTicker(new FuturesContract(CurrencyPair.BTC_USD, "PERPETUAL"));
 
-    assertThat(ticker.getInstrument()).isEqualTo(new FuturesContract(CurrencyPair.BTC_USD, "PERPETUAL"));
+    assertThat(ticker.getInstrument())
+        .isEqualTo(new FuturesContract(CurrencyPair.BTC_USD, "PERPETUAL"));
     assertThat(ticker.getLast()).isPositive();
 
     if (ticker.getBid().signum() > 0 && ticker.getAsk().signum() > 0) {
@@ -118,12 +122,14 @@ public class DeribitMarketDataServiceIntegration extends DeribitIntegrationTestP
 
     assumeThat(trades.getTrades()).isNotEmpty();
 
-    assertThat(trades.getTrades()).allSatisfy(trade -> {
-      assertThat(trade.getInstrument()).isEqualTo(CurrencyPair.BTC_USDT);
-      assertThat(trade.getPrice()).isPositive();
-      assertThat(trade.getOriginalAmount()).isPositive();
-      assertThat(trade).hasNoNullFieldsOrPropertiesExcept("makerOrderId", "takerOrderId");
-    });
+    assertThat(trades.getTrades())
+        .allSatisfy(
+            trade -> {
+              assertThat(trade.getInstrument()).isEqualTo(CurrencyPair.BTC_USDT);
+              assertThat(trade.getPrice()).isPositive();
+              assertThat(trade.getOriginalAmount()).isPositive();
+              assertThat(trade).hasNoNullFieldsOrPropertiesExcept("makerOrderId", "takerOrderId");
+            });
   }
 
   @Test
@@ -133,13 +139,13 @@ public class DeribitMarketDataServiceIntegration extends DeribitIntegrationTestP
 
     assumeThat(trades.getTrades()).isNotEmpty();
 
-    assertThat(trades.getTrades()).allSatisfy(trade -> {
-      assertThat(trade.getInstrument()).isEqualTo(futuresContract);
-      assertThat(trade.getPrice()).isPositive();
-      assertThat(trade.getOriginalAmount()).isPositive();
-      assertThat(trade).hasNoNullFieldsOrPropertiesExcept("makerOrderId", "takerOrderId");
-    });
+    assertThat(trades.getTrades())
+        .allSatisfy(
+            trade -> {
+              assertThat(trade.getInstrument()).isEqualTo(futuresContract);
+              assertThat(trade.getPrice()).isPositive();
+              assertThat(trade.getOriginalAmount()).isPositive();
+              assertThat(trade).hasNoNullFieldsOrPropertiesExcept("makerOrderId", "takerOrderId");
+            });
   }
-
-
 }

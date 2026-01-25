@@ -53,7 +53,6 @@ public class DeribitDeposit {
   @JsonProperty("clearance_state")
   private ClearanceState clearanceState;
 
-
   public enum ClearanceState {
     @JsonProperty("in_progress")
     IN_PROGRESS,
@@ -82,5 +81,4 @@ public class DeribitDeposit {
     @JsonEnumDefaultValue
     UNKNOWN
   }
-
 }

@@ -114,12 +114,12 @@ public class BinanceFutureStreamPublicTest {
                   assertThat(orderBook.getBids().get(0).getLimitPrice())
                       .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
                   assertThat(
-                      orderBook
-                          .getAsks()
-                          .get(0)
-                          .getLimitPrice()
-                          .compareTo(orderBook.getBids().get(0).getLimitPrice())
-                          > 0)
+                          orderBook
+                                  .getAsks()
+                                  .get(0)
+                                  .getLimitPrice()
+                                  .compareTo(orderBook.getBids().get(0).getLimitPrice())
+                              > 0)
                       .isTrue();
                 }));
     disposables.add(
@@ -208,12 +208,12 @@ public class BinanceFutureStreamPublicTest {
                   assertThat(orderBook.getBids().get(0).getLimitPrice())
                       .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
                   assertThat(
-                      orderBook
-                          .getAsks()
-                          .get(0)
-                          .getLimitPrice()
-                          .compareTo(orderBook.getBids().get(0).getLimitPrice())
-                          > 0)
+                          orderBook
+                                  .getAsks()
+                                  .get(0)
+                                  .getLimitPrice()
+                                  .compareTo(orderBook.getBids().get(0).getLimitPrice())
+                              > 0)
                       .isTrue();
                 }));
     Thread.sleep(3000);

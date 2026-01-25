@@ -16,5 +16,4 @@ public class DeribitPlatformStatus {
 
   @JsonProperty("locked_indices")
   private List<String> lockedCurrencies;
-
 }

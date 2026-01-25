@@ -73,9 +73,8 @@ public class DeribitExchange extends BaseExchange {
           new Currency(deribitCurrency.getCurrency()), DeribitAdapters.adaptMeta(deribitCurrency));
     }
 
-      List<DeribitInstrument> deribitInstruments =
-          ((DeribitMarketDataServiceRaw) marketDataService)
-              .getDeribitInstruments(null, null, null);
+    List<DeribitInstrument> deribitInstruments =
+        ((DeribitMarketDataServiceRaw) marketDataService).getDeribitInstruments(null, null, null);
 
     for (DeribitInstrument deribitInstrument : deribitInstruments) {
       var instrument = DeribitAdapters.toInstrument(deribitInstrument);
@@ -84,7 +83,6 @@ public class DeribitExchange extends BaseExchange {
         DeribitAdapters.putSymbolMapping(deribitInstrument.getInstrumentName(), instrument);
         instruments.put(instrument, DeribitAdapters.adaptMeta(deribitInstrument));
       }
-
     }
   }
 }

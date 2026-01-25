@@ -14,7 +14,8 @@ public class DeribitDigest extends BaseParamsDigest {
   private final String clientId;
   private final SynchronizedValueFactory<Long> timestampFactory;
 
-  private DeribitDigest(String clientId, String clientSecret, SynchronizedValueFactory<Long> timestampFactory) {
+  private DeribitDigest(
+      String clientId, String clientSecret, SynchronizedValueFactory<Long> timestampFactory) {
     super(clientSecret, HMAC_SHA_256);
     this.clientId = clientId;
     this.timestampFactory = timestampFactory;

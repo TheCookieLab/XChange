@@ -260,5 +260,4 @@ public class DeribitTradeServiceRaw extends DeribitBaseService {
   public List<DeribitPosition> getPositions(String currency, Kind kind) throws IOException {
     return deribitAuthenticated.getPositions(currency, kind, deribitDigest).getResult();
   }
-
 }

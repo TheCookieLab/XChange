@@ -50,8 +50,10 @@ public class BaseBybitExchange {
     exchangeSpecification.setExchangeSpecificParametersItem(
         BybitStreamingExchange.EXCHANGE_TYPE, category);
     AuthUtils.setApiAndSecretKey(exchangeSpecification, "bybit-main");
-    exchangeSpecification.setExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT, Duration.ofSeconds(5));
-    exchangeSpecification.setExchangeSpecificParametersItem(WS_RETRY_DURATION, Duration.ofSeconds(10));
+    exchangeSpecification.setExchangeSpecificParametersItem(
+        WS_CONNECTION_TIMEOUT, Duration.ofSeconds(5));
+    exchangeSpecification.setExchangeSpecificParametersItem(
+        WS_RETRY_DURATION, Duration.ofSeconds(10));
     exchangeSpecification.setExchangeSpecificParametersItem(WS_IDLE_TIMEOUT, 15);
     StreamingExchange exchange =
         StreamingExchangeFactory.INSTANCE.createExchange(exchangeSpecification);

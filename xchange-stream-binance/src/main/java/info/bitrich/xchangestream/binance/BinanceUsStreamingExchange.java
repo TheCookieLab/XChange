@@ -170,7 +170,8 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
 
   private Completable createAndConnectUserDataService(String listenKey) {
     userDataStreamingService =
-        BinanceUserDataStreamingService.create(getStreamingBaseUri(), listenKey, getExchangeSpecification());
+        BinanceUserDataStreamingService.create(
+            getStreamingBaseUri(), listenKey, getExchangeSpecification());
     applyStreamingSpecification(getExchangeSpecification(), userDataStreamingService);
     return userDataStreamingService
         .connect()
@@ -256,7 +257,8 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
             + buildSubscriptionStreams(subscription, klineSubscription);
 
     BinanceStreamingService streamingService =
-        new BinanceStreamingService(path, subscription, klineSubscription, getExchangeSpecification());
+        new BinanceStreamingService(
+            path, subscription, klineSubscription, getExchangeSpecification());
     applyStreamingSpecification(getExchangeSpecification(), streamingService);
     return streamingService;
   }

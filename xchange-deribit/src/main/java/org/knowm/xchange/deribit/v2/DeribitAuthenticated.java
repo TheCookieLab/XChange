@@ -51,14 +51,11 @@ public interface DeribitAuthenticated {
       @HeaderParam("Authorization") ParamsDigest auth)
       throws DeribitException, IOException;
 
-  /**
-   * Retrieves a per-currency list of user account summaries
-   */
+  /** Retrieves a per-currency list of user account summaries */
   @GET
   @Path("get_account_summaries")
   DeribitResponse<DeribitAccountSummaryList> getAccountSummaries(
-      @QueryParam("extended") Boolean extended,
-      @HeaderParam("Authorization") ParamsDigest auth)
+      @QueryParam("extended") Boolean extended, @HeaderParam("Authorization") ParamsDigest auth)
       throws DeribitException, IOException;
 
   /**
@@ -448,6 +445,4 @@ public interface DeribitAuthenticated {
       @QueryParam("count") Integer count,
       @HeaderParam("Authorization") ParamsDigest auth)
       throws DeribitException, IOException;
-
-
 }

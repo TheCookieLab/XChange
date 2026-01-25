@@ -17,11 +17,11 @@ import lombok.extern.jackson.Jacksonized;
     visible = true,
     defaultImpl = DeribitWsNotification.class)
 @JsonSubTypes({
-    @Type(value = DeribitEventNotification.class, name = "event"),
-    @Type(value = DeribitTickerNotification.class, name = "ticker"),
-    @Type(value = DeribitTradeNotification.class, name = "trades"),
-    @Type(value = DeribitUserChangeNotification.class, name = "user.changes"),
-    @Type(value = DeribitUserTradeNotification.class, name = "user.trades"),
+  @Type(value = DeribitEventNotification.class, name = "event"),
+  @Type(value = DeribitTickerNotification.class, name = "ticker"),
+  @Type(value = DeribitTradeNotification.class, name = "trades"),
+  @Type(value = DeribitUserChangeNotification.class, name = "user.changes"),
+  @Type(value = DeribitUserTradeNotification.class, name = "user.trades"),
 })
 @Data
 @SuperBuilder(toBuilder = true)

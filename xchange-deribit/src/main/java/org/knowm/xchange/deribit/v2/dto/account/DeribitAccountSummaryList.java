@@ -9,5 +9,4 @@ public class DeribitAccountSummaryList {
 
   @JsonProperty("summaries")
   private List<DeribitAccountSummary> accountSummaries;
-
 }

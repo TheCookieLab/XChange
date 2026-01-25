@@ -45,7 +45,8 @@ class DeribitAccountServiceTest extends DeribitExchangeWiremock {
     FundingRecord expectedDeposit =
         FundingRecord.builder()
             .internalId("6539450")
-            .blockchainTransactionHash("0xa5aee397bc7d0005519f8cd24b29779b0637dfa298567a8a5b8b38ac14293e03")
+            .blockchainTransactionHash(
+                "0xa5aee397bc7d0005519f8cd24b29779b0637dfa298567a8a5b8b38ac14293e03")
             .date(Date.from(Instant.parse("2025-11-16T23:10:00.124Z")))
             .address("0x1c5a37bc3670026367d38108777c94e5fdaf7a7c")
             .addressTag("")
@@ -71,6 +72,4 @@ class DeribitAccountServiceTest extends DeribitExchangeWiremock {
             .build();
     assertThat(actual.get(4)).usingRecursiveComparison().isEqualTo(expectedTransfer);
   }
-
-
 }

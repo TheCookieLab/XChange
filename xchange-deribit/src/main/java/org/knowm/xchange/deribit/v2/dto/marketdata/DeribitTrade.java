@@ -65,5 +65,4 @@ public class DeribitTrade {
    */
   @JsonProperty("amount")
   private BigDecimal amount;
-
 }

@@ -122,8 +122,7 @@ public class DeribitTransactionLog {
   public DeribitTransactionLog(@JsonProperty("info") Object infoObject) {
     if (infoObject instanceof Map) {
       infoMap = (Map<String, Object>) infoObject;
-    }
-    else if (infoObject instanceof String) {
+    } else if (infoObject instanceof String) {
       infoString = (String) infoObject;
     }
   }
@@ -176,12 +175,9 @@ public class DeribitTransactionLog {
 
     @JsonEnumDefaultValue
     UNKNOWN
-
   }
 
-
   public enum Side {
-
     @JsonProperty("short")
     SHORT,
 
@@ -211,6 +207,4 @@ public class DeribitTransactionLog {
     @JsonProperty("maker")
     MAKER
   }
-
-
 }

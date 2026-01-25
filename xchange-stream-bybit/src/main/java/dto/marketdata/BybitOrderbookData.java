@@ -19,7 +19,6 @@ public class BybitOrderbookData {
   // in docs says than it is Integer, but in fact, we get in response bigger numbers
   private final long seq;
 
-
   @ConstructorProperties({"s", "b", "a", "u", "seq"})
   public BybitOrderbookData(
       String symbolName,

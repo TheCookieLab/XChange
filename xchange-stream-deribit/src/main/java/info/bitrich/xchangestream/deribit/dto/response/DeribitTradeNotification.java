@@ -78,6 +78,5 @@ public class DeribitTradeNotification extends DeribitWsNotification<List<TradeDa
 
     @JsonProperty("trade_seq")
     Integer tradeSeq;
-
   }
 }

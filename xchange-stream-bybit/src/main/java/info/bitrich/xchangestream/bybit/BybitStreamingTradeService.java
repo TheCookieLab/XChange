@@ -178,33 +178,35 @@ public class BybitStreamingTradeService extends BybitBaseService implements Stre
 
   public Single<List<Integer>> batchCancelOrder(List<CancelOrderParams> params) {
     List<BybitCancelOrderParams> bybitParams = new ArrayList<>();
-    params.forEach(d->bybitParams.add((BybitCancelOrderParams) d));
+    params.forEach(d -> bybitParams.add((BybitCancelOrderParams) d));
     BybitCategory category = BybitAdapters.getCategory(bybitParams.get(0).getInstrument());
     try {
-    Observable<List<Integer>> observable = userTradeService
-          .subscribeChannel(
-              BybitUserTradeStreamingService.BATCH_ORDER_CANCEL,
-              mapper.writeValueAsString(bybitParams.toArray(new BybitCancelOrderParams[0])),
-                      String.valueOf(System.nanoTime()), category)
-          .flatMap(
-              node -> {
-                BybitStreamOrderResponse response =
-                    mapper.treeToValue(node, BybitStreamOrderResponse.class);
-                if (response.getRetCode() == 0) {
-                  List<Integer> list = new ArrayList<>();
-                  response
-                      .getRetExtInfo()
-                      .getList()
-                      .forEach(retExtInfo -> list.add(Integer.valueOf(retExtInfo.getCode())));
-                  return Observable.just(list);
-                } else {
-                  return Observable.just(List.of(response.getRetCode()));
-                }
-              });
-    return observable
-        .firstElement()
-        .compose(RateLimiterOperator.of(getBatchCancelOrderRateLimiter(category)))
-        .toSingle();
+      Observable<List<Integer>> observable =
+          userTradeService
+              .subscribeChannel(
+                  BybitUserTradeStreamingService.BATCH_ORDER_CANCEL,
+                  mapper.writeValueAsString(bybitParams.toArray(new BybitCancelOrderParams[0])),
+                  String.valueOf(System.nanoTime()),
+                  category)
+              .flatMap(
+                  node -> {
+                    BybitStreamOrderResponse response =
+                        mapper.treeToValue(node, BybitStreamOrderResponse.class);
+                    if (response.getRetCode() == 0) {
+                      List<Integer> list = new ArrayList<>();
+                      response
+                          .getRetExtInfo()
+                          .getList()
+                          .forEach(retExtInfo -> list.add(Integer.valueOf(retExtInfo.getCode())));
+                      return Observable.just(list);
+                    } else {
+                      return Observable.just(List.of(response.getRetCode()));
+                    }
+                  });
+      return observable
+          .firstElement()
+          .compose(RateLimiterOperator.of(getBatchCancelOrderRateLimiter(category)))
+          .toSingle();
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }

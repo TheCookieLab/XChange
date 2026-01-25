@@ -47,7 +47,6 @@ public class DeribitTransfer {
   @JsonProperty("updated_timestamp")
   private Instant updatedAt;
 
-
   public enum State {
     @JsonProperty("prepared")
     PREPARED,
@@ -92,5 +91,4 @@ public class DeribitTransfer {
     @JsonEnumDefaultValue
     UNKNOWN
   }
-
 }
