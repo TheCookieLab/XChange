@@ -1,7 +1,14 @@
 package info.bitrich.xchangestream.okex;
 
+import static info.bitrich.xchangestream.okex.Utils.getMinAmount;
+import static org.knowm.xchange.dto.Order.OrderType.BID;
+
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.rxjava3.disposables.Disposable;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -19,14 +26,6 @@ import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
-import static info.bitrich.xchangestream.okex.Utils.getMinAmount;
-import static org.knowm.xchange.dto.Order.OrderType.BID;
 
 @Ignore
 public class OkexWebsocketTradeTest {
@@ -80,104 +79,104 @@ public class OkexWebsocketTradeTest {
     }
   }
 
-    @Test
-    public void websocketFuturesTradeTest() throws IOException, InterruptedException {
-        tradeTest(new FuturesContract("SOL/USDT/SWAP"));
-    }
-
-    @Test
-    public void websocketSpotTradeTest() throws IOException, InterruptedException {
-        tradeTest(new CurrencyPair("SOL/USDT"));
-    }
-
-  private void tradeTest(Instrument instrument) throws IOException, InterruptedException {
-      OkexStreamingTradeService tradeService =
-              (OkexStreamingTradeService) exchange.getStreamingTradeService();
-      Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
-      BigDecimal minAmount =
-              exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
-      BigDecimal amount =
-              getMinAmount(
-                      new BigDecimal("10"),
-                      minAmount,
-                      ticker,
-                      exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
-      String limitOrderUserId = RandomStringUtils.randomAlphanumeric(20);
-      LimitOrder limitOrder =
-              new LimitOrder.Builder(BID, instrument)
-                      .limitPrice(ticker.getLow())
-                      .originalAmount(amount)
-                      .userReference(limitOrderUserId)
-                      .build();
-      Disposable placeLimitOrderDisposable =
-              tradeService
-                      .placeLimitOrder(limitOrder)
-                      .subscribe(
-                              result -> {
-                                  if (logOutput) {
-                                      LOG.info("placeLimitOrder result: {}", result.toString());
-                                  }
-                              },
-                              throwable -> LOG.error("placeLimitOrder error", throwable));
-      Thread.sleep(1000);
-      if (logOutput) {
-          LOG.info("placeLimitOrderDisposable disposed: {}", placeLimitOrderDisposable.isDisposed());
-      }
-      LimitOrder limitOrderChange =
-              new LimitOrder.Builder(BID, instrument)
-                      .limitPrice(ticker.getLow().add(BigDecimal.ONE.negate()))
-                      .userReference(limitOrderUserId)
-                      .originalAmount(amount)
-                      .build();
-      Disposable placeLimitOrderChangeDisposable =
-              tradeService
-                      .changeOrder(limitOrderChange)
-                      .subscribe(
-                              result -> {
-                                  if (logOutput) {
-                                      LOG.info("changeOrder result: {}", result.toString());
-                                  }
-                              },
-                              throwable -> LOG.error("changeOrder error", throwable));
-      Thread.sleep(1000);
-      if (logOutput) {
-          LOG.info("changeOrder disposed: {}", placeLimitOrderChangeDisposable.isDisposed());
-      }
-      CancelOrderParams params = new OkexTradeParams.OkexCancelOrderParams(instrument, null,limitOrderUserId);
-      Disposable cancelOrderDisposable =
-              tradeService
-                      .cancelOrder(params)
-                      .subscribe(
-                              result -> {
-                                  if (logOutput) {
-                                      LOG.info("cancelOrder result: {}", result.toString());
-                                  }
-                              },
-                              throwable -> LOG.error("cancelOrder error", throwable));
-      Thread.sleep(1000);
-      if (logOutput) {
-          LOG.info("cancelOrderDisposable disposed: {}", cancelOrderDisposable.isDisposed());
-      }
-      String marketOrderUserId = RandomStringUtils.randomAlphanumeric(20);
-      MarketOrder marketOrder =
-              new MarketOrder.Builder(BID, instrument)
-                      .userReference(marketOrderUserId)
-                      .originalAmount(amount)
-                      .build();
-      Disposable marketOrderDisposable =
-              tradeService
-                      .placeMarketOrder(marketOrder)
-                      .subscribe(
-                              result -> {
-                                  if (logOutput) {
-                                      LOG.info("marketOrder result: {}", result.toString());
-                                  }
-                              },
-                              throwable -> LOG.error("marketOrder error", throwable));
-      Thread.sleep(1000);
-      if (logOutput) {
-          LOG.info("marketOrderDisposable disposed: {}", marketOrderDisposable.isDisposed());
-      }
+  @Test
+  public void websocketFuturesTradeTest() throws IOException, InterruptedException {
+    tradeTest(new FuturesContract("SOL/USDT/SWAP"));
   }
 
+  @Test
+  public void websocketSpotTradeTest() throws IOException, InterruptedException {
+    tradeTest(new CurrencyPair("SOL/USDT"));
+  }
+
+  private void tradeTest(Instrument instrument) throws IOException, InterruptedException {
+    OkexStreamingTradeService tradeService =
+        (OkexStreamingTradeService) exchange.getStreamingTradeService();
+    Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
+    BigDecimal minAmount =
+        exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
+    BigDecimal amount =
+        getMinAmount(
+            new BigDecimal("10"),
+            minAmount,
+            ticker,
+            exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
+    String limitOrderUserId = RandomStringUtils.randomAlphanumeric(20);
+    LimitOrder limitOrder =
+        new LimitOrder.Builder(BID, instrument)
+            .limitPrice(ticker.getLow())
+            .originalAmount(amount)
+            .userReference(limitOrderUserId)
+            .build();
+    Disposable placeLimitOrderDisposable =
+        tradeService
+            .placeLimitOrder(limitOrder)
+            .subscribe(
+                result -> {
+                  if (logOutput) {
+                    LOG.info("placeLimitOrder result: {}", result.toString());
+                  }
+                },
+                throwable -> LOG.error("placeLimitOrder error", throwable));
+    Thread.sleep(1000);
+    if (logOutput) {
+      LOG.info("placeLimitOrderDisposable disposed: {}", placeLimitOrderDisposable.isDisposed());
+    }
+    LimitOrder limitOrderChange =
+        new LimitOrder.Builder(BID, instrument)
+            .limitPrice(ticker.getLow().add(BigDecimal.ONE.negate()))
+            .userReference(limitOrderUserId)
+            .originalAmount(amount)
+            .build();
+    Disposable placeLimitOrderChangeDisposable =
+        tradeService
+            .changeOrder(limitOrderChange)
+            .subscribe(
+                result -> {
+                  if (logOutput) {
+                    LOG.info("changeOrder result: {}", result.toString());
+                  }
+                },
+                throwable -> LOG.error("changeOrder error", throwable));
+    Thread.sleep(1000);
+    if (logOutput) {
+      LOG.info("changeOrder disposed: {}", placeLimitOrderChangeDisposable.isDisposed());
+    }
+    CancelOrderParams params =
+        new OkexTradeParams.OkexCancelOrderParams(instrument, null, limitOrderUserId);
+    Disposable cancelOrderDisposable =
+        tradeService
+            .cancelOrder(params)
+            .subscribe(
+                result -> {
+                  if (logOutput) {
+                    LOG.info("cancelOrder result: {}", result.toString());
+                  }
+                },
+                throwable -> LOG.error("cancelOrder error", throwable));
+    Thread.sleep(1000);
+    if (logOutput) {
+      LOG.info("cancelOrderDisposable disposed: {}", cancelOrderDisposable.isDisposed());
+    }
+    String marketOrderUserId = RandomStringUtils.randomAlphanumeric(20);
+    MarketOrder marketOrder =
+        new MarketOrder.Builder(BID, instrument)
+            .userReference(marketOrderUserId)
+            .originalAmount(amount)
+            .build();
+    Disposable marketOrderDisposable =
+        tradeService
+            .placeMarketOrder(marketOrder)
+            .subscribe(
+                result -> {
+                  if (logOutput) {
+                    LOG.info("marketOrder result: {}", result.toString());
+                  }
+                },
+                throwable -> LOG.error("marketOrder error", throwable));
+    Thread.sleep(1000);
+    if (logOutput) {
+      LOG.info("marketOrderDisposable disposed: {}", marketOrderDisposable.isDisposed());
+    }
+  }
 }
