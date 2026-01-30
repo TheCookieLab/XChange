@@ -22,14 +22,10 @@ import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
-import org.junit.jupiter.api.condition.DisabledOnJre;
-import org.junit.jupiter.api.condition.JRE;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-// Disabled on JDK 21+ due to ByteBuddy/Mockito incompatibility
-@DisabledOnJre({JRE.JAVA_21, JRE.JAVA_22, JRE.OTHER})
 class GateioStreamingMarketDataServiceTest {
 
   @Mock GateioStreamingService gateioStreamingService;

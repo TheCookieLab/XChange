@@ -26,14 +26,10 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.UserTrade;
-import org.junit.jupiter.api.condition.DisabledOnJre;
-import org.junit.jupiter.api.condition.JRE;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-// Disabled on JDK 21+ due to ByteBuddy/Mockito incompatibility
-@DisabledOnJre({JRE.JAVA_21, JRE.JAVA_22, JRE.OTHER})
 class BitmexStreamingTradeServiceTest {
 
   @Mock BitmexStreamingService bitmexStreamingService;
