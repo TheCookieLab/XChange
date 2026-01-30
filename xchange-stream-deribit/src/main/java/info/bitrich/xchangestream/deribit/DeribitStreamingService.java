@@ -25,24 +25,26 @@ public class DeribitStreamingService extends NettyStreamingService<DeribitWsNoti
 
   @Override
   protected String getChannelNameFromMessage(DeribitWsNotification message) {
-      return message.getParams().getChannel();
+    return message.getParams().getChannel();
   }
 
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
-    var deribitWsRequest = DeribitWsRequest.builder()
-        .method(Method.SUBSCRIBE)
-        .params(Params.builder().channels(List.of(channelName)).build())
-        .build();
+    var deribitWsRequest =
+        DeribitWsRequest.builder()
+            .method(Method.SUBSCRIBE)
+            .params(Params.builder().channels(List.of(channelName)).build())
+            .build();
     return objectMapper.writeValueAsString(deribitWsRequest);
   }
 
   @Override
   public String getUnsubscribeMessage(String channelName, Object... args) throws IOException {
-    var deribitWsRequest = DeribitWsRequest.builder()
-        .method(Method.UNSUBSCRIBE)
-        .params(Params.builder().channels(List.of(channelName)).build())
-        .build();
+    var deribitWsRequest =
+        DeribitWsRequest.builder()
+            .method(Method.UNSUBSCRIBE)
+            .params(Params.builder().channels(List.of(channelName)).build())
+            .build();
     return objectMapper.writeValueAsString(deribitWsRequest);
   }
 
@@ -94,11 +96,14 @@ public class DeribitStreamingService extends NettyStreamingService<DeribitWsNoti
       handleMessage(deribitWsNotification);
     } else {
       // process several payloads separately
-      ((List) deribitWsNotification.getParams().getData()).stream().forEach(payload -> {
-        var singleNotification = deribitWsNotification.toBuilder().build();
-        singleNotification.getParams().setData(List.of(payload));
-        handleMessage(singleNotification);
-      });
+      ((List) deribitWsNotification.getParams().getData())
+          .stream()
+              .forEach(
+                  payload -> {
+                    var singleNotification = deribitWsNotification.toBuilder().build();
+                    singleNotification.getParams().setData(List.of(payload));
+                    handleMessage(singleNotification);
+                  });
     }
   }
 }

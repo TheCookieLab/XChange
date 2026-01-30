@@ -1,6 +1,9 @@
 package info.bitrich.xchangestream.binance;
 
 import static info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderCancelAndReplacePayload.CancelReplaceMode.STOP_ON_FAILURE;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,6 +28,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.Security;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.regex.Pattern;
 import lombok.Getter;
@@ -34,6 +38,7 @@ import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.signers.Ed25519Signer;
 import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.dto.BinanceException;
 import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
@@ -52,13 +57,21 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   private final String privateKey;
   CompositeDisposable compositeDisposable = new CompositeDisposable();
   Charset charSet = StandardCharsets.UTF_8;
-  @Getter
-  private boolean authorized = false;
+  @Getter private boolean authorized = false;
   private String signature = "";
   private Disposable loginDisposable;
 
-  public BinanceUserTradeStreamingService(String apiUrl, String apiKey, String privateKey) {
-    super(apiUrl);
+  public BinanceUserTradeStreamingService(
+      String apiUrl,
+      String apiKey,
+      String privateKey,
+      ExchangeSpecification exchangeSpecification) {
+    super(
+        apiUrl,
+        65536,
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
+        (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.apiKey = apiKey;
     this.privateKey = privateKey;
   }
@@ -100,8 +113,7 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
             .flatMap(
                 node -> {
                   TypeReference<BinanceWebsocketOrderResponse<BinanceWebsocketLoginResponse>>
-                      typeReference = new TypeReference<>() {
-                  };
+                      typeReference = new TypeReference<>() {};
                   BinanceWebsocketOrderResponse<BinanceWebsocketLoginResponse> response =
                       mapper.treeToValue(node, typeReference);
                   if (response.getStatus() == 200) {
@@ -157,90 +169,95 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
     String method = args[0].toString();
     switch (method) {
-      case "session.logon": { // login
-        long timestamp = System.currentTimeMillis();
-        try {
-          String loginPayload = "apiKey=" + apiKey + "&timestamp=" + timestamp;
-          signature = signPayload(loginPayload);
-          BinanceWebsocketLoginPayloadWithSignature loginPayloadWithSignature =
-              new BinanceWebsocketLoginPayloadWithSignature(apiKey, signature, timestamp);
-          BinanceWebsocketPayload<BinanceWebsocketLoginPayloadWithSignature> payload =
-              new BinanceWebsocketPayload<>(
-                  channelName, "session.logon", loginPayloadWithSignature);
+      case "session.logon":
+        { // login
+          long timestamp = System.currentTimeMillis();
+          try {
+            String loginPayload = "apiKey=" + apiKey + "&timestamp=" + timestamp;
+            signature = signPayload(loginPayload);
+            BinanceWebsocketLoginPayloadWithSignature loginPayloadWithSignature =
+                new BinanceWebsocketLoginPayloadWithSignature(apiKey, signature, timestamp);
+            BinanceWebsocketPayload<BinanceWebsocketLoginPayloadWithSignature> payload =
+                new BinanceWebsocketPayload<>(
+                    channelName, "session.logon", loginPayloadWithSignature);
+            return objectMapper.writeValueAsString(payload);
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      case "order.place":
+        {
+          BinanceWebsocketPlaceOrderPayload orderPayload = null;
+          if (args[1] instanceof MarketOrder) {
+            MarketOrder marketOrder = (MarketOrder) args[1];
+            orderPayload = BinanceStreamingAdapters.adaptPlaceOrder(marketOrder);
+          } else if (args[1] instanceof LimitOrder) {
+            LimitOrder limitOrder = (LimitOrder) args[1];
+            orderPayload = BinanceStreamingAdapters.adaptPlaceOrder(limitOrder);
+          }
+          assert orderPayload != null;
+          BinanceWebsocketPayload<BinanceWebsocketPlaceOrderPayload> payload =
+              new BinanceWebsocketPayload<>(channelName, method, orderPayload);
           return objectMapper.writeValueAsString(payload);
-        } catch (Exception e) {
-          throw new RuntimeException(e);
         }
-      }
-      case "order.place": {
-        BinanceWebsocketPlaceOrderPayload orderPayload = null;
-        if (args[1] instanceof MarketOrder) {
-          MarketOrder marketOrder = (MarketOrder) args[1];
-          orderPayload = BinanceStreamingAdapters.adaptPlaceOrder(marketOrder);
-        } else if (args[1] instanceof LimitOrder) {
+      case "order.modify":
+        {
           LimitOrder limitOrder = (LimitOrder) args[1];
-          orderPayload = BinanceStreamingAdapters.adaptPlaceOrder(limitOrder);
+          BinanceWebsocketOrderAmendPayload amendOrderPayload =
+              BinanceStreamingAdapters.adaptAmendOrder(limitOrder);
+          assert amendOrderPayload != null;
+          BinanceWebsocketPayload<BinanceWebsocketOrderAmendPayload> payload =
+              new BinanceWebsocketPayload<>(channelName, method, amendOrderPayload);
+          return objectMapper.writeValueAsString(payload);
         }
-        assert orderPayload != null;
-        BinanceWebsocketPayload<BinanceWebsocketPlaceOrderPayload> payload =
-            new BinanceWebsocketPayload<>(channelName, method, orderPayload);
-        return objectMapper.writeValueAsString(payload);
-      }
-      case "order.modify": {
-        LimitOrder limitOrder = (LimitOrder) args[1];
-        BinanceWebsocketOrderAmendPayload amendOrderPayload =
-            BinanceStreamingAdapters.adaptAmendOrder(limitOrder);
-        assert amendOrderPayload != null;
-        BinanceWebsocketPayload<BinanceWebsocketOrderAmendPayload> payload =
-            new BinanceWebsocketPayload<>(channelName, method, amendOrderPayload);
-        return objectMapper.writeValueAsString(payload);
-      }
-      case "order.cancel": {
-        BinanceCancelOrderParams params = (BinanceCancelOrderParams) args[1];
-        Long orderId = null;
-        if (params.getOrderId() != null && !params.getOrderId().isEmpty()) {
-          orderId = Long.valueOf(params.getOrderId());
+      case "order.cancel":
+        {
+          BinanceCancelOrderParams params = (BinanceCancelOrderParams) args[1];
+          Long orderId = null;
+          if (params.getOrderId() != null && !params.getOrderId().isEmpty()) {
+            orderId = Long.valueOf(params.getOrderId());
+          }
+          BinanceWebsocketOrderCancelPayload cancelOrderPayload =
+              BinanceWebsocketOrderCancelPayload.builder()
+                  .symbol(BinanceAdapters.toSymbol(params.getInstrument()))
+                  .orderId(orderId)
+                  .origClientOrderId(params.getUserReference())
+                  .newClientOrderId(params.getUserReference())
+                  .timestamp(System.currentTimeMillis())
+                  .build();
+          BinanceWebsocketPayload<BinanceWebsocketOrderCancelPayload> payload =
+              new BinanceWebsocketPayload<>(channelName, method, cancelOrderPayload);
+          return objectMapper.writeValueAsString(payload);
         }
-        BinanceWebsocketOrderCancelPayload cancelOrderPayload =
-            BinanceWebsocketOrderCancelPayload.builder()
-                .symbol(BinanceAdapters.toSymbol(params.getInstrument()))
-                .orderId(orderId)
-                .origClientOrderId(params.getUserReference())
-                .newClientOrderId(params.getUserReference())
-                .timestamp(System.currentTimeMillis())
-                .build();
-        BinanceWebsocketPayload<BinanceWebsocketOrderCancelPayload> payload =
-            new BinanceWebsocketPayload<>(channelName, method, cancelOrderPayload);
-        return objectMapper.writeValueAsString(payload);
-      }
-      case "order.cancelReplace": {
-        LimitOrder limitOrder = (LimitOrder) args[1];
-        BinanceCancelOrderParams params = (BinanceCancelOrderParams) args[2];
-        Long cancelOrderId = null;
-        if (params.getOrderId() != null && !params.getOrderId().isEmpty()) {
-          cancelOrderId = Long.valueOf(params.getOrderId());
+      case "order.cancelReplace":
+        {
+          LimitOrder limitOrder = (LimitOrder) args[1];
+          BinanceCancelOrderParams params = (BinanceCancelOrderParams) args[2];
+          Long cancelOrderId = null;
+          if (params.getOrderId() != null && !params.getOrderId().isEmpty()) {
+            cancelOrderId = Long.valueOf(params.getOrderId());
+          }
+          TimeInForce tif =
+              BinanceAdapters.getOrderFlag(limitOrder, TimeInForce.class).orElse(TimeInForce.GTC);
+          BinanceWebsocketOrderCancelAndReplacePayload orderCancelAndReplacePayload =
+              BinanceWebsocketOrderCancelAndReplacePayload.builder()
+                  .symbol(BinanceAdapters.toSymbol(params.getInstrument()))
+                  .cancelOrderId(cancelOrderId)
+                  .cancelOrigClientOrderId(params.getUserReference())
+                  .symbol(BinanceAdapters.toSymbol(limitOrder.getInstrument()))
+                  .side(BinanceAdapters.convert(limitOrder.getType()))
+                  .newClientOrderId(limitOrder.getUserReference())
+                  .type(OrderType.LIMIT)
+                  .price(limitOrder.getLimitPrice())
+                  .quantity(limitOrder.getOriginalAmount())
+                  .timeInForce(tif)
+                  .cancelReplaceMode(STOP_ON_FAILURE)
+                  .timestamp(System.currentTimeMillis())
+                  .build();
+          BinanceWebsocketPayload<BinanceWebsocketOrderCancelAndReplacePayload> payload =
+              new BinanceWebsocketPayload<>(channelName, method, orderCancelAndReplacePayload);
+          return objectMapper.writeValueAsString(payload);
         }
-        TimeInForce tif =
-            BinanceAdapters.getOrderFlag(limitOrder, TimeInForce.class).orElse(TimeInForce.GTC);
-        BinanceWebsocketOrderCancelAndReplacePayload orderCancelAndReplacePayload =
-            BinanceWebsocketOrderCancelAndReplacePayload.builder()
-                .symbol(BinanceAdapters.toSymbol(params.getInstrument()))
-                .cancelOrderId(cancelOrderId)
-                .cancelOrigClientOrderId(params.getUserReference())
-                .symbol(BinanceAdapters.toSymbol(limitOrder.getInstrument()))
-                .side(BinanceAdapters.convert(limitOrder.getType()))
-                .newClientOrderId(limitOrder.getUserReference())
-                .type(OrderType.LIMIT)
-                .price(limitOrder.getLimitPrice())
-                .quantity(limitOrder.getOriginalAmount())
-                .timeInForce(tif)
-                .cancelReplaceMode(STOP_ON_FAILURE)
-                .timestamp(System.currentTimeMillis())
-                .build();
-        BinanceWebsocketPayload<BinanceWebsocketOrderCancelAndReplacePayload> payload =
-            new BinanceWebsocketPayload<>(channelName, method, orderCancelAndReplacePayload);
-        return objectMapper.writeValueAsString(payload);
-      }
       default:
         return null;
     }

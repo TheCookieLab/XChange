@@ -140,7 +140,6 @@ public class DeribitUserTradeNotification extends DeribitWsNotification<List<Use
     @JsonProperty("instrument_name")
     String instrumentName;
 
-
     public enum OrderType {
       @JsonProperty("limit")
       LIMIT,
@@ -184,8 +183,6 @@ public class DeribitUserTradeNotification extends DeribitWsNotification<List<Use
 
       @JsonProperty("name")
       String name;
-
     }
-
   }
 }

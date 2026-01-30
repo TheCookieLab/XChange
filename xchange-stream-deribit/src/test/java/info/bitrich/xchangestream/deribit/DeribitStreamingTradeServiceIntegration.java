@@ -27,14 +27,16 @@ public class DeribitStreamingTradeServiceIntegration extends DeribitStreamingExc
 
   @Test
   void user_trades_single_instrument() {
-    Observable<UserTrade> observable = exchange.getStreamingTradeService().getUserTrades(new CurrencyPair("BTC/USDC"));
+    Observable<UserTrade> observable =
+        exchange.getStreamingTradeService().getUserTrades(new CurrencyPair("BTC/USDC"));
 
     TestObserver<UserTrade> testObserver = observable.test();
 
-    List<UserTrade> userTrades = testObserver
-//        .awaitDone(50, TimeUnit.SECONDS)
-        .awaitCount(1)
-        .values();
+    List<UserTrade> userTrades =
+        testObserver
+            //        .awaitDone(50, TimeUnit.SECONDS)
+            .awaitCount(1)
+            .values();
 
     testObserver.dispose();
 
@@ -50,14 +52,14 @@ public class DeribitStreamingTradeServiceIntegration extends DeribitStreamingExc
   @Test
   void position_changes() {
     Observable<OpenPosition> observable =
-        exchange.getStreamingTradeService().getPositionChanges(new FuturesContract(new CurrencyPair("BTC/USDC"), "PERPETUAL"));
+        exchange
+            .getStreamingTradeService()
+            .getPositionChanges(new FuturesContract(new CurrencyPair("BTC/USDC"), "PERPETUAL"));
 
     TestObserver<OpenPosition> testObserver = observable.test();
 
-    List<OpenPosition> positionChanges = testObserver
-        .awaitDone(5, TimeUnit.SECONDS)
-        .awaitCount(1)
-        .values();
+    List<OpenPosition> positionChanges =
+        testObserver.awaitDone(5, TimeUnit.SECONDS).awaitCount(1).values();
 
     testObserver.dispose();
 
@@ -65,7 +67,7 @@ public class DeribitStreamingTradeServiceIntegration extends DeribitStreamingExc
 
     assumeThat(positionChanges).overridingErrorMessage("Received nothing").isNotEmpty();
 
-    assertThat(positionChanges.get(0).getInstrument()).isEqualTo(new FuturesContract(new CurrencyPair("BTC/USDC"), "PERPETUAL"));
+    assertThat(positionChanges.get(0).getInstrument())
+        .isEqualTo(new FuturesContract(new CurrencyPair("BTC/USDC"), "PERPETUAL"));
   }
-
 }

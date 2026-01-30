@@ -17,7 +17,10 @@ public class BybitOrderMessage<T> {
 
   @Getter
   @AllArgsConstructor
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY, getterVisibility = Visibility.NONE, setterVisibility = Visibility.NONE)
+  @JsonAutoDetect(
+      fieldVisibility = Visibility.ANY,
+      getterVisibility = Visibility.NONE,
+      setterVisibility = Visibility.NONE)
   public static class BybitHeader {
 
     @JsonProperty("X-BAPI-TIMESTAMP")
@@ -28,6 +31,5 @@ public class BybitOrderMessage<T> {
 
     @JsonProperty("Referer")
     private String referer;
-
   }
 }

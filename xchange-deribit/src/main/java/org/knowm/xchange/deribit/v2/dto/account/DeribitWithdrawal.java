@@ -54,5 +54,4 @@ public class DeribitWithdrawal {
 
   @JsonProperty("confirmed_timestamp")
   private Instant confirmedAt;
-
 }

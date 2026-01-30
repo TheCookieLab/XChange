@@ -17,9 +17,10 @@ import org.knowm.xchange.deribit.v2.dto.account.DeribitTransfer.Type;
 import org.knowm.xchange.deribit.v2.dto.account.DeribitWithdrawal;
 import org.knowm.xchange.dto.account.FundingRecord.Status;
 
-class DeribitAccountServiceRawTest  extends DeribitExchangeWiremock {
+class DeribitAccountServiceRawTest extends DeribitExchangeWiremock {
 
-  DeribitAccountServiceRaw deribitAccountServiceRaw = (DeribitAccountServiceRaw) exchange.getAccountService();
+  DeribitAccountServiceRaw deribitAccountServiceRaw =
+      (DeribitAccountServiceRaw) exchange.getAccountService();
 
   @Test
   void valid_deposits() throws IOException {
@@ -87,5 +88,4 @@ class DeribitAccountServiceRawTest  extends DeribitExchangeWiremock {
     assertThat(actual).hasSize(1);
     assertThat(actual).first().usingRecursiveComparison().isEqualTo(expected);
   }
-
 }

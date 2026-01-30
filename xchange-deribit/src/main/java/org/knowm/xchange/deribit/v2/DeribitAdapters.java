@@ -68,7 +68,6 @@ public class DeribitAdapters {
     INSTRUMENT_TO_SYMBOL.put(instrument, symbol);
   }
 
-
   public Ticker adaptTicker(DeribitTicker deribitTicker) {
     return new Ticker.Builder()
         .instrument(toInstrument(deribitTicker.getInstrumentName()))
@@ -147,7 +146,8 @@ public class DeribitAdapters {
     } else if (deribitOrder.getOrderType().equals(OrderType.limit)) {
       builder = new LimitOrder.Builder(type, instrument).limitPrice(deribitOrder.getPrice());
     } else {
-      throw new ExchangeException("Unsupported deribitOrder type: \"" + deribitOrder.getOrderType() + "\"");
+      throw new ExchangeException(
+          "Unsupported deribitOrder type: \"" + deribitOrder.getOrderType() + "\"");
     }
     builder
         .orderStatus(adaptOrderStatus(deribitOrder.getOrderState()))
@@ -206,11 +206,17 @@ public class DeribitAdapters {
   }
 
   public Balance adapt(DeribitAccountSummary deribitAccountSummary) {
-    return new Balance(deribitAccountSummary.getCurrency(), deribitAccountSummary.getBalance(), deribitAccountSummary.getAvailableFunds());
+    return new Balance(
+        deribitAccountSummary.getCurrency(),
+        deribitAccountSummary.getBalance(),
+        deribitAccountSummary.getAvailableFunds());
   }
 
   public OpenPosition adapt(DeribitPosition deribitPosition) {
-    var size = deribitPosition.getSizeCurrency() != null ? deribitPosition.getSizeCurrency() : deribitPosition.getSize();
+    var size =
+        deribitPosition.getSizeCurrency() != null
+            ? deribitPosition.getSizeCurrency()
+            : deribitPosition.getSize();
     return OpenPosition.builder()
         .instrument(toInstrument(deribitPosition.getInstrumentName()))
         .type(deribitPosition.getPositionType())
@@ -267,7 +273,9 @@ public class DeribitAdapters {
       return null;
     }
 
-    var currencyPair = new CurrencyPair(deribitInstrument.getBaseCurrency(), deribitInstrument.getCounterCurrency());
+    var currencyPair =
+        new CurrencyPair(
+            deribitInstrument.getBaseCurrency(), deribitInstrument.getCounterCurrency());
     if (deribitInstrument.getKind() == Kind.SPOT) {
       return currencyPair;
     }
@@ -278,7 +286,11 @@ public class DeribitAdapters {
     }
 
     if (deribitInstrument.getKind() == Kind.OPTIONS) {
-      return new OptionsContract(currencyPair, deribitInstrument.getExpirationTimestamp(), deribitInstrument.getStrike(), deribitInstrument.getOptionType());
+      return new OptionsContract(
+          currencyPair,
+          deribitInstrument.getExpirationTimestamp(),
+          deribitInstrument.getStrike(),
+          deribitInstrument.getOptionType());
     }
 
     return null;
@@ -290,7 +302,9 @@ public class DeribitAdapters {
         .addressTag(deribitTransactionLog.getAddressTag())
         .date(toDate(deribitTransactionLog.getTimestamp()))
         .currency(deribitTransactionLog.getCurrency())
-        .amount(Optional.ofNullable(deribitTransactionLog.getAmount()).orElse(deribitTransactionLog.getChange()))
+        .amount(
+            Optional.ofNullable(deribitTransactionLog.getAmount())
+                .orElse(deribitTransactionLog.getChange()))
         .internalId(deribitTransactionLog.getId())
         .blockchainTransactionHash(deribitTransactionLog.getBlockchainTransactionHash())
         .type(toFundingRecordType(deribitTransactionLog))
@@ -315,11 +329,12 @@ public class DeribitAdapters {
         return Type.INTERNAL_SUB_ACCOUNT_TRANSFER;
       default:
         if (deribitTransactionLog.getChange() != null) {
-          return deribitTransactionLog.getChange().signum() > 0 ? Type.OTHER_INFLOW : Type.OTHER_OUTFLOW;
+          return deribitTransactionLog.getChange().signum() > 0
+              ? Type.OTHER_INFLOW
+              : Type.OTHER_OUTFLOW;
         }
     }
     return null;
-
   }
 
   private UserTrade adaptUserTrade(DeribitUserTrade deribitDeribitUserTrade) {
@@ -340,5 +355,4 @@ public class DeribitAdapters {
   public Date toDate(Instant instant) {
     return Optional.ofNullable(instant).map(Date::from).orElse(null);
   }
-
 }

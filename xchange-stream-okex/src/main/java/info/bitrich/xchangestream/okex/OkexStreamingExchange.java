@@ -38,10 +38,12 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
 
   @Override
   public Completable connect(ProductSubscription... args) {
+    applyWebsocketTimeouts(this.exchangeSpecification);
     this.streamingService = new OkexStreamingService(getPublicApiUrl(), this.exchangeSpecification);
     if (isApiKeyValid()) {
       this.privateStreamingService =
           new OkexPrivateStreamingService(getPrivateApiUrl(), this.exchangeSpecification, this);
+      applyStreamingSpecification(exchangeSpecification, privateStreamingService);
     }
     this.streamingMarketDataService =
         new OkexStreamingMarketDataService(streamingService, exchangeMetaData);
@@ -72,7 +74,7 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
     if (useSandbox()) {
       apiUrl = SANDBOX_WS_PUBLIC_CHANNEL_URI;
     } else {
-      apiUrl =  WS_PUBLIC_CHANNEL_URI;
+      apiUrl = WS_PUBLIC_CHANNEL_URI;
     }
     return apiUrl;
   }

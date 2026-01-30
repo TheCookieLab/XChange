@@ -9,5 +9,4 @@ public class DeribitLogListResponse<T> {
 
   @JsonProperty("logs")
   List<T> logs;
-
 }

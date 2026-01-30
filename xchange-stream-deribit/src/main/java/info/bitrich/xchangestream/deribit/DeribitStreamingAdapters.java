@@ -51,7 +51,6 @@ public class DeribitStreamingAdapters {
       return null;
     }
 
-
     return Trade.builder()
         .type(tradeData.getOrderSide())
         .originalAmount(tradeData.getAmount())
@@ -79,15 +78,19 @@ public class DeribitStreamingAdapters {
   }
 
   public OpenPosition toOpenPosition(DeribitUserChangeNotification notification) {
-    var deribitPosition = Optional.ofNullable(notification.getParams().getData().getPositions())
-        .map(deribitPositions -> deribitPositions.get(0))
-        .orElse(null);
+    var deribitPosition =
+        Optional.ofNullable(notification.getParams().getData().getPositions())
+            .map(deribitPositions -> deribitPositions.get(0))
+            .orElse(null);
 
     if (deribitPosition == null) {
       return null;
     }
 
-    var size = deribitPosition.getSizeCurrency() != null ? deribitPosition.getSizeCurrency() : deribitPosition.getSize();
+    var size =
+        deribitPosition.getSizeCurrency() != null
+            ? deribitPosition.getSizeCurrency()
+            : deribitPosition.getSize();
     return OpenPosition.builder()
         .instrument(DeribitAdapters.toInstrument(deribitPosition.getInstrumentName()))
         .type(deribitPosition.getPositionType())
@@ -97,6 +100,4 @@ public class DeribitStreamingAdapters {
         .unRealisedPnl(deribitPosition.getFloatingProfitLoss())
         .build();
   }
-
-
 }

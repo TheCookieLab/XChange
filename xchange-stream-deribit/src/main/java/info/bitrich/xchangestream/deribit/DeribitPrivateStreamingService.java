@@ -40,12 +40,10 @@ public class DeribitPrivateStreamingService extends DeribitStreamingService {
 
   @SneakyThrows
   private void sendLoginMessage() {
-    DeribitLoginRequest deribitLoginRequest = DeribitLoginRequest.builder()
-        .params(Params.builder()
-            .clientId(apiKey)
-            .clientSecret(apiSecret)
-            .build())
-        .build();
+    DeribitLoginRequest deribitLoginRequest =
+        DeribitLoginRequest.builder()
+            .params(Params.builder().clientId(apiKey).clientSecret(apiSecret).build())
+            .build();
 
     sendMessage(objectMapper.writeValueAsString(deribitLoginRequest));
   }
@@ -53,7 +51,8 @@ public class DeribitPrivateStreamingService extends DeribitStreamingService {
   @Override
   protected void handleMessage(DeribitWsNotification message) {
     // subscribe to channels after sucessful login confirmation
-    if (message instanceof DeribitEventNotification && ((DeribitEventNotification) message).hasToken()) {
+    if (message instanceof DeribitEventNotification
+        && ((DeribitEventNotification) message).hasToken()) {
       resubscribeChannelsAfterLogin();
       return;
     }

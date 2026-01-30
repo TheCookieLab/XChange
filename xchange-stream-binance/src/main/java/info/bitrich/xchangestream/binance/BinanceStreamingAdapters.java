@@ -4,6 +4,10 @@ import info.bitrich.xchangestream.binance.dto.market.BinanceRawTrade;
 import info.bitrich.xchangestream.binance.dto.market.DepthBinanceWebSocketTransaction;
 import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderAmendPayload;
 import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketPlaceOrderPayload;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.dto.trade.OrderType;
 import org.knowm.xchange.binance.dto.trade.TimeInForce;
@@ -14,11 +18,6 @@ import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 public class BinanceStreamingAdapters {
 
@@ -93,42 +92,42 @@ public class BinanceStreamingAdapters {
   public static BinanceWebsocketPlaceOrderPayload adaptPlaceOrder(Order order) {
     boolean reduceOnly = false;
     if (order.getInstrument() instanceof FuturesContract) {
-        switch (order.getType()) {
-            case EXIT_ASK:
-            case EXIT_BID:
-                reduceOnly = true;
-                break;
-        }
-    }
-      BinanceWebsocketPlaceOrderPayload payload = null;
-      if (order instanceof LimitOrder) {
-        TimeInForce tif =
-            BinanceAdapters.getOrderFlag(order, TimeInForce.class).orElse(TimeInForce.GTC);
-        payload =
-            BinanceWebsocketPlaceOrderPayload.builder()
-                .type(OrderType.LIMIT)
-                .symbol(BinanceAdapters.toSymbol(order.getInstrument()))
-                .side(BinanceAdapters.convert(order.getType()))
-                .reduceOnly(reduceOnly ?true:null)//dont send if false(for spot)
-                .quantity(order.getOriginalAmount())
-                .price(((LimitOrder) order).getLimitPrice())
-                .timestamp(System.currentTimeMillis())
-                .timeInForce(tif)
-                .newClientOrderId(order.getUserReference())
-                .build();
-        return payload;
-      } else if (order instanceof MarketOrder) {
-        payload =
-            BinanceWebsocketPlaceOrderPayload.builder()
-                .type(OrderType.MARKET)
-                .symbol(BinanceAdapters.toSymbol(order.getInstrument()))
-                .side(BinanceAdapters.convert(order.getType()))
-                    .reduceOnly(reduceOnly ?true:null) //dont send if false(for spot)
-                .quantity(order.getOriginalAmount())
-                .timestamp(System.currentTimeMillis())
-                .newClientOrderId(order.getUserReference())
-                .build();
+      switch (order.getType()) {
+        case EXIT_ASK:
+        case EXIT_BID:
+          reduceOnly = true;
+          break;
       }
+    }
+    BinanceWebsocketPlaceOrderPayload payload = null;
+    if (order instanceof LimitOrder) {
+      TimeInForce tif =
+          BinanceAdapters.getOrderFlag(order, TimeInForce.class).orElse(TimeInForce.GTC);
+      payload =
+          BinanceWebsocketPlaceOrderPayload.builder()
+              .type(OrderType.LIMIT)
+              .symbol(BinanceAdapters.toSymbol(order.getInstrument()))
+              .side(BinanceAdapters.convert(order.getType()))
+              .reduceOnly(reduceOnly ? true : null) // dont send if false(for spot)
+              .quantity(order.getOriginalAmount())
+              .price(((LimitOrder) order).getLimitPrice())
+              .timestamp(System.currentTimeMillis())
+              .timeInForce(tif)
+              .newClientOrderId(order.getUserReference())
+              .build();
       return payload;
+    } else if (order instanceof MarketOrder) {
+      payload =
+          BinanceWebsocketPlaceOrderPayload.builder()
+              .type(OrderType.MARKET)
+              .symbol(BinanceAdapters.toSymbol(order.getInstrument()))
+              .side(BinanceAdapters.convert(order.getType()))
+              .reduceOnly(reduceOnly ? true : null) // dont send if false(for spot)
+              .quantity(order.getOriginalAmount())
+              .timestamp(System.currentTimeMillis())
+              .newClientOrderId(order.getUserReference())
+              .build();
+    }
+    return payload;
   }
 }

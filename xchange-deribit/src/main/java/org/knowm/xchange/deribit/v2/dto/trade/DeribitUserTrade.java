@@ -28,7 +28,6 @@ public class DeribitUserTrade {
   @JsonDeserialize(converter = StringToOrderTypeConverter.class)
   private Order.OrderType orderSide;
 
-
   /** User's fee in units of the specified fee_currency */
   private BigDecimal fee;
 
@@ -116,5 +115,4 @@ public class DeribitUserTrade {
   /** The sequence number of the trade within instrument */
   @JsonProperty("trade_seq")
   private long tradeSeq;
-
 }

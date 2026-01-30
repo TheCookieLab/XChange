@@ -55,7 +55,6 @@ class DeribitTradeServiceTest extends DeribitExchangeWiremock {
     assertThat(actual.getOpenOrders()).first().usingRecursiveComparison().isEqualTo(expected);
   }
 
-
   @Test
   void open_positions() throws IOException {
     var expected =
@@ -75,7 +74,6 @@ class DeribitTradeServiceTest extends DeribitExchangeWiremock {
 
     assertThat(actual.getOpenPositions()).first().usingRecursiveComparison().isEqualTo(expected);
   }
-
 
   @Test
   void place_limit_buy_order() throws IOException {
@@ -107,7 +105,7 @@ class DeribitTradeServiceTest extends DeribitExchangeWiremock {
     assertThat(orders).hasSize(1);
     assertThat(orders)
         .first()
-//        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        //        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
         .usingRecursiveComparison()
         .isEqualTo(expected);
   }
@@ -117,10 +115,7 @@ class DeribitTradeServiceTest extends DeribitExchangeWiremock {
     UserTrades userTrades =
         exchange
             .getTradeService()
-            .getTradeHistory(
-                DeribitTradeHistoryParams.builder()
-                    .currency(Currency.USDT)
-                    .build());
+            .getTradeHistory(DeribitTradeHistoryParams.builder().currency(Currency.USDT).build());
 
     assertThat(userTrades.getUserTrades()).hasSize(1);
 
@@ -138,6 +133,4 @@ class DeribitTradeServiceTest extends DeribitExchangeWiremock {
             .build();
     assertThat(userTrades.getUserTrades()).first().usingRecursiveComparison().isEqualTo(expected);
   }
-
-
 }

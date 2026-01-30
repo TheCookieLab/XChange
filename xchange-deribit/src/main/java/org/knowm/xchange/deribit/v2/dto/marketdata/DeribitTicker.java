@@ -117,5 +117,4 @@ public class DeribitTicker {
   /** Underlying price for implied volatility calculations (options only) */
   @JsonProperty("underlying_price")
   private BigDecimal underlyingPrice;
-
 }

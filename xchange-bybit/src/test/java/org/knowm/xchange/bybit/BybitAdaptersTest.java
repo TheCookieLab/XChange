@@ -56,8 +56,7 @@ public class BybitAdaptersTest {
         .isEqualTo(new FuturesContract("ETH/USDC/PERP"));
     assertThat(convertBybitSymbolToInstrument("ETH-02FEB24", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDC/02FEB24"));
-    assertThat(
-            convertBybitSymbolToInstrument("ETHUSDT-02FEB24", BybitCategory.LINEAR))
+    assertThat(convertBybitSymbolToInstrument("ETHUSDT-02FEB24", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDT/02FEB24"));
     assertThat(convertBybitSymbolToInstrument("ETHUSDH24", BybitCategory.INVERSE))
         .isEqualTo(new FuturesContract("ETH/USD/H24"));

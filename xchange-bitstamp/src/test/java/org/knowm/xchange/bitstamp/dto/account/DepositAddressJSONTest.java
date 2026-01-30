@@ -105,4 +105,16 @@ public class DepositAddressJSONTest {
     assertThat(address.getError()).isNullOrEmpty();
     assertThat(address.getDepositAddress()).isNotBlank();
   }
+
+  @Test
+  public void testMultiChainDepositResponse() throws IOException {
+    final BitstampDepositAddress address =
+        unmarshall(
+            "/org/knowm/xchange/bitstamp/dto/account/example-multichain-deposit-response.json");
+    assertThat(address.getError()).isNullOrEmpty();
+    assertThat(address.getDepositAddress()).isNotBlank();
+    assertThat(address.getMemoId()).isEqualTo("299576079");
+    assertThat(address.getDestinationTag()).isEqualTo(89473951L);
+    assertThat(address.getTransferId()).isEqualTo(89473951L);
+  }
 }

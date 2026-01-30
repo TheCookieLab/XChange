@@ -41,12 +41,16 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
   @Override
   protected void initServices() {
     super.initServices();
+    applyWebsocketTimeouts(exchangeSpecification);
     this.streamingService = new BybitStreamingService(getApiUrl(), exchangeSpecification);
+    applyStreamingSpecification(exchangeSpecification, streamingService);
     if (isApiKeyValid()) {
       this.streamingUserDataService =
           new BybitUserDataStreamingService(getApiUrlWithAuth(), exchangeSpecification);
+      applyStreamingSpecification(exchangeSpecification, streamingUserDataService);
       this.streamingUserTradeService =
           new BybitUserTradeStreamingService(getTradeApiUrlWithAuth(), exchangeSpecification);
+      applyStreamingSpecification(exchangeSpecification, streamingUserTradeService);
     }
     this.streamingMarketDataService = new BybitStreamingMarketDataService(streamingService);
     this.streamingTradeService =
@@ -72,17 +76,16 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
 
   private String getApiUrl() {
     String apiUrl;
-      if (Boolean.TRUE.equals(
-          exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX))) {
-        apiUrl = TESTNET_URI;
-      } else {
-        apiUrl = URI;
-      }
-      apiUrl +=
-          "/"
-              + ((BybitCategory)
-                      exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE))
-                  .getValue();
+    if (Boolean.TRUE.equals(exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX))) {
+      apiUrl = TESTNET_URI;
+    } else {
+      apiUrl = URI;
+    }
+    apiUrl +=
+        "/"
+            + ((BybitCategory)
+                    exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE))
+                .getValue();
     return apiUrl;
   }
 

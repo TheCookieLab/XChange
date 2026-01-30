@@ -55,7 +55,10 @@ public class DeribitMarketDataService extends DeribitMarketDataServiceRaw
 
       return deribitInstruments.stream()
           .filter(DeribitInstrument::isActive)
-          .filter( deribitInstrument -> Set.of(Kind.SPOT, Kind.OPTIONS, Kind.FUTURES).contains(deribitInstrument.getKind()))
+          .filter(
+              deribitInstrument ->
+                  Set.of(Kind.SPOT, Kind.OPTIONS, Kind.FUTURES)
+                      .contains(deribitInstrument.getKind()))
           .map(DeribitAdapters::toInstrument)
           .distinct()
           .collect(Collectors.toList());

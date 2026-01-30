@@ -1,5 +1,7 @@
 package info.bitrich.xchangestream.binance;
 
+import static java.util.Collections.emptyMap;
+
 import info.bitrich.xchangestream.binance.BinanceUserDataChannel.NoActiveChannelException;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
@@ -10,6 +12,11 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.binance.BinanceAuthenticated;
 import org.knowm.xchange.binance.BinanceExchange;
@@ -19,14 +26,6 @@ import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static java.util.Collections.emptyMap;
 
 public class BinanceStreamingExchange extends BinanceExchange implements StreamingExchange {
 
@@ -72,6 +71,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
     if (fetchOrderBookLimit instanceof Integer) {
       oderBookFetchLimitParameter = (int) fetchOrderBookLimit;
     }
+    applyWebsocketTimeouts(getExchangeSpecification());
   }
 
   public Completable connect(KlineSubscription klineSubscription, ProductSubscription... args) {
@@ -163,7 +163,8 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
 
   private Completable createAndConnectUserDataService(String listenKey) {
     userDataStreamingService =
-        BinanceUserDataStreamingService.create(getStreamingBaseUri(), listenKey);
+        BinanceUserDataStreamingService.create(
+            getStreamingBaseUri(), listenKey, exchangeSpecification);
     applyStreamingSpecification(getExchangeSpecification(), userDataStreamingService);
     return userDataStreamingService
         .connect()
@@ -192,7 +193,8 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
         new BinanceUserTradeStreamingService(
             getTradeStreamingBaseUri(),
             exchangeSpecification.getApiKey(),
-            exchangeSpecification.getSecretKey());
+            exchangeSpecification.getSecretKey(),
+            getExchangeSpecification());
     applyStreamingSpecification(getExchangeSpecification(), userTradeStreamingService);
     return userTradeStreamingService.connect();
   }
@@ -277,10 +279,12 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
     String path =
         getStreamingBaseUri()
             + "stream?streams="
-            + URLEncoder.encode(buildSubscriptionStreams(subscription, klineSubscription), StandardCharsets.UTF_8);
+            + URLEncoder.encode(
+                buildSubscriptionStreams(subscription, klineSubscription), StandardCharsets.UTF_8);
 
     BinanceStreamingService streamingService =
-        new BinanceStreamingService(path, subscription, klineSubscription);
+        new BinanceStreamingService(
+            path, subscription, klineSubscription, getExchangeSpecification());
     applyStreamingSpecification(getExchangeSpecification(), streamingService);
     return streamingService;
   }

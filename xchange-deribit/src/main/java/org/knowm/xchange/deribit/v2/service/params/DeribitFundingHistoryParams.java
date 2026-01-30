@@ -11,8 +11,11 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 
 @Data
 @Builder
-public class DeribitFundingHistoryParams implements TradeHistoryParamCurrency, TradeHistoryParamLimit,
-    TradeHistoryParamOffset, TradeHistoryParamsTimeSpan {
+public class DeribitFundingHistoryParams
+    implements TradeHistoryParamCurrency,
+        TradeHistoryParamLimit,
+        TradeHistoryParamOffset,
+        TradeHistoryParamsTimeSpan {
 
   private Currency currency;
 

@@ -30,16 +30,16 @@ public class DeribitAccountService extends DeribitAccountServiceRaw implements A
 
   @Override
   public AccountInfo getAccountInfo() throws IOException {
-    var balances = getAccountSummaries(false).stream()
-        .map(DeribitAdapters::adapt)
-        .collect(Collectors.toList());
+    var balances =
+        getAccountSummaries(false).stream()
+            .map(DeribitAdapters::adapt)
+            .collect(Collectors.toList());
     Wallet wallet = Wallet.Builder.from(balances).id("main").build();
 
     var openPositions = exchange.getTradeService().getOpenPositions().getOpenPositions();
 
     return new AccountInfo(null, null, Collections.singleton(wallet), openPositions, null);
   }
-
 
   @Override
   public List<FundingRecord> getFundingHistory(TradeHistoryParams params) throws IOException {
@@ -64,16 +64,18 @@ public class DeribitAccountService extends DeribitAccountServiceRaw implements A
     Instant startTime = null;
     Instant endTime = null;
     if (params instanceof TradeHistoryParamsTimeSpan) {
-      startTime = Optional.of(params)
-          .map(TradeHistoryParamsTimeSpan.class::cast)
-          .map(TradeHistoryParamsTimeSpan::getStartTime)
-          .map(Date::toInstant)
-          .orElse(null);
-      endTime = Optional.of(params)
-          .map(TradeHistoryParamsTimeSpan.class::cast)
-          .map(TradeHistoryParamsTimeSpan::getEndTime)
-          .map(Date::toInstant)
-          .orElse(null);
+      startTime =
+          Optional.of(params)
+              .map(TradeHistoryParamsTimeSpan.class::cast)
+              .map(TradeHistoryParamsTimeSpan::getStartTime)
+              .map(Date::toInstant)
+              .orElse(null);
+      endTime =
+          Optional.of(params)
+              .map(TradeHistoryParamsTimeSpan.class::cast)
+              .map(TradeHistoryParamsTimeSpan::getEndTime)
+              .map(Date::toInstant)
+              .orElse(null);
     }
 
     List<FundingRecord> fundingRecords = new ArrayList<>();

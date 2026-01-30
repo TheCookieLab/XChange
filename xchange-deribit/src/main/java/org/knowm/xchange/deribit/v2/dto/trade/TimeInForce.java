@@ -22,5 +22,4 @@ public enum TimeInForce implements IOrderFlags {
 
   @JsonEnumDefaultValue
   UNKNOWN
-
 }

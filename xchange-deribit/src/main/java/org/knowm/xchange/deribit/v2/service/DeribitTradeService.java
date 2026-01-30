@@ -93,9 +93,8 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
 
   @Override
   public OpenPositions getOpenPositions() throws IOException {
-    var positions = getPositions(null, null).stream()
-        .map(DeribitAdapters::adapt)
-        .collect(Collectors.toList());
+    var positions =
+        getPositions(null, null).stream().map(DeribitAdapters::adapt).collect(Collectors.toList());
 
     return new OpenPositions(positions);
   }

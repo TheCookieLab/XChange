@@ -28,9 +28,7 @@ public class OkexExchange extends BaseExchange {
   public String accountLevel = "1";
 
   /** Adjust host parameters depending on exchange specific parameters */
-  protected void concludeHostParams(ExchangeSpecification exchangeSpecification) {
-
-  }
+  protected void concludeHostParams(ExchangeSpecification exchangeSpecification) {}
 
   @Override
   public void applySpecification(ExchangeSpecification exchangeSpecification) {

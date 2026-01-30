@@ -19,143 +19,139 @@ public class DeribitTickerNotification extends DeribitWsNotification<TickerData>
   @Builder
   @Jacksonized
   public static class TickerData {
-      @JsonProperty("ask_iv")
-      BigDecimal askIv;
+    @JsonProperty("ask_iv")
+    BigDecimal askIv;
 
-      @JsonProperty("best_ask_amount")
-      BigDecimal bestAskSize;
+    @JsonProperty("best_ask_amount")
+    BigDecimal bestAskSize;
 
-      @JsonProperty("best_ask_price")
-      BigDecimal bestAskPrice;
+    @JsonProperty("best_ask_price")
+    BigDecimal bestAskPrice;
 
-      @JsonProperty("best_bid_amount")
-      BigDecimal bestBidSize;
+    @JsonProperty("best_bid_amount")
+    BigDecimal bestBidSize;
 
-      @JsonProperty("best_bid_price")
-      BigDecimal bestBidPrice;
+    @JsonProperty("best_bid_price")
+    BigDecimal bestBidPrice;
 
-      @JsonProperty("bid_iv")
-      BigDecimal bidIv;
+    @JsonProperty("bid_iv")
+    BigDecimal bidIv;
 
-      @JsonProperty("current_funding")
-      BigDecimal currentFunding;
+    @JsonProperty("current_funding")
+    BigDecimal currentFunding;
 
-      @JsonProperty("delivery_price")
-      BigDecimal deliveryPrice;
+    @JsonProperty("delivery_price")
+    BigDecimal deliveryPrice;
 
-      @JsonProperty("estimated_delivery_price")
-      BigDecimal estimatedDeliveryPrice;
+    @JsonProperty("estimated_delivery_price")
+    BigDecimal estimatedDeliveryPrice;
 
-      @JsonProperty("funding_8h")
-      BigDecimal funding8H;
+    @JsonProperty("funding_8h")
+    BigDecimal funding8H;
 
-      @JsonProperty("greeks")
-      Greeks greeks;
+    @JsonProperty("greeks")
+    Greeks greeks;
 
-      @JsonProperty("index_price")
-      BigDecimal indexPrice;
+    @JsonProperty("index_price")
+    BigDecimal indexPrice;
 
-      @JsonProperty("instrument_name")
-      String instrumentName;
+    @JsonProperty("instrument_name")
+    String instrumentName;
 
-      @JsonProperty("interest_rate")
-      BigDecimal interestRate;
+    @JsonProperty("interest_rate")
+    BigDecimal interestRate;
 
-      @JsonProperty("interest_value")
-      BigDecimal interestValue;
+    @JsonProperty("interest_value")
+    BigDecimal interestValue;
 
-      @JsonProperty("last_price")
-      BigDecimal lastPrice;
+    @JsonProperty("last_price")
+    BigDecimal lastPrice;
 
-      @JsonProperty("mark_iv")
-      BigDecimal markIv;
+    @JsonProperty("mark_iv")
+    BigDecimal markIv;
 
-      @JsonProperty("mark_price")
-      BigDecimal markPrice;
+    @JsonProperty("mark_price")
+    BigDecimal markPrice;
 
-      @JsonProperty("max_price")
-      BigDecimal maxPrice;
+    @JsonProperty("max_price")
+    BigDecimal maxPrice;
 
-      @JsonProperty("min_price")
-      BigDecimal minPrice;
+    @JsonProperty("min_price")
+    BigDecimal minPrice;
 
-      @JsonProperty("open_interest")
-      BigDecimal openInterest;
+    @JsonProperty("open_interest")
+    BigDecimal openInterest;
 
-      @JsonProperty("settlement_price")
-      BigDecimal settlementPrice;
+    @JsonProperty("settlement_price")
+    BigDecimal settlementPrice;
 
-      @JsonProperty("state")
-      State state;
+    @JsonProperty("state")
+    State state;
 
-      @JsonProperty("stats")
-      Stats stats;
+    @JsonProperty("stats")
+    Stats stats;
 
-      @JsonProperty("timestamp")
-      Instant timestamp;
+    @JsonProperty("timestamp")
+    Instant timestamp;
 
-      @JsonProperty("underlying_index")
-      BigDecimal underlyingIndex;
+    @JsonProperty("underlying_index")
+    BigDecimal underlyingIndex;
 
-      @JsonProperty("underlying_price")
-      BigDecimal underlyingPrice;
+    @JsonProperty("underlying_price")
+    BigDecimal underlyingPrice;
 
+    @Data
+    @Builder
+    @Jacksonized
+    public static class Greeks {
+      @JsonProperty("delta")
+      BigDecimal delta;
 
-      @Data
-      @Builder
-      @Jacksonized
-      public static class Greeks {
-          @JsonProperty("delta")
-          BigDecimal delta;
+      @JsonProperty("gamma")
+      BigDecimal gamma;
 
-          @JsonProperty("gamma")
-          BigDecimal gamma;
+      @JsonProperty("rho")
+      BigDecimal rho;
 
-          @JsonProperty("rho")
-          BigDecimal rho;
+      @JsonProperty("theta")
+      BigDecimal theta;
 
-          @JsonProperty("theta")
-          BigDecimal theta;
+      @JsonProperty("vega")
+      BigDecimal vega;
+    }
 
-          @JsonProperty("vega")
-          BigDecimal vega;
+    public enum State {
+      @JsonProperty("open")
+      OPEN,
 
-      }
+      @JsonProperty("closed")
+      CLOSED,
 
-      public enum State {
-          @JsonProperty("open")
-          OPEN,
+      @JsonEnumDefaultValue
+      UNKNOWN
+    }
 
-          @JsonProperty("closed")
-          CLOSED,
+    @Data
+    @Builder
+    @Jacksonized
+    public static class Stats {
+      @JsonProperty("high")
+      BigDecimal high;
 
-          @JsonEnumDefaultValue
-          UNKNOWN
-      }
+      @JsonProperty("low")
+      BigDecimal low;
 
-      @Data
-      @Builder
-      @Jacksonized
-      public static class Stats {
-          @JsonProperty("high")
-          BigDecimal high;
+      @JsonProperty("price_change")
+      BigDecimal priceChange;
 
-          @JsonProperty("low")
-          BigDecimal low;
+      @JsonProperty("volume")
+      BigDecimal volume;
 
-          @JsonProperty("price_change")
-          BigDecimal priceChange;
+      @JsonProperty("volume_notional")
+      BigDecimal volumeNotional;
 
-          @JsonProperty("volume")
-          BigDecimal volume;
-
-          @JsonProperty("volume_notional")
-          BigDecimal volumeNotional;
-
-          @JsonProperty("volume_usd")
-          BigDecimal volumeUsd;
-
-      }
-
+      @JsonProperty("volume_usd")
+      BigDecimal volumeUsd;
+    }
   }
 }

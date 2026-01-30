@@ -1,10 +1,10 @@
 package info.bitrich.xchangestream.bybit;
 
 import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptBatchAmendOrder;
-import static org.knowm.xchange.bybit.BybitAdapters.adaptChangeOrder;
-import static org.knowm.xchange.bybit.BybitAdapters.adaptLimitOrder;
-import static org.knowm.xchange.bybit.BybitAdapters.adaptMarketOrder;
-import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
+import static org.knowm.xchange.bybit.BybitAdapters.*;
 import static org.knowm.xchange.utils.DigestUtils.bytesToHex;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +67,12 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
   private String connId;
 
   public BybitUserTradeStreamingService(String apiUrl, ExchangeSpecification spec) {
-    super(apiUrl);
+    super(
+        apiUrl,
+        65536,
+        (Duration) spec.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+        (Duration) spec.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
+        (Integer) spec.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.spec = spec;
   }
 

@@ -26,7 +26,12 @@ import org.knowm.xchange.bitstamp.dto.account.BitstampWithdrawal;
 import org.knowm.xchange.bitstamp.dto.account.DepositTransaction;
 import org.knowm.xchange.bitstamp.dto.account.WithdrawalFee;
 import org.knowm.xchange.bitstamp.dto.account.WithdrawalRequest;
-import org.knowm.xchange.bitstamp.dto.trade.*;
+import org.knowm.xchange.bitstamp.dto.trade.BitstampCancelAllOrdersResponse;
+import org.knowm.xchange.bitstamp.dto.trade.BitstampOrder;
+import org.knowm.xchange.bitstamp.dto.trade.BitstampOrderCancelResponse;
+import org.knowm.xchange.bitstamp.dto.trade.BitstampOrderStatusResponse;
+import org.knowm.xchange.bitstamp.dto.trade.BitstampTradingFee;
+import org.knowm.xchange.bitstamp.dto.trade.BitstampUserTransaction;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 
@@ -781,213 +786,16 @@ public interface BitstampAuthenticatedV2 {
       throws BitstampException, IOException;
 
   @POST
-  @Path("btc_address/")
-  BitstampDepositAddress getBitcoinDepositAddress(
+  @Path("{currency}_address/")
+  @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+  BitstampDepositAddress getDepositAddress(
       @HeaderParam("X-Auth") String apiKey,
       @HeaderParam("X-Auth-Signature") ParamsDigest signer,
       @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
       @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("ltc_address/")
-  BitstampDepositAddress getLitecoinDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("bch_address/")
-  BitstampDepositAddress getBitcoinCashDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("eth_address/")
-  BitstampDepositAddress getEthereumDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("usdt_address/")
-  BitstampDepositAddress getUsdtDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("xlm_address/")
-  BitstampDepositAddress getXlmDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("doge_address/")
-  BitstampDepositAddress getDogeDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("rlusd_address/")
-  BitstampDepositAddress getRlusdDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("eurc_address/")
-  BitstampDepositAddress getEurcDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("sushi_address/")
-  BitstampDepositAddress getSushiDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("shib_address/")
-  BitstampDepositAddress getShibDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("bonk_address/")
-  BitstampDepositAddress getBonkDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("etc_address/")
-  BitstampDepositAddress getEtcDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("pengu_address/")
-  BitstampDepositAddress getPenguDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("yfi_address/")
-  BitstampDepositAddress getYfiDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("sui_address/")
-  BitstampDepositAddress getSuiDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("link_address/")
-  BitstampDepositAddress getLinkDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("ldo_address/")
-  BitstampDepositAddress getLdoDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("fartcoin_address/")
-  BitstampDepositAddress getFartcoinDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("pepe_address/")
-  BitstampDepositAddress getPepeDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
-      throws BitstampException, IOException;
-
-  @POST
-  @Path("usdc_address/")
-  BitstampDepositAddress getUsdcDepositAddress(
-      @HeaderParam("X-Auth") String apiKey,
-      @HeaderParam("X-Auth-Signature") ParamsDigest signer,
-      @HeaderParam("X-Auth-Nonce") SynchronizedValueFactory<String> nonce,
-      @HeaderParam("X-Auth-Timestamp") SynchronizedValueFactory<String> timeStamp,
-      @HeaderParam("X-Auth-Version") String version)
+      @HeaderParam("X-Auth-Version") String version,
+      @PathParam("currency") String currency,
+      @FormParam("network") String network)
       throws BitstampException, IOException;
 
   @POST

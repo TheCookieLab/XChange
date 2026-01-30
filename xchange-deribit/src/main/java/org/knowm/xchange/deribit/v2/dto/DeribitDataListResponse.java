@@ -12,5 +12,4 @@ public class DeribitDataListResponse<T> {
 
   @JsonProperty("data")
   List<T> data;
-
 }

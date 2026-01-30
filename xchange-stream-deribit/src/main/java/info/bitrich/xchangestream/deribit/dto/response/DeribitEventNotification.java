@@ -17,6 +17,4 @@ public class DeribitEventNotification extends DeribitWsNotification<Object> {
   public boolean hasToken() {
     return result instanceof Map && ((Map) result).containsKey("access_token");
   }
-
-
 }

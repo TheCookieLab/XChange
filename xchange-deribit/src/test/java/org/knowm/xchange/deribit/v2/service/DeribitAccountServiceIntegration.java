@@ -35,5 +35,4 @@ public class DeribitAccountServiceIntegration {
     AccountInfo accountInfo = exchange.getAccountService().getAccountInfo();
     assertThat(accountInfo.getWallet("main").getBalances()).isNotEmpty();
   }
-
 }

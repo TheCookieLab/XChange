@@ -1,11 +1,10 @@
 package info.bitrich.xchangestream.binance.examples;
 
-import org.knowm.xchange.dto.marketdata.OrderBook;
-import org.knowm.xchange.dto.marketdata.Ticker;
+import static java.math.RoundingMode.UP;
 
 import java.math.BigDecimal;
-
-import static java.math.RoundingMode.UP;
+import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.Ticker;
 
 public class Util {
   static String printOrderBookShortInfo(OrderBook orderBook) {

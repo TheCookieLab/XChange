@@ -17,30 +17,52 @@ public class DeribitAccountServiceRaw extends DeribitBaseService {
     super(exchange);
   }
 
-  public DeribitAccountSummary getAccountSummary(String currency, Boolean extended) throws IOException {
+  public DeribitAccountSummary getAccountSummary(String currency, Boolean extended)
+      throws IOException {
     return deribitAuthenticated.getAccountSummary(currency, extended, deribitDigest).getResult();
   }
 
   public List<DeribitAccountSummary> getAccountSummaries(Boolean extended) throws IOException {
-    return deribitAuthenticated.getAccountSummaries(extended, deribitDigest).getResult().getAccountSummaries();
+    return deribitAuthenticated
+        .getAccountSummaries(extended, deribitDigest)
+        .getResult()
+        .getAccountSummaries();
   }
 
-  public List<DeribitDeposit> getDeposits(String currency, Integer count, Long offset) throws IOException {
-    return deribitAuthenticated.getDeposits(currency, count, offset, deribitDigest).getResult().getData();
+  public List<DeribitDeposit> getDeposits(String currency, Integer count, Long offset)
+      throws IOException {
+    return deribitAuthenticated
+        .getDeposits(currency, count, offset, deribitDigest)
+        .getResult()
+        .getData();
   }
 
-  public List<DeribitTransfer> getTransfers(String currency, Integer count, Long offset) throws IOException {
-    return deribitAuthenticated.getTransfers(currency, count, offset, deribitDigest).getResult().getData();
+  public List<DeribitTransfer> getTransfers(String currency, Integer count, Long offset)
+      throws IOException {
+    return deribitAuthenticated
+        .getTransfers(currency, count, offset, deribitDigest)
+        .getResult()
+        .getData();
   }
 
-  public List<DeribitWithdrawal> getWithdrawals(String currency, Integer count, Long offset) throws IOException {
-    return deribitAuthenticated.getWithdrawals(currency, count, offset, deribitDigest).getResult().getData();
+  public List<DeribitWithdrawal> getWithdrawals(String currency, Integer count, Long offset)
+      throws IOException {
+    return deribitAuthenticated
+        .getWithdrawals(currency, count, offset, deribitDigest)
+        .getResult()
+        .getData();
   }
 
-  public List<DeribitTransactionLog> getTransactionLogs(String currency, Instant startTime, Instant endTime, Integer count) throws IOException {
+  public List<DeribitTransactionLog> getTransactionLogs(
+      String currency, Instant startTime, Instant endTime, Integer count) throws IOException {
     long start = Optional.ofNullable(startTime).map(Instant::toEpochMilli).orElse(0L);
-    long end = Optional.ofNullable(endTime).map(Instant::toEpochMilli).orElse(Instant.now().toEpochMilli());
-    return deribitAuthenticated.getTransactionLogs(currency, start, end, count, deribitDigest).getResult().getLogs();
+    long end =
+        Optional.ofNullable(endTime)
+            .map(Instant::toEpochMilli)
+            .orElse(Instant.now().toEpochMilli());
+    return deribitAuthenticated
+        .getTransactionLogs(currency, start, end, count, deribitDigest)
+        .getResult()
+        .getLogs();
   }
-
 }
