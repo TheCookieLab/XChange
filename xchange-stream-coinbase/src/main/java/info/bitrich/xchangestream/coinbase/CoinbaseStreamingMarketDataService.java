@@ -1,11 +1,13 @@
 package info.bitrich.xchangestream.coinbase;
 
-import static info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters.adaptCandles;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingCandle;
 import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingEvent;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingLevel2Update;
 import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingMessage;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingTicker;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingTrade;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Observable;
@@ -15,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -30,6 +33,7 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +50,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   private final CoinbaseStreamingService streamingService;
   private final OrderBookSnapshotProvider snapshotProvider;
   private final ExchangeSpecification exchangeSpecification;
+  private final String productIdOverride;
   private final Map<CurrencyPair, OrderBookState> orderBooks = new ConcurrentHashMap<>();
   // Cache observables per currency pair to enable replay for new subscribers
   // Key format: "CURRENCY_PAIR:channel" to differentiate between level2 and level2_batch
@@ -60,6 +65,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     this.streamingService = streamingService;
     this.snapshotProvider = snapshotProvider != null ? snapshotProvider : pair -> null;
     this.exchangeSpecification = spec;
+    this.productIdOverride = resolveProductIdOverride(spec);
   }
 
   void ensureHeartbeatsSubscription() {
@@ -93,15 +99,16 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   @Override
   public Observable<Ticker> getTicker(CurrencyPair currencyPair, Object... args) {
+    String productId = resolveProductId(currencyPair);
     CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
         CoinbaseChannel.TICKER,
-        Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+        Collections.singletonList(productId),
         Collections.emptyMap());
 
     return streamingService
         .observeChannel(request)
         .map(CoinbaseStreamingAdapters::toStreamingMessage)
-        .flatMapIterable(CoinbaseStreamingAdapters::adaptTickers)
+        .flatMapIterable(message -> adaptTickers(message, currencyPair, productId))
         .filter(ticker -> instrumentMatches(ticker.getInstrument(), currencyPair));
   }
 
@@ -115,15 +122,16 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   @Override
   public Observable<Trade> getTrades(CurrencyPair currencyPair, Object... args) {
+    String productId = resolveProductId(currencyPair);
     CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
         CoinbaseChannel.MARKET_TRADES,
-        Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+        Collections.singletonList(productId),
         Collections.emptyMap());
 
     return streamingService
         .observeChannel(request)
         .map(CoinbaseStreamingAdapters::toStreamingMessage)
-        .flatMapIterable(CoinbaseStreamingAdapters::adaptTrades)
+        .flatMapIterable(message -> adaptTrades(message, currencyPair, productId))
         .filter(trade -> instrumentMatches(trade.getInstrument(), currencyPair));
   }
 
@@ -182,15 +190,16 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     // Include channel in cache key to differentiate between level2 and level2_batch
     final String cacheKey = currencyPair.toString() + ":" + channel.channelName();
     final CoinbaseChannel finalChannel = channel; // Make final for lambda
+    final String productId = resolveProductId(currencyPair);
     
     return orderBookObservables.computeIfAbsent(cacheKey, key -> {
       CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
           finalChannel,
-          Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+          Collections.singletonList(productId),
           Collections.emptyMap());
 
       OrderBookState state = orderBooks.computeIfAbsent(
-          currencyPair, pair -> new OrderBookState(pair, snapshotProvider));
+          currencyPair, pair -> new OrderBookState(pair, snapshotProvider, productId));
 
       LOG.info("Creating order book observable for {} on channel {}", currencyPair, finalChannel.channelName());
       return streamingService
@@ -257,15 +266,16 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   private Observable<CandleStick> subscribeCandles(
       CurrencyPair currencyPair, CoinbaseCandleSubscriptionParams params) {
+    String productId = resolveProductId(currencyPair);
     CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
         CoinbaseChannel.CANDLES,
-        Collections.singletonList(CoinbaseProductIds.productId(currencyPair)),
+        Collections.singletonList(productId),
         params.toChannelArgs());
 
     return streamingService
         .observeChannel(request)
         .map(CoinbaseStreamingAdapters::toStreamingMessage)
-        .flatMapIterable(message -> adaptCandles(message, currencyPair));
+        .flatMapIterable(message -> adaptCandles(message, currencyPair, productId));
   }
 
   private CoinbaseCandleSubscriptionParams resolveCandleParams(Object... args) {
@@ -391,9 +401,127 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     return false;
   }
 
+  private static String resolveProductIdOverride(ExchangeSpecification exchangeSpecification) {
+    if (exchangeSpecification == null) {
+      return null;
+    }
+    Object raw = exchangeSpecification.getExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_PRODUCT_ID_OVERRIDE);
+    if (raw == null) {
+      return null;
+    }
+    String text = raw.toString().trim();
+    return text.isEmpty() ? null : text;
+  }
+
+  private String resolveProductId(CurrencyPair currencyPair) {
+    if (productIdOverride != null) {
+      return productIdOverride;
+    }
+    return CoinbaseProductIds.productId(currencyPair);
+  }
+
+  private List<Ticker> adaptTickers(CoinbaseStreamingMessage message,
+      CurrencyPair currencyPair,
+      String expectedProductId) {
+    if (productIdOverride == null) {
+      return CoinbaseStreamingAdapters.adaptTickers(message);
+    }
+    if (message == null || message.getEvents().isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<Ticker> tickers = new ArrayList<>();
+    for (CoinbaseStreamingEvent event : message.getEvents()) {
+      for (CoinbaseStreamingTicker ticker : event.getTickers()) {
+        String productId = ticker.getProductId();
+        if (productId == null || !productId.equals(expectedProductId)) {
+          continue;
+        }
+        Ticker.Builder builder = new Ticker.Builder();
+        builder.instrument(currencyPair);
+        builder.last(ticker.getPrice());
+        builder.volume(ticker.getVolume24H());
+        builder.high(ticker.getHigh24H());
+        builder.low(ticker.getLow24H());
+        builder.open(ticker.getOpen24H());
+        builder.bid(ticker.getBestBid());
+        builder.ask(ticker.getBestAsk());
+        builder.timestamp(CoinbaseStreamingAdapters.parseInstant(ticker.getTime())
+            .map(Date::from)
+            .orElse(null));
+        tickers.add(builder.build());
+      }
+    }
+    return tickers;
+  }
+
+  private List<Trade> adaptTrades(CoinbaseStreamingMessage message,
+      CurrencyPair currencyPair,
+      String expectedProductId) {
+    if (productIdOverride == null) {
+      return CoinbaseStreamingAdapters.adaptTrades(message);
+    }
+    if (message == null || message.getEvents().isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<Trade> trades = new ArrayList<>();
+    for (CoinbaseStreamingEvent event : message.getEvents()) {
+      for (CoinbaseStreamingTrade trade : event.getTrades()) {
+        String productId = trade.getProductId();
+        if (productId == null || !productId.equals(expectedProductId)) {
+          continue;
+        }
+        Trade mappedTrade = UserTrade.builder()
+            .instrument(currencyPair)
+            .id(trade.getTradeId())
+            .price(trade.getPrice())
+            .originalAmount(trade.getSize())
+            .timestamp(CoinbaseStreamingAdapters.parseInstant(trade.getTime())
+                .map(Date::from)
+                .orElse(null))
+            .type(CoinbaseStreamingAdapters.parseOrderSide(trade.getSide()))
+            .build();
+        trades.add(mappedTrade);
+      }
+    }
+    return trades;
+  }
+
+  private List<CandleStick> adaptCandles(CoinbaseStreamingMessage message,
+      CurrencyPair currencyPair,
+      String expectedProductId) {
+    if (productIdOverride == null) {
+      return CoinbaseStreamingAdapters.adaptCandles(message, currencyPair);
+    }
+    if (message == null || message.getEvents().isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<CandleStick> candlesList = new ArrayList<>();
+    for (CoinbaseStreamingEvent event : message.getEvents()) {
+      for (CoinbaseStreamingCandle candle : event.getCandles()) {
+        String productId = candle.getProductId();
+        if (productId == null || !productId.equals(expectedProductId)) {
+          continue;
+        }
+        candlesList.add(new CandleStick.Builder()
+            .open(candle.getOpen())
+            .close(candle.getClose())
+            .high(candle.getHigh())
+            .low(candle.getLow())
+            .volume(candle.getVolume())
+            .timestamp(CoinbaseStreamingAdapters.parseUnixTimestamp(candle.getStart())
+                .map(Date::from)
+                .orElse(null))
+            .build());
+      }
+    }
+    return candlesList;
+  }
+
   static final class OrderBookState {
     private final CurrencyPair currencyPair;
     private final OrderBookSnapshotProvider snapshotProvider;
+    private final String expectedProductId;
     private final NavigableMap<BigDecimal, LimitOrder> bids =
         new ConcurrentSkipListMap<>(Collections.reverseOrder());
     private final NavigableMap<BigDecimal, LimitOrder> asks = new ConcurrentSkipListMap<>();
@@ -404,8 +532,19 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     private volatile boolean hasSnapshot;
 
     OrderBookState(CurrencyPair currencyPair, OrderBookSnapshotProvider snapshotProvider) {
+      this(currencyPair, snapshotProvider, null);
+    }
+
+    OrderBookState(CurrencyPair currencyPair,
+        OrderBookSnapshotProvider snapshotProvider,
+        String expectedProductId) {
       this.currencyPair = currencyPair;
       this.snapshotProvider = snapshotProvider;
+      String defaultProductId = currencyPair == null ? null : CoinbaseProductIds.productId(currencyPair);
+      String resolved = expectedProductId == null || expectedProductId.isBlank()
+          ? defaultProductId
+          : expectedProductId.trim();
+      this.expectedProductId = resolved == null || resolved.isBlank() ? defaultProductId : resolved;
     }
 
     /**
@@ -428,7 +567,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       boolean changed = false;
       for (CoinbaseStreamingEvent event : message.getEvents()) {
         String productId = event.getProductId();
-        if (productId != null && !productId.equals(CoinbaseProductIds.productId(currencyPair))) {
+        if (productId != null && expectedProductId != null && !productId.equals(expectedProductId)) {
           continue;
         }
         String type = event.getType() == null ? "" : event.getType();
@@ -503,10 +642,14 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     private void applySnapshotEvent(CoinbaseStreamingEvent event) {
       bids.clear();
       asks.clear();
-      CurrencyPair pair = CoinbaseStreamingAdapters.toCurrencyPair(event.getProductId());
-      if (pair == null) {
+      String productId = event.getProductId();
+      if (productId == null || productId.isBlank()) {
         return;
       }
+      if (expectedProductId != null && !productId.equals(expectedProductId)) {
+        return;
+      }
+      CurrencyPair pair = currencyPair;
       // Coinbase level2 snapshots can have either:
       // 1. bids/asks arrays (List<List<String>>) - traditional format
       // 2. updates array with price_level/new_quantity - newer format
@@ -514,8 +657,8 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       if (!event.getUpdates().isEmpty()) {
         // Snapshot uses updates array format
         LOG.debug("Applying snapshot from updates array ({} updates)", event.getUpdates().size());
-        List<LimitOrder> bidUpdates = CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID);
-        List<LimitOrder> askUpdates = CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK);
+        List<LimitOrder> bidUpdates = adaptLevel2Updates(event, Order.OrderType.BID);
+        List<LimitOrder> askUpdates = adaptLevel2Updates(event, Order.OrderType.ASK);
         for (LimitOrder order : bidUpdates) {
           BigDecimal normalizedPrice = normalizePrice(order.getLimitPrice());
           if (order.getOriginalAmount().compareTo(BigDecimal.ZERO) > 0) {
@@ -578,16 +721,14 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       boolean changed = false;
       LOG.debug("Applying level2 updates: {} updates total", 
           event.getUpdates() != null ? event.getUpdates().size() : 0);
-      List<LimitOrder> bidUpdates =
-          CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.BID);
+      List<LimitOrder> bidUpdates = adaptLevel2Updates(event, Order.OrderType.BID);
       if (!bidUpdates.isEmpty()) {
         LOG.debug("Applying {} bid updates", bidUpdates.size());
         if (applyUpdatesToSide(bids, bidUpdates)) {
           changed = true;
         }
       }
-      List<LimitOrder> askUpdates =
-          CoinbaseStreamingAdapters.adaptLevel2Updates(event, Order.OrderType.ASK);
+      List<LimitOrder> askUpdates = adaptLevel2Updates(event, Order.OrderType.ASK);
       if (!askUpdates.isEmpty()) {
         LOG.debug("Applying {} ask updates", askUpdates.size());
         if (applyUpdatesToSide(asks, askUpdates)) {
@@ -598,6 +739,26 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         LOG.warn("Received {} updates but none were applied (possibly filtered out)", event.getUpdates().size());
       }
       return changed;
+    }
+
+    private List<LimitOrder> adaptLevel2Updates(CoinbaseStreamingEvent event, Order.OrderType side) {
+      List<LimitOrder> orders = new ArrayList<>();
+      if (event == null || event.getUpdates().isEmpty()) {
+        return orders;
+      }
+      for (CoinbaseStreamingLevel2Update update : event.getUpdates()) {
+        Order.OrderType orderSide = CoinbaseStreamingAdapters.parseOrderSide(update.getSide());
+        if (orderSide != side) {
+          continue;
+        }
+        BigDecimal price = update.getPriceLevel();
+        BigDecimal amount = update.getNewQuantity();
+        if (price == null || amount == null) {
+          continue;
+        }
+        orders.add(new LimitOrder(orderSide, amount, currencyPair, null, null, price));
+      }
+      return orders;
     }
 
     private boolean applyUpdatesToSide(

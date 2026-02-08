@@ -38,6 +38,19 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
       "Coinbase_Default_Candle_Granularity";
   public static final String PARAM_DEFAULT_CANDLE_PRODUCT_TYPE =
       "Coinbase_Default_Candle_Product_Type";
+  /**
+   * Optional override for the product id used by market data subscriptions (ticker/trades/candles/order book).
+   *
+   * <p>By default, {@link CoinbaseStreamingMarketDataService} derives Coinbase product ids from
+   * {@link CurrencyPair} (e.g. {@code BTC/USD -> BTC-USD}). Some Coinbase futures/perpetual products
+   * do not map cleanly to a {@link CurrencyPair} representation. Setting this parameter to a
+   * non-empty string forces market data subscriptions to use that product id while still emitting
+   * DTOs keyed by the requested {@link CurrencyPair}.
+   *
+   * <p><strong>Note:</strong> The override is global for the exchange instance. If you subscribe to
+   * multiple currency pairs, all market data subscriptions will use the same overridden product id.
+   */
+  public static final String PARAM_PRODUCT_ID_OVERRIDE = "Coinbase_Product_Id_Override";
   public static final String PARAM_WEBSOCKET_JWT_SUPPLIER =
       "Coinbase_Websocket_Jwt_Supplier";
 
