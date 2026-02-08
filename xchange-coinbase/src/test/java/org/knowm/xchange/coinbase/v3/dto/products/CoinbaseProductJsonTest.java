@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.Instant;
 import org.junit.Test;
 
 /**
@@ -28,6 +29,11 @@ public class CoinbaseProductJsonTest {
 
     assertNotNull("Product should not be null", product);
     assertEquals("Product ID should match", "BTC-USD", product.getProductId());
+    assertEquals("Product type should match", "SPOT", product.getProductType());
+    assertEquals("Product venue should match", "CBE", product.getProductVenue());
+    assertEquals("Base currency id should match", "BTC", product.getBaseCurrencyId());
+    assertEquals("Quote currency id should match", "USD", product.getQuoteCurrencyId());
+    assertTrue("Spot products should not include futures details", product.getFutureProductDetails() == null);
   }
 
   @Test
@@ -40,6 +46,51 @@ public class CoinbaseProductJsonTest {
 
     assertNotNull("Product should not be null", product);
     assertEquals("Product ID should match", "ETH-USD", product.getProductId());
+    assertTrue("Minimal payload should not have product type", product.getProductType() == null);
+    assertTrue("Minimal payload should not have product venue", product.getProductVenue() == null);
+  }
+
+  @Test
+  public void testDeserializeFutureProductDetails() throws Exception {
+    String json = "{\n"
+        + "  \"product_id\": \"BIP-20DEC30-CDE\",\n"
+        + "  \"product_type\": \"FUTURE\",\n"
+        + "  \"quote_currency_id\": \"USD\",\n"
+        + "  \"future_product_details\": {\n"
+        + "    \"contract_root_unit\": \"BTC\",\n"
+        + "    \"funding_rate\": \"0.000024\",\n"
+        + "    \"funding_time\": \"2026-02-08T14:00:00Z\",\n"
+        + "    \"intraday_margin_rate\": {\n"
+        + "      \"long_margin_rate\": \"0.1000185\",\n"
+        + "      \"short_margin_rate\": \"0.1000008\"\n"
+        + "    },\n"
+        + "    \"overnight_margin_rate\": {\n"
+        + "      \"long_margin_rate\": \"0.245625\",\n"
+        + "      \"short_margin_rate\": \"0.306375\"\n"
+        + "    }\n"
+        + "  }\n"
+        + "}";
+
+    CoinbaseProductResponse product = mapper.readValue(json, CoinbaseProductResponse.class);
+
+    assertNotNull("Product should not be null", product);
+    assertEquals("Product ID should match", "BIP-20DEC30-CDE", product.getProductId());
+    assertEquals("Product type should match", "FUTURE", product.getProductType());
+    assertEquals("Quote currency id should match", "USD", product.getQuoteCurrencyId());
+
+    CoinbaseFutureProductDetails details = product.getFutureProductDetails();
+    assertNotNull("Future product details should not be null", details);
+    assertEquals("Contract root unit should match", "BTC", details.getContractRootUnit());
+    assertEquals(new BigDecimal("0.000024"), details.getFundingRate());
+    assertEquals(Instant.parse("2026-02-08T14:00:00Z"), details.getFundingTime());
+
+    assertNotNull(details.getIntradayMarginRate());
+    assertEquals(new BigDecimal("0.1000185"), details.getIntradayMarginRate().getLongMarginRate());
+    assertEquals(new BigDecimal("0.1000008"), details.getIntradayMarginRate().getShortMarginRate());
+
+    assertNotNull(details.getOvernightMarginRate());
+    assertEquals(new BigDecimal("0.245625"), details.getOvernightMarginRate().getLongMarginRate());
+    assertEquals(new BigDecimal("0.306375"), details.getOvernightMarginRate().getShortMarginRate());
   }
 
   @Test
@@ -105,4 +156,3 @@ public class CoinbaseProductJsonTest {
     assertEquals("Side should match", "BUY", trade.getSide());
   }
 }
-

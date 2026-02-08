@@ -124,8 +124,7 @@ public class CoinbasePublicEndpointsIntegration {
     
     assertNotNull("Products response should not be null", response);
     assertNotNull("Products list should not be null", response.getProducts());
-    // Note: CoinbaseProductResponse doesn't expose productType field in the public endpoint response
-    // This test verifies the endpoint accepts the filter parameter
+    // This test primarily verifies the endpoint accepts the product_type filter parameter.
     assertFalse("Products should not be empty", response.getProducts().isEmpty());
   }
 
@@ -135,8 +134,8 @@ public class CoinbasePublicEndpointsIntegration {
     
     assertNotNull("Product response should not be null", response);
     assertEquals("Product ID should match", TEST_PRODUCT_ID, response.getProductId());
-    // Note: CoinbaseProductResponse only contains basic fields (productId, price, volume, etc.)
-    // Full product details are available in the authenticated endpoint
+    // This endpoint can return additional metadata (e.g. base/quote currency ids, product type/venue)
+    // and may include futures details when the selected product_id is a futures contract.
   }
 
   @Test
@@ -225,4 +224,3 @@ public class CoinbasePublicEndpointsIntegration {
     }
   }
 }
-
