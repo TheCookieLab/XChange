@@ -52,7 +52,12 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseOrdersResponse listFills(CoinbaseTradeHistoryParams params) throws IOException {
     List<String> productIds = null;
-    if (params.getCurrencyPairs() != null && !params.getCurrencyPairs().isEmpty()) {
+    if (params.getProductIds() != null && !params.getProductIds().isEmpty()) {
+      productIds = params.getProductIds().stream()
+          .filter(id -> id != null && !id.trim().isEmpty())
+          .map(String::trim)
+          .collect(Collectors.toList());
+    } else if (params.getCurrencyPairs() != null && !params.getCurrencyPairs().isEmpty()) {
       productIds = params.getCurrencyPairs().stream()
           .map(CoinbaseAdapters::adaptProductId)
           .collect(Collectors.toList());
@@ -69,9 +74,10 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
 
     Integer limit = params.getLimit();
     String cursor = params.getNextPageCursor();
+    String retailPortfolioId = params.getRetailPortfolioId();
 
     return coinbaseAdvancedTrade.listFills(authTokenCreator, orderIds, tradeIds, productIds,
-        startTs, endTs, null, limit, cursor, null);
+        startTs, endTs, retailPortfolioId, limit, cursor, null);
   }
 
   /**

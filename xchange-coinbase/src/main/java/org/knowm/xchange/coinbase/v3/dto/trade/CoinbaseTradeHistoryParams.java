@@ -17,12 +17,16 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
     TradeHistoryParamNextPageCursor, TradeHistoryParamsTimeSpan {
 
   private Set<CurrencyPair> currencyPairs;
+  /** Raw Coinbase product ids (for example {@code BTC-USD} or {@code BTC-PERP}). */
+  private Set<String> productIds;
   private String transactionId;
   private String orderId;
   private String nextPageCursor;
   private Date startTime;
   private Date endTime;
   private Integer limit;
+  /** Optional retail portfolio id filter used by some endpoints (for example perpetuals/INTX). */
+  private String retailPortfolioId;
 
   public CoinbaseTradeHistoryParams() {
   }
@@ -53,6 +57,63 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
       this.currencyPairs = new HashSet<>();
     }
     this.currencyPairs.add(currencyPair);
+  }
+
+  /**
+   * @return raw Coinbase product ids to filter fills by (optional)
+   */
+  public Collection<String> getProductIds() {
+    return productIds;
+  }
+
+  /**
+   * Set raw Coinbase product ids to filter fills by.
+   *
+   * <p>This is a Coinbase-specific escape hatch for products that do not have a natural
+   * {@link CurrencyPair} representation (for example perpetual futures products like {@code BTC-PERP}).</p>
+   *
+   * @param productIds product ids (nullable)
+   */
+  public void setProductIds(Collection<String> productIds) {
+    if (productIds == null) {
+      this.productIds = null;
+      return;
+    }
+    this.productIds = new HashSet<>(productIds);
+  }
+
+  /**
+   * Add a single raw Coinbase product id filter.
+   *
+   * @param productId product id (ignored when null/blank)
+   */
+  public void addProductId(String productId) {
+    if (productId == null || productId.trim().isEmpty()) {
+      return;
+    }
+    if (this.productIds == null) {
+      this.productIds = new HashSet<>();
+    }
+    this.productIds.add(productId.trim());
+  }
+
+  /**
+   * @return retail portfolio id used for filtering fills (optional)
+   */
+  public String getRetailPortfolioId() {
+    return retailPortfolioId;
+  }
+
+  /**
+   * Set the retail portfolio id filter.
+   *
+   * <p>This is primarily used for Coinbase perpetuals/INTX portfolios where fills are logically scoped
+   * to a portfolio UUID.</p>
+   *
+   * @param retailPortfolioId portfolio id (nullable)
+   */
+  public void setRetailPortfolioId(String retailPortfolioId) {
+    this.retailPortfolioId = retailPortfolioId;
   }
 
   @Override
