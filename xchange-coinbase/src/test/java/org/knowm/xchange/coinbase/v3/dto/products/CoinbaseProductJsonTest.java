@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import org.junit.Test;
 
@@ -60,6 +61,7 @@ public class CoinbaseProductJsonTest {
         + "    \"contract_root_unit\": \"BTC\",\n"
         + "    \"funding_rate\": \"0.000024\",\n"
         + "    \"funding_time\": \"2026-02-08T14:00:00Z\",\n"
+        + "    \"funding_interval\": \"3600s\",\n"
         + "    \"intraday_margin_rate\": {\n"
         + "      \"long_margin_rate\": \"0.1000185\",\n"
         + "      \"short_margin_rate\": \"0.1000008\"\n"
@@ -83,6 +85,7 @@ public class CoinbaseProductJsonTest {
     assertEquals("Contract root unit should match", "BTC", details.getContractRootUnit());
     assertEquals(new BigDecimal("0.000024"), details.getFundingRate());
     assertEquals(Instant.parse("2026-02-08T14:00:00Z"), details.getFundingTime());
+    assertEquals(Duration.ofHours(1), details.getFundingInterval());
 
     assertNotNull(details.getIntradayMarginRate());
     assertEquals(new BigDecimal("0.1000185"), details.getIntradayMarginRate().getLongMarginRate());
