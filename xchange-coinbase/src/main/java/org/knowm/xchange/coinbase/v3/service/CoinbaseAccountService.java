@@ -141,7 +141,19 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
   @Override
   public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
       throws IOException {
-    CoinbaseTransactionSummaryResponse response = getTransactionSummary();
+    String productType = normalizeCategory(category, 0);
+    String productVenue = normalizeCategory(category, 1);
+    if ("FUTURES".equals(productType)) {
+      productType = "FUTURE";
+    }
+    if ("PERPETUAL".equals(productType) || "PERPETUALS".equals(productType) || "INTX".equals(productType)) {
+      productType = "FUTURE";
+      if (productVenue == null) {
+        productVenue = "INTX";
+      }
+    }
+
+    CoinbaseTransactionSummaryResponse response = getTransactionSummary(productType, null, productVenue);
     CoinbaseFeeTier feeTier = response.getFeeTier();
 
     final Fee globalFee = new Fee(feeTier.getMakerFeeRate(), feeTier.getTakerFeeRate());
@@ -165,6 +177,21 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
         return 1;
       }
     });
+  }
+
+  private static String normalizeCategory(String[] category, int index) {
+    if (category == null || category.length <= index) {
+      return null;
+    }
+    String value = category[index];
+    if (value == null) {
+      return null;
+    }
+    String normalized = value.trim();
+    if (normalized.isEmpty()) {
+      return null;
+    }
+    return normalized.toUpperCase();
   }
 
   /**
