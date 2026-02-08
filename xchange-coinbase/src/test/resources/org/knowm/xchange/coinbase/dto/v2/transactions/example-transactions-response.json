@@ -1,0 +1,55 @@
+{
+  "pagination": {
+    "ending_before": null,
+    "starting_after": null,
+    "limit": 25,
+    "order": "desc",
+    "previous_uri": null,
+    "next_uri": null
+  },
+  "data": [
+    {
+      "id": "tx-1",
+      "type": "fiat_deposit",
+      "status": "completed",
+      "amount": {
+        "amount": "10.00",
+        "currency": "USD"
+      },
+      "native_amount": {
+        "amount": "10.00",
+        "currency": "USD"
+      },
+      "created_at": "2026-02-08T00:00:10Z",
+      "updated_at": "2026-02-08T00:00:11Z",
+      "resource": "transaction",
+      "resource_path": "/v2/accounts/account-1/transactions/tx-1",
+      "details": {
+        "title": "Deposit",
+        "subtitle": "Bank transfer"
+      }
+    },
+    {
+      "id": "tx-2",
+      "type": "fiat_withdrawal",
+      "status": "completed",
+      "amount": {
+        "amount": "-5.00",
+        "currency": "USD"
+      },
+      "native_amount": {
+        "amount": "-5.00",
+        "currency": "USD"
+      },
+      "created_at": "2026-02-08T00:01:10Z",
+      "updated_at": "2026-02-08T00:01:11Z",
+      "resource": "transaction",
+      "resource_path": "/v2/accounts/account-1/transactions/tx-2",
+      "details": {
+        "title": "Withdrawal",
+        "subtitle": "Bank transfer"
+      }
+    }
+  ]
+}
+

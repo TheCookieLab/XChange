@@ -4,6 +4,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.client.ExchangeRestProxyBuilder;
+import org.knowm.xchange.coinbase.v2.CoinbaseV2Authenticated;
+import org.knowm.xchange.coinbase.v2.dto.accounts.CoinbaseV2AccountsResponse;
+import org.knowm.xchange.coinbase.v2.dto.transactions.CoinbaseV2TransactionsResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
@@ -28,6 +32,7 @@ import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioRequest;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
+import si.mazi.rescu.ParamsDigest;
 
 /**
  * Raw account service implementation for Coinbase Advanced Trade (v3) API.
@@ -43,6 +48,8 @@ import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummary
  */
 public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
 
+  protected final CoinbaseV2Authenticated coinbaseV2;
+
   /**
    * Constructs a new raw account service using the exchange's default configuration.
    *
@@ -50,6 +57,21 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseAccountServiceRaw(Exchange exchange) {
     super(exchange);
+    this.coinbaseV2 = ExchangeRestProxyBuilder.forInterface(CoinbaseV2Authenticated.class,
+        exchange.getExchangeSpecification()).build();
+  }
+
+  public CoinbaseAccountServiceRaw(Exchange exchange, org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated coinbaseAdvancedTrade,
+      ParamsDigest authTokenCreator, CoinbaseV2Authenticated coinbaseV2) {
+    super(exchange, coinbaseAdvancedTrade, authTokenCreator);
+    this.coinbaseV2 = coinbaseV2;
+  }
+
+  public CoinbaseAccountServiceRaw(Exchange exchange, org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated coinbaseAdvancedTrade,
+      ParamsDigest authTokenCreator) {
+    this(exchange, coinbaseAdvancedTrade, authTokenCreator,
+        ExchangeRestProxyBuilder.forInterface(CoinbaseV2Authenticated.class,
+            exchange.getExchangeSpecification()).build());
   }
 
   /**
@@ -216,6 +238,44 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
       String contractExpiryType, String productVenue) throws IOException {
     return coinbaseAdvancedTrade.getTransactionSummary(authTokenCreator, productType,
         contractExpiryType, productVenue);
+  }
+
+  /**
+   * List Coinbase API v2 accounts.
+   *
+   * <p>This is primarily used to discover an account id (for example a USD wallet) for subsequent
+   * calls to {@link #listV2AccountTransactions(String, Integer, String, String, String)}.</p>
+   *
+   * @param limit max results per page (nullable to use server defaults)
+   * @param startingAfter pagination cursor (nullable)
+   * @param endingBefore pagination cursor (nullable)
+   * @param order "asc" or "desc" (nullable)
+   * @return raw v2 accounts response
+   * @throws IOException if a network or serialization error occurs
+   */
+  public CoinbaseV2AccountsResponse listV2Accounts(Integer limit, String startingAfter,
+      String endingBefore, String order) throws IOException {
+    return coinbaseV2.listAccounts(authTokenCreator, limit, startingAfter, endingBefore, order);
+  }
+
+  /**
+   * List Coinbase API v2 account transactions for a specific v2 account id.
+   *
+   * <p>Transactions can represent deposits, withdrawals, and transfers that affect collateral
+   * independently of trading fills. Callers should apply strict type filtering to avoid double
+   * counting trade-related activity.</p>
+   *
+   * @param accountId Coinbase v2 account id (required)
+   * @param limit max results per page (nullable to use server defaults)
+   * @param startingAfter pagination cursor (nullable)
+   * @param endingBefore pagination cursor (nullable)
+   * @param order "asc" or "desc" (nullable)
+   * @return raw v2 transactions response
+   * @throws IOException if a network or serialization error occurs
+   */
+  public CoinbaseV2TransactionsResponse listV2AccountTransactions(String accountId, Integer limit,
+      String startingAfter, String endingBefore, String order) throws IOException {
+    return coinbaseV2.listTransactions(authTokenCreator, accountId, limit, startingAfter, endingBefore, order);
   }
 
   /**
