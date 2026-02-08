@@ -141,19 +141,8 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
   @Override
   public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
       throws IOException {
-    String productType = normalizeCategory(category, 0);
-    String productVenue = normalizeCategory(category, 1);
-    if ("FUTURES".equals(productType)) {
-      productType = "FUTURE";
-    }
-    if ("PERPETUAL".equals(productType) || "PERPETUALS".equals(productType) || "INTX".equals(productType)) {
-      productType = "FUTURE";
-      if (productVenue == null) {
-        productVenue = "INTX";
-      }
-    }
-
-    CoinbaseTransactionSummaryResponse response = getTransactionSummary(productType, null, productVenue);
+    TransactionSummaryFilters filters = resolveTransactionSummaryFilters(category);
+    CoinbaseTransactionSummaryResponse response = getTransactionSummary(filters.productType(), null, filters.productVenue());
     CoinbaseFeeTier feeTier = response.getFeeTier();
 
     final Fee globalFee = new Fee(feeTier.getMakerFeeRate(), feeTier.getTakerFeeRate());
@@ -177,6 +166,40 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
         return 1;
       }
     });
+  }
+
+  static TransactionSummaryFilters resolveTransactionSummaryFilters(String... category) {
+    String productType = normalizeCategory(category, 0);
+    String productVenue = normalizeCategory(category, 1);
+    if ("FUTURES".equals(productType)) {
+      productType = "FUTURE";
+    }
+    if ("PERPETUAL".equals(productType) || "PERPETUALS".equals(productType) || "INTX".equals(productType)) {
+      productType = "FUTURE";
+      if (productVenue == null) {
+        productVenue = "INTX";
+      }
+    }
+    return new TransactionSummaryFilters(productType, productVenue);
+  }
+
+  static final class TransactionSummaryFilters {
+
+    private final String productType;
+    private final String productVenue;
+
+    private TransactionSummaryFilters(String productType, String productVenue) {
+      this.productType = productType;
+      this.productVenue = productVenue;
+    }
+
+    String productType() {
+      return productType;
+    }
+
+    String productVenue() {
+      return productVenue;
+    }
   }
 
   private static String normalizeCategory(String[] category, int index) {
