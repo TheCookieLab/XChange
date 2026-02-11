@@ -3,21 +3,21 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.knowm.xchange</groupId>
+    <groupId>com.github.thecookielab.xchange</groupId>
     <artifactId>xchange-parent</artifactId>
-    <version>5.2.5-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>XChange</name>
     <description>XChange is a Java library providing a simple and consistent API for interacting with
     a diverse set of cryptocurrency exchanges.</description>
 
-    <url>http://knowm.org/open-source/xchange</url>
+    <url>https://github.com/TheCookieLab/XChange</url>
     <inceptionYear>2012</inceptionYear>
 
     <organization>
-        <name>Knowm Inc.</name>
-        <url>http://knowm.org/open-source/xchange/</url>
+        <name>TheCookieLab</name>
+        <url>https://github.com/TheCookieLab</url>
     </organization>
 
     <licenses>
@@ -31,7 +31,9 @@
 
     <developers>
         <developer>
-            <name>Tim Molter</name>
+            <name>TheCookieLab</name>
+            <organization>TheCookieLab</organization>
+            <organizationUrl>https://github.com/TheCookieLab</organizationUrl>
         </developer>
     </developers>
 
@@ -146,20 +148,28 @@
     </modules>
 
     <scm>
-        <connection>scm:git:git@github.com:knowm/XChange.git</connection>
-        <developerConnection>scm:git:git@github.com:knowm/XChange.git</developerConnection>
+        <connection>scm:git:git@github.com:TheCookieLab/XChange.git</connection>
+        <developerConnection>scm:git:git@github.com:TheCookieLab/XChange.git</developerConnection>
         <tag>HEAD</tag>
-        <url>git@github.com:knowm/XChange.git</url>
+        <url>https://github.com/TheCookieLab/XChange</url>
     </scm>
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/knowm/XChange/issues</url>
+        <url>https://github.com/TheCookieLab/XChange/issues</url>
     </issueManagement>
 
     <ciManagement>
-        <url>https://travis-ci.org/github/knowm/XChange</url>
+        <url>https://github.com/TheCookieLab/XChange/actions</url>
     </ciManagement>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>central-portal-snapshots</id>
+            <name>Central Portal Snapshots</name>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -574,28 +584,12 @@
                         --add-opens java.base/jdk.internal.loader=ALL-UNNAMED</argLine>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.9.0</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <publishingServerId>central</publishingServerId>
-                    <autoPublish>true</autoPublish>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 
     <profiles>
         <profile>
             <id>release-sign-artifacts</id>
-            <activation>
-                <property>
-                    <name>gpg.passphrase</name>
-                    <value>true</value>
-                </property>
-            </activation>
             <build>
                 <plugins>
                     <plugin>
@@ -652,6 +646,23 @@
                         </executions>
                     </plugin>
 
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>central-release-publish</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.9.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                        </configuration>
+                    </plugin>
                 </plugins>
             </build>
         </profile>

@@ -1,7 +1,7 @@
-## [![XChange](https://raw.githubusercontent.com/knowm/XChange/develop/etc/XChange_64_64.png)](http://knowm.org/open-source/xchange) XChange
+## [![XChange](https://raw.githubusercontent.com/TheCookieLab/XChange/main/etc/XChange_64_64.png)](https://github.com/TheCookieLab/XChange) XChange
 
 [![Discord](https://img.shields.io/discord/778301671302365256?logo=Discord)](https://discord.gg/n27zjVTbDz)
-[![Java CI with Maven on Push](https://github.com/knowm/XChange/actions/workflows/maven.yml/badge.svg?event=status)](https://github.com/knowm/XChange/actions/workflows/maven.yml)
+[![Java CI with Maven on Push](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml/badge.svg?event=status)](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml)
 
 XChange is a Java library providing a simple and consistent API for interacting with 60+ Bitcoin and other cryptocurrency exchanges, providing a consistent interface for trading and accessing market data.
 
@@ -9,7 +9,7 @@ A big thanks to all the [contributors](CONTRIBUTORS) who have helped make XChang
 
 ## Important!
 
-The world of Bitcoin changes quickly and XChange is no exception. For the latest bugfixes and features you should use the [snapshot jars](https://oss.sonatype.org/content/groups/public/org/knowm/xchange/) or build yourself from the `develop` branch. See below for more details about building with Maven. To report bugs and see what issues people are currently working on see the [issues page](https://github.com/knowm/XChange/issues).
+The world of Bitcoin changes quickly and XChange is no exception. For the latest bugfixes and features you should use the [snapshot jars](https://central.sonatype.com/repository/maven-snapshots/com/github/thecookielab/xchange/) or build yourself from the `main` or `develop` branch. See below for more details about building with Maven. To report bugs and see what issues people are currently working on see the [issues page](https://github.com/TheCookieLab/XChange/issues).
 
 ## Description
 
@@ -21,17 +21,17 @@ Basic usage is very simple: Create an `Exchange` instance, get the appropriate s
 
 | Exchange         | Status                                                                                                                                                                    |
 |------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| bitfinex         | [![status](https://github.com/knowm/XChange/actions/workflows/bitfinex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitfinex.yml)                  |
-| bitget           | [![status](https://github.com/knowm/XChange/actions/workflows/bitget.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitget.yml)                      |
-| bitmex           | [![status](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml)                     |
-| coinex           | [![status](https://github.com/knowm/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/coinex.yaml)                     |
-| deribit          | [![status](https://github.com/knowm/XChange/actions/workflows/deribit.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/deribit.yaml)                   |
-| gate.io          | [![status](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml)               |
-| kraken           | [![status](https://github.com/knowm/XChange/actions/workflows/kraken.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/kraken.yaml)                     |
-| mexc             | [![status](https://github.com/knowm/XChange/actions/workflows/mexc.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/mexc.yaml)                         |
-| stream-bitfinex  | [![status](https://github.com/knowm/XChange/actions/workflows/stream-bitfinex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/stream-bitfinex.yml)    |
-| stream-deribit   | [![status](https://github.com/knowm/XChange/actions/workflows/stream-deribit.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/stream-deribit.yml)      |
-| stream-kraken-v2 | [![status](https://github.com/knowm/XChange/actions/workflows/stream-kraken-v2.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/stream-kraken-v2.yaml) |
+| bitfinex         | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yml)                  |
+| bitget           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yml)                      |
+| bitmex           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml)                     |
+| coinex           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml)                     |
+| deribit          | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml)                   |
+| gate.io          | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml)               |
+| kraken           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml)                     |
+| mexc             | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml)                         |
+| stream-bitfinex  | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yml)    |
+| stream-deribit   | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yml)      |
+| stream-kraken-v2 | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-kraken-v2.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-kraken-v2.yaml) |
 
 ## REST API
 #### Public Market Data
@@ -57,7 +57,7 @@ exSpec.setSecretKey("sisJixU6Xd0d1yr6w02EHCb9UwYzTNuj");
 Exchange bitstamp = ExchangeFactory.INSTANCE.createExchange(exSpec);
 ```
 
-*Please Note:* while most exchanges use just an API key and secret key, others (such as `username` on Bitstamp or `passphrase` on Coinbase Pro) are exchange-specific. For more examples of adding the keys to the `ExchangeSpecification`, including storing them in a configuration file, see [Frequently Asked Questions](https://github.com/knowm/XChange/wiki/Frequently-Asked-Questions).
+*Please Note:* while most exchanges use just an API key and secret key, others (such as `username` on Bitstamp or `passphrase` on Coinbase Pro) are exchange-specific. For more examples of adding the keys to the `ExchangeSpecification`, including storing them in a configuration file, see [Frequently Asked Questions](https://github.com/TheCookieLab/XChange/wiki/Frequently-Asked-Questions).
 
 Once you have an authenticated `Exchange`, the private API services, `AccountService` and `TradeService`, can be used to access private data:
 
@@ -112,7 +112,7 @@ Authentication, if supported for the exchange, works the same way as for the mai
 
 ## More information
 
-Now go ahead and [study some more examples](http://knowm.org/open-source/xchange/xchange-example-code), [download the thing](http://knowm.org/open-source/xchange/xchange-change-log/) and [provide feedback](https://github.com/knowm/XChange/issues).
+Now go ahead and [study some more examples](http://knowm.org/open-source/xchange/xchange-example-code), [download the thing](http://knowm.org/open-source/xchange/xchange-change-log/) and [provide feedback](https://github.com/TheCookieLab/XChange/issues).
 
 More information about reactive streams can be found at the [RxJava wiki](https://github.com/ReactiveX/RxJava/wiki).
 
@@ -135,43 +135,43 @@ Talk to us on discord: [![Discord](https://img.shields.io/discord/77830167130236
 
 ## Wiki
 
-- [Home](https://github.com/knowm/XChange/wiki)
-- [FAQ](https://github.com/knowm/XChange/wiki/Frequently-Asked-Questions)
-- [Design Notes](https://github.com/knowm/XChange/wiki/Design-Notes)
-- [Milestones](https://github.com/knowm/XChange/wiki/Milestones)
-- [Exchange Support](https://github.com/knowm/XChange/wiki/Exchange-support)
-- [New Implementation Best Practices](https://github.com/knowm/XChange/wiki/New-Implementation-Best-Practices)
-- [Installing SSL Certificates into TrustStore](https://github.com/knowm/XChange/wiki/Installing-SSL-Certificates-into-TrustStore)
-- [Getting Started with XChange for Noobies](https://github.com/knowm/XChange/wiki/Getting-Started-with-XChange-for-Noobies)
-- [Code Style](https://github.com/knowm/XChange/wiki/Code-Style)
+- [Home](https://github.com/TheCookieLab/XChange/wiki)
+- [FAQ](https://github.com/TheCookieLab/XChange/wiki/Frequently-Asked-Questions)
+- [Design Notes](https://github.com/TheCookieLab/XChange/wiki/Design-Notes)
+- [Milestones](https://github.com/TheCookieLab/XChange/wiki/Milestones)
+- [Exchange Support](https://github.com/TheCookieLab/XChange/wiki/Exchange-support)
+- [New Implementation Best Practices](https://github.com/TheCookieLab/XChange/wiki/New-Implementation-Best-Practices)
+- [Installing SSL Certificates into TrustStore](https://github.com/TheCookieLab/XChange/wiki/Installing-SSL-Certificates-into-TrustStore)
+- [Getting Started with XChange for Noobies](https://github.com/TheCookieLab/XChange/wiki/Getting-Started-with-XChange-for-Noobies)
+- [Code Style](https://github.com/TheCookieLab/XChange/wiki/Code-Style)
 
 ## Continuous Integration
 
-[![Java CI with Maven](https://github.com/knowm/XChange/actions/workflows/maven.yml/badge.svg?branch=develop&event=status)](https://github.com/knowm/XChange/actions/workflows/maven.yml)
+[![Java CI with Maven](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml/badge.svg?branch=main&event=status)](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml)
 
 ## Getting Started
 
 ### Non-Maven
 
-- [XChange Release Jars](http://search.maven.org/#search%7Cga%7C1%7Cknowm%20xchange)
-- [XChange Snapshot Jars](https://oss.sonatype.org/content/groups/public/org/knowm/xchange/)
+- [XChange Release Jars](https://central.sonatype.com/search?q=g:com.github.thecookielab.xchange)
+- [XChange Snapshot Jars](https://central.sonatype.com/repository/maven-snapshots/com/github/thecookielab/xchange/)
 
 ### Maven
 
-The XChange release artifacts are hosted on Maven Central: [org.knowm.xchange](https://mvnrepository.com/artifact/org.knowm.xchange)
+The XChange release artifacts are hosted on Maven Central: [com.github.thecookielab.xchange](https://mvnrepository.com/artifact/com.github.thecookielab.xchange)
 
 Add the following dependencies in your pom.xml file. You will need at least xchange-core. Add the additional dependencies for the exchange modules you are interested in (XYZ shown only for a placeholder). There is example code for all the modules in xchange-examples.
 
 ```xml
 <dependency>
-  <groupId>org.knowm.xchange</groupId>
+  <groupId>com.github.thecookielab.xchange</groupId>
   <artifactId>xchange-core</artifactId>
-  <version>5.2.4</version>
+  <version>0.1.0-SNAPSHOT</version>
 </dependency>
 <dependency>
-  <groupId>org.knowm.xchange</groupId>
+  <groupId>com.github.thecookielab.xchange</groupId>
   <artifactId>xchange-XYZ</artifactId>
-  <version>5.2.4</version>
+  <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -179,9 +179,9 @@ If it is available for your exchange, you may also want to use the streaming API
 
 ```xml
 <dependency>
-  <groupId>org.knowm.xchange</groupId>
+  <groupId>com.github.thecookielab.xchange</groupId>
   <artifactId>xchange-stream-XYZ</artifactId>
-  <version>5.2.4</version>
+  <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -203,7 +203,7 @@ For snapshots, add the following repository to your pom.xml file.
 
 The current snapshot version is:
 
-    5.2.5-SNAPSHOT
+    0.1.0-SNAPSHOT
 
 ## Building with Maven
 
@@ -221,22 +221,15 @@ pom format/organize               | `mvn com.github.ekryd.sortpom:sortpom-maven-
 
 ## Bugs
 
-Please report any bugs or submit feature requests to [XChange's Github issue tracker](https://github.com/knowm/XChange/issues).
+Please report any bugs or submit feature requests to [XChange's Github issue tracker](https://github.com/TheCookieLab/XChange/issues).
 
 ## Contributing
 
-If you'd like to submit a new implementation for another exchange, please take a look at [New Implementation Best Practices](https://github.com/knowm/XChange/wiki/New-Implementation-Best-Practices) first, as there are lots of time-saving tips!
+If you'd like to submit a new implementation for another exchange, please take a look at [New Implementation Best Practices](https://github.com/TheCookieLab/XChange/wiki/New-Implementation-Best-Practices) first, as there are lots of time-saving tips!
 
-For more information such as a contributor list and a list of known projects depending on XChange, visit the [Main Project Wiki](https://github.com/knowm/XChange/wiki).
+For more information such as a contributor list and a list of known projects depending on XChange, visit the [Main Project Wiki](https://github.com/TheCookieLab/XChange/wiki).
 
 ---
-## Maintained by Knowm Inc.
+## Maintained by TheCookieLab
 
-**XChange** is an open-source project sponsored and maintained by the team at [Knowm Inc.](https://knowm.com), a company dedicated to neuromorphic computing and machine learning research since 2015.
-
-Our team also powers [AI Receptionist](https://ai-receptionist.com/), an AI-driven automated phone system for small businesses. We leverage the same high-performance, resilient technical architecture and design principles used in XChange to ensure AI Receptionist never misses a call.
-
-Learn more about our research at [Knowm.org](https://knowm.org).
-
-**Connect with the Lead Developer:**
-[Tim Molter on LinkedIn](https://www.linkedin.com/in/tmolter/) | [Tim Molter on X (Twitter)](https://x.com/TimMolter)
+**XChange** in this repository is maintained by [TheCookieLab](https://github.com/TheCookieLab) as an independent fork focused on production trading reliability and rapid exchange support updates.

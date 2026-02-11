@@ -3,9 +3,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.knowm.xchange</groupId>
+        <groupId>com.github.thecookielab.xchange</groupId>
         <artifactId>xchange-parent</artifactId>
-        <version>5.2.5-SNAPSHOT</version>
+        <version>0.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>xchange-coinsph</artifactId>
@@ -40,7 +40,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.knowm.xchange</groupId>
+            <groupId>com.github.thecookielab.xchange</groupId>
             <artifactId>xchange-core</artifactId>
             <version>${project.version}</version>
         </dependency>
