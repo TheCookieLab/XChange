@@ -25,16 +25,16 @@
     <!-- Parent provides default configuration for dependencies -->
     <dependencies>
 
-        <!--For String Joining, etc. -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>com.github.thecookielab.xchange</groupId>
             <artifactId>xchange-core</artifactId>
             <version>${project.version}</version>
+        </dependency>
+
+        <!--For String Joining, etc. -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
         </dependency>
 
     </dependencies>

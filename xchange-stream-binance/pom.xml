@@ -13,11 +13,6 @@
     <name>XChange Binance Stream</name>
 
     <dependencies>
-
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.github.thecookielab.xchange</groupId>
             <artifactId>xchange-binance</artifactId>
@@ -32,6 +27,11 @@
             <groupId>com.github.thecookielab.xchange</groupId>
             <artifactId>xchange-stream-service-netty</artifactId>
             <version>${project.parent.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
         </dependency>
     </dependencies>
 </project>

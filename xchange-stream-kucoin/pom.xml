@@ -14,10 +14,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.github.thecookielab.xchange</groupId>
             <artifactId>xchange-kucoin</artifactId>
             <version>${project.parent.version}</version>
@@ -31,6 +27,10 @@
             <groupId>com.github.thecookielab.xchange</groupId>
             <artifactId>xchange-stream-service-netty</artifactId>
             <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
         </dependency>
 
     </dependencies>

@@ -14,6 +14,21 @@
     <description>XChange implementation for the Coins.ph Exchange Stream</description>
 
     <dependencies>
+        <dependency>
+            <groupId>com.github.thecookielab.xchange</groupId>
+            <artifactId>xchange-coinsph</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.thecookielab.xchange</groupId>
+            <artifactId>xchange-stream-core</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.thecookielab.xchange</groupId>
+            <artifactId>xchange-stream-service-netty</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -32,21 +47,6 @@
             <artifactId>junit-jupiter-engine</artifactId>
             <version>${version.junit}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.github.thecookielab.xchange</groupId>
-            <artifactId>xchange-coinsph</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.thecookielab.xchange</groupId>
-            <artifactId>xchange-stream-core</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.thecookielab.xchange</groupId>
-            <artifactId>xchange-stream-service-netty</artifactId>
-            <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
 </project>

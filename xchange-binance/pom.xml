@@ -23,14 +23,14 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcpkix-jdk18on</artifactId>
-            <version>1.80</version>
-        </dependency>
-        <dependency>
             <groupId>com.github.thecookielab.xchange</groupId>
             <artifactId>xchange-core</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.80</version>
         </dependency>
 
         <dependency>
