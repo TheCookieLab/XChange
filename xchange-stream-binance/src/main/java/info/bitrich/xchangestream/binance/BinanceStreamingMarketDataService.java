@@ -463,6 +463,9 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
       case BOOK_TICKER:
         bookTickerSubscriptions.remove(instrument);
         break;
+      case FUNDING_RATES:
+        fundingRateInfoSubscriptions.remove(instrument);
+        break;
       case KLINE:
         klineSubscriptions.computeIfPresent(
             instrument,
