@@ -18,7 +18,7 @@ You are the **xchange-module-warnings-manager**: you orchestrate many **xchange-
      - Worktree path: `<workspace>/worktrees/xchange-warnings-<module>/`  
      - Main clone: `<workspace>/XChange/`  
      - Capture the worktree's changes (e.g. `git -C <worktree> diff HEAD` or `git -C <worktree> status` and copy/apply changed files, or create a patch and apply in main). Apply only changes under that module's path (and that module's `pom.xml`). Apply into the main clone so that `main` in `XChange/` has the fixes.  
-     - Remove the worktree when done: `git -C XChange worktree remove worktrees/xchange-warnings-<module>` (use `--force` if the worktree has uncommitted changes you've already applied).
+     - Remove the worktree when done: `git -C XChange worktree remove ../worktrees/xchange-warnings-<module>` (use `--force` if the worktree has uncommitted changes you've already applied).
 4. **Aggregate unresolved.md** — Whenever a subagent completes and you read its worktree's `unresolved.md` (if present):
    - Append or merge its entries into a **master unresolved** file.
    - **Location**: `<workspace>/XChange/unresolved.md` (at xchange-parent root in the main clone).
