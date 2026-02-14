@@ -7,6 +7,15 @@ XChange is a Java library providing a simple and consistent API for interacting 
 
 A big thanks to all the [contributors](CONTRIBUTORS) who have helped make XChange what it is today! ❤️
 
+## Fork Attribution
+
+This repository is a maintained fork of the original XChange project.
+
+- Upstream repository: [knowm/XChange](https://github.com/knowm/XChange)
+- Original project site: [knowm.org/open-source/xchange](http://knowm.org/open-source/xchange)
+
+This fork preserves upstream MIT license and copyright notices. Our release notes include an **Upstream Credits** section that tracks upstream PRs and commits included in each release.
+
 ## Important!
 
 The world of Bitcoin changes quickly and XChange is no exception. For the latest bugfixes and features you should use the [snapshot jars](https://central.sonatype.com/repository/maven-snapshots/com/github/thecookielab/xchange/) or build yourself from the `main` or `develop` branch. See below for more details about building with Maven. To report bugs and see what issues people are currently working on see the [issues page](https://github.com/TheCookieLab/XChange/issues).

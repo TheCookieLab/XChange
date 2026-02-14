@@ -1,6 +1,10 @@
-XChange is developed by Knowm Inc. members and the open-source community.
+XChange was originally developed by Knowm Inc. and the open-source community.
+This fork is maintained by The Cookie Lab and the open-source community.
 
-We thank all of our contributors: https://github.com/timmolter/xchange/graphs/contributors 
+We thank all of our contributors:
+
+- Upstream: https://github.com/knowm/XChange/graphs/contributors
+- This fork: https://github.com/TheCookieLab/XChange/graphs/contributors
 
 For the detailed history of contributions of a given file, try
 
