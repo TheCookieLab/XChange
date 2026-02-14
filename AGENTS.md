@@ -22,10 +22,10 @@ Agents and skills specific to XChange live under this repo. When working in XCha
 
 | Agent | Purpose |
 |-------|--------|
-| **xchange-module-warnings** | Fixes IDE/compiler warnings in **one** XChange module. Creates an isolated worktree on `main` (no branch), fixes local warnings, writes global issues to `unresolved.md` in that worktree. Invoke with a module name (e.g. “Use the xchange-module-warnings subagent for module xchange-coinbase”). |
-| **xchange-module-warnings-manager** | Orchestrates **xchange-module-warnings** across all submodules: batches dispatch, verifies and merges each worktree into the main clone, aggregates and deduplicates `unresolved.md` at repo root, then addresses global issues and raises decisions to the user. Use to clear all Problems across XChange in one run. |
+| **xchange-module-worker** | Per-module worker for large-scale XChange tasks. Performs one assigned task in one submodule in isolation (worktree on `main`, no branch). **Default task** (when none specified): resolve IDE/compiler warnings—fixes local warnings, writes global issues to `unresolved.md` in that worktree. For other tasks, the manager or user supplies the task and worktree path pattern. Invoke with a module name (e.g. “Use the xchange-module-worker subagent for module xchange-coinbase”). |
+| **xchange-module-manager** | Orchestrates **xchange-module-worker** across all submodules for any large-scale, near-global task. Batches dispatch, verifies and merges each worktree into the main clone, aggregates and deduplicates `unresolved.md`, then addresses global issues and raises decisions to the user. **Default task** (when none specified): resolve warnings across the codebase. For other tasks, specify the task when invoking; manager passes it to workers and uses task-appropriate verification/merge. |
 
-Path convention for the warnings workflow: worktrees live at `<workspace>/worktrees/xchange-warnings-<module>/`; main clone is `<workspace>/XChange/`. Master unresolved list: `XChange/unresolved.md`.
+These agents are for work that needs the same or similar changes in many submodules but is too complex for a single global search/replace. Path convention (default task): worktrees at `<workspace>/worktrees/xchange-warnings-<module>/`; main clone `<workspace>/XChange/`. Master unresolved list: `XChange/unresolved.md`.
 
 ### Skills (`.cursor/skills/`)
 
@@ -48,5 +48,5 @@ Path convention for the warnings workflow: worktrees live at `<workspace>/worktr
 ## Summary for agent decision logic
 
 1. **Build:** Use `mvn` from repo root; at least build the touched module(s) before completion.
-2. **Warnings cleanup:** Use **xchange-module-warnings** for one module; use **xchange-module-warnings-manager** to run the full fleet and then resolve global issues.
+2. **Large-scale per-module tasks (e.g. warnings cleanup):** Use **xchange-module-worker** for one module; use **xchange-module-manager** to run the full fleet. Default task for both is resolve warnings when no other task is specified.
 3. **Scoped rules:** Deeper `AGENTS.md` in subdirs override this file when present.
