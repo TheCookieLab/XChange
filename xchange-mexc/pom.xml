@@ -18,8 +18,7 @@
     <inceptionYear>2022</inceptionYear>
 
     <organization>
-        <name>Knowm Inc.</name>
-        <url>http://knowm.org/open-source/xchange/</url>
+        <name>The Cookie Lab</name>
     </organization>
 
     <!-- Parent provides default configuration for dependencies -->
