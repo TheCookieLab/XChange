@@ -1,0 +1,560 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+POM_FILE="${REPO_ROOT}/pom.xml"
+RULESET_FILE="${REPO_ROOT}/config/static-analysis/pmd/xchange-ruleset.xml"
+EXCLUDED_MODULES_FILE="${REPO_ROOT}/config/static-analysis/pmd/excluded-modules.txt"
+DEFAULT_REPORT_DIR="${REPO_ROOT}/target/pmd-reports"
+DEFAULT_CACHE_FILE="${REPO_ROOT}/target/pmd-cache/pmd.cache"
+
+FORMAT="text"
+THREADS="1C"
+MINIMUM_PRIORITY="MEDIUM_LOW"
+REPORT_FILE=""
+REPORT_DIR="${DEFAULT_REPORT_DIR}"
+CACHE_FILE="${DEFAULT_CACHE_FILE}"
+INCLUDE_TESTS=false
+LIST_MODULES=false
+SHOW_CONFIG=false
+DRY_RUN=false
+SELECT_CHANGED=false
+CHANGED_BASE="origin/main"
+INCLUDE_EXCLUDED=false
+FAIL_ON_VIOLATION=true
+USE_CACHE=true
+
+MODULE_ARGS=()
+EXTRA_PMD_ARGS=()
+ALL_MODULES=()
+DEFAULT_EXCLUDED_MODULES=()
+EXPLICIT_MODULES=()
+
+usage() {
+    cat <<'USAGE'
+Usage:
+  scripts/pmd-check [options] [module ...]
+
+Default behavior:
+  - With no modules: scans all XChange modules from pom.xml.
+  - With one or more modules: scans only those modules.
+
+Module arguments:
+  - Accepts full artifactIds (e.g. xchange-coinbase).
+  - Accepts short names when unique (e.g. coinbase -> xchange-coinbase).
+  - Accepts comma-separated values (e.g. xchange-core,xchange-coinbase).
+
+Options:
+  -m, --module <name>          Add a module (repeatable).
+      --changed                Scan only modules changed vs CHANGED_BASE...HEAD.
+      --changed-base <ref>     Base git ref for --changed (default: origin/main).
+      --include-tests          Include src/test/java in addition to src/main/java.
+      --include-excluded       Include modules listed in excluded-modules.txt.
+      --list-modules           Print known modules and exit.
+      --show-config            Print resolved runtime config before execution.
+      --format <renderer>      PMD renderer (default: text).
+  -r, --report-file <path>     Report output path. Relative paths resolve from repo root.
+      --report-dir <dir>       Report output directory when --report-file is not set.
+  -t, --threads <n>            PMD thread setting (default: 1C).
+      --minimum-priority <p>   PMD minimum priority (HIGH..LOW, default: MEDIUM_LOW).
+      --no-fail-on-violation   Return zero even when violations are found.
+      --no-cache               Disable PMD incremental cache.
+      --dry-run                Print the command but do not execute PMD.
+  -h, --help                   Show this help.
+
+Examples:
+  scripts/pmd-check
+  scripts/pmd-check xchange-core xchange-coinbase
+  scripts/pmd-check -m coinbase --include-tests
+  scripts/pmd-check --changed --no-fail-on-violation
+  scripts/pmd-check xchange-core --format json --report-file target/pmd-reports/core.json
+  scripts/pmd-check xchange-core -- --debug
+USAGE
+}
+
+die() {
+    echo "[${SCRIPT_NAME}] ERROR: $*" >&2
+    exit 2
+}
+
+info() {
+    echo "[${SCRIPT_NAME}] $*" >&2
+}
+
+require_command() {
+    local cmd="$1"
+    if ! command -v "${cmd}" >/dev/null 2>&1; then
+        die "Required command not found: ${cmd}"
+    fi
+}
+
+trim() {
+    local value="$1"
+    value="${value#${value%%[![:space:]]*}}"
+    value="${value%${value##*[![:space:]]}}"
+    printf '%s' "${value}"
+}
+
+array_contains() {
+    local needle="$1"
+    shift
+    local item
+    for item in "$@"; do
+        if [[ "${item}" == "${needle}" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+module_exists() {
+    local candidate="$1"
+    array_contains "${candidate}" "${ALL_MODULES[@]}"
+}
+
+load_modules() {
+    if [[ ! -f "${POM_FILE}" ]]; then
+        die "Cannot find pom.xml at ${POM_FILE}"
+    fi
+
+    ALL_MODULES=()
+    while IFS= read -r module; do
+        module="$(trim "${module}")"
+        [[ -z "${module}" ]] && continue
+        ALL_MODULES+=("${module}")
+    done < <(
+        sed -n '/<modules>/,/<\/modules>/p' "${POM_FILE}" \
+            | sed -n 's|^[[:space:]]*<module>\(.*\)</module>[[:space:]]*$|\1|p'
+    )
+
+    if [[ ${#ALL_MODULES[@]} -eq 0 ]]; then
+        die "No modules found under <modules> in ${POM_FILE}"
+    fi
+}
+
+load_default_excluded_modules() {
+    DEFAULT_EXCLUDED_MODULES=()
+    if [[ -f "${EXCLUDED_MODULES_FILE}" ]]; then
+        while IFS= read -r line; do
+            line="${line%%#*}"
+            line="$(trim "${line}")"
+            [[ -z "${line}" ]] && continue
+            if module_exists "${line}"; then
+                DEFAULT_EXCLUDED_MODULES+=("${line}")
+            fi
+        done <"${EXCLUDED_MODULES_FILE}"
+    fi
+}
+
+resolve_module() {
+    local raw="$1"
+    local candidate="${raw}"
+
+    if module_exists "${candidate}"; then
+        echo "${candidate}"
+        return 0
+    fi
+
+    if [[ "${candidate}" != xchange-* ]]; then
+        local prefixed="xchange-${candidate}"
+        if module_exists "${prefixed}"; then
+            echo "${prefixed}"
+            return 0
+        fi
+    fi
+
+    local fuzzy_matches=()
+    local module
+    for module in "${ALL_MODULES[@]}"; do
+        if [[ "${module}" == *"${candidate}"* ]]; then
+            fuzzy_matches+=("${module}")
+        fi
+    done
+
+    if [[ ${#fuzzy_matches[@]} -eq 1 ]]; then
+        echo "${fuzzy_matches[0]}"
+        return 0
+    fi
+
+    if [[ ${#fuzzy_matches[@]} -gt 1 ]]; then
+        die "Ambiguous module '${raw}'. Matches: ${fuzzy_matches[*]}"
+    fi
+
+    die "Unknown module '${raw}'. Use --list-modules to inspect valid modules."
+}
+
+add_module_arg() {
+    local raw="$1"
+    local split_values
+    local value
+    IFS=',' read -r -a split_values <<<"${raw}"
+    for value in "${split_values[@]}"; do
+        value="$(trim "${value}")"
+        [[ -z "${value}" ]] && continue
+        MODULE_ARGS+=("${value}")
+    done
+}
+
+collect_changed_modules() {
+    local base_ref="$1"
+    local changed_modules=()
+    local file
+    local top
+
+    if ! git -C "${REPO_ROOT}" rev-parse --verify "${base_ref}" >/dev/null 2>&1; then
+        die "--changed-base ref not found: ${base_ref}"
+    fi
+
+    while IFS= read -r file; do
+        [[ -z "${file}" ]] && continue
+        top="${file%%/*}"
+        if module_exists "${top}" && ! array_contains "${top}" "${changed_modules[@]}"; then
+            changed_modules+=("${top}")
+        fi
+    done < <(git -C "${REPO_ROOT}" diff --name-only "${base_ref}...HEAD")
+
+    local module
+    for module in "${changed_modules[@]}"; do
+        echo "${module}"
+    done
+}
+
+report_extension_for_format() {
+    local fmt="$1"
+    case "${fmt}" in
+    text | textcolor | emacs | ideaj | textpad)
+        echo "txt"
+        ;;
+    html | summaryhtml | vbhtml | yahtml | xslt)
+        echo "html"
+        ;;
+    csv | json | sarif | xml | codeclimate)
+        echo "${fmt}"
+        ;;
+    *)
+        echo "out"
+        ;;
+    esac
+}
+
+load_modules
+load_default_excluded_modules
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    -m | --module)
+        [[ $# -ge 2 ]] || die "--module requires a value"
+        add_module_arg "$2"
+        shift 2
+        continue
+        ;;
+    --changed)
+        SELECT_CHANGED=true
+        shift
+        continue
+        ;;
+    --changed-base)
+        [[ $# -ge 2 ]] || die "--changed-base requires a git ref"
+        CHANGED_BASE="$2"
+        shift 2
+        continue
+        ;;
+    --include-tests)
+        INCLUDE_TESTS=true
+        shift
+        continue
+        ;;
+    --include-excluded)
+        INCLUDE_EXCLUDED=true
+        shift
+        continue
+        ;;
+    --list-modules)
+        LIST_MODULES=true
+        shift
+        continue
+        ;;
+    --show-config)
+        SHOW_CONFIG=true
+        shift
+        continue
+        ;;
+    --format)
+        [[ $# -ge 2 ]] || die "--format requires a value"
+        FORMAT="$2"
+        shift 2
+        continue
+        ;;
+    -r | --report-file)
+        [[ $# -ge 2 ]] || die "--report-file requires a value"
+        REPORT_FILE="$2"
+        shift 2
+        continue
+        ;;
+    --report-dir)
+        [[ $# -ge 2 ]] || die "--report-dir requires a value"
+        REPORT_DIR="$2"
+        shift 2
+        continue
+        ;;
+    -t | --threads)
+        [[ $# -ge 2 ]] || die "--threads requires a value"
+        THREADS="$2"
+        shift 2
+        continue
+        ;;
+    --minimum-priority)
+        [[ $# -ge 2 ]] || die "--minimum-priority requires a value"
+        MINIMUM_PRIORITY="$2"
+        shift 2
+        continue
+        ;;
+    --no-fail-on-violation)
+        FAIL_ON_VIOLATION=false
+        shift
+        continue
+        ;;
+    --no-cache)
+        USE_CACHE=false
+        shift
+        continue
+        ;;
+    --dry-run)
+        DRY_RUN=true
+        shift
+        continue
+        ;;
+    --)
+        shift
+        EXTRA_PMD_ARGS+=("$@")
+        break
+        ;;
+    -*)
+        die "Unknown option: $1"
+        ;;
+    *)
+        add_module_arg "$1"
+        shift
+        continue
+        ;;
+    esac
+done
+
+if [[ ! -f "${RULESET_FILE}" ]]; then
+    die "PMD ruleset not found: ${RULESET_FILE}"
+fi
+
+require_command pmd
+require_command git
+
+if [[ "${LIST_MODULES}" == true ]]; then
+    for module in "${ALL_MODULES[@]}"; do
+        marker=""
+        if array_contains "${module}" "${DEFAULT_EXCLUDED_MODULES[@]}"; then
+            marker=" (default-excluded)"
+        fi
+        echo "${module}${marker}"
+    done
+
+    if [[ "${SHOW_CONFIG}" != true ]]; then
+        exit 0
+    fi
+fi
+
+requested_modules=()
+
+if [[ "${SELECT_CHANGED}" == true ]]; then
+    while IFS= read -r module; do
+        [[ -z "${module}" ]] && continue
+        requested_modules+=("${module}")
+    done < <(collect_changed_modules "${CHANGED_BASE}")
+
+    if [[ ${#requested_modules[@]} -eq 0 ]]; then
+        info "No changed modules found for '${CHANGED_BASE}...HEAD'."
+        exit 0
+    fi
+fi
+
+for raw_module in "${MODULE_ARGS[@]}"; do
+    resolved_module="$(resolve_module "${raw_module}")"
+    requested_modules+=("${resolved_module}")
+    if ! array_contains "${resolved_module}" "${EXPLICIT_MODULES[@]}"; then
+        EXPLICIT_MODULES+=("${resolved_module}")
+    fi
+done
+
+if [[ ${#requested_modules[@]} -eq 0 ]]; then
+    requested_modules=("${ALL_MODULES[@]}")
+fi
+
+selected_modules=()
+for module in "${requested_modules[@]}"; do
+    if ! array_contains "${module}" "${selected_modules[@]}"; then
+        selected_modules+=("${module}")
+    fi
+done
+
+if [[ "${INCLUDE_EXCLUDED}" != true && ${#DEFAULT_EXCLUDED_MODULES[@]} -gt 0 ]]; then
+    filtered_modules=()
+    for module in "${selected_modules[@]}"; do
+        if array_contains "${module}" "${DEFAULT_EXCLUDED_MODULES[@]}" \
+            && ! array_contains "${module}" "${EXPLICIT_MODULES[@]}"; then
+            info "Skipping default-excluded module: ${module}"
+            continue
+        fi
+        filtered_modules+=("${module}")
+    done
+    selected_modules=("${filtered_modules[@]}")
+fi
+
+if [[ ${#selected_modules[@]} -eq 0 ]]; then
+    info "No modules selected after filtering."
+    exit 0
+fi
+
+source_roots=()
+skipped_modules=()
+for module in "${selected_modules[@]}"; do
+    main_src="${REPO_ROOT}/${module}/src/main/java"
+    test_src="${REPO_ROOT}/${module}/src/test/java"
+    has_sources=false
+
+    if [[ -d "${main_src}" ]]; then
+        source_roots+=("${main_src}")
+        has_sources=true
+    fi
+    if [[ "${INCLUDE_TESTS}" == true && -d "${test_src}" ]]; then
+        source_roots+=("${test_src}")
+        has_sources=true
+    fi
+
+    if [[ "${has_sources}" != true ]]; then
+        skipped_modules+=("${module}")
+    fi
+done
+
+if [[ ${#source_roots[@]} -eq 0 ]]; then
+    die "No source directories found for the selected modules."
+fi
+
+if [[ -n "${REPORT_FILE}" ]]; then
+    if [[ "${REPORT_FILE}" != /* ]]; then
+        REPORT_FILE="${REPO_ROOT}/${REPORT_FILE}"
+    fi
+else
+    if [[ "${REPORT_DIR}" != /* ]]; then
+        REPORT_DIR="${REPO_ROOT}/${REPORT_DIR}"
+    fi
+    mkdir -p "${REPORT_DIR}"
+
+    module_slug="all"
+    if [[ ${#selected_modules[@]} -le 3 ]]; then
+        module_slug="$(IFS=-; echo "${selected_modules[*]}")"
+    elif [[ "${SELECT_CHANGED}" == true ]]; then
+        module_slug="changed"
+    fi
+    module_slug="${module_slug//\//-}"
+    module_slug="${module_slug// /-}"
+
+    timestamp="$(date +%Y%m%d-%H%M%S)"
+    extension="$(report_extension_for_format "${FORMAT}")"
+    REPORT_FILE="${REPORT_DIR}/pmd-${module_slug}-${timestamp}.${extension}"
+fi
+
+mkdir -p "$(dirname "${REPORT_FILE}")"
+
+PMD_CMD=(
+    pmd
+    check
+    --format
+    "${FORMAT}"
+    --minimum-priority
+    "${MINIMUM_PRIORITY}"
+    --threads
+    "${THREADS}"
+    -R
+    "${RULESET_FILE}"
+    --relativize-paths-with
+    "${REPO_ROOT}"
+    --report-file
+    "${REPORT_FILE}"
+)
+
+if [[ "${FAIL_ON_VIOLATION}" != true ]]; then
+    PMD_CMD+=(--no-fail-on-violation)
+fi
+
+if [[ "${USE_CACHE}" == true ]]; then
+    mkdir -p "$(dirname "${CACHE_FILE}")"
+    PMD_CMD+=(--cache "${CACHE_FILE}")
+else
+    PMD_CMD+=(--no-cache)
+fi
+
+for source_root in "${source_roots[@]}"; do
+    PMD_CMD+=(--dir "${source_root}")
+done
+
+if [[ ${#EXTRA_PMD_ARGS[@]} -gt 0 ]]; then
+    PMD_CMD+=("${EXTRA_PMD_ARGS[@]}")
+fi
+
+if [[ "${SHOW_CONFIG}" == true ]]; then
+    info "repo_root=${REPO_ROOT}"
+    info "ruleset=${RULESET_FILE}"
+    info "report_file=${REPORT_FILE}"
+    info "minimum_priority=${MINIMUM_PRIORITY}"
+    info "threads=${THREADS}"
+    info "include_tests=${INCLUDE_TESTS}"
+    info "fail_on_violation=${FAIL_ON_VIOLATION}"
+    info "use_cache=${USE_CACHE}"
+fi
+
+info "Selected modules (${#selected_modules[@]}): ${selected_modules[*]}"
+if [[ ${#skipped_modules[@]} -gt 0 ]]; then
+    info "Skipped modules without source roots: ${skipped_modules[*]}"
+fi
+info "Source roots (${#source_roots[@]}):"
+for source_root in "${source_roots[@]}"; do
+    info "  - ${source_root}"
+done
+
+if [[ "${DRY_RUN}" == true ]]; then
+    printf '[%s] Dry run command: ' "${SCRIPT_NAME}" >&2
+    printf '%q ' "${PMD_CMD[@]}" >&2
+    echo >&2
+    exit 0
+fi
+
+set +e
+"${PMD_CMD[@]}"
+exit_code=$?
+set -e
+
+violation_count=0
+if [[ -f "${REPORT_FILE}" ]]; then
+    violation_count=$(grep -cve '^[[:space:]]*$' "${REPORT_FILE}" || true)
+fi
+
+if [[ "${exit_code}" -eq 0 && "${FAIL_ON_VIOLATION}" != true ]]; then
+    if [[ "${violation_count}" -gt 0 ]]; then
+        info "PMD completed with ${violation_count} violation(s) (fail disabled)."
+    else
+        info "PMD completed with no violations."
+    fi
+elif [[ "${exit_code}" -eq 0 ]]; then
+    info "PMD completed with no violations."
+elif [[ "${exit_code}" -eq 4 ]]; then
+    info "PMD completed with violations."
+else
+    info "PMD completed with exit code ${exit_code}."
+fi
+
+info "Report written to ${REPORT_FILE}"
+exit "${exit_code}"

@@ -29,7 +29,7 @@ These agents are for work that needs the same or similar changes in many submodu
 
 ### Skills (`.cursor/skills/`)
 
-- *(None yet. Add project-specific skills here as they are created.)*
+- **xchange-pmd-check** — runs XChange PMD analysis via `scripts/pmd-check` (full project, selected modules, or changed modules), using XChange-specific static-analysis configuration.
 
 ### Other tools and conventions
 

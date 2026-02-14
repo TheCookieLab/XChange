@@ -459,6 +459,10 @@
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <version>4.9.8.0</version>
                 <configuration>
+                    <effort>Max</effort>
+                    <threshold>Medium</threshold>
+                    <includeFilterFile>${maven.multiModuleProjectDirectory}/config/static-analysis/spotbugs/include-filter.xml</includeFilterFile>
+                    <excludeFilterFile>${maven.multiModuleProjectDirectory}/config/static-analysis/spotbugs/exclude-filter.xml</excludeFilterFile>
                     <plugins>
                         <plugin>
                             <groupId>com.h3xstream.findsecbugs</groupId>

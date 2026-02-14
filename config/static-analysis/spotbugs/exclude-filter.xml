@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Exchange payload DTOs are intentionally mutable for Jackson mapping. -->
+    <Match>
+        <Class name="~.*\\.dto\\..*" />
+        <Bug code="EI" />
+    </Match>
+
+    <!-- Exception wrappers are transport-focused; serialVersionUID adds little value here. -->
+    <Match>
+        <Class name="~.*Exception$" />
+        <Bug pattern="SE_NO_SERIALVERSIONID" />
+    </Match>
+</FindBugsFilter>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Core correctness defects across exchange adapters -->
+    <Match>
+        <Bug category="CORRECTNESS" />
+    </Match>
+
+    <!-- API usage and error-handling defects with operational impact -->
+    <Match>
+        <Bug category="BAD_PRACTICE" />
+    </Match>
+
+    <!-- Concurrency defects for stream modules and background services -->
+    <Match>
+        <Bug category="MT_CORRECTNESS" />
+    </Match>
+
+    <!-- Security findings from SpotBugs + FindSecBugs -->
+    <Match>
+        <Bug category="SECURITY" />
+    </Match>
+
+    <!-- Numeric precision/casting mistakes important for market data and balances -->
+    <Match>
+        <Bug pattern="ICAST_IDIV_CAST_TO_DOUBLE,ICAST_INTEGER_MULTIPLY_CAST_TO_LONG" />
+    </Match>
+</FindBugsFilter>

@@ -1,0 +1,5 @@
+# Modules excluded from default PMD scans.
+# These can still be scanned explicitly (e.g. scripts/pmd-check xchange-examples)
+# or by using --include-excluded.
+
+xchange-examples
