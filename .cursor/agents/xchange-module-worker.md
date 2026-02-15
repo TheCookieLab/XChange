@@ -22,6 +22,7 @@ For deterministic operation, expect these inputs from the manager:
 - `spotbugs_cmd` (explicit SpotBugs command)
 - `baseline_inventory_file` (manager-created initial inventory file)
 - `baseline_module_checklist` (module-specific baseline findings/signatures to clear)
+- `module_issue_list_file` (manager-created module issue list to work from immediately)
 
 If some values are missing for the default task, derive:
 
@@ -33,6 +34,7 @@ If some values are missing for the default task, derive:
 - `spotbugs_cmd=mvn -B -f <worktree_root>/pom.xml -pl <artifactId> -am -DskipTests spotbugs:spotbugs`
 - `baseline_inventory_file=<workspace>/XChange/warning-inventory-initial.md`
 - `baseline_module_checklist=<module entries from warning-inventory-initial.md>`
+- `module_issue_list_file=<workspace>/XChange/warning-inventory/<artifactId>-issues-initial.md`
 
 ---
 
@@ -65,21 +67,28 @@ Record cross-module blockers in `unresolved.md`.
 3. Confirm branch/worktree mapping:
    - `git -C <worktree_root> branch --show-current` should match `<branch_name>`.
 
-### Gather warnings first (mandatory)
+### Start from manager issue list (mandatory)
 
-Before fixing anything, gather warnings and create/refresh all three remediation files in the worktree root:
+Begin remediation immediately from manager-provided inventory artifacts:
+
+- `module_issue_list_file`
+- `baseline_module_checklist`
+
+Do not run compiler/PMD/SpotBugs automatically at start if the manager already provided issue lists.
+
+### Optional local check reruns (only when needed)
+
+Run `compiler_verify_cmd`, `pmd_cmd`, and/or `spotbugs_cmd` only when needed, for example:
+
+- To confirm a risky fix
+- To investigate checklist drift or unexpected behavior
+- To refresh residual findings before handing back to manager
+
+If rerun outputs are generated, write/update these worktree-root files:
 
 - `<worktree_root>/compiler-warnings.md`
 - `<worktree_root>/pmd-problems.md`
 - `<worktree_root>/spotbugs-problems.md`
-
-Collection contract:
-
-1. Run `compiler_verify_cmd`; write module-local warning lines to `compiler-warnings.md`.
-2. Run `pmd_cmd`; ensure PMD findings are written to `pmd-problems.md`.
-3. Run `spotbugs_cmd`; summarize current SpotBugs findings into `spotbugs-problems.md`.
-
-These three files are the worker's source of truth and remediation queue. Keep them updated after each fix cycle.
 
 ### Baseline checklist alignment (mandatory when provided)
 
@@ -96,9 +105,9 @@ Treat `baseline_module_checklist` as a must-clear checklist:
 
 Fix module-local issues listed in:
 
-- `compiler-warnings.md`
-- `pmd-problems.md`
-- `spotbugs-problems.md`
+- `module_issue_list_file`
+- `baseline_module_checklist`
+- Optional rerun files (`compiler-warnings.md`, `pmd-problems.md`, `spotbugs-problems.md`) only if you generated them
 
 Examples include:
 
@@ -146,19 +155,21 @@ Example:
 
 ### Completion contract (default task)
 
-1. Re-run `compiler_verify_cmd`, `pmd_cmd`, and `spotbugs_cmd` as needed.
-2. Refresh `compiler-warnings.md`, `pmd-problems.md`, and `spotbugs-problems.md` after each cycle.
-3. Stage only module-local changes plus warning files and `unresolved.md` (if present).
-4. If changes exist, commit once:
+1. Start by working through `module_issue_list_file` / `baseline_module_checklist` immediately.
+2. Re-run `compiler_verify_cmd`, `pmd_cmd`, and `spotbugs_cmd` only when needed.
+3. If reruns were executed, refresh `compiler-warnings.md`, `pmd-problems.md`, and `spotbugs-problems.md`.
+4. Stage only module-local changes plus any generated warning files and `unresolved.md` (if present).
+5. If changes exist, commit once:
    - `git -C <worktree_root> commit -m "Fix warnings in <artifactId>"`
-5. If no changes are needed, report explicit no-op.
-6. Report completion with:
+6. If no changes are needed, report explicit no-op.
+7. Report completion with:
    - `artifactId`
    - absolute `worktree_root`
    - `branch_name`
    - commit SHA (or `NO_CHANGES`)
    - remaining warning counts per source (`compiler`, `pmd`, `spotbugs`)
    - baseline checklist counts (`resolved`, `moved_to_unresolved`, `remaining`)
+   - whether local checks were rerun (`yes/no`) and which sources were rerun
    - unresolved issue count
 
 ### User-facing path rule

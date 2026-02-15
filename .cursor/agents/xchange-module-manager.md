@@ -36,10 +36,10 @@ Use an **inventory-first** flow:
   - `warning-inventory-initial.md` (baseline inventory snapshot)
   - `warning-checklist.md` (live progress/status tracker)
   - `warning-modules-todo.txt` (modules that require workers)
-- Worker warning queues must exist as worktree-root files:
-  - `compiler-warnings.md`
-  - `pmd-problems.md`
-  - `spotbugs-problems.md`
+- Manager should materialize per-module issue lists:
+  - `warning-inventory/<artifactId>-issues-initial.md`
+- Workers should start from manager-provided issue lists immediately.
+- Worker-side check reruns are optional and only done when needed.
 
 ### Your responsibilities (default task)
 
@@ -64,6 +64,7 @@ Use an **inventory-first** flow:
    - `warning-inventory-initial.md` with per-module counts + signature summary
    - `warning-modules-todo.txt` containing only modules with at least one finding
    - `warning-checklist.md` initialized with one checklist entry per module/signature
+   - `warning-inventory/<artifactId>-issues-initial.md` for each module in `warning-modules-todo.txt`
 
    If `warning-modules-todo.txt` is empty, skip worker dispatch and report no-op completion.
 
@@ -77,11 +78,11 @@ Use an **inventory-first** flow:
    - SpotBugs warnings command:
      `mvn -B -f <worktree_root>/pom.xml -pl <artifactId> -am -DskipTests spotbugs:spotbugs`
 
-   Invoke one worker per module with module, worktree path, branch, `BASE_SHA`, all three warning-source commands, and module baseline checklist context from `warning-inventory-initial.md`.
+   Invoke one worker per module with module, worktree path, branch, `BASE_SHA`, all three warning-source commands, module baseline checklist context from `warning-inventory-initial.md`, and module issue list file `warning-inventory/<artifactId>-issues-initial.md`.
 
 5. **On worker completion (module-by-module)**:
-   - Validate worker report includes module, worktree path, branch, commit SHA (or explicit no-op), unresolved count, remaining warning counts per source, and baseline-checklist status (`resolved`, `remaining`, `moved_to_unresolved`).
-   - Validate warning files exist in worktree root:
+   - Validate worker report includes module, worktree path, branch, commit SHA (or explicit no-op), unresolved count, remaining warning counts per source, baseline-checklist status (`resolved`, `remaining`, `moved_to_unresolved`), and whether worker-side checks were rerun.
+   - Treat worker warning files as optional artifacts (present only if worker reran checks):
      - `<worktree_root>/compiler-warnings.md`
      - `<worktree_root>/pmd-problems.md`
      - `<worktree_root>/spotbugs-problems.md`
@@ -116,6 +117,7 @@ Use an **inventory-first** flow:
 ### Batching guidance
 
 - Inventory first, dispatch second. Never dispatch workers before inventory is complete.
+- Workers should begin fixes from manager issue lists immediately; avoid mandatory initial reruns in worker worktrees.
 - Start with a moderate batch, process completions, then dispatch next modules.
 - Prefer processing completion pipeline in order: verify -> cherry-pick -> aggregate unresolved -> cleanup worktree.
 - Consider running `xchange-core` early to surface shared API blockers quickly.
