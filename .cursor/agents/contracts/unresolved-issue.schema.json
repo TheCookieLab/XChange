@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xchange.local/schemas/unresolved-issue.schema.json",
+  "title": "XChange Unresolved Issue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source",
+    "file",
+    "problem",
+    "reason_global",
+    "signature",
+    "modules"
+  ],
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": [
+        "compiler",
+        "pmd",
+        "spotbugs",
+        "test",
+        "build",
+        "runtime",
+        "other"
+      ]
+    },
+    "file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "line": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "problem": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason_global": {
+      "type": "string",
+      "minLength": 1
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 1
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

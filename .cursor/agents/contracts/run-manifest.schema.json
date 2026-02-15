@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xchange.local/schemas/run-manifest.schema.json",
+  "title": "XChange Manager Run Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "created_at",
+    "base_sha",
+    "task_description",
+    "dispatch_mode",
+    "cloud_enabled",
+    "limits",
+    "modules"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "base_sha": {
+      "type": "string",
+      "minLength": 7
+    },
+    "task_description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dispatch_mode": {
+      "type": "string",
+      "enum": ["local", "cloud", "mixed"]
+    },
+    "cloud_enabled": {
+      "type": "boolean"
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_parallel_local",
+        "max_parallel_cloud",
+        "module_timeout_minutes",
+        "retry_limit"
+      ],
+      "properties": {
+        "max_parallel_local": { "type": "integer", "minimum": 1 },
+        "max_parallel_cloud": { "type": "integer", "minimum": 1 },
+        "module_timeout_minutes": { "type": "integer", "minimum": 1 },
+        "retry_limit": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "status", "attempts", "last_update"],
+        "properties": {
+          "artifact_id": { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "dispatched",
+              "in_progress",
+              "retrying",
+              "completed",
+              "no_changes",
+              "blocked",
+              "failed"
+            ]
+          },
+          "dispatch_mode": {
+            "type": "string",
+            "enum": ["local", "cloud"]
+          },
+          "attempts": { "type": "integer", "minimum": 0 },
+          "commit_sha": {
+            "type": ["string", "null"]
+          },
+          "unresolved_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failure_class": {
+            "type": ["string", "null"],
+            "enum": ["infra", "merge", "task", null]
+          },
+          "last_error": { "type": ["string", "null"] },
+          "last_update": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

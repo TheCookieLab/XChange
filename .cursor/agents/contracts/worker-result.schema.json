@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xchange.local/schemas/worker-result.schema.json",
+  "title": "XChange Worker Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "artifact_id",
+    "status",
+    "commit_sha",
+    "validations_run",
+    "unresolved_count",
+    "unresolved_file"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "no_changes", "blocked", "failed"]
+    },
+    "commit_sha": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Git SHA when changes committed, or NO_CHANGES"
+    },
+    "validations_run": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "command", "result"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "result": {
+            "type": "string",
+            "enum": ["pass", "fail", "unknown"]
+          },
+          "details": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    },
+    "unresolved_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unresolved_file": {
+      "type": ["string", "null"]
+    },
+    "failure_class": {
+      "type": ["string", "null"],
+      "enum": ["infra", "merge", "task", null]
+    },
+    "notes": {
+      "type": ["string", "null"]
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

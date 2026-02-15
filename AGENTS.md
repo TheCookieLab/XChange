@@ -22,8 +22,8 @@ Agents and skills specific to XChange live under this repo. When working in XCha
 
 | Agent | Purpose |
 |-------|--------|
-| **xchange-module-worker** | Autonomous per-module worker for large-scale XChange tasks. Performs one assigned task in one submodule using a dedicated worktree/branch from a manager-provided base SHA, chooses its own implementation/verification approach, and reports unresolved cross-module issues via `unresolved.md`. |
-| **xchange-module-manager** | Lightweight dispatcher for **xchange-module-worker** across XChange submodules. Orchestrates worker launch and result collection, aggregates unresolved issues, and integrates worker commits. Uses local workers by default; cloud workers are enabled only when explicitly requested (for example: `start the xchange module manager with cloud subagents enabled`). |
+| **xchange-module-worker** | Autonomous per-module worker for large-scale XChange tasks. Performs one assigned task in one submodule using a dedicated worktree/branch from a manager-provided base SHA, chooses its own implementation/verification approach, must report at least one validation in structured `worker-result.json`, and reports unresolved cross-module issues (`unresolved.md` + schema-aligned `unresolved.json`). |
+| **xchange-module-manager** | Lightweight dispatcher for **xchange-module-worker** across XChange submodules. Orchestrates worker launch and structured result collection, maintains a resumable run manifest, applies timeout/retry policy, aggregates unresolved issues, and integrates worker commits. Uses local workers by default; cloud workers are enabled only when explicitly requested (for example: `start the xchange module manager with cloud subagents enabled`). |
 
 These agents are for work that needs the same or similar changes in many submodules but is too complex for a single global search/replace. Use full artifactId in path/branch naming (for example worktrees at `<workspace>/worktrees/xchange-<taskslug>-<artifactId>/` and branches at `agent/<taskslug>/<artifactId>`), with main clone `<workspace>/XChange/`. Master unresolved list: `XChange/unresolved.md`.
 
@@ -35,6 +35,7 @@ These agents are for work that needs the same or similar changes in many submodu
 
 - **Module list:** Submodules are defined in `pom.xml` under `<modules>`. Use that list for batch or fleet operations.
 - **Parent POM:** This repo root is `xchange-parent`; do not change the parent POM from a single-module subagent—record such needs in `unresolved.md` for the manager or a follow-up pass.
+- **Subagent contracts:** See `.cursor/agents/contracts/` for run-manifest, worker-result, and unresolved-issue schemas.
 
 ---
 
