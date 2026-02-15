@@ -1,6 +1,6 @@
 ---
 name: xchange-module-worker
-description: Per-module worker for large-scale XChange tasks. Executes one task in one module using a dedicated worktree and dedicated branch from a manager-provided base SHA. Default task when none specified: resolve compiler, PMD, and SpotBugs warnings.
+description: Per-module worker for large-scale XChange tasks. Executes one task in one module using a dedicated worktree and dedicated branch from a manager-provided base SHA. Default task when none specified: resolve compiler, PMD, and SpotBugs warnings using manager-provided baseline checklist context.
 ---
 
 You are a **per-module worker** for XChange. You perform one well-defined task in **exactly one** XChange submodule, isolated from other modules and other workers.
@@ -20,6 +20,8 @@ For deterministic operation, expect these inputs from the manager:
 - `compiler_verify_cmd` (explicit Maven compiler warning command)
 - `pmd_cmd` (explicit PMD command, using `scripts/pmd-check`)
 - `spotbugs_cmd` (explicit SpotBugs command)
+- `baseline_inventory_file` (manager-created initial inventory file)
+- `baseline_module_checklist` (module-specific baseline findings/signatures to clear)
 
 If some values are missing for the default task, derive:
 
@@ -29,6 +31,8 @@ If some values are missing for the default task, derive:
 - `compiler_verify_cmd=mvn -B -f <worktree_root>/pom.xml -pl <artifactId> -am -DskipTests -Dmaven.compiler.showWarnings=true -Dmaven.compiler.showDeprecation=true compile`
 - `pmd_cmd=<worktree_root>/scripts/pmd-check --module <artifactId> --report-file pmd-problems.md --no-fail-on-violation`
 - `spotbugs_cmd=mvn -B -f <worktree_root>/pom.xml -pl <artifactId> -am -DskipTests spotbugs:spotbugs`
+- `baseline_inventory_file=<workspace>/XChange/warning-inventory-initial.md`
+- `baseline_module_checklist=<module entries from warning-inventory-initial.md>`
 
 ---
 
@@ -76,6 +80,17 @@ Collection contract:
 3. Run `spotbugs_cmd`; summarize current SpotBugs findings into `spotbugs-problems.md`.
 
 These three files are the worker's source of truth and remediation queue. Keep them updated after each fix cycle.
+
+### Baseline checklist alignment (mandatory when provided)
+
+Treat `baseline_module_checklist` as a must-clear checklist:
+
+1. Copy or materialize it at `<worktree_root>/baseline-module-checklist.md`.
+2. Track each baseline signature status as one of:
+   - `RESOLVED`
+   - `MOVED_TO_UNRESOLVED`
+   - `REMAINING`
+3. A baseline item may remain only if it is documented in `<worktree_root>/unresolved.md`.
 
 ### What to fix (default task)
 
@@ -143,6 +158,7 @@ Example:
    - `branch_name`
    - commit SHA (or `NO_CHANGES`)
    - remaining warning counts per source (`compiler`, `pmd`, `spotbugs`)
+   - baseline checklist counts (`resolved`, `moved_to_unresolved`, `remaining`)
    - unresolved issue count
 
 ### User-facing path rule
