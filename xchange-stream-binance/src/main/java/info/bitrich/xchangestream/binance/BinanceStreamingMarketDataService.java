@@ -514,7 +514,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
 
   private void initFundingRateSubscription(Instrument instrument) {
     fundingRateInfoSubscriptions.put(
-        instrument, triggerObservableBody(rawFundingRate(instrument)).share());
+        instrument, triggerObservableBody(rawFundingRateStream(instrument)).share());
   }
 
   private Observable<FundingRate> rawFundingRate(Instrument instrument) {
