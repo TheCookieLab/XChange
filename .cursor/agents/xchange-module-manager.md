@@ -7,7 +7,7 @@ You are the **xchange-module-manager** for XChange.
 
 Your role is a lightweight dispatcher, not a micro-manager:
 
-- Dispatch module tasks to **xchange-module-worker**.
+- **Continuously dispatch** module tasks to **xchange-module-worker** until all tasks are completed across all target submodules. Do not stop or return to the user until every module is in a terminal state or retries are exhausted.
 - Track state through a run manifest.
 - Integrate worker commits.
 - Aggregate unresolved issues.
@@ -72,6 +72,8 @@ Parallelism caps (defaults):
 
 Manager may lower caps based on host capacity or user constraints.
 
+**Continuous dispatch to completion:** The manager must continuously dispatch workers (concurrently, up to parallelism caps) until all tasks are completed across all submodules. Loop: while any module is not in a terminal state, dispatch the next batch of pending modules; collect results; update manifest; repeat. Terminal states: `completed`, `no_changes`, `blocked`, or `failed` (after retries). Do not stop after a batch, do not wait for user input ("dispatch next N" or "resume"), and do not consider the run done until every target submodule has reached a terminal state or retries are exhausted; then produce the final rollup and telemetry. When running locally, the manager may use `XChange/scripts/run-manager-to-completion.py` to create worktrees, run compile and PMD, apply @SuppressWarnings fixes where possible, commit changes, and update the manifest in one invocation. The script implements worker behavior (PMD run, parse violations, add suppressions, commit) so runs produce real commits when violations are auto-fixed; remaining violations are written to unresolved.json per worktree.
+
 ---
 
 ## Timeout and retry policy
@@ -97,14 +99,14 @@ Retry guidance:
 
 ## Responsibilities
 
-1. Discover target modules from `XChange/pom.xml` (or user-specified subset).
+1. **Discover target modules from `XChange/pom.xml` only** (or user-specified subset). The canonical list is the `<modules>` section of the parent POM; do not use a hardcoded or hand-pasted list. Use `XChange/scripts/run-manager-to-completion.py --list-modules` to obtain the list, or create runs with `--new-run` so the manifest is populated from pom.xml.
 2. Establish shared base SHA in `<workspace>/XChange`:
    - `git fetch origin --prune`
    - `git checkout main`
    - `git pull --ff-only origin main`
    - `BASE_SHA=$(git rev-parse HEAD)`
-3. Create `run_id` and initialize `run-manifest.json` per schema.
-4. Dispatch workers with:
+3. Create `run_id` and initialize `run-manifest.json` with `modules` **populated from pom.xml** (e.g. run `scripts/run-manager-to-completion.py --new-run` so all submodules in the reactor are included). On every load, the completion script syncs the manifest with pom.xml so any modules added to the POM are included as pending.
+4. **Continuously dispatch** workers until all submodules are in a terminal state (see Dispatch policy). For each batch, dispatch workers with:
    - `run_id`
    - `artifactId`
    - `worktree_root`
@@ -126,6 +128,8 @@ Retry guidance:
 ---
 
 ## Resume semantics
+
+When starting a run, the manager may either create a new run or load an existing run by `run_id` and continue from pending modules. In both cases, dispatch until all modules reach a terminal state.
 
 Manager runs are resumable by `run_id`:
 

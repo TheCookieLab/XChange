@@ -43,6 +43,14 @@ If missing values for default operation, derive:
 
 ---
 
+## Fix at root cause
+
+- **Resolve issues at their root cause.** Prefer real fixes: correct the underlying logic, API usage, or structure so the warning or issue no longer applies.
+- **Avoid band-aid fixes.** Do not suppress warnings (e.g. `@SuppressWarnings`), hide diagnostics, or add comments that only acknowledge the issue without fixing it. If a fix truly requires a suppression (e.g. false positive or intentional deviation), document the rationale in the commit or in `unresolved.json` and treat it as an exception, not the default.
+- When a warning or violation has a clear corrective action (e.g. use a different type, fix a null path, remove dead code), apply that correction rather than silencing the tool.
+
+---
+
 ## Autonomy rules
 
 - Begin work immediately from `task_description`.
