@@ -11,6 +11,7 @@
 - **Full build:** From repo root: `mvn -B clean install` (or `mvn -B clean test`). No `scripts/run-full-build-quiet.sh` in this repo; use Maven directly.
 - **Single module:** `mvn -pl <module> -am compile` (or `test`, `install`) from repo root.
 - For any code or `pom.xml` change, run at least the affected module build before considering the task complete.
+- **Suppressing warnings is disallowed.** Do not add or use `@SuppressWarnings`. Fix the underlying cause so the rule is satisfied, or document in `unresolved.json` if it cannot be fixed within scope.
 
 ---
 
@@ -23,13 +24,14 @@ Agents and skills specific to XChange live under this repo. When working in XCha
 | Agent | Purpose |
 |-------|--------|
 | **xchange-module-worker** | Autonomous per-module worker for large-scale XChange tasks. Performs one assigned task in one submodule using a dedicated worktree/branch from a manager-provided base SHA, chooses its own implementation/verification approach, must report at least one validation in structured `worker-result.json`, and reports unresolved cross-module issues (`unresolved.md` + schema-aligned `unresolved.json`). |
-| **xchange-module-manager** | Lightweight dispatcher for **xchange-module-worker** across XChange submodules. Orchestrates worker launch and structured result collection, maintains a resumable run manifest, applies timeout/retry policy, aggregates unresolved issues, and integrates worker commits. Uses local workers by default; cloud workers are enabled only when explicitly requested (for example: `start the xchange module manager with cloud subagents enabled`). |
+| **xchange-module-manager** | Lightweight dispatcher for **xchange-module-worker** across XChange submodules. The manager and workers (agents) drive all fixing; the helper script only does setup (worktrees), optional probe (build-failure.log), and integrate (cherry-pick + cleanup). Orchestrates worker launch and structured result collection, maintains a resumable run manifest, applies timeout/retry policy, aggregates unresolved issues, and integrates worker commits. Uses local workers by default; cloud workers are enabled only when explicitly requested (for example: `start the xchange module manager with cloud subagents enabled`). |
 
 These agents are for work that needs the same or similar changes in many submodules but is too complex for a single global search/replace. Use full artifactId in path/branch naming (for example worktrees at `<workspace>/worktrees/xchange-<taskslug>-<artifactId>/` and branches at `agent/<taskslug>/<artifactId>`), with main clone `<workspace>/XChange/`. Master unresolved list: `XChange/unresolved.md`.
 
 ### Skills (`.cursor/skills/`)
 
 - **xchange-pmd-check** — runs XChange PMD analysis via `scripts/pmd-check` (full project, selected modules, or changed modules), using XChange-specific static-analysis configuration.
+- **xchange-manager-run** — wraps `scripts/run-manager-to-completion.py`; use for manager run setup (worktrees), optional probe (build-failure.log), and integrate (cherry-pick + cleanup). Usage instructions live in the skill; the script does not drive fixing—agents do.
 
 ### Other tools and conventions
 
@@ -49,5 +51,5 @@ These agents are for work that needs the same or similar changes in many submodu
 ## Summary for agent decision logic
 
 1. **Build:** Use `mvn` from repo root; at least build the touched module(s) before completion.
-2. **Large-scale per-module tasks (e.g. warnings cleanup):** Use **xchange-module-worker** for one module; use **xchange-module-manager** to run the full fleet. Default task for both is resolve warnings when no other task is specified.
+2. **Large-scale per-module tasks (e.g. fix build errors, warnings cleanup):** Use **xchange-module-worker** for one module; use **xchange-module-manager** to run the full fleet. Default task for both is fix build errors and resolve warnings; workers run the build first, fix compile/test failures, then resolve warnings and only report completion when the module is green.
 3. **Scoped rules:** Deeper `AGENTS.md` in subdirs override this file when present.
