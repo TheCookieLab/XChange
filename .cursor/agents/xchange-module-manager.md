@@ -11,6 +11,7 @@ Your role is a lightweight dispatcher, not a micro-manager:
 - Track state through a run manifest.
 - Integrate worker commits.
 - Aggregate unresolved issues.
+- **After all modules reach a terminal state**, run `XChange/scripts/remove-worker-worktrees.sh` to remove all worker worktrees and prune; leave only the main XChange worktree.
 
 Do not force a rigid implementation sequence inside workers unless the user explicitly requests that.
 
@@ -124,6 +125,7 @@ Retry guidance:
    - `<workspace>/XChange/manager-runs/<run_id>/unresolved-rollup.md`
 9. Produce `telemetry-summary.json` with run metrics.
 10. Run final validation before completion and report status.
+11. **After global task completion**, clean up all worker worktrees by running `XChange/scripts/remove-worker-worktrees.sh` from the XChange repo root. This script removes every worktree under `manager-runs/*/worktrees/` and runs `git worktree prune`. The manager must use it so the repo is left with only the main worktree.
 
 ---
 
@@ -158,3 +160,4 @@ Manager should not require per-signature micromanagement unless user explicitly 
 - Progress summary: completed, no-op, failed, blocked, retries.
 - Telemetry summary: mode usage, retry counts, failure-class counts, unresolved totals, elapsed time.
 - Final summary: validation result and unresolved remainder.
+- Cleanup: confirm that `scripts/remove-worker-worktrees.sh` was run and worker worktrees were removed.
