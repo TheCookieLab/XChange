@@ -6,10 +6,10 @@ This runbook covers publishing a release for `com.github.thecookielab.xchange`.
 
 1. `main` is green in GitHub Actions.
 2. Release credentials are configured in repository secrets:
-   - `MAVEN_CENTRAL_USERNAME`
-   - `MAVEN_CENTRAL_PASSWORD`
-   - `MAVEN_GPG_PRIVATE_KEY`
-   - `MAVEN_GPG_PASSPHRASE`
+   - `MAVEN_CENTRAL_TOKEN_USER`
+   - `MAVEN_CENTRAL_TOKEN_PASS`
+   - `GPG_PRIVATEKEY`
+   - `GPG_PASSPHRASE`
 3. You have selected:
    - `release_version` (for example `0.1.0`)
    - `next_snapshot_version` (for example `0.1.1-SNAPSHOT`)
@@ -22,11 +22,11 @@ Use this command from repo root to verify `maven-release-plugin` flow without pu
 mvn -B --no-transfer-progress \
   --settings etc/settings.xml \
   -Prelease-sign-artifacts,central-release-publish \
-  -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}" \
+  -Dgpg.passphrase="${GPG_PASSPHRASE}" \
   -DreleaseVersion="0.1.0" \
   -DdevelopmentVersion="0.1.1-SNAPSHOT" \
   -DlocalCheckout=true \
-  -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=${MAVEN_GPG_PASSPHRASE} -DskipIntegrationTests=true" \
+  -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=${GPG_PASSPHRASE} -DskipIntegrationTests=true" \
   -DdryRun=true \
   -DpreparationGoals=validate \
   release:clean release:prepare

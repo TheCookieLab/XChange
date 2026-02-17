@@ -34,23 +34,23 @@ jobs:
     - name: Import GPG key
       uses: crazy-max/ghaction-import-gpg@v6
       with:
-        gpg_private_key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
-        passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        gpg_private_key: ${{ secrets.GPG_PRIVATEKEY }}
+        passphrase: ${{ secrets.GPG_PASSPHRASE }}
     - name: Configure git user
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
     - name: Publish release
       env:
-        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-        MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_TOKEN_USER }}
+        MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN_PASS }}
       run: |
         mvn --batch-mode --no-transfer-progress \
           --settings etc/settings.xml \
           -Prelease-sign-artifacts,central-release-publish \
-          -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}" \
+          -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" \
           -DreleaseVersion="${{ inputs.release_version }}" \
           -DdevelopmentVersion="${{ inputs.next_snapshot_version }}" \
           -DlocalCheckout=true \
-          -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} -DskipIntegrationTests=true" \
+          -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -DskipIntegrationTests=true" \
           release:clean release:prepare release:perform
