@@ -16,9 +16,14 @@ public class KrakenStreamingTradeServiceIntegration extends KrakenStreamingExcha
 
   @BeforeAll
   public static void credentialsPresent() {
-    // skip if there are no credentials
-    assumeThat(exchange.getExchangeSpecification().getApiKey()).isNotEmpty();
-    assumeThat(exchange.getExchangeSpecification().getSecretKey()).isNotEmpty();
+    assumeThat(exchange.getExchangeSpecification().getApiKey())
+        .overridingErrorMessage(
+            "Missing Kraken API key for private streaming tests (set -DapiKey=...)")
+        .isNotEmpty();
+    assumeThat(exchange.getExchangeSpecification().getSecretKey())
+        .overridingErrorMessage(
+            "Missing Kraken secret key for private streaming tests (set -DsecretKey=...)")
+        .isNotEmpty();
   }
 
   @Test

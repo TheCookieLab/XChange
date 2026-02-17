@@ -4,10 +4,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 @Slf4j
 class KrakenStreamingAccountServiceIntegration extends KrakenStreamingExchangeIT {
+
+  @BeforeAll
+  static void credentialsPresent() {
+    assumeThat(exchange.getExchangeSpecification().getApiKey())
+        .overridingErrorMessage(
+            "Missing Kraken API key for private streaming tests (set -DapiKey=...)")
+        .isNotEmpty();
+    assumeThat(exchange.getExchangeSpecification().getSecretKey())
+        .overridingErrorMessage(
+            "Missing Kraken secret key for private streaming tests (set -DsecretKey=...)")
+        .isNotEmpty();
+  }
 
   @Test
   void balances() {

@@ -1,6 +1,7 @@
 package org.knowm.xchange.kraken;
 
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,8 +21,10 @@ public class KrakenIntegrationTestParent {
 
   @BeforeEach
   public void exchange_online() {
-    // skip if offline
-    assumeThat(exchange.getMarketDataService().getExchangeHealth())
-        .isEqualTo(ExchangeHealth.ONLINE);
+    try {
+      assumeThat(exchange.getMarketDataService().getExchangeHealth()).isEqualTo(ExchangeHealth.ONLINE);
+    } catch (RuntimeException e) {
+      assumeTrue(false, "Unable to determine Kraken health: " + e.getMessage());
+    }
   }
 }

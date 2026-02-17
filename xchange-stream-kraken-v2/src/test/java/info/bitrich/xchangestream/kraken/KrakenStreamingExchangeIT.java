@@ -12,6 +12,7 @@ import org.knowm.xchange.ExchangeSpecification;
 public class KrakenStreamingExchangeIT {
 
   public static StreamingExchange exchange;
+  private static Throwable connectionFailure;
 
   @BeforeAll
   public static void setup() {
@@ -23,18 +24,30 @@ public class KrakenStreamingExchangeIT {
     spec.setSecretKey(System.getProperty("secretKey"));
 
     exchange = StreamingExchangeFactory.INSTANCE.createExchange(spec);
-
-    exchange.connect().blockingAwait();
+    connectionFailure = null;
+    try {
+      exchange.connect().blockingAwait();
+    } catch (Throwable t) {
+      connectionFailure = t;
+    }
   }
 
   @BeforeEach
   void exchangeReachable() {
-    assumeTrue(exchange.isAlive(), "Exchange is unreachable");
+    assumeTrue(
+        connectionFailure == null,
+        connectionFailure == null
+            ? "Connected to Kraken websocket"
+            : "Failed to connect to Kraken websocket: "
+                + connectionFailure.getClass().getSimpleName()
+                + ": "
+                + connectionFailure.getMessage());
+    assumeTrue(exchange != null && exchange.isAlive(), "Exchange websocket is unreachable");
   }
 
   @AfterAll
   public static void cleanup() {
-    if (exchange.isAlive()) {
+    if (exchange != null && exchange.isAlive()) {
       exchange.disconnect().blockingAwait();
     }
   }
