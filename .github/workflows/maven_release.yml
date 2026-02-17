@@ -55,3 +55,21 @@ jobs:
           -DlocalCheckout=true \
           -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=\"$GPG_PASSPHRASE\" -DskipIntegrationTests=true" \
           release:clean release:prepare release:perform
+    - name: Publish next snapshot
+      env:
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_TOKEN_USER }}
+        MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN_PASS }}
+      run: |
+        CURRENT_VERSION="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' pom.xml | head -n1)"
+        case "$CURRENT_VERSION" in
+          *-SNAPSHOT) ;;
+          *)
+            echo "::error::Expected the post-release development version to be a SNAPSHOT but found '$CURRENT_VERSION'."
+            exit 1
+            ;;
+        esac
+        mvn --batch-mode --no-transfer-progress \
+          --settings etc/settings.xml \
+          -Dfmt.skip=true \
+          -DskipIntegrationTests=true \
+          clean deploy
