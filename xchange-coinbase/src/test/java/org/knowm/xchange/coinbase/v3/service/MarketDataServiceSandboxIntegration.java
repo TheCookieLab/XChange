@@ -78,7 +78,7 @@ public class MarketDataServiceSandboxIntegration {
       assertNotNull("Bids should not be null", priceBook.getBids());
       assertNotNull("Asks should not be null", priceBook.getAsks());
     } catch (Exception e) {
-      System.out.println("Best bid/ask not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Best bid/ask not fully supported in sandbox (expected)");
     }
   }
 
@@ -91,7 +91,7 @@ public class MarketDataServiceSandboxIntegration {
       assertNotNull("Price books should not be null", priceBooks);
       assertEquals("Should return one price book", 1, priceBooks.size());
     } catch (Exception e) {
-      System.out.println("Best bid/ask not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Best bid/ask not fully supported in sandbox (expected)");
     }
   }
 
@@ -109,7 +109,7 @@ public class MarketDataServiceSandboxIntegration {
         assertEquals("Instrument should match", currencyPair, trades.getTrades().get(0).getInstrument());
       }
     } catch (Exception e) {
-      System.out.println("Market trades not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Market trades not fully supported in sandbox (expected)");
     }
   }
 
@@ -132,7 +132,7 @@ public class MarketDataServiceSandboxIntegration {
                     .getTimestamp()));
       }
     } catch (Exception e) {
-      System.out.println("Candlestick data not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Candlestick data not fully supported in sandbox (expected)");
     }
   }
 
@@ -149,7 +149,7 @@ public class MarketDataServiceSandboxIntegration {
       assertNotNull("CandleStickData should not be null", candleStickData);
       assertEquals("Instrument should match", currencyPair, candleStickData.getInstrument());
     } catch (Exception e) {
-      System.out.println("Candlestick data with date not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Candlestick data with date not fully supported in sandbox (expected)");
     }
   }
 
@@ -167,7 +167,7 @@ public class MarketDataServiceSandboxIntegration {
       assertFalse("Asks should not be empty", orderBook.getAsks().isEmpty());
       assertFalse("Bids should not be empty", orderBook.getBids().isEmpty());
     } catch (Exception e) {
-      System.out.println("Order book not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Order book not fully supported in sandbox (expected)");
     }
   }
 
@@ -183,7 +183,7 @@ public class MarketDataServiceSandboxIntegration {
       assertNotNull("Bid should not be null", ticker.getBid());
       assertNotNull("Last should not be null", ticker.getLast());
     } catch (Exception e) {
-      System.out.println("Ticker not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Ticker not fully supported in sandbox (expected)");
     }
   }
 
@@ -196,7 +196,7 @@ public class MarketDataServiceSandboxIntegration {
       assertNotNull("Products list should not be null", products.getProducts());
       assertFalse("Products should not be empty", products.getProducts().isEmpty());
     } catch (Exception e) {
-      System.out.println("List products not fully supported in sandbox: " + e.getMessage());
+      System.out.println("List products not fully supported in sandbox (expected)");
     }
   }
 

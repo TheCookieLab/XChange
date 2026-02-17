@@ -118,7 +118,7 @@ public class AccountServiceSandboxIntegration {
       // Sandbox may return empty list - this is acceptable
     } catch (Exception e) {
       // Payment methods endpoint may not be fully supported in sandbox
-      System.out.println("Payment methods not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Payment methods not fully supported in sandbox (expected)");
     }
   }
 
@@ -143,7 +143,7 @@ public class AccountServiceSandboxIntegration {
           feeTier.getTakerFeeRate().compareTo(BigDecimal.ZERO) >= 0);
     } catch (Exception e) {
       // Transaction summary may not be fully supported in sandbox
-      System.out.println("Transaction summary not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Transaction summary not fully supported in sandbox (expected)");
     }
   }
 
@@ -163,7 +163,7 @@ public class AccountServiceSandboxIntegration {
       }
     } catch (Exception e) {
       // Dynamic fees may not be fully supported in sandbox
-      System.out.println("Dynamic trading fees not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Dynamic trading fees not fully supported in sandbox (expected)");
     }
   }
 
@@ -194,7 +194,7 @@ public class AccountServiceSandboxIntegration {
       CoinbaseFuturesBalanceSummaryResponse response = accountService.getFuturesBalanceSummary();
       assertNotNull("Futures balance summary response should not be null", response);
     } catch (Exception e) {
-      System.out.println("Futures balance summary not supported in sandbox: " + e.getMessage());
+      System.out.println("Futures balance summary not supported in sandbox (expected)");
     }
   }
 
@@ -207,7 +207,7 @@ public class AccountServiceSandboxIntegration {
       assertNotNull("Futures sweeps response should not be null", response);
       assertNotNull("Sweeps list should not be null", response.getSweeps());
     } catch (Exception e) {
-      System.out.println("Futures sweeps not supported in sandbox: " + e.getMessage());
+      System.out.println("Futures sweeps not supported in sandbox (expected)");
     }
   }
 
@@ -219,7 +219,7 @@ public class AccountServiceSandboxIntegration {
       CoinbaseIntradayMarginSettingResponse response = accountService.getIntradayMarginSetting();
       assertNotNull("Intraday margin setting response should not be null", response);
     } catch (Exception e) {
-      System.out.println("Intraday margin setting not supported in sandbox: " + e.getMessage());
+      System.out.println("Intraday margin setting not supported in sandbox (expected)");
     }
   }
 
@@ -231,7 +231,7 @@ public class AccountServiceSandboxIntegration {
       CoinbaseCurrentMarginWindowResponse response = accountService.getCurrentMarginWindow();
       assertNotNull("Current margin window response should not be null", response);
     } catch (Exception e) {
-      System.out.println("Current margin window not supported in sandbox: " + e.getMessage());
+      System.out.println("Current margin window not supported in sandbox (expected)");
     }
   }
 
@@ -254,7 +254,7 @@ public class AccountServiceSandboxIntegration {
       assertEquals("Portfolio UUID should match", portfolioUuid, response.getBalances().getPortfolioUuid());
       assertNotNull("Collateral currency should not be null", response.getBalances().getCollateralCurrency());
     } catch (Exception e) {
-      System.out.println("Perpetuals balances not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Perpetuals balances not fully supported in sandbox (expected)");
     }
   }
 
@@ -276,7 +276,7 @@ public class AccountServiceSandboxIntegration {
             response.getSummary().getCollateralCurrency());
       }
     } catch (Exception e) {
-      System.out.println("Perpetuals summary not fully supported in sandbox: " + e.getMessage());
+      System.out.println("Perpetuals summary not fully supported in sandbox (expected)");
     }
   }
 

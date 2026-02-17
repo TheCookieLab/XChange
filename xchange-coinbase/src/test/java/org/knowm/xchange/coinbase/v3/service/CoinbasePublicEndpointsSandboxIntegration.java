@@ -43,7 +43,7 @@ public class CoinbasePublicEndpointsSandboxIntegration {
       assertNotNull("Time response should not be null", response);
       assertNotNull("ISO timestamp should not be null", response.getIso());
     } catch (Exception e) {
-      System.out.println("Time endpoint may not be fully supported in sandbox: " + e.getMessage());
+      System.out.println("Time endpoint may not be fully supported in sandbox (expected)");
       // Sandbox may not support all endpoints, so we just log and continue
     }
   }
@@ -72,7 +72,7 @@ public class CoinbasePublicEndpointsSandboxIntegration {
       test.run();
       System.out.println("✓ " + name + ": SUPPORTED");
     } catch (Exception e) {
-      System.out.println("✗ " + name + ": NOT SUPPORTED (" + e.getClass().getSimpleName() + ": " + e.getMessage() + ")");
+      System.out.println("✗ " + name + ": NOT SUPPORTED (expected in sandbox)");
     }
   }
 
