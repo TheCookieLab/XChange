@@ -8,7 +8,7 @@ This runbook covers publishing a release for `com.github.thecookielab.xchange`.
 2. Release credentials are configured in repository secrets:
    - `MAVEN_CENTRAL_TOKEN_USER`
    - `MAVEN_CENTRAL_TOKEN_PASS`
-   - `GPG_PRIVATEKEY`
+   - `GPG_PRIVATE_KEY`
    - `GPG_PASSPHRASE`
 3. You have selected:
    - `release_version` (for example `0.1.0`)
