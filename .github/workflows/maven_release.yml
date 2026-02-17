@@ -51,4 +51,6 @@ jobs:
           -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}" \
           -DreleaseVersion="${{ inputs.release_version }}" \
           -DdevelopmentVersion="${{ inputs.next_snapshot_version }}" \
+          -DlocalCheckout=true \
+          -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} -DskipIntegrationTests=true" \
           release:clean release:prepare release:perform
