@@ -25,8 +25,8 @@ jobs:
         cache: maven
     - name: Publish Maven snapshots
       env:
-        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-        MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_TOKEN_USER || secrets.MAVEN_CENTRAL_USERNAME }}
+        MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN_PASS || secrets.MAVEN_CENTRAL_PASSWORD }}
       run: |
         mvn --batch-mode --no-transfer-progress \
           --settings etc/settings.xml \
