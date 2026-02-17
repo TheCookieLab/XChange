@@ -1,7 +1,7 @@
 ## [![XChange](https://raw.githubusercontent.com/TheCookieLab/XChange/main/etc/XChange_64_64.png)](https://github.com/TheCookieLab/XChange) XChange
 
 [![Discord](https://img.shields.io/discord/778301671302365256?logo=Discord)](https://discord.gg/HX9MbWZ)
-[![Java CI with Maven on Push](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml/badge.svg?event=status)](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml)
+[![Java CI with Maven on Push](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml)
 
 XChange is a Java library providing a simple and consistent API for interacting with 60+ Bitcoin and other cryptocurrency exchanges, providing a consistent interface for trading and accessing market data.
 
@@ -158,7 +158,7 @@ Talk to us on discord: [![Discord](https://img.shields.io/discord/77830167130236
 
 ## Continuous Integration
 
-[![Java CI with Maven](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml/badge.svg?branch=main&event=status)](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml)
+[![Java CI with Maven](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml)
 
 ## Getting Started
 
