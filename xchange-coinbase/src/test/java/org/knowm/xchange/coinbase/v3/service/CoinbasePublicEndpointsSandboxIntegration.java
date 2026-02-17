@@ -31,7 +31,7 @@ public class CoinbasePublicEndpointsSandboxIntegration {
 
   @BeforeClass
   public static void beforeClass() {
-    ExchangeSpecification spec = CoinbaseTestUtils.createSandboxSpecification();
+    ExchangeSpecification spec = CoinbaseTestUtils.createSandboxSpecificationWithCredentials();
     coinbase = ExchangeRestProxyBuilder.forInterface(Coinbase.class, spec).build();
   }
 
@@ -81,4 +81,3 @@ public class CoinbasePublicEndpointsSandboxIntegration {
     void run() throws Exception;
   }
 }
-

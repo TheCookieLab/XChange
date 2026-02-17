@@ -14,6 +14,7 @@ import org.junit.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
+import org.knowm.xchange.coinbase.v3.CoinbaseTestUtils;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
 import org.knowm.xchange.currency.Currency;
@@ -56,20 +57,10 @@ public class MarketDataServiceSandboxIntegration {
 
   static CoinbaseExchange exchange;
   static CoinbaseMarketDataService marketDataService;
-  private static final String SANDBOX_URL = "https://api-sandbox.coinbase.com";
 
   @BeforeClass
   public static void beforeClass() {
-    ExchangeSpecification spec = new ExchangeSpecification(CoinbaseExchange.class);
-    spec.setSslUri(SANDBOX_URL);
-    spec.setHost("api-sandbox.coinbase.com");
-    
-    // Sandbox doesn't validate JWT signatures, but we need validly formatted credentials for generation
-    // Use your real Coinbase credentials - sandbox ignores signature validation
-    org.knowm.xchange.utils.AuthUtils.setApiAndSecretKey(spec);
-    
-    // If no credentials found, tests will be skipped
-    
+    ExchangeSpecification spec = CoinbaseTestUtils.createSandboxSpecificationWithCredentials();
     exchange = (CoinbaseExchange) ExchangeFactory.INSTANCE.createExchange(spec);
     marketDataService = (CoinbaseMarketDataService) exchange.getMarketDataService();
   }
@@ -252,4 +243,3 @@ public class MarketDataServiceSandboxIntegration {
     void run() throws Exception;
   }
 }
-

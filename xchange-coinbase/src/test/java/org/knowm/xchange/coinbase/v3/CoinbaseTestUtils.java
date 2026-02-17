@@ -1,5 +1,11 @@
 package org.knowm.xchange.coinbase.v3;
 
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.spec.ECGenParameterSpec;
+import java.util.Base64;
+import java.util.UUID;
 import org.junit.Assume;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
@@ -13,6 +19,8 @@ public class CoinbaseTestUtils {
 
   public static final String SANDBOX_URL = "https://api-sandbox.coinbase.com";
   public static final String PRODUCTION_URL = "https://api.coinbase.com";
+  private static final String SANDBOX_HOST = "api-sandbox.coinbase.com";
+  private static final String SANDBOX_SYNTHETIC_KEY_PREFIX = "organizations/sandbox/apiKeys/";
   
   public static final String PROPERTY_SANDBOX = "coinbase.sandbox";
   public static final String PROPERTY_API_URL = "coinbase.api.url";
@@ -26,9 +34,25 @@ public class CoinbaseTestUtils {
   public static ExchangeSpecification createSandboxSpecification() {
     ExchangeSpecification spec = new ExchangeSpecification(CoinbaseExchange.class);
     spec.setSslUri(SANDBOX_URL);
-    spec.setHost("api-sandbox.coinbase.com");
+    spec.setHost(SANDBOX_HOST);
     spec.setExchangeName("Coinbase Sandbox");
     spec.setExchangeDescription("Coinbase Advanced Trade Sandbox Environment");
+    return spec;
+  }
+
+  /**
+   * Creates an exchange specification configured for sandbox testing and ensures credentials
+   * are present for JWT generation.
+   *
+   * <p>Coinbase sandbox accepts unsigned or non-production credentials, but XChange still needs an
+   * API key and private key to construct JWTs for authenticated calls. This helper loads real
+   * credentials when available and otherwise provisions an ephemeral synthetic key pair.
+   *
+   * @return configured exchange specification pointing to sandbox with auth material
+   */
+  public static ExchangeSpecification createSandboxSpecificationWithCredentials() {
+    ExchangeSpecification spec = createSandboxSpecification();
+    configureSandboxCredentials(spec);
     return spec;
   }
 
@@ -56,7 +80,7 @@ public class CoinbaseTestUtils {
     boolean useSandbox = "true".equalsIgnoreCase(System.getProperty(PROPERTY_SANDBOX));
     
     if (useSandbox) {
-      return createSandboxSpecification();
+      return createSandboxSpecificationWithCredentials();
     }
     
     // Check for custom API URL override
@@ -98,6 +122,29 @@ public class CoinbaseTestUtils {
         && !spec.getApiKey().isEmpty()
         && spec.getSecretKey() != null
         && !spec.getSecretKey().isEmpty();
+  }
+
+  /**
+   * Ensures sandbox specification has credentials suitable for JWT generation.
+   *
+   * <p>Order of precedence:
+   * <ol>
+   *   <li>Use environment or file-based credentials resolved by {@link AuthUtils} if available</li>
+   *   <li>Fallback to synthetic sandbox credentials (ephemeral EC private key)</li>
+   * </ol>
+   *
+   * @param spec exchange specification to mutate
+   */
+  public static void configureSandboxCredentials(ExchangeSpecification spec) {
+    if (spec == null) {
+      throw new IllegalArgumentException("spec must not be null");
+    }
+    AuthUtils.setApiAndSecretKey(spec);
+    if (isAuthConfigured(spec)) {
+      return;
+    }
+    spec.setApiKey(SANDBOX_SYNTHETIC_KEY_PREFIX + UUID.randomUUID());
+    spec.setSecretKey(generateEphemeralPrivateKeyPem());
   }
 
   /**
@@ -168,5 +215,24 @@ public class CoinbaseTestUtils {
     }
     return System.getProperty("coinbase.test.order.id");
   }
-}
 
+  /**
+   * Generates an ephemeral EC private key in PKCS#8 PEM format.
+   *
+   * <p>This is only used for sandbox test JWT generation when no real credentials are provided.
+   *
+   * @return PEM encoded private key string
+   */
+  private static String generateEphemeralPrivateKeyPem() {
+    try {
+      KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+      generator.initialize(new ECGenParameterSpec("secp256r1"));
+      KeyPair keyPair = generator.generateKeyPair();
+      byte[] der = keyPair.getPrivate().getEncoded();
+      String body = Base64.getMimeEncoder(64, new byte[] {'\n'}).encodeToString(der);
+      return "-----BEGIN PRIVATE KEY-----\n" + body + "\n-----END PRIVATE KEY-----";
+    } catch (GeneralSecurityException e) {
+      throw new IllegalStateException("Failed to generate sandbox private key", e);
+    }
+  }
+}

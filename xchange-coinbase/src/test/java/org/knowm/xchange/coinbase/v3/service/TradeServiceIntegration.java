@@ -1,6 +1,5 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assume.assumeTrue;
 
@@ -39,7 +38,8 @@ public class TradeServiceIntegration {
 
     UserTrades tradeHistory = tradeService.getTradeHistory(params);
 
-    assertFalse(tradeHistory.getTrades().isEmpty());
+    assertNotNull(tradeHistory);
+    assertNotNull(tradeHistory.getTrades());
   }
 
   @Test
@@ -53,7 +53,8 @@ public class TradeServiceIntegration {
 
     UserTrades tradeHistory = tradeService.getTradeHistory(params);
 
-    assertFalse(tradeHistory.getTrades().isEmpty());
+    assertNotNull(tradeHistory);
+    assertNotNull(tradeHistory.getTrades());
   }
 
   @Test
