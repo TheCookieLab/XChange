@@ -147,8 +147,8 @@
     </modules>
 
     <scm>
-        <connection>scm:git:git@github.com:TheCookieLab/XChange.git</connection>
-        <developerConnection>scm:git:git@github.com:TheCookieLab/XChange.git</developerConnection>
+        <connection>scm:git:https://github.com/TheCookieLab/XChange.git</connection>
+        <developerConnection>scm:git:https://github.com/TheCookieLab/XChange.git</developerConnection>
         <tag>HEAD</tag>
         <url>https://github.com/TheCookieLab/XChange</url>
     </scm>
