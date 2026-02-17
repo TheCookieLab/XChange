@@ -3,7 +3,7 @@ on:
     - cron: '0 5 * * *'
   workflow_dispatch:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 jobs:
   build:
