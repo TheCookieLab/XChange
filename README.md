@@ -1,6 +1,6 @@
 ## [![XChange](https://raw.githubusercontent.com/TheCookieLab/XChange/main/etc/XChange_64_64.png)](https://github.com/TheCookieLab/XChange) XChange
 
-[![Discord](https://img.shields.io/discord/778301671302365256?logo=Discord)](https://discord.gg/n27zjVTbDz)
+[![Discord](https://img.shields.io/discord/778301671302365256?logo=Discord)](https://discord.gg/HX9MbWZ)
 [![Java CI with Maven on Push](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml/badge.svg?event=status)](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml)
 
 XChange is a Java library providing a simple and consistent API for interacting with 60+ Bitcoin and other cryptocurrency exchanges, providing a consistent interface for trading and accessing market data.
@@ -28,18 +28,20 @@ Basic usage is very simple: Create an `Exchange` instance, get the appropriate s
 
 ## Integration status
 
-| Exchange         | Status                                                                                                                                                                    |
-|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| bitfinex         | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yml)                  |
-| bitget           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yml)                      |
-| bitmex           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml)                     |
-| coinex           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml)                     |
-| deribit          | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml)                   |
-| gate.io          | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml)               |
-| kraken           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml)                     |
-| mexc             | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml)                         |
-| stream-bitfinex  | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yml)    |
-| stream-deribit   | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yml)      |
+| Exchange         | Status                                                                                                                                                                      |
+|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| bitfinex         | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml)     |
+| bitget           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml)         |
+| bitmex           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml)         |
+| coinbase         | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinbase.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinbase.yaml)     |
+| coinex           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml)         |
+| deribit          | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml)       |
+| gate.io          | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml)   |
+| kraken           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml)         |
+| mexc             | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml)             |
+| stream-bitfinex  | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yaml) |
+| stream-coinbase  | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-coinbase.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-coinbase.yaml) |
+| stream-deribit   | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yaml)   |
 | stream-kraken-v2 | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-kraken-v2.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-kraken-v2.yaml) |
 
 ## REST API
@@ -140,7 +142,7 @@ Example Code: <http://knowm.org/open-source/xchange/xchange-example-code>
 Change Log: <http://knowm.org/open-source/xchange/xchange-change-log/>  
 Java Docs: <http://knowm.org/javadocs/xchange/index.html>
 
-Talk to us on discord: [![Discord](https://img.shields.io/discord/778301671302365256?logo=Discord)](https://discord.gg/n27zjVTbDz)
+Talk to us on discord: [![Discord](https://img.shields.io/discord/778301671302365256?logo=Discord)](https://discord.gg/HX9MbWZ)
 
 ## Wiki
 
@@ -175,12 +177,12 @@ Add the following dependencies in your pom.xml file. You will need at least xcha
 <dependency>
   <groupId>com.github.thecookielab.xchange</groupId>
   <artifactId>xchange-core</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
 </dependency>
 <dependency>
   <groupId>com.github.thecookielab.xchange</groupId>
   <artifactId>xchange-XYZ</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
 </dependency>
 ```
 
@@ -190,7 +192,7 @@ If it is available for your exchange, you may also want to use the streaming API
 <dependency>
   <groupId>com.github.thecookielab.xchange</groupId>
   <artifactId>xchange-stream-XYZ</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
 </dependency>
 ```
 
@@ -212,7 +214,7 @@ For snapshots, add the following repository to your pom.xml file.
 
 The current snapshot version is:
 
-    0.1.0-SNAPSHOT
+    0.2.0-SNAPSHOT
 
 ## Building with Maven
 
