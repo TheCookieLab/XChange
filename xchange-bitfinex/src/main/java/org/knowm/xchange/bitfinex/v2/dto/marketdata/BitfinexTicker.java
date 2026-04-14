@@ -33,4 +33,7 @@ public interface BitfinexTicker {
   BigDecimal getHigh();
 
   BigDecimal getLow();
+
+  /** Millisecond timestamp from the Bitfinex ticker row, or null when the exchange omits it. */
+  Long getTimestamp();
 }

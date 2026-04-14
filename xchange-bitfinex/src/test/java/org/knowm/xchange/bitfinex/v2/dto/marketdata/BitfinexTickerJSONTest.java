@@ -7,9 +7,11 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.bitfinex.service.BitfinexAdapters;
+import org.knowm.xchange.dto.marketdata.Ticker;
 
 public class BitfinexTickerJSONTest {
   @Test
@@ -48,8 +50,9 @@ public class BitfinexTickerJSONTest {
     assertThat(bitfinexTicker.getPlaceHolder0()).isNull();
     assertThat(bitfinexTicker.getPlaceHolder1()).isNull();
     assertThat(bitfinexTicker.getFrrAmountAvailable()).isEqualTo("2594257.74114297");
+    assertThat(bitfinexTicker.getTimestamp()).isEqualTo(1469734163000L);
 
-    // traiding pair:
+    // trading pair:
     BitfinexTickerTraidingPair bitfinexTicker2 = (BitfinexTickerTraidingPair) tickers[1];
     assertThat(bitfinexTicker2.getSymbol()).isEqualTo("tBTCUSD");
     assertThat(bitfinexTicker2.getBid()).isEqualTo("7381.6");
@@ -62,5 +65,9 @@ public class BitfinexTickerJSONTest {
     assertThat(bitfinexTicker2.getVolume()).isEqualTo("1982.88275223");
     assertThat(bitfinexTicker2.getHigh()).isEqualByComparingTo("7390");
     assertThat(bitfinexTicker2.getLow()).isEqualByComparingTo("7228.1");
+    assertThat(bitfinexTicker2.getTimestamp()).isEqualTo(1358182043000L);
+
+    Ticker ticker = BitfinexAdapters.adaptTicker(bitfinexTicker2);
+    assertThat(ticker.getTimestamp()).isEqualTo(new Date(1358182043000L));
   }
 }

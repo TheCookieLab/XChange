@@ -864,6 +864,10 @@ public class BitfinexAdapters {
     BigDecimal high = bitfinexTicker.getHigh();
     BigDecimal low = bitfinexTicker.getLow();
     BigDecimal volume = bitfinexTicker.getVolume();
+    Date timestamp =
+        bitfinexTicker.getTimestamp() == null
+            ? null
+            : DateUtils.fromMillisUtc(bitfinexTicker.getTimestamp());
     BigDecimal percentageChange =
         bitfinexTicker.getDailyChangePerc() != null
             ? bitfinexTicker.getDailyChangePerc().scaleByPowerOfTen(2)
@@ -884,6 +888,7 @@ public class BitfinexAdapters {
         .volume(volume)
         .bidSize(bidSize)
         .askSize(askSize)
+        .timestamp(timestamp)
         .percentageChange(percentageChange)
         .build();
   }

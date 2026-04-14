@@ -27,6 +27,7 @@ public class BitfinexTickerTraidingPair implements BitfinexTicker {
   private BigDecimal volume;
   private BigDecimal high;
   private BigDecimal low;
+  private Long timestamp;
 
   @Override
   public boolean isTradingPair() {

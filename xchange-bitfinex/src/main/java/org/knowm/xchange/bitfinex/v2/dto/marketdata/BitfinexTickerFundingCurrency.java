@@ -33,6 +33,7 @@ public class BitfinexTickerFundingCurrency implements BitfinexTicker {
   private Object placeHolder0;
   private Object placeHolder1;
   private BigDecimal frrAmountAvailable;
+  private Long timestamp;
 
   @Override
   public boolean isFundingCurrency() {
