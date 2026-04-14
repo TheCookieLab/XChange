@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import org.junit.Test;
@@ -69,5 +70,69 @@ public class BitfinexTickerJSONTest {
 
     Ticker ticker = BitfinexAdapters.adaptTicker(bitfinexTicker2);
     assertThat(ticker.getTimestamp()).isEqualTo(new Date(1358182043000L));
+  }
+
+  @Test
+  public void legacyImplementationsDefaultToNoTimestamp() {
+
+    BitfinexTicker ticker =
+        new BitfinexTicker() {
+          @Override
+          public String getSymbol() {
+            return "tBTCUSD";
+          }
+
+          @Override
+          public BigDecimal getBid() {
+            return null;
+          }
+
+          @Override
+          public BigDecimal getBidSize() {
+            return null;
+          }
+
+          @Override
+          public BigDecimal getAsk() {
+            return null;
+          }
+
+          @Override
+          public BigDecimal getAskSize() {
+            return null;
+          }
+
+          @Override
+          public BigDecimal getDailyChange() {
+            return null;
+          }
+
+          @Override
+          public BigDecimal getDailyChangePerc() {
+            return null;
+          }
+
+          @Override
+          public BigDecimal getLastPrice() {
+            return null;
+          }
+
+          @Override
+          public BigDecimal getVolume() {
+            return null;
+          }
+
+          @Override
+          public BigDecimal getHigh() {
+            return null;
+          }
+
+          @Override
+          public BigDecimal getLow() {
+            return null;
+          }
+        };
+
+    assertThat(ticker.getTimestamp()).isNull();
   }
 }
