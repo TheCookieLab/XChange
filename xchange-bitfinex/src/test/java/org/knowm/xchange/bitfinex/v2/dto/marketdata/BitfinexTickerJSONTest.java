@@ -23,13 +23,7 @@ public class BitfinexTickerJSONTest {
         BitfinexTickerJSONTest.class.getResourceAsStream(
             "/org/knowm/xchange/bitfinex/v2/dto/marketdata/example-ticker-data.json");
 
-    // Use Jackson to parse it
-    ObjectMapper mapper = new ObjectMapper();
-    CollectionType constructCollectionType =
-        mapper.getTypeFactory().constructCollectionType(List.class, ArrayNode.class);
-
-    List<ArrayNode> tickers0 = mapper.readValue(is, constructCollectionType);
-    BitfinexTicker[] tickers = BitfinexAdapters.adoptBitfinexTickers(tickers0);
+    BitfinexTicker[] tickers = readTickers(is);
 
     // Verify that the example data was unmarshalled correctly
     // funding currency:
@@ -70,6 +64,29 @@ public class BitfinexTickerJSONTest {
 
     Ticker ticker = BitfinexAdapters.adaptTicker(bitfinexTicker2);
     assertThat(ticker.getTimestamp()).isEqualTo(new Date(1358182043000L));
+  }
+
+  @Test
+  public void legacyRowsWithoutTimestampDefaultToNoTimestamp() throws IOException {
+
+    BitfinexTicker[] tickers =
+        readTickers(
+            "["
+                + "[\"fLEO\",1.0958904109589042e-8,0,0,0,1e-8,2,2663861.8810786298,0,0,"
+                + "1e-8,664.1085,1e-8,1e-8,null,null,2594257.74114297],"
+                + "[\"tBTCUSD\",7381.6,38.644979070000005,7381.7,32.145906579999995,126.6,"
+                + "0.0175,7381.2,1982.88275223,7390,7228.1]"
+                + "]");
+
+    BitfinexTickerFundingCurrency fundingTicker =
+        (BitfinexTickerFundingCurrency) tickers[0];
+    assertThat(fundingTicker.getTimestamp()).isNull();
+
+    BitfinexTickerTraidingPair tradingTicker = (BitfinexTickerTraidingPair) tickers[1];
+    assertThat(tradingTicker.getTimestamp()).isNull();
+
+    Ticker ticker = BitfinexAdapters.adaptTicker(tradingTicker);
+    assertThat(ticker.getTimestamp()).isNull();
   }
 
   @Test
@@ -134,5 +151,24 @@ public class BitfinexTickerJSONTest {
         };
 
     assertThat(ticker.getTimestamp()).isNull();
+  }
+
+  private static BitfinexTicker[] readTickers(InputStream json) throws IOException {
+
+    ObjectMapper mapper = new ObjectMapper();
+    List<ArrayNode> tickerRows = mapper.readValue(json, tickerRowsType(mapper));
+    return BitfinexAdapters.adoptBitfinexTickers(tickerRows);
+  }
+
+  private static BitfinexTicker[] readTickers(String json) throws IOException {
+
+    ObjectMapper mapper = new ObjectMapper();
+    List<ArrayNode> tickerRows = mapper.readValue(json, tickerRowsType(mapper));
+    return BitfinexAdapters.adoptBitfinexTickers(tickerRows);
+  }
+
+  private static CollectionType tickerRowsType(ObjectMapper mapper) {
+
+    return mapper.getTypeFactory().constructCollectionType(List.class, ArrayNode.class);
   }
 }
