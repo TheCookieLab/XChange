@@ -127,7 +127,7 @@ public final class CoinbaseStreamingAdapters {
                     .high(candle.getHigh())
                     .low(candle.getLow())
                     .volume(candle.getVolume())
-                    .timestamp(parseUnixTimestamp(candle.getStart()).map(java.util.Date::from).orElse(null))
+                    .timestamp(parseUnixTimestamp(candle.getStart()).orElse(null))
                     .build());
             }
         }

@@ -509,9 +509,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
             .high(candle.getHigh())
             .low(candle.getLow())
             .volume(candle.getVolume())
-            .timestamp(CoinbaseStreamingAdapters.parseUnixTimestamp(candle.getStart())
-                .map(Date::from)
-                .orElse(null))
+            .timestamp(CoinbaseStreamingAdapters.parseUnixTimestamp(candle.getStart()).orElse(null))
             .build());
       }
     }

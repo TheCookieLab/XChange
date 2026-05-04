@@ -402,7 +402,7 @@ public final class CoinbaseAdapters {
     return new CandleStick.Builder().open(productCandle.getOpen()).high(productCandle.getHigh())
         .low(productCandle.getLow()).close(productCandle.getClose())
         .volume(productCandle.getVolume())
-        .timestamp(Date.from(Instant.ofEpochSecond(Long.parseLong(productCandle.getStart()))))
+        .timestamp(Instant.ofEpochSecond(Long.parseLong(productCandle.getStart())))
         .build();
   }
 
