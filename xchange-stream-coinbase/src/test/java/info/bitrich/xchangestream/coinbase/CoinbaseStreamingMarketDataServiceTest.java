@@ -227,7 +227,7 @@ class CoinbaseStreamingMarketDataServiceTest {
     assertEquals(new BigDecimal("90"), candle.getLow());
     assertEquals(new BigDecimal("5"), candle.getVolume());
     // Verify timestamp: 1704067200 epoch seconds = 2024-01-01T00:00:00Z
-    assertEquals(1704067200000L, candle.getTimestamp().toInstant().toEpochMilli());
+    assertEquals(1704067200000L, candle.getTimestamp().toEpochMilli());
 
     CoinbaseSubscriptionRequest request = streamingService.lastRequest();
     assertEquals(CoinbaseChannel.CANDLES, request.getChannel());

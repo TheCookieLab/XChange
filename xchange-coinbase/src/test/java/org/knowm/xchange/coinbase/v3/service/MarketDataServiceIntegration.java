@@ -82,7 +82,7 @@ public class MarketDataServiceIntegration {
 
     assertEquals(limit, candleStickData.getCandleSticks().size());
     assertEquals(currencyPair, candleStickData.getInstrument());
-    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().after(
+    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().isAfter(
         candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1)
             .getTimestamp()));
   }
@@ -103,7 +103,7 @@ public class MarketDataServiceIntegration {
         "Candlestick count should be close to the requested day window",
         observedSize >= daysInPast && observedSize <= daysInPast + 2);
     assertEquals(currencyPair, candleStickData.getInstrument());
-    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().after(
+    assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().isAfter(
         candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1)
             .getTimestamp()));
   }

@@ -127,7 +127,7 @@ public class MarketDataServiceSandboxIntegration {
       if (!candleStickData.getCandleSticks().isEmpty()) {
         assertTrue("Should respect limit", candleStickData.getCandleSticks().size() <= limit);
         assertTrue("Candles should be sorted desc by time",
-            candleStickData.getCandleSticks().get(0).getTimestamp().after(
+            candleStickData.getCandleSticks().get(0).getTimestamp().isAfter(
                 candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1)
                     .getTimestamp()));
       }
