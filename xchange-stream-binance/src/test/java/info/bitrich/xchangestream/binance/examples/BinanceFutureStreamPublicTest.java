@@ -48,9 +48,9 @@ public class BinanceFutureStreamPublicTest {
     ExchangeSpecification spec = new ExchangeSpecification(BinanceFutureStreamingExchange.class);
     // The most convenient way. Can store all keys in .ssh folder
     AuthUtils.setApiAndSecretKey(spec, "binance-demo-futures");
-    spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
+//    spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
     spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, FUTURES);
-    // optional - more frequent ticker updates
+    // optional - more frequent OrderBook ticker updates
     //    spec.setExchangeSpecificParametersItem(USE_REALTIME_BOOK_TICKER, true);
     // optional more frequent order book updates
     //    spec.setExchangeSpecificParametersItem(USE_HIGHER_UPDATE_FREQUENCY, true);
