@@ -137,7 +137,7 @@ class CoinbaseStreamingAdaptersTest {
     // Verify timestamp is parsed correctly
     Assertions.assertNotNull(candle.getTimestamp(), "Candle timestamp should not be null");
     Assertions.assertEquals(
-        Date.from(Instant.ofEpochSecond(expectedEpochSeconds)),
+        Instant.ofEpochSecond(expectedEpochSeconds),
         candle.getTimestamp(),
         "Candle timestamp should match the parsed UNIX timestamp");
   }
@@ -178,7 +178,7 @@ class CoinbaseStreamingAdaptersTest {
     CandleStick candle = candles.get(0);
     Assertions.assertNotNull(candle.getTimestamp(), "Candle timestamp should not be null");
     Assertions.assertEquals(
-        Date.from(Instant.ofEpochSecond(expectedEpochSeconds)),
+        Instant.ofEpochSecond(expectedEpochSeconds),
         candle.getTimestamp(),
         "Candle timestamp should match the parsed UNIX timestamp");
     Assertions.assertEquals(new BigDecimal("100"), candle.getOpen());
