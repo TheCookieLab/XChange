@@ -190,14 +190,14 @@ public class DeribitAdapters {
 
       int code = error.getCode();
       String msg = error.getMessage();
-      String data = error.getData().toString();
+      String data = error.getData() == null ? null : error.getData().toString();
       if (StringUtils.isNotEmpty(data)) {
         msg += " - " + data;
       }
 
       switch (code) {
         case -32602:
-          return new CurrencyPairNotValidException(data, ex);
+          return new CurrencyPairNotValidException(StringUtils.defaultIfEmpty(data, msg), ex);
         default:
           return new ExchangeException(msg, ex);
       }

@@ -25,6 +25,9 @@ public class DeribitStreamingService extends NettyStreamingService<DeribitWsNoti
 
   @Override
   protected String getChannelNameFromMessage(DeribitWsNotification message) {
+    if (message.getParams() == null) {
+      return null;
+    }
     return message.getParams().getChannel();
   }
 
@@ -58,6 +61,12 @@ public class DeribitStreamingService extends NettyStreamingService<DeribitWsNoti
     super.handleMessage(message);
   }
 
+  /**
+   * Parses Deribit websocket messages and dispatches only channel notifications.
+   *
+   * <p>Deribit also sends control responses such as subscription acknowledgements and authorization
+   * errors without {@code params.channel}; those responses must not enter Netty channel dispatch.
+   */
   @Override
   public void messageHandler(String message) {
     log.debug("Received message: {}", message);
@@ -92,7 +101,11 @@ public class DeribitStreamingService extends NettyStreamingService<DeribitWsNoti
       return;
     }
 
-    if (deribitWsNotification.hasSinglePayload()) {
+    if (deribitWsNotification instanceof DeribitEventNotification) {
+      handleMessage(deribitWsNotification);
+    } else if (!hasChannelParams(deribitWsNotification)) {
+      log.debug("Ignoring Deribit control message without channel params: {}", message);
+    } else if (deribitWsNotification.hasSinglePayload()) {
       handleMessage(deribitWsNotification);
     } else {
       // process several payloads separately
@@ -105,5 +118,10 @@ public class DeribitStreamingService extends NettyStreamingService<DeribitWsNoti
                     handleMessage(singleNotification);
                   });
     }
+  }
+
+  private boolean hasChannelParams(DeribitWsNotification deribitWsNotification) {
+    return deribitWsNotification.getParams() != null
+        && deribitWsNotification.getParams().getChannel() != null;
   }
 }
