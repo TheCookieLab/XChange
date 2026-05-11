@@ -16,6 +16,7 @@ Integration tests that require API keys read them from environment variables. Th
 
 If no keys are provided the integration tests that need them are skipped.
 
+Public Deribit integration tests call live Deribit endpoints. Tests that use the sandbox API create their exchange without remote metadata loading so a temporary sandbox outage can be reported through the shared health assumption and skipped instead of failing during setup.
+
 > [!CAUTION]
 > Never commit your api credentials to the repository!
-

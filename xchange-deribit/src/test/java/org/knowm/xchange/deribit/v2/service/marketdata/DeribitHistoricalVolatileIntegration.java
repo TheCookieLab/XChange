@@ -5,22 +5,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.knowm.xchange.Exchange;
-import org.knowm.xchange.ExchangeFactory;
+import org.knowm.xchange.deribit.DeribitIntegrationTestParent;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.service.DeribitMarketDataService;
 
 public class DeribitHistoricalVolatileIntegration {
 
-  private static Exchange exchange;
+  private static DeribitExchange exchange;
   private static DeribitMarketDataService deribitMarketDataService;
 
   @BeforeAll
   public static void setUp() {
-    exchange = ExchangeFactory.INSTANCE.createExchange(DeribitExchange.class);
-    exchange.applySpecification(((DeribitExchange) exchange).getSandboxExchangeSpecification());
+    exchange = DeribitIntegrationTestParent.createSandboxExchangeWithoutRemoteMetadata();
     deribitMarketDataService = (DeribitMarketDataService) exchange.getMarketDataService();
+  }
+
+  @BeforeEach
+  void exchangeOnline() {
+    DeribitIntegrationTestParent.assumeExchangeOnline(exchange);
   }
 
   @Test
