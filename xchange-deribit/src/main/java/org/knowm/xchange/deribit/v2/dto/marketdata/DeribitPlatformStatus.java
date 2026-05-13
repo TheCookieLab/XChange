@@ -37,7 +37,7 @@ public class DeribitPlatformStatus {
         throws IOException {
       String value = parser.getValueAsString();
       if (value == null) {
-        return null;
+        return (Boolean) context.handleUnexpectedToken(Boolean.class, parser);
       }
 
       if ("partial".equalsIgnoreCase(value)) {

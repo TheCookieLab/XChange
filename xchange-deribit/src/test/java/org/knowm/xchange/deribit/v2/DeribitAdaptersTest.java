@@ -3,6 +3,7 @@ package org.knowm.xchange.deribit.v2;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.deribit.v2.dto.DeribitError;
 import org.knowm.xchange.deribit.v2.dto.DeribitException;
 import org.knowm.xchange.exceptions.ExchangeException;
@@ -29,5 +30,14 @@ class DeribitAdaptersTest {
     assertThat(exchangeException)
         .hasMessage("Gateway unavailable")
         .hasCauseInstanceOf(DeribitException.class);
+  }
+
+  @Test
+  void symbolMappingsPreserveNullAsUnknown() {
+    DeribitAdapters.putSymbolMapping(null, CurrencyPair.BTC_USD);
+    DeribitAdapters.putSymbolMapping("BTC_USD", null);
+
+    assertThat(DeribitAdapters.toInstrument((String) null)).isNull();
+    assertThat(DeribitAdapters.toString(null)).isNull();
   }
 }

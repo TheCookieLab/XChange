@@ -4,11 +4,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
@@ -60,10 +60,13 @@ import org.knowm.xchange.instrument.Instrument;
 @UtilityClass
 public class DeribitAdapters {
 
-  public final Map<String, Instrument> SYMBOL_TO_INSTRUMENT = new HashMap<>();
-  private final Map<Instrument, String> INSTRUMENT_TO_SYMBOL = new HashMap<>();
+  public final Map<String, Instrument> SYMBOL_TO_INSTRUMENT = new ConcurrentHashMap<>();
+  private final Map<Instrument, String> INSTRUMENT_TO_SYMBOL = new ConcurrentHashMap<>();
 
-  public void putSymbolMapping(String symbol, Instrument instrument) {
+  public synchronized void putSymbolMapping(String symbol, Instrument instrument) {
+    if (symbol == null || instrument == null) {
+      return;
+    }
     SYMBOL_TO_INSTRUMENT.put(symbol, instrument);
     INSTRUMENT_TO_SYMBOL.put(instrument, symbol);
   }
@@ -257,10 +260,16 @@ public class DeribitAdapters {
   }
 
   public String toString(Instrument instrument) {
+    if (instrument == null) {
+      return null;
+    }
     return INSTRUMENT_TO_SYMBOL.get(instrument);
   }
 
   public Instrument toInstrument(String symbol) {
+    if (symbol == null) {
+      return null;
+    }
     return SYMBOL_TO_INSTRUMENT.get(symbol);
   }
 

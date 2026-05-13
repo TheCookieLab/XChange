@@ -59,6 +59,12 @@ class DeribitPlatformStatusTest {
   }
 
   @Test
+  void rejectsUnexpectedLockedTokenShape() {
+    assertThatExceptionOfType(JsonMappingException.class)
+        .isThrownBy(() -> mapper.readValue("{\"locked\":{}}", DeribitPlatformStatus.class));
+  }
+
+  @Test
   void deserializesPartialLockedStatusAsOnline() throws Exception {
     DeribitPlatformStatus status =
         mapper.readValue(
