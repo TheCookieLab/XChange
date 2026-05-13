@@ -13,6 +13,15 @@
 - For any code or `pom.xml` change, run at least the affected module build before considering the task complete.
 - **Suppressing warnings is disallowed.** Do not add or use `@SuppressWarnings`. Fix the underlying cause so the rule is satisfied, or document in `unresolved.json` if it cannot be fixed within scope.
 
+## Dependency maintenance
+
+- Use the checked-in Maven Versions ruleset at `config/dependency-updates/version-rules.xml`; it filters prerelease, snapshot, early-access, and JDK-classifier candidates from normal update reports.
+- In this repo, "latest" means latest stable Maven Central release. Do not adopt alpha, beta, milestone, RC, preview, early-access, snapshot, or classifier-specific variants unless a security advisory has no stable fix.
+- Run update reports with `mvn -B versions:display-dependency-updates versions:display-plugin-updates versions:display-property-updates`.
+- Run vulnerability audits with Dependabot alert review plus `mvn -B org.owasp:dependency-check-maven:check -DskipIntegrationTests=true` when dependency risk is in scope.
+- Centralize shared dependency and plugin versions in the root parent POM. Leave module-local versions or plugin configuration only when behavior intentionally differs, and document the local reason in that module.
+- Do not add or retain Maven Enforcer dependency-convergence skips. Fix convergence at the root cause or record the blocker in `unresolved.md` and `unresolved.json`.
+
 ---
 
 ## Inventory: subagents and tools

@@ -1,5 +1,5 @@
 {
-  "id" : "aebaa168-bbc9-4819-98f5-c2336d01ca43",
+  "id" : "7ce08026-ce06-4c43-8d69-3479ce30944b",
   "name" : "api_v2_spot_trade_orderinfo",
   "request" : {
     "url" : "/api/v2/spot/trade/orderInfo?orderId=1214193970718347264",
@@ -9,7 +9,7 @@
     "status" : 200,
     "bodyFileName" : "api_v2_spot_trade_orderinfo-t-valid-market-sell-order.json"
   },
-  "uuid" : "aebaa168-bbc9-4819-98f5-c2336d01ca43",
+  "uuid" : "7ce08026-ce06-4c43-8d69-3479ce30944b",
   "persistent" : true,
   "insertionIndex" : 1
 }

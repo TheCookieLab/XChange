@@ -225,10 +225,18 @@ run unit and integration tests    | `mvn clean verify -DskipIntegrationTests=fal
 install in local Maven repo       | `mvn clean install`
 create project javadocs           | `mvn javadoc:aggregate`
 generate dependency tree          | `mvn dependency:tree`
-check for dependency updates      | `mvn versions:display-dependency-updates`
-check for plugin updates          | `mvn versions:display-plugin-updates`
+check for dependency updates      | `mvn versions:display-dependency-updates versions:display-plugin-updates versions:display-property-updates`
+run vulnerability audit           | `mvn org.owasp:dependency-check-maven:check -DskipIntegrationTests=true`
 code format                       | `mvn com.spotify.fmt:fmt-maven-plugin:format`
 pom format/organize               | `mvn com.github.ekryd.sortpom:sortpom-maven-plugin:sort`
+
+### Dependency maintenance
+
+Dependency update reports use `config/dependency-updates/version-rules.xml` to reject prerelease candidates. Treat "latest" as the latest stable Maven Central release: do not adopt alpha, beta, milestone, RC, preview, early-access, snapshot, or JDK-classifier variants unless a security advisory has no stable fix.
+
+Shared dependency and plugin versions belong in the root `pom.xml` properties and dependency management where possible. Keep module-local versions only when the module intentionally diverges from the shared build, and document the reason in that module's POM.
+
+Before closing a dependency update, run the Versions report, review the dependency tree for convergence, cross-check Dependabot alerts, and run the affected module tests. Full-project dependency work should finish with `mvn clean install`.
 
 ## Bugs
 
