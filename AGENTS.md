@@ -16,10 +16,8 @@ comments, and PRD delivery, follow the workspace root instructions first.
 1. Work from the repo root unless a module-specific command requires otherwise.
 2. Keep changes scoped to the requested module or cross-module concern.
 3. Reuse existing APIs and patterns; avoid new public API unless it is required.
-4. Fix warnings and static-analysis findings at root cause. Do not add
-   `@SuppressWarnings`, disable rules, widen exclusions, or hide diagnostics.
-5. If a blocker cannot be resolved in scope, record it in `unresolved.md` and
-   schema-aligned `unresolved.json`.
+4. Fix warnings and static-analysis findings at root cause using a red-green refactor approach. Do not add `@SuppressWarnings`, disable rules, widen exclusions, or hide diagnostics.
+5. If a blocker cannot be resolved in scope, record it in `unresolved.md` and schema-aligned `unresolved.json` and raise attention to it during summary/inbox.
 
 ## Build and Validation
 
