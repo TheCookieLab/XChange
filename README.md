@@ -1,254 +1,217 @@
 ## [![XChange](https://raw.githubusercontent.com/TheCookieLab/XChange/main/etc/XChange_64_64.png)](https://github.com/TheCookieLab/XChange) XChange
 
 [![Discord](https://img.shields.io/discord/778301671302365256?logo=Discord)](https://discord.gg/HX9MbWZ)
-[![Java CI with Maven on Push](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml)
-
-XChange is a Java library providing a simple and consistent API for interacting with 60+ Bitcoin and other cryptocurrency exchanges, providing a consistent interface for trading and accessing market data.
-
-A big thanks to all the [contributors](CONTRIBUTORS) who have helped make XChange what it is today! ❤️
-
-## Fork Attribution
-
-This repository is a maintained fork of the original XChange project.
-
-- Upstream repository: [knowm/XChange](https://github.com/knowm/XChange)
-- Original project site: [knowm.org/open-source/xchange](http://knowm.org/open-source/xchange)
-
-This fork preserves upstream MIT license and copyright notices. Our release notes include an **Upstream Credits** section that tracks upstream PRs and commits included in each release.
-
-## Important!
-
-The world of Bitcoin changes quickly and XChange is no exception. For the latest bugfixes and features you should use the [snapshot jars](https://central.sonatype.com/repository/maven-snapshots/com/github/thecookielab/xchange/) or build yourself from the `main` or `develop` branch. See below for more details about building with Maven. To report bugs and see what issues people are currently working on see the [issues page](https://github.com/TheCookieLab/XChange/issues).
-
-## Description
-
-XChange is a Java based library providing a simple and consistent API for interacting with a diverse set of cryptocurrency exchanges.
-
-Basic usage is very simple: Create an `Exchange` instance, get the appropriate service, and request data. More complex usages are progressively detailed below.
-
-## Integration status
-
-| Exchange         | Status                                                                                                                                                                      |
-|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| bitfinex         | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml)     |
-| bitget           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml)         |
-| bitmex           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml)         |
-| coinbase         | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinbase.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinbase.yaml)     |
-| coinex           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml)         |
-| deribit          | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml)       |
-| gate.io          | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml)   |
-| kraken           | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml)         |
-| mexc             | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml)             |
-| stream-bitfinex  | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yaml) |
-| stream-coinbase  | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-coinbase.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-coinbase.yaml) |
-| stream-deribit   | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yaml)   |
-| stream-kraken-v2 | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-kraken-v2.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-kraken-v2.yaml) |
-
-## REST API
-#### Public Market Data
-
-To use public APIs which do not require authentication:
-
-```java
-Exchange bitstamp = ExchangeFactory.INSTANCE.createExchange(BitstampExchange.class);
-MarketDataService marketDataService = bitstamp.getMarketDataService();
-Ticker ticker = marketDataService.getTicker(CurrencyPair.BTC_USD);
-System.out.println(ticker.toString());
-```
-
-#### Private Account Info
-
-To use APIs which require authentication, create an `ExchangeSpecification` with your API credentials and pass this to `createExchange()`:
-
-```java
-ExchangeSpecification exSpec = new BitstampExchange().getDefaultExchangeSpecification();
-exSpec.setUserName("34387");
-exSpec.setApiKey("a4SDmpl9s6xWJS5fkKRT6yn41vXuY0AM");
-exSpec.setSecretKey("sisJixU6Xd0d1yr6w02EHCb9UwYzTNuj");
-Exchange bitstamp = ExchangeFactory.INSTANCE.createExchange(exSpec);
-```
-
-*Please Note:* while most exchanges use just an API key and secret key, others (such as `username` on Bitstamp or `passphrase` on Coinbase Pro) are exchange-specific. For more examples of adding the keys to the `ExchangeSpecification`, including storing them in a configuration file, see [Frequently Asked Questions](https://github.com/TheCookieLab/XChange/wiki/Frequently-Asked-Questions).
-
-Once you have an authenticated `Exchange`, the private API services, `AccountService` and `TradeService`, can be used to access private data:
-
-```java
-// Get the account information
-AccountService accountService = bitstamp.getAccountService();
-AccountInfo accountInfo = accountService.getAccountInfo();
-System.out.println(accountInfo.toString());
-```
-
-All exchange implementations expose the same API, but you can also directly access the underlying "raw" data from the individual exchanges if you need to.
-
-## Websocket API
-
-The above API is usually fully supported on all exchanges and is best used for occasional requests and polling on relatively long intervals. Many exchanges, however, heavily limit the frequency that these requests can be made, and advise instead that you use their websocket API if you need streaming or real-time data.
-
-For a smaller number of exchanges, the websocket-based `StreamingExchange` API is also available. This uses [Reactive streams](http://reactivex.io/) to allow you to efficiently subscribe to changes relating to thousands of coin pairs without requiring large numbers of threads.
-
-You will need to import an additional dependency for the exchange you are using (see below), then example usage is as follows:
-
-```java
-// Use StreamingExchangeFactory instead of ExchangeFactory
-StreamingExchange exchange = StreamingExchangeFactory.INSTANCE.createExchange(BitstampStreamingExchange.class);
-
-// Connect to the Exchange WebSocket API. Here we use a blocking wait.
-exchange.connect().blockingAwait();
-
-// Subscribe to live trades update.
-Disposable subscription1 = exchange.getStreamingMarketDataService()
-    .getTrades(CurrencyPair.BTC_USD)
-    .subscribe(
-        trade -> LOG.info("Trade: {}", trade),
-        throwable -> LOG.error("Error in trade subscription", throwable));
-
-// Subscribe order book data with the reference to the subscription.
-Disposable subscription2 = exchange.getStreamingMarketDataService()
-    .getOrderBook(CurrencyPair.BTC_USD)
-    .subscribe(orderBook -> LOG.info("Order book: {}", orderBook));
-
-// Wait for a while to see some results arrive
-Thread.sleep(20000);
-
-// Unsubscribe
-subscription1.dispose();
-subscription2.dispose();
-
-// Disconnect from exchange (blocking again)
-exchange.disconnect().blockingAwait();
-```
-
-Authentication, if supported for the exchange, works the same way as for the main API, via an `ExchangeSpecification`. For more information on what is supported, see the Wiki.
-
-## More information
-
-Now go ahead and [study some more examples](http://knowm.org/open-source/xchange/xchange-example-code), [download the thing](http://knowm.org/open-source/xchange/xchange-change-log/) and [provide feedback](https://github.com/TheCookieLab/XChange/issues).
-
-More information about reactive streams can be found at the [RxJava wiki](https://github.com/ReactiveX/RxJava/wiki).
-
-## Features
-
-- [x] MIT license
-- [x] consistent API across all implemented exchanges
-- [x] active development
-- [x] very minimal 3rd party dependencies
-- [x] modular components
-
-## More Info
-
-Project Site: <http://knowm.org/open-source/xchange>  
-Example Code: <http://knowm.org/open-source/xchange/xchange-example-code>  
-Change Log: <http://knowm.org/open-source/xchange/xchange-change-log/>  
-Java Docs: <http://knowm.org/javadocs/xchange/index.html>
-
-Talk to us on discord: [![Discord](https://img.shields.io/discord/778301671302365256?logo=Discord)](https://discord.gg/HX9MbWZ)
-
-## Wiki
-
-- [Home](https://github.com/TheCookieLab/XChange/wiki)
-- [FAQ](https://github.com/TheCookieLab/XChange/wiki/Frequently-Asked-Questions)
-- [Design Notes](https://github.com/TheCookieLab/XChange/wiki/Design-Notes)
-- [Milestones](https://github.com/TheCookieLab/XChange/wiki/Milestones)
-- [Exchange Support](https://github.com/TheCookieLab/XChange/wiki/Exchange-support)
-- [New Implementation Best Practices](https://github.com/TheCookieLab/XChange/wiki/New-Implementation-Best-Practices)
-- [Installing SSL Certificates into TrustStore](https://github.com/TheCookieLab/XChange/wiki/Installing-SSL-Certificates-into-TrustStore)
-- [Getting Started with XChange for Noobies](https://github.com/TheCookieLab/XChange/wiki/Getting-Started-with-XChange-for-Noobies)
-- [Code Style](https://github.com/TheCookieLab/XChange/wiki/Code-Style)
-
-## Continuous Integration
-
 [![Java CI with Maven](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/TheCookieLab/XChange/actions/workflows/maven.yml)
 
-## Getting Started
+XChange is a Java library for trading and market-data access across many
+cryptocurrency exchanges. It provides one consistent API for exchange discovery,
+account data, orders, trades, tickers, order books, and streaming market data
+where supported.
 
-### Non-Maven
+This repository is a maintained fork focused on production trading reliability,
+fast exchange support updates, and a modern Maven release pipeline.
 
-- [XChange Release Jars](https://central.sonatype.com/search?q=g:com.github.thecookielab.xchange)
-- [XChange Snapshot Jars](https://central.sonatype.com/repository/maven-snapshots/com/github/thecookielab/xchange/)
+## Install
 
-### Maven
+Release artifacts are published under
+[`com.github.thecookielab.xchange`](https://central.sonatype.com/search?q=g:com.github.thecookielab.xchange).
+Set `xchange.version` to the latest release from Central, or use
+`0.2.0-SNAPSHOT` with the snapshots repository below.
 
-The XChange release artifacts are hosted on Maven Central: [com.github.thecookielab.xchange](https://mvnrepository.com/artifact/com.github.thecookielab.xchange)
-
-Add the following dependencies in your pom.xml file. You will need at least xchange-core. Add the additional dependencies for the exchange modules you are interested in (XYZ shown only for a placeholder). There is example code for all the modules in xchange-examples.
+Add `xchange-core` plus the exchange modules you use:
 
 ```xml
-<dependency>
-  <groupId>com.github.thecookielab.xchange</groupId>
-  <artifactId>xchange-core</artifactId>
-  <version>0.1.0</version>
-</dependency>
-<dependency>
-  <groupId>com.github.thecookielab.xchange</groupId>
-  <artifactId>xchange-XYZ</artifactId>
-  <version>0.1.0</version>
-</dependency>
+<properties>
+  <xchange.version>0.2.0-SNAPSHOT</xchange.version>
+</properties>
+
+<dependencies>
+  <dependency>
+    <groupId>com.github.thecookielab.xchange</groupId>
+    <artifactId>xchange-core</artifactId>
+    <version>${xchange.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>com.github.thecookielab.xchange</groupId>
+    <artifactId>xchange-XYZ</artifactId>
+    <version>${xchange.version}</version>
+  </dependency>
+</dependencies>
 ```
 
-If it is available for your exchange, you may also want to use the streaming API:
+If the exchange supports streaming, add its streaming module:
 
 ```xml
 <dependency>
   <groupId>com.github.thecookielab.xchange</groupId>
   <artifactId>xchange-stream-XYZ</artifactId>
-  <version>0.1.0</version>
+  <version>${xchange.version}</version>
 </dependency>
 ```
 
-For snapshots, add the following repository to your pom.xml file.
+For snapshots, add the Central Portal snapshots repository:
 
 ```xml
 <repository>
-    <name>Central Portal Snapshots</name>
-    <id>central-portal-snapshots</id>
-    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-    <releases>
-        <enabled>false</enabled>
-    </releases>
-    <snapshots>
-        <enabled>true</enabled>
-    </snapshots>
+  <id>central-portal-snapshots</id>
+  <name>Central Portal Snapshots</name>
+  <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+  <releases>
+    <enabled>false</enabled>
+  </releases>
+  <snapshots>
+    <enabled>true</enabled>
+  </snapshots>
 </repository>
 ```
 
-The current snapshot version is:
+## REST API
 
-    0.2.0-SNAPSHOT
+### Public Market Data
 
-## Building with Maven
+```java
+Exchange bitstamp = ExchangeFactory.INSTANCE.createExchange(BitstampExchange.class);
+MarketDataService marketDataService = bitstamp.getMarketDataService();
+Ticker ticker = marketDataService.getTicker(CurrencyPair.BTC_USD);
+System.out.println(ticker);
+```
 
-Instruction                 | Command
---------------------------------- | ------------------------ 
-run unit tests                    | `mvn clean test`
-run unit and integration tests    | `mvn clean verify -DskipIntegrationTests=false`    
-install in local Maven repo       | `mvn clean install`
-create project javadocs           | `mvn javadoc:aggregate`
-generate dependency tree          | `mvn dependency:tree`
-check for dependency updates      | `mvn versions:display-dependency-updates versions:display-plugin-updates versions:display-property-updates`
-run vulnerability audit           | `mvn org.owasp:dependency-check-maven:check -DskipIntegrationTests=true`
-code format                       | `mvn com.spotify.fmt:fmt-maven-plugin:format`
-pom format/organize               | `mvn com.github.ekryd.sortpom:sortpom-maven-plugin:sort`
+### Private Account Data
 
-### Dependency maintenance
+Create an `ExchangeSpecification`, set the exchange-specific credentials, and
+pass it to `ExchangeFactory`.
 
-Dependency update reports use `config/dependency-updates/version-rules.xml` to reject prerelease candidates. Treat "latest" as the latest stable Maven Central release: do not adopt alpha, beta, milestone, RC, preview, early-access, snapshot, or JDK-classifier variants unless a security advisory has no stable fix.
+```java
+ExchangeSpecification spec = new BitstampExchange().getDefaultExchangeSpecification();
+spec.setUserName("34387");
+spec.setApiKey("a4SDmpl9s6xWJS5fkKRT6yn41vXuY0AM");
+spec.setSecretKey("sisJixU6Xd0d1yr6w02EHCb9UwYzTNuj");
 
-Shared dependency and plugin versions belong in the root `pom.xml` properties and dependency management where possible. Keep module-local versions only when the module intentionally diverges from the shared build, and document the reason in that module's POM.
+Exchange bitstamp = ExchangeFactory.INSTANCE.createExchange(spec);
+AccountInfo accountInfo = bitstamp.getAccountService().getAccountInfo();
+System.out.println(accountInfo);
+```
 
-Before closing a dependency update, run the Versions report, review the dependency tree for convergence, cross-check Dependabot alerts, and run the affected module tests. Full-project dependency work should finish with `mvn clean install`.
+Credential fields vary by exchange. Some exchanges require only an API key and
+secret; others also require fields such as username or passphrase. See the
+[FAQ](https://github.com/TheCookieLab/XChange/wiki/Frequently-Asked-Questions)
+for configuration examples.
 
-## Bugs
+## WebSocket API
 
-Please report any bugs or submit feature requests to [XChange's Github issue tracker](https://github.com/TheCookieLab/XChange/issues).
+Use `StreamingExchange` for real-time subscriptions when an exchange module
+supports streaming.
+
+```java
+StreamingExchange exchange =
+    StreamingExchangeFactory.INSTANCE.createExchange(BitstampStreamingExchange.class);
+
+exchange.connect().blockingAwait();
+
+Disposable trades =
+    exchange.getStreamingMarketDataService()
+        .getTrades(CurrencyPair.BTC_USD)
+        .subscribe(
+            trade -> LOG.info("Trade: {}", trade),
+            error -> LOG.error("Trade subscription failed", error));
+
+Disposable orderBook =
+    exchange.getStreamingMarketDataService()
+        .getOrderBook(CurrencyPair.BTC_USD)
+        .subscribe(book -> LOG.info("Order book: {}", book));
+
+Thread.sleep(20000);
+
+trades.dispose();
+orderBook.dispose();
+exchange.disconnect().blockingAwait();
+```
+
+Streaming authentication uses the same `ExchangeSpecification` model as the REST
+API when the exchange supports private streaming channels.
+
+## Build and Validation
+
+| Task | Command |
+| --- | --- |
+| Run unit tests | `mvn -B clean test` |
+| Run unit and integration tests | `mvn -B clean verify -DskipIntegrationTests=false` |
+| Install locally | `mvn -B clean install` |
+| Build one module | `mvn -B -pl <module> -am test` |
+| Create aggregate Javadocs | `mvn -B javadoc:aggregate` |
+| Generate dependency tree | `mvn -B dependency:tree` |
+| Check dependency updates | `mvn -B versions:display-dependency-updates versions:display-plugin-updates versions:display-property-updates` |
+| Run vulnerability audit | `mvn -B org.owasp:dependency-check-maven:check -DskipIntegrationTests=true` |
+| Format Java | `mvn -B com.spotify.fmt:fmt-maven-plugin:format` |
+| Sort POMs | `mvn -B com.github.ekryd.sortpom:sortpom-maven-plugin:sort` |
+
+## Dependency Maintenance
+
+Dependency update reports use
+`config/dependency-updates/version-rules.xml` to reject prerelease candidates.
+Treat "latest" as the latest stable Maven Central release. Do not adopt alpha,
+beta, milestone, RC, preview, early-access, snapshot, or classifier-specific
+variants unless a security advisory has no stable fix.
+
+Shared dependency and plugin versions belong in the root `pom.xml` properties and
+dependency management. Keep module-local versions only when a module intentionally
+differs from the shared build, and document that reason in the module POM.
+
+Before closing dependency work:
+
+1. Run the Maven Versions report.
+2. Review the dependency tree for convergence problems.
+3. Cross-check Dependabot alerts or run the OWASP audit.
+4. Run affected module tests.
+5. Run `mvn -B clean install` for full-project dependency changes.
+
+## Integration Status
+
+| Exchange | Status |
+| --- | --- |
+| bitfinex | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml) |
+| bitget | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml) |
+| bitmex | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml) |
+| coinbase | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinbase.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinbase.yaml) |
+| coinex | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml) |
+| deribit | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml) |
+| gate.io | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml) |
+| kraken | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml) |
+| mexc | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/mexc.yaml) |
+| stream-bitfinex | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-bitfinex.yaml) |
+| stream-coinbase | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-coinbase.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-coinbase.yaml) |
+| stream-deribit | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-deribit.yaml) |
+| stream-kraken-v2 | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/stream-kraken-v2.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/stream-kraken-v2.yaml) |
+
+## Project Resources
+
+- [Wiki](https://github.com/TheCookieLab/XChange/wiki)
+- [FAQ](https://github.com/TheCookieLab/XChange/wiki/Frequently-Asked-Questions)
+- [Exchange Support](https://github.com/TheCookieLab/XChange/wiki/Exchange-support)
+- [Design Notes](https://github.com/TheCookieLab/XChange/wiki/Design-Notes)
+- [New Implementation Best Practices](https://github.com/TheCookieLab/XChange/wiki/New-Implementation-Best-Practices)
+- [Code Style](https://github.com/TheCookieLab/XChange/wiki/Code-Style)
+- [Issues](https://github.com/TheCookieLab/XChange/issues)
+- [Discord](https://discord.gg/HX9MbWZ)
 
 ## Contributing
 
-If you'd like to submit a new implementation for another exchange, please take a look at [New Implementation Best Practices](https://github.com/TheCookieLab/XChange/wiki/New-Implementation-Best-Practices) first, as there are lots of time-saving tips!
+Before submitting a new exchange implementation, read
+[New Implementation Best Practices](https://github.com/TheCookieLab/XChange/wiki/New-Implementation-Best-Practices).
 
-For more information such as a contributor list and a list of known projects depending on XChange, visit the [Main Project Wiki](https://github.com/TheCookieLab/XChange/wiki).
+Thanks to all [contributors](CONTRIBUTORS) who have helped build XChange.
 
----
+## Fork Attribution
+
+This repository is a maintained fork of the original XChange project:
+
+- Upstream repository: [knowm/XChange](https://github.com/knowm/XChange)
+- Original project site: [knowm.org/open-source/xchange](http://knowm.org/open-source/xchange)
+
+This fork preserves upstream MIT license and copyright notices. Release notes
+include an **Upstream Credits** section for upstream PRs and commits included in
+each release.
+
 ## Maintained by TheCookieLab
 
-**XChange** in this repository is maintained by [TheCookieLab](https://github.com/TheCookieLab) as an independent fork focused on production trading reliability and rapid exchange support updates.
+XChange is maintained by [TheCookieLab](https://github.com/TheCookieLab).

@@ -1,64 +1,86 @@
 # AGENTS Instructions for XChange
 
-**Audience:** AI agents and assistants. Read this when operating in the XChange repo (xchange-parent or any submodule).
+Read this before operating anywhere in the XChange repo, including `xchange-parent`
+and any exchange submodule.
 
-**Scope:** This repo is the XChange library (Java, Maven, 100+ exchange adapters). It lives in the ta4j-org workspace; for workspace rules (worktrees, paths, build), see the workspace root `AGENTS.md` and `.cursor/README.md`.
+## Scope
 
----
+XChange is a Java/Maven library with many exchange adapters. This file covers the
+repo root and all child directories unless a deeper `AGENTS.md` overrides it.
 
-## Build and validation
+For workspace-level rules such as worktree handling, pull requests, GitHub
+comments, and PRD delivery, follow the workspace root instructions first.
 
-- **Full build:** From repo root: `mvn -B clean install` (or `mvn -B clean test`). No `scripts/run-full-build-quiet.sh` in this repo; use Maven directly.
-- **Single module:** `mvn -pl <module> -am compile` (or `test`, `install`) from repo root.
-- For any code or `pom.xml` change, run at least the affected module build before considering the task complete.
-- **Suppressing warnings is disallowed.** Do not add or use `@SuppressWarnings`. Fix the underlying cause so the rule is satisfied, or document in `unresolved.json` if it cannot be fixed within scope.
+## Default Workflow
 
-## Dependency maintenance
+1. Work from the repo root unless a module-specific command requires otherwise.
+2. Keep changes scoped to the requested module or cross-module concern.
+3. Reuse existing APIs and patterns; avoid new public API unless it is required.
+4. Fix warnings and static-analysis findings at root cause. Do not add
+   `@SuppressWarnings`, disable rules, widen exclusions, or hide diagnostics.
+5. If a blocker cannot be resolved in scope, record it in `unresolved.md` and
+   schema-aligned `unresolved.json`.
 
-- Use the checked-in Maven Versions ruleset at `config/dependency-updates/version-rules.xml`; it filters prerelease, snapshot, early-access, and JDK-classifier candidates from normal update reports.
-- In this repo, "latest" means latest stable Maven Central release. Do not adopt alpha, beta, milestone, RC, preview, early-access, snapshot, or classifier-specific variants unless a security advisory has no stable fix.
-- Run update reports with `mvn -B versions:display-dependency-updates versions:display-plugin-updates versions:display-property-updates`.
-- Run vulnerability audits with Dependabot alert review plus `mvn -B org.owasp:dependency-check-maven:check -DskipIntegrationTests=true` when dependency risk is in scope.
-- Centralize shared dependency and plugin versions in the root parent POM. Leave module-local versions or plugin configuration only when behavior intentionally differs, and document the local reason in that module.
-- Do not add or retain Maven Enforcer dependency-convergence skips. Fix convergence at the root cause or record the blocker in `unresolved.md` and `unresolved.json`.
+## Build and Validation
 
----
+- Full build: `mvn -B clean install`
+- Unit tests: `mvn -B clean test`
+- Unit and integration tests: `mvn -B clean verify -DskipIntegrationTests=false`
+- Single module: `mvn -B -pl <module> -am test`
+- Compile-only quick check: `mvn -B -pl <module> -am compile`
+- PMD: use the `xchange-pmd-check` skill or `scripts/pmd-check`
 
-## Inventory: subagents and tools
+For any code or `pom.xml` change, run at least the affected module build before
+completion. Use Maven directly; this repo does not provide
+`scripts/run-full-build-quiet.sh`.
 
-Agents and skills specific to XChange live under this repo. When working in XChange, prefer these over workspace-level agents for XChange tasks.
+## Dependency Maintenance
 
-### Subagents (`.cursor/agents/`)
+- "Latest" means the latest stable Maven Central release.
+- Do not adopt alpha, beta, milestone, RC, preview, early-access, snapshot, or
+  classifier-specific variants unless a security advisory has no stable fix.
+- Run update reports with:
+  `mvn -B versions:display-dependency-updates versions:display-plugin-updates versions:display-property-updates`
+- The Maven Versions plugin uses `config/dependency-updates/version-rules.xml` to
+  reject prerelease candidates from normal reports.
+- Run vulnerability audits with Dependabot alert review plus:
+  `mvn -B org.owasp:dependency-check-maven:check -DskipIntegrationTests=true`
+- Centralize shared dependency and plugin versions in the root parent POM.
+- Keep module-local versions or plugin configuration only when behavior
+  intentionally differs, and document the reason in that module.
+- Do not add or retain Maven Enforcer dependency-convergence skips. Fix
+  convergence or record the blocker in `unresolved.md` and `unresolved.json`.
 
-| Agent | Purpose |
-|-------|--------|
-| **xchange-module-worker** | Autonomous per-module worker for large-scale XChange tasks. Performs one assigned task in one submodule using a dedicated worktree/branch from a manager-provided base SHA, chooses its own implementation/verification approach, must report at least one validation in structured `worker-result.json`, and reports unresolved cross-module issues (`unresolved.md` + schema-aligned `unresolved.json`). |
-| **xchange-module-manager** | Lightweight dispatcher for **xchange-module-worker** across XChange submodules. The manager and workers (agents) drive all fixing; the helper script only does setup (worktrees), optional probe (build-failure.log), and integrate (cherry-pick + cleanup). Orchestrates worker launch and structured result collection, maintains a resumable run manifest, applies timeout/retry policy, aggregates unresolved issues, and integrates worker commits. Uses local workers by default; cloud workers are enabled only when explicitly requested (for example: `start the xchange module manager with cloud subagents enabled`). |
+## XChange Agents and Skills
 
-These agents are for work that needs the same or similar changes in many submodules but is too complex for a single global search/replace. Use full artifactId in path/branch naming (for example worktrees at `<workspace>/worktrees/xchange-<taskslug>-<artifactId>/` and branches at `agent/<taskslug>/<artifactId>`), with main clone `<workspace>/XChange/`. Master unresolved list: `XChange/unresolved.md`.
+Use repo-local agents and skills for XChange work before broader workspace tools.
 
-### Skills (`.cursor/skills/`)
+### Agents
 
-- **xchange-pmd-check** — runs XChange PMD analysis via `scripts/pmd-check` (full project, selected modules, or changed modules), using XChange-specific static-analysis configuration.
-- **xchange-manager-run** — wraps `scripts/run-manager-to-completion.py`; use for manager run setup (worktrees), optional probe (build-failure.log), and integrate (cherry-pick + cleanup). Usage instructions live in the skill; the script does not drive fixing—agents do.
+| Agent | Use |
+| --- | --- |
+| `xchange-module-worker` | One autonomous task in one module, using a dedicated worktree and branch. The worker must inventory, fix, revalidate, produce `worker-result.json`, and report unresolved issues in `unresolved.md` plus `unresolved.json`. |
+| `xchange-module-manager` | Dispatches `xchange-module-worker` across many modules, manages retries/timeouts, validates worker results, integrates green worker commits, and rolls up unresolved issues. |
 
-### Other tools and conventions
+Use the manager for repeated module work such as warning cleanup, migration passes,
+or build failures that are too broad for one direct edit. Use full artifact IDs in
+worker path and branch names, for example
+`<workspace>/worktrees/xchange-<taskslug>-<artifactId>/` and
+`agent/<taskslug>/<artifactId>`.
 
-- **Module list:** Submodules are defined in `pom.xml` under `<modules>`. Use that list for batch or fleet operations.
-- **Parent POM:** This repo root is `xchange-parent`; do not change the parent POM from a single-module subagent—record such needs in `unresolved.md` for the manager or a follow-up pass.
-- **Subagent contracts:** See `.cursor/agents/contracts/` for run-manifest, worker-result, and unresolved-issue schemas.
+### Skills
 
----
+- `xchange-pmd-check`: runs XChange PMD analysis through `scripts/pmd-check`.
+- `xchange-manager-run`: documents `scripts/run-manager-to-completion.py` setup,
+  probe, integration, and cleanup modes. The script prepares and integrates work;
+  agents perform the fixes.
 
-## File reference rules
+## Repo Conventions
 
-- When summarizing changes in **global** (cross-repo) work from the ta4j-org workspace, use worktree-rooted absolute paths per workspace `AGENTS.md`.
-- When working only inside XChange (this repo), paths relative to repo root or absolute paths under this repo are fine.
-
----
-
-## Summary for agent decision logic
-
-1. **Build:** Use `mvn` from repo root; at least build the touched module(s) before completion.
-2. **Large-scale per-module tasks (e.g. fix build errors, warnings cleanup):** Use **xchange-module-worker** for one module; use **xchange-module-manager** to run the full fleet. Default task for both is fix build errors and resolve warnings; workers run the build first, fix compile/test failures, then resolve warnings and only report completion when the module is green.
-3. **Scoped rules:** Deeper `AGENTS.md` in subdirs override this file when present.
+- The canonical module list is the root `pom.xml` `<modules>` section.
+- The root project is `xchange-parent`.
+- A single-module worker must not change the parent POM. Record parent-POM needs
+  as unresolved for the manager or a follow-up pass.
+- Subagent contracts live in `.cursor/agents/contracts/`.
+- For XChange-only summaries, repo-relative paths are acceptable. For cross-repo
+  workspace summaries, use worktree-rooted absolute paths.
