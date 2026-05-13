@@ -63,7 +63,7 @@ public class DeribitAdapters {
   public final Map<String, Instrument> SYMBOL_TO_INSTRUMENT = new ConcurrentHashMap<>();
   private final Map<Instrument, String> INSTRUMENT_TO_SYMBOL = new ConcurrentHashMap<>();
 
-  public void putSymbolMapping(String symbol, Instrument instrument) {
+  public synchronized void putSymbolMapping(String symbol, Instrument instrument) {
     SYMBOL_TO_INSTRUMENT.put(symbol, instrument);
     INSTRUMENT_TO_SYMBOL.put(instrument, symbol);
   }
