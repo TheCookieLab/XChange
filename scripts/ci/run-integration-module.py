@@ -87,11 +87,14 @@ def run_maven(module_name: str, log_path: Path, redacted_log_path: Path) -> int:
                 encoding="utf-8",
                 errors="replace",
         )
-        assert process.stdout is not None
+        if process.stdout is None:
+            process.kill()
+            raise RuntimeError("Maven process stdout was not captured")
         for line in process.stdout:
-            print(line, end="")
             log_file.write(line)
-            redacted_log_file.write(redact_log_line(line))
+            redacted_line = redact_log_line(line)
+            print(redacted_line, end="")
+            redacted_log_file.write(redacted_line)
         return process.wait()
 
 

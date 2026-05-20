@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPT_PATH = Path(__file__).with_name("run-integration-module.py")
@@ -16,6 +19,20 @@ runner = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 sys.modules[SPEC.name] = runner
 SPEC.loader.exec_module(runner)
+
+
+class FakeMavenProcess:
+
+    def __init__(self, lines: list[str], return_code: int = 0) -> None:
+        self.stdout = iter(lines)
+        self.return_code = return_code
+        self.killed = False
+
+    def wait(self) -> int:
+        return self.return_code
+
+    def kill(self) -> None:
+        self.killed = True
 
 
 class IntegrationClassificationTest(unittest.TestCase):
@@ -196,6 +213,32 @@ class IntegrationClassificationTest(unittest.TestCase):
                 "Authorization: Bearer <redacted> token=<redacted> api_key: <redacted> password=<redacted>\n",
                 runner.redact_log_line(line),
         )
+
+    def test_run_maven_streams_redacted_output_and_keeps_raw_log(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output_dir = Path(directory)
+            raw_log = output_dir / "maven.log"
+            redacted_log = output_dir / "maven.redacted.log"
+            fake_process = FakeMavenProcess(
+                    ["Authorization: Bearer abc123 token=def456\n"],
+                    return_code=7,
+            )
+            stdout = io.StringIO()
+
+            with (
+                    patch.object(runner.subprocess, "Popen", return_value=fake_process),
+                    redirect_stdout(stdout),
+            ):
+                exit_code = runner.run_maven("xchange-example", raw_log, redacted_log)
+
+            self.assertEqual(7, exit_code)
+            self.assertEqual("Authorization: Bearer abc123 token=def456\n", raw_log.read_text())
+            self.assertEqual(
+                    "Authorization: Bearer <redacted> token=<redacted>\n",
+                    redacted_log.read_text(),
+            )
+            self.assertEqual(redacted_log.read_text(), stdout.getvalue())
+            self.assertNotIn("abc123", stdout.getvalue())
 
     def test_parses_failsafe_xml(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
