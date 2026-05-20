@@ -8,6 +8,7 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
+import org.knowm.xchange.coinex.config.converter.LenientUriDeserializer;
 import org.knowm.xchange.coinex.config.converter.StringToCurrencyConverter;
 import org.knowm.xchange.currency.Currency;
 
@@ -89,6 +90,7 @@ public class CoinexChainInfo {
     private Boolean isMemoRequiredForDeposit;
 
     @JsonProperty("explorer_asset_url")
+    @JsonDeserialize(using = LenientUriDeserializer.class)
     private URI explorerAssetUrl;
   }
 }

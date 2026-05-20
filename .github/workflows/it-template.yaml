@@ -5,25 +5,37 @@ on:
         required: true
         type: string
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '25'
           cache: 'maven'
 
-      - name: Build with maven
-        run: |
-          mvn --batch-mode --no-transfer-progress \
-            --projects .,xchange-core,${{ inputs.module-name }} \
-            --also-make \
-            -DskipTests \
-            -Dmaven.javadoc.skip \
-            -DskipIntegrationTests=false \
-            verify
+      - name: Test CI classifier scripts
+        run: python3 -m unittest scripts.ci.run_integration_module_test scripts.ci.check_integration_health_test
+
+      - name: Build and classify integration tests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci/run-integration-module.py --module-name "${{ inputs.module-name }}"
+
+      - name: Upload integration classification
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-ci-${{ inputs.module-name }}
+          path: |
+            target/it-ci/classification.json
+            target/it-ci/maven.redacted.log
+          if-no-files-found: error
