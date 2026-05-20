@@ -23,6 +23,9 @@ class CoinexChainInfoTest {
         getClass()
             .getResourceAsStream(
                 "/org/knowm/xchange/coinex/marketdata/all-deposit-withdraw-config-template-url.json")) {
+      assertThat(inputStream)
+          .as("Missing test fixture: all-deposit-withdraw-config-template-url.json")
+          .isNotNull();
       CoinexResponse<List<CoinexChainInfo>> response =
           mapper.readValue(inputStream, new TypeReference<CoinexResponse<List<CoinexChainInfo>>>() {});
 
