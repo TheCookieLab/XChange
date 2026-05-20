@@ -12,6 +12,9 @@ concurrency:
 jobs:
   build:
     name: Run integration tests
+    permissions:
+      actions: read
+      contents: read
     uses: ./.github/workflows/it-template.yaml
     with:
       module-name: xchange-stream-bitfinex
