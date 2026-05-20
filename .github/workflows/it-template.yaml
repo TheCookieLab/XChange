@@ -23,7 +23,7 @@ jobs:
           cache: 'maven'
 
       - name: Test CI classifier scripts
-        run: python3 -m unittest scripts.ci.run_integration_module_test scripts.ci.check_integration_health_test
+        run: python3 -m unittest scripts.ci.run_integration_module_test scripts.ci.check_integration_health_test scripts.ci.workflow_permissions_test
 
       - name: Build and classify integration tests
         env:
