@@ -1,0 +1,30 @@
+name: Integration CI Health
+
+on:
+  schedule:
+    - cron: '30 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  queued-runs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check scheduled integration workflow health
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci/check-integration-health.py --branch main
+
+      - name: Upload integration health classification
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-ci-health
+          path: target/it-ci-health
+          if-no-files-found: error

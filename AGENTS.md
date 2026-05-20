@@ -28,6 +28,15 @@ comments, and PRD delivery, follow the workspace root instructions first.
 - Compile-only quick check: `mvn -B -pl <module> -am compile`
 - PMD: use the `xchange-pmd-check` skill or `scripts/pmd-check`
 
+Scheduled exchange integration workflows run through
+`scripts/ci/run-integration-module.py`, which preserves the Maven command while
+classifying allowlisted external/setup failures as transient warnings. Assertion
+failures, compilation errors, Jackson mapping errors, and repo-owned null
+pointer failures remain hard failures. If the same transient fingerprint repeats
+for three consecutive classified runs, treat it as a real failure and investigate
+the exchange adapter or CI setup. CI artifacts include `classification.json` and
+`maven.redacted.log`; keep raw Maven logs on the runner only.
+
 For any code or `pom.xml` change, run at least the affected module build before
 completion. Use Maven directly; this repo does not provide
 `scripts/run-full-build-quiet.sh`.

@@ -24,6 +24,8 @@ javadoc/
 bin/
 log/
 classes/
+__pycache__/
+*.pyc
 
 # maven wrapper
 .mvn

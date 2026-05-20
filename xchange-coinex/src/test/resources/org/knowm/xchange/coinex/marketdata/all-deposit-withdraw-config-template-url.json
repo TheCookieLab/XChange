@@ -1,0 +1,33 @@
+{
+  "code": 0,
+  "data": [
+    {
+      "asset": {
+        "ccy": "A",
+        "deposit_enabled": true,
+        "withdraw_enabled": true,
+        "inter_transfer_enabled": true,
+        "is_st": false
+      },
+      "chains": [
+        {
+          "chain": "EOSIO",
+          "min_deposit_amount": "2",
+          "min_withdraw_amount": "7",
+          "deposit_enabled": true,
+          "withdraw_enabled": true,
+          "deposit_delay_minutes": 0,
+          "safe_confirmations": 120,
+          "irreversible_confirmations": 180,
+          "deflation_rate": "0",
+          "withdrawal_fee": "0.1",
+          "withdrawal_precision": 4,
+          "memo": "Memo",
+          "is_memo_required_for_deposit": true,
+          "explorer_asset_url": "https://eosauthority.com/tokens/{identity}?network=eosA-eos-core.vaulta"
+        }
+      ]
+    }
+  ],
+  "message": "OK"
+}
