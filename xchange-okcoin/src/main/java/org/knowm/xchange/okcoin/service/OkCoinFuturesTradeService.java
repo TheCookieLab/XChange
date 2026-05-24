@@ -185,16 +185,14 @@ public class OkCoinFuturesTradeService extends OkCoinTradeServiceRaw implements 
   @Override
   public boolean cancelOrder(String orderId) throws IOException {
 
-    boolean ret = false;
     for (Instrument symbol : exchange.getExchangeInstruments()) {
       for (FuturesContract futuresContract : getExchangeContracts()) {
         if (cancelFuturesOrder(symbol, futuresContract, orderId)) {
-          ret = true;
-          break;
+          return true;
         }
       }
     }
-    return ret;
+    return false;
   }
 
   @Override

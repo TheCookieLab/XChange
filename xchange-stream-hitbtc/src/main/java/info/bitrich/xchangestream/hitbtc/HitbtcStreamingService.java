@@ -49,8 +49,9 @@ public class HitbtcStreamingService extends JsonNettyStreamingService {
 
     if (message.has(JSON_ID)) {
       int requestId = message.get(JSON_ID).asInt();
-      if (requests.containsKey(requestId)) {
-        return requests.get(requestId).getKey();
+      Pair<String, String> request = requests.get(requestId);
+      if (request != null) {
+        return request.getKey();
       }
     }
 
@@ -75,9 +76,9 @@ public class HitbtcStreamingService extends JsonNettyStreamingService {
   protected void handleMessage(JsonNode message) {
     if (message.has(JSON_ID)) {
       int requestId = message.get(JSON_ID).asInt();
-      if (requests.containsKey(requestId)) {
-
-        String subscriptionMethod = requests.get(requestId).getLeft();
+      Pair<String, String> request = requests.remove(requestId);
+      if (request != null) {
+        String subscriptionMethod = request.getLeft();
 
         if (message.has(JSON_ERROR)) {
           try {
@@ -90,8 +91,6 @@ public class HitbtcStreamingService extends JsonNettyStreamingService {
           boolean result = message.get(JSON_RESULT).asBoolean();
           LOG.info("HitBTC returned {} as result of '{}' method", result, subscriptionMethod);
         }
-
-        requests.remove(requestId);
         return;
 
       } else {

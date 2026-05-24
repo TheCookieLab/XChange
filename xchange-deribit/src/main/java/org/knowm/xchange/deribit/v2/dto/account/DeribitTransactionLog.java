@@ -6,9 +6,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.Data;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.deribit.v2.config.converter.StringToCurrencyConverter;
@@ -55,7 +55,7 @@ public class DeribitTransactionLog {
   @JsonProperty("id")
   String id;
 
-  Map<String, Object> infoMap = new ConcurrentHashMap<>();
+  Map<String, Object> infoMap = new HashMap<>();
 
   String infoString;
 

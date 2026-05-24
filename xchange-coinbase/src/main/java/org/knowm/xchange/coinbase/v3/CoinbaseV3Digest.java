@@ -160,6 +160,9 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
         return new KeyPair(pub, priv);
       }
 
+      if (obj == null) {
+        throw new IllegalArgumentException("Unknown PEM object: null");
+      }
       throw new IllegalArgumentException("Unknown PEM object: " + obj.getClass());
     }
   }

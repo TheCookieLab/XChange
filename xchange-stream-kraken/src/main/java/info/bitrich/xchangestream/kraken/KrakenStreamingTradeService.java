@@ -83,15 +83,11 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
         }
       }
     }
-    return Observable.create(
-        emit ->
-            ownTradesObservable
-                .filter(
-                    order ->
-                        currencyPair == null
-                            || order.getCurrencyPair() == null
-                            || order.getCurrencyPair().compareTo(currencyPair) == 0)
-                .subscribe(emit::onNext, emit::onError, emit::onComplete));
+    return ownTradesObservable.filter(
+        order ->
+            currencyPair == null
+                || order.getCurrencyPair() == null
+                || order.getCurrencyPair().compareTo(currencyPair) == 0);
   }
 
   private Iterable<Order> adaptKrakenOrders(KrakenDtoOrderHolder[] dtoList) {
@@ -147,15 +143,11 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
         }
       }
     }
-    return Observable.create(
-        emit ->
-            userTradeObservable
-                .filter(
-                    order ->
-                        currencyPair == null
-                            || order.getCurrencyPair() == null
-                            || order.getCurrencyPair().compareTo(currencyPair) == 0)
-                .subscribe(emit::onNext, emit::onError, emit::onComplete));
+    return userTradeObservable.filter(
+        order ->
+            currencyPair == null
+                || order.getCurrencyPair() == null
+                || order.getCurrencyPair().compareTo(currencyPair) == 0);
   }
 
   private List<UserTrade> adaptKrakenUserTrade(KrakenDtoUserTradeHolder[] ownTrades) {

@@ -219,7 +219,9 @@ public class CoinsphAccountServiceRaw extends CoinsphBaseService {
         }
       }
     } catch (IOException | CoinsphException e) {
-      LOG.warn("Unable to load Coins.ph fiat funding history; continuing with crypto records.", e);
+      LOG.warn(
+          "Unable to load Coins.ph fiat funding history; continuing with crypto records.",
+          (Throwable) e);
     }
 
     // Sort by timestamp (newest first)
