@@ -313,7 +313,7 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
 
     } catch (IOException e) {
       LOG.error("Failed to create or keep-alive listen key: {}", e.getMessage(), e);
-      listenKey = missingListenKey(); // Invalidate key on error
+      listenKey = null; // Invalidate key on error
     }
   }
 
@@ -336,7 +336,7 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
           e.getMessage(),
           e);
       // Invalidate the key, so it's refreshed on next user data subscription attempt
-      listenKey = missingListenKey();
+      listenKey = null;
       listenKeyCreateTime = 0;
       if (listenKeyKeepAliveExecutor != null) {
         listenKeyKeepAliveExecutor.shutdown(); // Stop trying with the old key
@@ -354,11 +354,11 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
       } catch (IOException e) {
         LOG.error("Failed to close listen key {}: {}", listenKey, e.getMessage(), e);
       } finally {
-        listenKey = missingListenKey();
+        listenKey = null;
         listenKeyCreateTime = 0;
         if (listenKeyKeepAliveExecutor != null) {
           listenKeyKeepAliveExecutor.shutdownNow();
-          listenKeyKeepAliveExecutor = noKeepAliveExecutor();
+          listenKeyKeepAliveExecutor = null;
         }
       }
     }
@@ -393,14 +393,6 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
   // Add missing isConnecting method
   public boolean isConnecting() {
     return false; // Simple implementation - you can enhance this if needed
-  }
-
-  private static String missingListenKey() {
-    return null;
-  }
-
-  private static ScheduledExecutorService noKeepAliveExecutor() {
-    return null;
   }
 
   @Override

@@ -97,7 +97,10 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
     }
     try {
       return new CoinbaseV3Digest(keyName, secretKey);
-    } catch (IOException | GeneralSecurityException | IllegalArgumentException e) {
+    } catch (IOException
+        | GeneralSecurityException
+        | IllegalArgumentException
+        | ClassCastException e) {
       throw new IllegalStateException("Failed to initialize CoinbaseV3Digest", e);
     }
   }

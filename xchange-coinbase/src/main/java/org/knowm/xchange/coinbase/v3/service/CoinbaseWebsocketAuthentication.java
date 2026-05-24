@@ -32,8 +32,16 @@ public final class CoinbaseWebsocketAuthentication {
   public static Supplier<String> websocketJwtSupplier(ExchangeSpecification specification) {
     Objects.requireNonNull(specification, "specification");
 
-    CoinbaseV3Digest digest =
-        CoinbaseV3Digest.createInstance(specification.getApiKey(), specification.getSecretKey());
+    final CoinbaseV3Digest digest;
+    try {
+      digest =
+          CoinbaseV3Digest.createInstance(specification.getApiKey(), specification.getSecretKey());
+    } catch (IllegalStateException ex) {
+      LOG.debug(
+          "Coinbase Advanced Trade WebSocket JWT supplier unavailable - invalid credentials: {}",
+          ex.getMessage());
+      return () -> null;
+    }
 
     if (digest == null) {
       LOG.debug("Coinbase Advanced Trade WebSocket JWT supplier unavailable - missing credentials");
