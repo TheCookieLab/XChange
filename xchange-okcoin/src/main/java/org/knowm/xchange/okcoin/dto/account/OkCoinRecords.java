@@ -2,8 +2,8 @@ package org.knowm.xchange.okcoin.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class OkCoinRecords {
 
@@ -98,7 +98,7 @@ public class OkCoinRecords {
     ;
 
     private static final Map<Integer, RechargeStatus> fromInt =
-        new HashMap<Integer, RechargeStatus>();
+        new ConcurrentHashMap<Integer, RechargeStatus>();
 
     static {
       for (RechargeStatus status : values()) fromInt.put(status.code, status);
@@ -134,7 +134,7 @@ public class OkCoinRecords {
     ;
 
     private static final Map<Integer, WithdrawalStatus> fromInt =
-        new HashMap<Integer, WithdrawalStatus>();
+        new ConcurrentHashMap<Integer, WithdrawalStatus>();
 
     static {
       for (WithdrawalStatus status : values()) fromInt.put(status.code, status);

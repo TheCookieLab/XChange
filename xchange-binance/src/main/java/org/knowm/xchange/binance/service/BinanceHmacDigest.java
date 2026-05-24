@@ -7,14 +7,10 @@ import java.nio.charset.StandardCharsets;
 import javax.crypto.Mac;
 import org.knowm.xchange.binance.BinanceAuthenticated;
 import org.knowm.xchange.service.BaseParamsDigest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import si.mazi.rescu.Params;
 import si.mazi.rescu.RestInvocation;
 
 public class BinanceHmacDigest extends BaseParamsDigest {
-
-  private static final Logger LOG = LoggerFactory.getLogger(BinanceHmacDigest.class);
 
   private BinanceHmacDigest(String secretKeyBase64) {
     super(secretKeyBase64, HMAC_SHA_256);

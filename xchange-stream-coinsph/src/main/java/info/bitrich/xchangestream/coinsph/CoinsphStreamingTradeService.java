@@ -8,27 +8,21 @@ import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.UserTrade;
-import org.knowm.xchange.service.trade.TradeService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CoinsphStreamingTradeService implements StreamingTradeService {
-  private static final Logger LOG = LoggerFactory.getLogger(CoinsphStreamingTradeService.class);
-
   private final CoinsphStreamingService service;
-  private final TradeService tradeService;
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
 
   /** Constructor with just streaming service. */
   public CoinsphStreamingTradeService(CoinsphStreamingService service) {
     this.service = service;
-    this.tradeService = null;
   }
 
   /** Constructor with streaming service and trade service. */
-  public CoinsphStreamingTradeService(CoinsphStreamingService service, TradeService tradeService) {
+  public CoinsphStreamingTradeService(
+      CoinsphStreamingService service,
+      org.knowm.xchange.service.trade.TradeService tradeService) {
     this.service = service;
-    this.tradeService = tradeService;
   }
 
   @Override

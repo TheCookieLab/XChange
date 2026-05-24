@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceErrorAdapter;
@@ -180,7 +180,7 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
   public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
       throws IOException {
     try {
-      Map<Instrument, Fee> fees = new HashMap<>();
+      Map<Instrument, Fee> fees = new ConcurrentHashMap<>();
       if (exchange
           .getExchangeSpecification()
           .getExchangeSpecificParametersItem(EXCHANGE_TYPE)

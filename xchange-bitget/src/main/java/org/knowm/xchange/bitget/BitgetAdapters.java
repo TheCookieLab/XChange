@@ -4,11 +4,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.bitget.dto.account.BitgetAccountType;
@@ -46,7 +46,7 @@ import org.knowm.xchange.instrument.Instrument;
 @UtilityClass
 public class BitgetAdapters {
 
-  private final Map<String, CurrencyPair> SYMBOL_TO_CURRENCY_PAIR = new HashMap<>();
+  private final Map<String, CurrencyPair> SYMBOL_TO_CURRENCY_PAIR = new ConcurrentHashMap<>();
 
   public CurrencyPair toCurrencyPair(String symbol) {
     return SYMBOL_TO_CURRENCY_PAIR.get(symbol);

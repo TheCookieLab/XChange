@@ -25,12 +25,8 @@ import org.knowm.xchange.kraken.KrakenAdapters;
 import org.knowm.xchange.kraken.dto.trade.KrakenOrderFlags;
 import org.knowm.xchange.kraken.dto.trade.KrakenOrderStatus;
 import org.knowm.xchange.kraken.dto.trade.KrakenType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class KrakenStreamingTradeService implements StreamingTradeService {
-  private static final Logger LOG = LoggerFactory.getLogger(KrakenStreamingTradeService.class);
-
   private final KrakenStreamingService streamingService;
 
   private volatile boolean ownTradesObservableSet, userTradeObservableSet;
@@ -63,41 +59,39 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
 
   @Override
   public Observable<Order> getOrderChanges(CurrencyPair currencyPair, Object... args) {
-    try {
-      if (!ownTradesObservableSet) {
-        synchronized (this) {
-          if (!ownTradesObservableSet) {
-            String channelName = getChannelName(KrakenSubscriptionName.openOrders);
-            ownTradesObservable =
-                streamingService
-                    .subscribeChannel(channelName)
-                    .filter(JsonNode::isArray)
-                    .filter(Objects::nonNull)
-                    .map(jsonNode -> jsonNode.get(0))
-                    .map(
-                        jsonNode ->
-                            StreamingObjectMapperHelper.getObjectMapper()
-                                .treeToValue(jsonNode, KrakenDtoOrderHolder[].class))
-                    .flatMapIterable(this::adaptKrakenOrders)
-                    .share();
+    if (streamingService == null) {
+      return Observable.error(new IllegalStateException("Private Kraken streaming service unavailable"));
+    }
+    if (!ownTradesObservableSet) {
+      synchronized (this) {
+        if (!ownTradesObservableSet) {
+          String channelName = getChannelName(KrakenSubscriptionName.openOrders);
+          ownTradesObservable =
+              streamingService
+                  .subscribeChannel(channelName)
+                  .filter(JsonNode::isArray)
+                  .filter(Objects::nonNull)
+                  .map(jsonNode -> jsonNode.get(0))
+                  .map(
+                      jsonNode ->
+                          StreamingObjectMapperHelper.getObjectMapper()
+                              .treeToValue(jsonNode, KrakenDtoOrderHolder[].class))
+                  .flatMapIterable(this::adaptKrakenOrders)
+                  .share();
 
-            ownTradesObservableSet = true;
-          }
+          ownTradesObservableSet = true;
         }
       }
-      return Observable.create(
-          emit ->
-              ownTradesObservable
-                  .filter(
-                      order ->
-                          currencyPair == null
-                              || order.getCurrencyPair() == null
-                              || order.getCurrencyPair().compareTo(currencyPair) == 0)
-                  .subscribe(emit::onNext, emit::onError, emit::onComplete));
-
-    } catch (Exception e) {
-      return Observable.error(e);
     }
+    return Observable.create(
+        emit ->
+            ownTradesObservable
+                .filter(
+                    order ->
+                        currencyPair == null
+                            || order.getCurrencyPair() == null
+                            || order.getCurrencyPair().compareTo(currencyPair) == 0)
+                .subscribe(emit::onNext, emit::onError, emit::onComplete));
   }
 
   private Iterable<Order> adaptKrakenOrders(KrakenDtoOrderHolder[] dtoList) {
@@ -105,40 +99,7 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
 
     for (KrakenDtoOrderHolder dtoHolder : dtoList) {
       for (Map.Entry<String, KrakenOpenOrder> dtoOrderEntry : dtoHolder.entrySet()) {
-        String orderId = dtoOrderEntry.getKey();
-        KrakenOpenOrder dto = dtoOrderEntry.getValue();
-        KrakenOpenOrder.KrakenDtoDescr descr = dto.descr;
-
-        CurrencyPair pair = descr == null ? null : new CurrencyPair(descr.pair);
-        Order.OrderType side =
-            descr == null ? null : KrakenAdapters.adaptOrderType(KrakenType.fromString(descr.type));
-        String orderType = (descr == null || descr.ordertype == null) ? null : descr.ordertype;
-
-        Order.Builder builder;
-        if ("limit".equals(orderType))
-          builder = new LimitOrder.Builder(side, pair).limitPrice(descr.price);
-        else if ("stop".equals(orderType))
-          builder =
-              new StopOrder.Builder(side, pair).limitPrice(descr.price).stopPrice(descr.price2);
-        else if ("market".equals(orderType)) builder = new MarketOrder.Builder(side, pair);
-        else // this is an order update (not the full order, it may only update one field)
-        builder = new MarketOrder.Builder(side, pair);
-
-        result.add(
-            builder
-                .id(orderId)
-                .originalAmount(dto.vol)
-                .cumulativeAmount(dto.vol_exec)
-                .averagePrice(dto.avg_price)
-                .orderStatus(
-                    dto.status == null
-                        ? null
-                        : KrakenAdapters.adaptOrderStatus(KrakenOrderStatus.fromString(dto.status)))
-                .timestamp(dto.opentm == null ? null : new Date((long) (dto.opentm * 1000L)))
-                .fee(dto.fee)
-                .flags(adaptFlags(dto.oflags))
-                .userReference(resolveUserReference(dto.cl_ord_id, dto.userref))
-                .build());
+        result.add(adaptKrakenOrder(dtoOrderEntry.getKey(), dtoOrderEntry.getValue()));
       }
     }
     return result;
@@ -163,40 +124,38 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
 
   @Override
   public Observable<UserTrade> getUserTrades(CurrencyPair currencyPair, Object... args) {
-    try {
-      if (!userTradeObservableSet) {
-        synchronized (this) {
-          if (!userTradeObservableSet) {
-            String channelName = getChannelName(KrakenSubscriptionName.ownTrades);
-            userTradeObservable =
-                streamingService
-                    .subscribeChannel(channelName)
-                    .filter(JsonNode::isArray)
-                    .filter(Objects::nonNull)
-                    .map(jsonNode -> jsonNode.get(0))
-                    .map(
-                        jsonNode ->
-                            StreamingObjectMapperHelper.getObjectMapper()
-                                .treeToValue(jsonNode, KrakenDtoUserTradeHolder[].class))
-                    .flatMapIterable(this::adaptKrakenUserTrade)
-                    .share();
-            userTradeObservableSet = true;
-          }
+    if (streamingService == null) {
+      return Observable.error(new IllegalStateException("Private Kraken streaming service unavailable"));
+    }
+    if (!userTradeObservableSet) {
+      synchronized (this) {
+        if (!userTradeObservableSet) {
+          String channelName = getChannelName(KrakenSubscriptionName.ownTrades);
+          userTradeObservable =
+              streamingService
+                  .subscribeChannel(channelName)
+                  .filter(JsonNode::isArray)
+                  .filter(Objects::nonNull)
+                  .map(jsonNode -> jsonNode.get(0))
+                  .map(
+                      jsonNode ->
+                          StreamingObjectMapperHelper.getObjectMapper()
+                              .treeToValue(jsonNode, KrakenDtoUserTradeHolder[].class))
+                  .flatMapIterable(this::adaptKrakenUserTrade)
+                  .share();
+          userTradeObservableSet = true;
         }
       }
-      return Observable.create(
-          emit ->
-              userTradeObservable
-                  .filter(
-                      order ->
-                          currencyPair == null
-                              || order.getCurrencyPair() == null
-                              || order.getCurrencyPair().compareTo(currencyPair) == 0)
-                  .subscribe(emit::onNext, emit::onError, emit::onComplete));
-
-    } catch (Exception e) {
-      return Observable.error(e);
     }
+    return Observable.create(
+        emit ->
+            userTradeObservable
+                .filter(
+                    order ->
+                        currencyPair == null
+                            || order.getCurrencyPair() == null
+                            || order.getCurrencyPair().compareTo(currencyPair) == 0)
+                .subscribe(emit::onNext, emit::onError, emit::onComplete));
   }
 
   private List<UserTrade> adaptKrakenUserTrade(KrakenDtoUserTradeHolder[] ownTrades) {
@@ -204,24 +163,7 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
 
     for (KrakenDtoUserTradeHolder holder : ownTrades) {
       for (Map.Entry<String, KrakenOwnTrade> entry : holder.entrySet()) {
-        String tradeId = entry.getKey();
-        KrakenOwnTrade dto = entry.getValue();
-
-        CurrencyPair currencyPair = new CurrencyPair(dto.pair);
-        result.add(
-            UserTrade.builder()
-                .id(tradeId) // The tradeId should be the key of the map, postxid can be null and is
-                // not unique as required for a tradeId
-                .orderId(dto.ordertxid)
-                .instrument(currencyPair)
-                .timestamp(dto.time == null ? null : new Date((long) (dto.time * 1000L)))
-                .type(KrakenAdapters.adaptOrderType(KrakenType.fromString(dto.type)))
-                .price(dto.price)
-                .feeAmount(dto.fee)
-                .feeCurrency(currencyPair.getCounter())
-                .originalAmount(dto.vol)
-                .orderUserReference(resolveUserReference(dto.cl_ord_id, dto.userref))
-                .build());
+        result.add(adaptUserTrade(entry.getKey(), entry.getValue()));
       }
     }
     return result;
@@ -229,5 +171,54 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
 
   private static String resolveUserReference(String cl_ord_id, Integer userref) {
     return cl_ord_id == null ? userref == null ? null : Integer.toString(userref) : cl_ord_id;
+  }
+
+  private Order adaptKrakenOrder(String orderId, KrakenOpenOrder dto) {
+    KrakenOpenOrder.KrakenDtoDescr descr = dto.descr;
+
+    CurrencyPair pair = descr == null ? null : new CurrencyPair(descr.pair);
+    Order.OrderType side =
+        descr == null ? null : KrakenAdapters.adaptOrderType(KrakenType.fromString(descr.type));
+    String orderType = (descr == null || descr.ordertype == null) ? null : descr.ordertype;
+
+    Order.Builder builder;
+    if ("limit".equals(orderType)) {
+      builder = new LimitOrder.Builder(side, pair).limitPrice(descr.price);
+    } else if ("stop".equals(orderType)) {
+      builder = new StopOrder.Builder(side, pair).limitPrice(descr.price).stopPrice(descr.price2);
+    } else {
+      builder = new MarketOrder.Builder(side, pair);
+    }
+
+    return builder
+        .id(orderId)
+        .originalAmount(dto.vol)
+        .cumulativeAmount(dto.vol_exec)
+        .averagePrice(dto.avg_price)
+        .orderStatus(
+            dto.status == null
+                ? null
+                : KrakenAdapters.adaptOrderStatus(KrakenOrderStatus.fromString(dto.status)))
+        .timestamp(dto.opentm == null ? null : new Date((long) (dto.opentm * 1000L)))
+        .fee(dto.fee)
+        .flags(adaptFlags(dto.oflags))
+        .userReference(resolveUserReference(dto.cl_ord_id, dto.userref))
+        .build();
+  }
+
+  private UserTrade adaptUserTrade(String tradeId, KrakenOwnTrade dto) {
+    CurrencyPair currencyPair = new CurrencyPair(dto.pair);
+    return UserTrade.builder()
+        .id(tradeId)
+        .orderId(dto.ordertxid)
+        .instrument(currencyPair)
+        .timestamp(dto.time == null ? null : new Date((long) (dto.time * 1000L)))
+        .type(KrakenAdapters.adaptOrderType(KrakenType.fromString(dto.type)))
+        .price(dto.price)
+        .feeAmount(dto.fee)
+        .feeCurrency(currencyPair.getCounter())
+        .originalAmount(dto.vol)
+        .orderUserReference(resolveUserReference(dto.cl_ord_id, dto.userref))
+        .build();
   }
 }

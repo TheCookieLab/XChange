@@ -42,6 +42,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -49,7 +50,7 @@ public class BinanceAdapters {
   private static final DateTimeFormatter DATE_TIME_FMT =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-  private static final Map<String, CurrencyPair> SYMBOL_TO_CURRENCY_PAIR = new HashMap<>();
+  private static final Map<String, CurrencyPair> SYMBOL_TO_CURRENCY_PAIR = new ConcurrentHashMap<>();
 
   private BinanceAdapters() {}
 
@@ -146,7 +147,7 @@ public class BinanceAdapters {
     }
     try {
       return Long.parseLong(id);
-    } catch (Throwable e) {
+    } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Binance id must be a valid long number.", e);
     }
   }
@@ -447,7 +448,7 @@ public class BinanceAdapters {
       List<BinanceKline> klines, CurrencyPair currencyPair) {
 
     CandleStickData candleStickData = null;
-    if (klines.size() != 0) {
+    if (!klines.isEmpty()) {
       List<CandleStick> candleSticks = new ArrayList<>();
       for (BinanceKline chartData : klines) {
         candleSticks.add(
@@ -489,43 +490,30 @@ public class BinanceAdapters {
           BigDecimal counterMaxQty = null;
           BigDecimal counterMaxQtyFallback = null;
 
-          Instrument currentCurrencyPair =
-              new FuturesContract(
-                  new CurrencyPair(
-                      futureSymbol.getBaseAsset() + "/" + futureSymbol.getQuoteAsset()),
-                  "PERP");
+          Instrument currentCurrencyPair = createPerpetualContract(futureSymbol);
 
           for (Filter filter : futureSymbol.getFilters()) {
             switch (filter.getFilterType()) {
               case "PRICE_FILTER":
-                priceStepSize = new BigDecimal(filter.getTickSize()).stripTrailingZeros();
+                priceStepSize = parseDecimal(filter.getTickSize());
                 pairPrecision = Math.min(pairPrecision, numberOfDecimals(filter.getTickSize()));
                 // why was here maxPrice as maxQty? used as fallback, but...
-                counterMaxQtyFallback = new BigDecimal(filter.getMaxPrice()).stripTrailingZeros();
+                counterMaxQtyFallback = parseDecimal(filter.getMaxPrice());
                 break;
               case "LOT_SIZE":
                 amountPrecision = Math.min(amountPrecision, numberOfDecimals(filter.getStepSize()));
-                minQty = new BigDecimal(filter.getMinQty()).stripTrailingZeros();
-                maxQty = new BigDecimal(filter.getMaxQty()).stripTrailingZeros();
-                stepSize = new BigDecimal(filter.getStepSize()).stripTrailingZeros();
+                minQty = parseDecimal(filter.getMinQty());
+                maxQty = parseDecimal(filter.getMaxQty());
+                stepSize = parseDecimal(filter.getStepSize());
                 break;
               // FUTURES
               case "MIN_NOTIONAL":
-                counterMinQty =
-                    (filter.getNotional() != null)
-                        ? new BigDecimal(filter.getNotional()).stripTrailingZeros()
-                        : null;
+                counterMinQty = parseDecimalOrNull(filter.getNotional());
                 break;
               // SPOT
               case "NOTIONAL":
-                counterMinQty =
-                    (filter.getMinNotional() != null)
-                        ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
-                        : null;
-                counterMaxQty =
-                    (filter.getMaxNotional() != null)
-                        ? new BigDecimal(filter.getMaxNotional()).stripTrailingZeros()
-                        : null;
+                counterMinQty = parseDecimalOrNull(filter.getMinNotional());
+                counterMaxQty = parseDecimalOrNull(filter.getMaxNotional());
                 break;
             }
           }
@@ -558,8 +546,8 @@ public class BinanceAdapters {
   public static ExchangeMetaData adaptExchangeMetaData(
       BinanceExchangeInfo binanceExchangeInfo, Map<String, AssetDetail> assetDetailMap) {
     // populate currency pair keys only, exchange does not provide any other metadata for download
-    Map<Instrument, InstrumentMetaData> instruments = new HashMap<>();
-    Map<Currency, CurrencyMetaData> currencies = new HashMap<>();
+    Map<Instrument, InstrumentMetaData> instruments = new ConcurrentHashMap<>();
+    Map<Currency, CurrencyMetaData> currencies = new ConcurrentHashMap<>();
 
     List<Symbol> symbols = binanceExchangeInfo.getSymbols();
 
@@ -580,40 +568,30 @@ public class BinanceAdapters {
         BigDecimal counterMaxQty = null;
         BigDecimal counterMaxQtyFallback = null;
 
-        CurrencyPair currentCurrencyPair =
-            new CurrencyPair(symbol.getBaseAsset(), symbol.getQuoteAsset());
+        CurrencyPair currentCurrencyPair = createCurrencyPair(symbol);
 
         for (Filter filter : symbol.getFilters()) {
           switch (filter.getFilterType()) {
             case "PRICE_FILTER":
-              priceStepSize = new BigDecimal(filter.getTickSize()).stripTrailingZeros();
+              priceStepSize = parseDecimal(filter.getTickSize());
               pairPrecision = Math.min(pairPrecision, numberOfDecimals(filter.getTickSize()));
               // why was here maxPrice as maxQty? used as fallback, but...
-              counterMaxQtyFallback = new BigDecimal(filter.getMaxPrice()).stripTrailingZeros();
+              counterMaxQtyFallback = parseDecimal(filter.getMaxPrice());
               break;
             case "LOT_SIZE":
               amountPrecision = Math.min(amountPrecision, numberOfDecimals(filter.getStepSize()));
-              minQty = new BigDecimal(filter.getMinQty()).stripTrailingZeros();
-              maxQty = new BigDecimal(filter.getMaxQty()).stripTrailingZeros();
-              stepSize = new BigDecimal(filter.getStepSize()).stripTrailingZeros();
+              minQty = parseDecimal(filter.getMinQty());
+              maxQty = parseDecimal(filter.getMaxQty());
+              stepSize = parseDecimal(filter.getStepSize());
               break;
             // US Binance
             case "MIN_NOTIONAL":
-              counterMinQty =
-                  (filter.getMinNotional() != null)
-                      ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
-                      : null;
+              counterMinQty = parseDecimalOrNull(filter.getMinNotional());
               break;
             // NOT US Binance
             case "NOTIONAL":
-              counterMinQty =
-                  (filter.getMinNotional() != null)
-                      ? new BigDecimal(filter.getMinNotional()).stripTrailingZeros()
-                      : null;
-              counterMaxQty =
-                  (filter.getMaxNotional() != null)
-                      ? new BigDecimal(filter.getMaxNotional()).stripTrailingZeros()
-                      : null;
+              counterMinQty = parseDecimalOrNull(filter.getMinNotional());
+              counterMaxQty = parseDecimalOrNull(filter.getMaxNotional());
               break;
           }
         }
@@ -655,6 +633,22 @@ public class BinanceAdapters {
 
   private static int numberOfDecimals(String value) {
     return new BigDecimal(value).stripTrailingZeros().scale();
+  }
+
+  private static CurrencyPair createCurrencyPair(Symbol symbol) {
+    return new CurrencyPair(symbol.getBaseAsset(), symbol.getQuoteAsset());
+  }
+
+  private static Instrument createPerpetualContract(Symbol symbol) {
+    return new FuturesContract(createCurrencyPair(symbol), "PERP");
+  }
+
+  private static BigDecimal parseDecimal(String value) {
+    return new BigDecimal(value).stripTrailingZeros();
+  }
+
+  private static BigDecimal parseDecimalOrNull(String value) {
+    return value == null ? null : parseDecimal(value);
   }
 
   public static FundingRates adaptFundingRates(List<BinanceFundingRate> binanceFundingRates) {

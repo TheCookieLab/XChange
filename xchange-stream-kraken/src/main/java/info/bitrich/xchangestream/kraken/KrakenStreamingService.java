@@ -135,8 +135,8 @@ public class KrakenStreamingService extends JsonNettyStreamingService {
 
     try {
       JsonNode event = message.get(EVENT);
-      KrakenEventType krakenEvent;
-      if (event != null && (krakenEvent = KrakenEventType.getEvent(event.textValue())) != null) {
+      KrakenEventType krakenEvent = event == null ? null : KrakenEventType.getEvent(event.textValue());
+      if (krakenEvent != null) {
         switch (krakenEvent) {
           case pingStatus:
             LOG.info("PingStatus received: {}", message);

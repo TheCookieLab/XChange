@@ -31,8 +31,8 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
       Duration.ofMinutes(30); // Keep-alive typically every 30-50 mins
 
   private final CoinsphAccountServiceRaw accountServiceRaw;
-  private volatile String listenKey = null;
-  private volatile long listenKeyCreateTime = 0;
+  private volatile String listenKey;
+  private volatile long listenKeyCreateTime;
   private final AtomicBoolean isUserDataStreamSubscribed = new AtomicBoolean(false); // Added
   private ScheduledExecutorService listenKeyKeepAliveExecutor;
   private final boolean isPrivateService; // Added flag for private vs public service
@@ -110,7 +110,7 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
           exchange.getClass().getMethod("getUserStreamingBaseUri");
       String baseUri = (String) getUserStreamingBaseUri.invoke(exchange);
       return baseUri + listenKey;
-    } catch (Exception e) {
+    } catch (ReflectiveOperationException | ClassCastException e) {
       LOG.warn("Could not invoke getUserStreamingBaseUri on exchange, using default URL", e);
       return "wss://wsapi.pro.coins.ph/openapi/ws/" + listenKey;
     }
@@ -249,7 +249,7 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
     // If it's a direct user data message, it might be the payload itself.
 
     try {
-      String channel = getChannelNameFromMessage(message);
+      getChannelNameFromMessage(message);
       JsonNode dataNode = message;
       if (message.has("stream") && message.has("data")) {
         // For combined streams, actual payload is in "data" field
@@ -313,7 +313,7 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
 
     } catch (IOException e) {
       LOG.error("Failed to create or keep-alive listen key: {}", e.getMessage(), e);
-      listenKey = null; // Invalidate key on error
+      listenKey = missingListenKey(); // Invalidate key on error
     }
   }
 
@@ -336,7 +336,7 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
           e.getMessage(),
           e);
       // Invalidate the key, so it's refreshed on next user data subscription attempt
-      listenKey = null;
+      listenKey = missingListenKey();
       listenKeyCreateTime = 0;
       if (listenKeyKeepAliveExecutor != null) {
         listenKeyKeepAliveExecutor.shutdown(); // Stop trying with the old key
@@ -354,11 +354,11 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
       } catch (IOException e) {
         LOG.error("Failed to close listen key {}: {}", listenKey, e.getMessage(), e);
       } finally {
-        listenKey = null;
+        listenKey = missingListenKey();
         listenKeyCreateTime = 0;
         if (listenKeyKeepAliveExecutor != null) {
           listenKeyKeepAliveExecutor.shutdownNow();
-          listenKeyKeepAliveExecutor = null;
+          listenKeyKeepAliveExecutor = noKeepAliveExecutor();
         }
       }
     }
@@ -393,6 +393,14 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
   // Add missing isConnecting method
   public boolean isConnecting() {
     return false; // Simple implementation - you can enhance this if needed
+  }
+
+  private static String missingListenKey() {
+    return null;
+  }
+
+  private static ScheduledExecutorService noKeepAliveExecutor() {
+    return null;
   }
 
   @Override

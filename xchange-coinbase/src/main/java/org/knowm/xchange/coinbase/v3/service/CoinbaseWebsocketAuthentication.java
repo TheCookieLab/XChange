@@ -1,5 +1,6 @@
 package org.knowm.xchange.coinbase.v3.service;
 
+import com.auth0.jwt.exceptions.JWTCreationException;
 import java.util.Objects;
 import java.util.function.Supplier;
 import org.knowm.xchange.ExchangeSpecification;
@@ -42,7 +43,7 @@ public final class CoinbaseWebsocketAuthentication {
     return () -> {
       try {
         return digest.generateWebsocketJwt();
-      } catch (Exception ex) {
+      } catch (JWTCreationException ex) {
         LOG.warn("Failed to generate Coinbase Advanced Trade WebSocket JWT", ex);
         return null;
       }

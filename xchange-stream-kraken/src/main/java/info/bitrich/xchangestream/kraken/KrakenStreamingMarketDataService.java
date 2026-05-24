@@ -94,7 +94,6 @@ public class KrakenStreamingMarketDataService implements StreamingMarketDataServ
     String channelName = getChannelName(KrakenSubscriptionName.ohlc, currencyPair);
     // args[0] is reserved for an optional order boo depth, we'll use  args[1] for the interval
     Object[] args = new Object[2];
-    args[0] = null;
     args[1] = interval;
 
     return subscribe(channelName, MIN_DATA_ARRAY_SIZE, args)

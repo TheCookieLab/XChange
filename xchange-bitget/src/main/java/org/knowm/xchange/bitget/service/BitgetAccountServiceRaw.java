@@ -1,6 +1,8 @@
 package org.knowm.xchange.bitget.service;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import org.knowm.xchange.bitget.BitgetAdapters;
 import org.knowm.xchange.bitget.BitgetExchange;
@@ -46,8 +48,8 @@ public class BitgetAccountServiceRaw extends BitgetBaseService {
 
   public List<BitgetTransferRecordDto> getBitgetTransferRecords(BitgetTransferHistoryParams params)
       throws IOException {
-    Long from = params.getStartTime() != null ? params.getStartTime().toEpochMilli() : null;
-    Long to = params.getEndTime() != null ? params.getEndTime().toEpochMilli() : null;
+    Long from = toEpochMilli(params.getStartTime());
+    Long to = toEpochMilli(params.getEndTime());
 
     return bitgetAuthenticated
         .transferRecords(
@@ -67,8 +69,8 @@ public class BitgetAccountServiceRaw extends BitgetBaseService {
 
   public List<BitgetMainSubTransferRecordDto> getBitgetMainSubTransferRecords(
       BitgetMainSubTransferHistoryParams params) throws IOException {
-    Long from = params.getStartTime() != null ? params.getStartTime().toEpochMilli() : null;
-    Long to = params.getEndTime() != null ? params.getEndTime().toEpochMilli() : null;
+    Long from = toEpochMilli(params.getStartTime());
+    Long to = toEpochMilli(params.getEndTime());
 
     return bitgetAuthenticated
         .mainSubTransferRecords(
@@ -110,13 +112,10 @@ public class BitgetAccountServiceRaw extends BitgetBaseService {
         params instanceof TradeHistoryParamsIdSpan
             ? ((TradeHistoryParamsIdSpan) params).getEndId()
             : null;
-    Long from = null;
-    Long to = null;
-    if (params instanceof TradeHistoryParamsTimeSpan) {
-      TradeHistoryParamsTimeSpan paramsTimeSpan = ((TradeHistoryParamsTimeSpan) params);
-      from = paramsTimeSpan.getStartTime() != null ? paramsTimeSpan.getStartTime().getTime() : null;
-      to = paramsTimeSpan.getEndTime() != null ? paramsTimeSpan.getEndTime().getTime() : null;
-    }
+    TradeHistoryParamsTimeSpan paramsTimeSpan =
+        params instanceof TradeHistoryParamsTimeSpan ? (TradeHistoryParamsTimeSpan) params : null;
+    Long from = toEpochMilli(startTime(paramsTimeSpan));
+    Long to = toEpochMilli(endTime(paramsTimeSpan));
 
     return bitgetAuthenticated
         .withdrawalRecords(
@@ -153,13 +152,10 @@ public class BitgetAccountServiceRaw extends BitgetBaseService {
         params instanceof TradeHistoryParamsIdSpan
             ? ((TradeHistoryParamsIdSpan) params).getEndId()
             : null;
-    Long from = null;
-    Long to = null;
-    if (params instanceof TradeHistoryParamsTimeSpan) {
-      TradeHistoryParamsTimeSpan paramsTimeSpan = ((TradeHistoryParamsTimeSpan) params);
-      from = paramsTimeSpan.getStartTime() != null ? paramsTimeSpan.getStartTime().getTime() : null;
-      to = paramsTimeSpan.getEndTime() != null ? paramsTimeSpan.getEndTime().getTime() : null;
-    }
+    TradeHistoryParamsTimeSpan paramsTimeSpan =
+        params instanceof TradeHistoryParamsTimeSpan ? (TradeHistoryParamsTimeSpan) params : null;
+    Long from = toEpochMilli(startTime(paramsTimeSpan));
+    Long to = toEpochMilli(endTime(paramsTimeSpan));
 
     return bitgetAuthenticated
         .depositRecords(
@@ -195,13 +191,10 @@ public class BitgetAccountServiceRaw extends BitgetBaseService {
         params instanceof TradeHistoryParamsIdSpan
             ? ((TradeHistoryParamsIdSpan) params).getEndId()
             : null;
-    Long from = null;
-    Long to = null;
-    if (params instanceof TradeHistoryParamsTimeSpan) {
-      TradeHistoryParamsTimeSpan paramsTimeSpan = ((TradeHistoryParamsTimeSpan) params);
-      from = paramsTimeSpan.getStartTime() != null ? paramsTimeSpan.getStartTime().getTime() : null;
-      to = paramsTimeSpan.getEndTime() != null ? paramsTimeSpan.getEndTime().getTime() : null;
-    }
+    TradeHistoryParamsTimeSpan paramsTimeSpan =
+        params instanceof TradeHistoryParamsTimeSpan ? (TradeHistoryParamsTimeSpan) params : null;
+    Long from = toEpochMilli(startTime(paramsTimeSpan));
+    Long to = toEpochMilli(endTime(paramsTimeSpan));
 
     return bitgetAuthenticated
         .subDepositRecords(
@@ -216,5 +209,21 @@ public class BitgetAccountServiceRaw extends BitgetBaseService {
             to,
             lastTradeId)
         .getData();
+  }
+
+  private static Date startTime(TradeHistoryParamsTimeSpan paramsTimeSpan) {
+    return paramsTimeSpan == null ? null : paramsTimeSpan.getStartTime();
+  }
+
+  private static Date endTime(TradeHistoryParamsTimeSpan paramsTimeSpan) {
+    return paramsTimeSpan == null ? null : paramsTimeSpan.getEndTime();
+  }
+
+  private static Long toEpochMilli(Instant instant) {
+    return instant == null ? null : instant.toEpochMilli();
+  }
+
+  private static Long toEpochMilli(Date date) {
+    return date == null ? null : date.getTime();
   }
 }

@@ -84,24 +84,6 @@ public class DeribitBaseService extends BaseExchangeService<DeribitExchange>
     return auth;
   }
 
-  private DeribitAuthentication authOverClientCredentials(String clientId, String clientSecret)
-      throws DeribitException, IOException {
-    return deribit
-        .auth(
-            GrantType.client_credentials,
-            null,
-            null,
-            clientId,
-            clientSecret,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null)
-        .getResult();
-  }
-
   private DeribitAuthentication authOverClientSignature(String clientId, String clientSecret)
       throws DeribitException, IOException {
     if (clientId == null || clientId.isEmpty()) {

@@ -3,8 +3,8 @@ package org.knowm.xchange.okcoin.v3.dto.trade;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.knowm.xchange.okcoin.v3.dto.MarginMode;
@@ -19,7 +19,7 @@ public class FuturesAccountsResponse extends OkexResponse {
   public static class FuturesAccountInfo {
     @JsonAnySetter
     /** map: currency -> FuturesAccount, e.g.“eth” */
-    private Map<String, FuturesAccount> accounts = new HashMap<>();
+    private Map<String, FuturesAccount> accounts = new ConcurrentHashMap<>();
   }
 
   @Data

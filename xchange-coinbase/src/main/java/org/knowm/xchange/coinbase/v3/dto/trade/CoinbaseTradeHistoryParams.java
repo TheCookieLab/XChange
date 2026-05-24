@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.dto.trade;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -75,11 +76,8 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
    * @param productIds product ids (nullable)
    */
   public void setProductIds(Collection<String> productIds) {
-    if (productIds == null) {
-      this.productIds = null;
-      return;
-    }
-    this.productIds = new HashSet<>(productIds);
+    this.productIds =
+        productIds == null ? Collections.emptySet() : new HashSet<>(productIds);
   }
 
   /**

@@ -7,6 +7,7 @@ import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.service.core.StreamingExchangeConfiguration;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
+import java.io.IOException;
 import org.knowm.xchange.coinsph.CoinsphExchange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,21 +50,7 @@ public class CoinsphStreamingExchange extends CoinsphExchange implements Streami
         new CoinsphStreamingService(
             PUBLIC_API_URI, null, false); // No account service needed for public
 
-    try {
-      // Initialize private streaming service if we have API credentials
-      if (exchangeSpecification.getApiKey() != null
-          && exchangeSpecification.getSecretKey() != null) {
-        LOG.info("Initializing private streaming service with API credentials");
-        this.privateStreamingService =
-            new CoinsphStreamingService(this, configuration); // Mark as private service
-      } else {
-        LOG.info("No API credentials provided, private streaming service won't be initialized");
-        this.privateStreamingService = null;
-      }
-    } catch (Exception e) {
-      LOG.error("Failed to initialize private streaming service", e);
-      this.privateStreamingService = null;
-    }
+    this.privateStreamingService = createPrivateStreamingService();
 
     this.streamingMarketDataService = new CoinsphStreamingMarketDataService(publicStreamingService);
 
@@ -78,6 +65,22 @@ public class CoinsphStreamingExchange extends CoinsphExchange implements Streami
   /** Get the base URI for user data streams. */
   public String getUserStreamingBaseUri() {
     return userDataApiBaseUri;
+  }
+
+  private CoinsphStreamingService createPrivateStreamingService() {
+    if (exchangeSpecification.getApiKey() == null
+        || exchangeSpecification.getSecretKey() == null) {
+      LOG.info("No API credentials provided, private streaming service won't be initialized");
+      return null;
+    }
+
+    try {
+      LOG.info("Initializing private streaming service with API credentials");
+      return new CoinsphStreamingService(this, configuration);
+    } catch (IOException e) {
+      LOG.error("Failed to initialize private streaming service", e);
+      return null;
+    }
   }
 
   @Override

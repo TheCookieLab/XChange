@@ -45,6 +45,7 @@ public final class BinanceKline {
     return low.add(high).divide(new BigDecimal("2"), MathContext.DECIMAL32);
   }
 
+  @Override
   public String toString() {
     String tstamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(openTime);
     return String.format(

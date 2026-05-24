@@ -37,7 +37,7 @@ public class BinanceTimestampFactory implements SynchronizedValueFactory<Long> {
   }
 
   public void clearDeltaServerTime() {
-    deltaServerTime = null;
+    deltaServerTimeExpire = 0L;
   }
 
   public long deltaServerTime(BinanceTime binanceTime) throws IOException {

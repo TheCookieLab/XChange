@@ -2,6 +2,7 @@ package org.knowm.xchange.binance;
 
 import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
 
+import java.io.IOException;
 import java.util.Map;
 import org.apache.commons.lang3.ObjectUtils;
 import org.knowm.xchange.BaseExchange;
@@ -56,16 +57,13 @@ public class BinanceExchange extends BaseExchange implements Exchange {
   }
 
   public void resetResilienceRegistries() {
-    RESILIENCE_REGISTRIES = null;
+    RESILIENCE_REGISTRIES = createResilienceRegistries();
   }
 
   @Override
   public ResilienceRegistries getResilienceRegistries() {
     if (RESILIENCE_REGISTRIES == null) {
-      // some workaround, for different resilience registries for spot and futures
-      if (isFuturesEnabled()) {
-        RESILIENCE_REGISTRIES = BinanceResilience.createRegistriesFuture();
-      } else RESILIENCE_REGISTRIES = BinanceResilience.createRegistries();
+      RESILIENCE_REGISTRIES = createResilienceRegistries();
     }
     return RESILIENCE_REGISTRIES;
   }
@@ -149,9 +147,15 @@ public class BinanceExchange extends BaseExchange implements Exchange {
                       symbol.getSymbol(),
                       new CurrencyPair(symbol.getBaseAsset(), symbol.getQuoteAsset())));
 
-    } catch (Exception e) {
+    } catch (IOException e) {
       throw new ExchangeException("Failed to initialize: " + e.getMessage(), e);
     }
+  }
+
+  private ResilienceRegistries createResilienceRegistries() {
+    return isFuturesEnabled()
+        ? BinanceResilience.createRegistriesFuture()
+        : BinanceResilience.createRegistries();
   }
 
   protected boolean isAuthenticated() {

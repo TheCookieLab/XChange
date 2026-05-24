@@ -8,10 +8,13 @@ public enum MarginType {
 
   @JsonCreator
   public static MarginType getOrderSide(String s) {
+    if (s == null) {
+      throw new IllegalArgumentException("Unknown margin type null.");
+    }
     try {
       return MarginType.valueOf(s);
-    } catch (Exception e) {
-      throw new RuntimeException("Unknown margin type " + s + ".");
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Unknown margin type " + s + ".", e);
     }
   }
 }

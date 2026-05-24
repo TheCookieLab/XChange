@@ -53,7 +53,6 @@ public class BinanceBaseService extends BaseResilientExchangeService<BinanceExch
                 ExchangeRestProxyBuilder.forInterface(
                         BinanceFuturesAuthenticated.class, futuresSpec)
                     .build();
-            inverseBinanceFutures = null;
             break;
           }
         case INVERSE:
@@ -63,7 +62,6 @@ public class BinanceBaseService extends BaseResilientExchangeService<BinanceExch
                 ExchangeRestProxyBuilder.forInterface(
                         BinanceFuturesAuthenticated.class, inverseFuturesSpec)
                     .build();
-            binanceFutures = null;
             break;
           }
       }

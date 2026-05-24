@@ -164,20 +164,23 @@ public final class CoinsphStreamingAdapters {
       CoinsphWebSocketOutboundAccountPosition accountPosition) {
     List<Balance> balances = new ArrayList<>();
     for (CoinsphWebSocketOutboundAccountPosition.Balance balance : accountPosition.getBalances()) {
-      Currency currency = new Currency(balance.getAsset());
-      BigDecimal total = balance.getFree().add(balance.getLocked());
-      balances.add(
-          new Balance.Builder()
-              .currency(currency)
-              .available(balance.getFree())
-              .frozen(balance.getLocked())
-              .total(total)
-              .timestamp(new Date(accountPosition.getEventTime()))
-              // accountLastUpdateTime (u) could also be relevant if more precise timing is needed
-              // for the balance itself
-              .build());
+      balances.add(adaptBalance(accountPosition, balance));
     }
     return balances;
+  }
+
+  private static Balance adaptBalance(
+      CoinsphWebSocketOutboundAccountPosition accountPosition,
+      CoinsphWebSocketOutboundAccountPosition.Balance balance) {
+    Currency currency = new Currency(balance.getAsset());
+    BigDecimal total = balance.getFree().add(balance.getLocked());
+    return new Balance.Builder()
+        .currency(currency)
+        .available(balance.getFree())
+        .frozen(balance.getLocked())
+        .total(total)
+        .timestamp(new Date(accountPosition.getEventTime()))
+        .build();
   }
 
   public static UserTrade adaptUserTrade(CoinsphWebSocketExecutionReport executionReport) {

@@ -2,6 +2,7 @@ package org.knowm.xchange.binance;
 
 import java.io.IOException;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.binance.service.BinanceMarketDataService;
 import org.knowm.xchange.binance.service.BinanceTradeService;
 import org.knowm.xchange.binance.service.BinanceUsAccountService;
@@ -39,7 +40,7 @@ public class BinanceUsExchange extends BinanceExchange {
       exchangeMetaData =
           BinanceAdapters.adaptExchangeMetaData(marketDataService.getExchangeInfo(), null);
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new ExchangeException("Failed to initialize Binance US exchange metadata", e);
     }
   }
 }

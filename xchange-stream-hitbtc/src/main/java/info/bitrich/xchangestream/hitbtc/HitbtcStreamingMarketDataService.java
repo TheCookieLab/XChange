@@ -11,9 +11,9 @@ import info.bitrich.xchangestream.hitbtc.dto.HitbtcWebSocketTradesTransaction;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -25,7 +25,8 @@ import org.knowm.xchange.hitbtc.v2.HitbtcAdapters;
 public class HitbtcStreamingMarketDataService implements StreamingMarketDataService {
 
   private final HitbtcStreamingService service;
-  private Map<CurrencyPair, HitbtcWebSocketOrderBook> orderbooks = new HashMap<>();
+  private final Map<CurrencyPair, HitbtcWebSocketOrderBook> orderbooks =
+      new ConcurrentHashMap<>();
 
   public HitbtcStreamingMarketDataService(HitbtcStreamingService service) {
     this.service = service;

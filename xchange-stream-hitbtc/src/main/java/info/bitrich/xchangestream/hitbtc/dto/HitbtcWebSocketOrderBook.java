@@ -12,7 +12,7 @@ import org.knowm.xchange.hitbtc.v2.dto.HitbtcOrderLimit;
 public class HitbtcWebSocketOrderBook {
   private Map<BigDecimal, HitbtcOrderLimit> asks;
   private Map<BigDecimal, HitbtcOrderLimit> bids;
-  private long sequence = 0;
+  private long sequence;
 
   public HitbtcWebSocketOrderBook(HitbtcWebSocketOrderBookTransaction orderbookTransaction) {
     createFromLevels(orderbookTransaction);

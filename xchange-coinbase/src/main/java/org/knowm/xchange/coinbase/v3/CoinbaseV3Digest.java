@@ -64,11 +64,13 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
    *
    * @param keyName   API key name (identifies the key in Coinbase API)
    * @param secretKey PEM-encoded private key string (ECDSA P-256 format)
-   * @throws Exception If key parsing fails or BouncyCastle provider initialization fails
+   * @throws IOException If key parsing fails
+   * @throws GeneralSecurityException If key derivation or provider initialization fails
    * @see #createInstance(String, String)
    */
 
-  private CoinbaseV3Digest(String keyName, String secretKey) throws Exception {
+  private CoinbaseV3Digest(String keyName, String secretKey)
+      throws IOException, GeneralSecurityException {
     super(secretKey, HMAC_SHA_256);
 
     KeyPair kp = loadECKeyPair(normalizePem(secretKey));
@@ -95,7 +97,7 @@ public class CoinbaseV3Digest extends BaseParamsDigest {
     }
     try {
       return new CoinbaseV3Digest(keyName, secretKey);
-    } catch (Exception e) {
+    } catch (IOException | GeneralSecurityException | IllegalArgumentException e) {
       throw new IllegalStateException("Failed to initialize CoinbaseV3Digest", e);
     }
   }

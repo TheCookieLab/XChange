@@ -5,10 +5,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -18,6 +18,7 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.okcoin.OkCoinAdapters;
 import org.knowm.xchange.okcoin.dto.trade.OkCoinOrderResult;
@@ -69,7 +70,7 @@ public class OkCoinTradeService extends OkCoinTradeServiceRaw implements TradeSe
     try {
       // orderId = -1 returns all of the orders on this market
       orderResults = getOrder(-1, OkCoinAdapters.adaptSymbol(symbol));
-    } catch (Exception e) {
+    } catch (IOException | ExchangeException e) {
       return NO_OPEN_ORDERS;
       // Market not present.
     }
@@ -82,22 +83,17 @@ public class OkCoinTradeService extends OkCoinTradeServiceRaw implements TradeSe
 
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
-
-    String marketOrderType = null;
-    String price = null;
-    String amount = null;
-    long orderId = -1L;
     String symbol = OkCoinAdapters.adaptSymbol(marketOrder.getCurrencyPair());
     if (marketOrder.getType().equals(OrderType.BID)) {
-      marketOrderType = "buy_market";
-      price = marketOrder.getOriginalAmount().toPlainString();
-      orderId = placeMarketOrderBuy(symbol, marketOrderType, price).getOrderId();
+      return String.valueOf(
+          placeMarketOrderBuy(symbol, "buy_market", marketOrder.getOriginalAmount().toPlainString())
+              .getOrderId());
     } else {
-      marketOrderType = "sell_market";
-      amount = marketOrder.getOriginalAmount().toPlainString();
-      orderId = placeMarketOrderSell(symbol, marketOrderType, amount).getOrderId();
+      return String.valueOf(
+          placeMarketOrderSell(
+                  symbol, "sell_market", marketOrder.getOriginalAmount().toPlainString())
+              .getOrderId());
     }
-    return String.valueOf(orderId);
   }
 
   @Override
@@ -130,13 +126,7 @@ public class OkCoinTradeService extends OkCoinTradeServiceRaw implements TradeSe
     List<Map<String, Object>> list = new ArrayList<>();
     Arrays.stream(limitOrders)
         .forEach(
-            limitOrder -> {
-              Map<String, Object> map = new HashMap<>();
-              map.put("price", limitOrder.getLimitPrice().toPlainString());
-              map.put("amount", limitOrder.getOriginalAmount().toPlainString());
-              map.put("type", limitOrder.getType() == OrderType.BID ? "buy" : "sell");
-              list.add(map);
-            });
+            limitOrder -> list.add(createBatchTradeRequest(limitOrder)));
 
     ObjectMapper mapper = new ObjectMapper();
     String ordersData = mapper.writeValueAsString(list);
@@ -207,7 +197,7 @@ public class OkCoinTradeService extends OkCoinTradeServiceRaw implements TradeSe
     OkCoinBatchTradeResult okCoinBatchTradeResult =
         cancelUpToThreeOrders(ordersToCancel, OkCoinAdapters.adaptSymbol(currencyPair));
 
-    Map<String, Boolean> requestResults = new HashMap<>(ordersToCancel.size());
+    Map<String, Boolean> requestResults = new ConcurrentHashMap<>(ordersToCancel.size());
     if (okCoinBatchTradeResult.getSuccess() != null) {
       Arrays.stream(okCoinBatchTradeResult.getSuccess().split(BATCH_DELIMITER))
           .forEach(id -> requestResults.put(id, Boolean.TRUE));
@@ -216,14 +206,22 @@ public class OkCoinTradeService extends OkCoinTradeServiceRaw implements TradeSe
       Arrays.stream(okCoinBatchTradeResult.getError().split(BATCH_DELIMITER))
           .forEach(id -> requestResults.put(id, Boolean.FALSE));
     }
-    Map<LimitOrder, Boolean> results = new HashMap<>(limitOrders.size());
+    Map<LimitOrder, Boolean> results = new ConcurrentHashMap<>(limitOrders.size());
     requestResults.forEach(
         (id, result) ->
             limitOrders.stream()
                 .filter(order -> order.getId().equals(id))
                 .findAny()
-                .ifPresent(limitOrder -> results.put(limitOrder, requestResults.get(id))));
+                .ifPresent(limitOrder -> results.put(limitOrder, result)));
     return results;
+  }
+
+  private static Map<String, Object> createBatchTradeRequest(LimitOrder limitOrder) {
+    Map<String, Object> request = new ConcurrentHashMap<>();
+    request.put("price", limitOrder.getLimitPrice().toPlainString());
+    request.put("amount", limitOrder.getOriginalAmount().toPlainString());
+    request.put("type", limitOrder.getType() == OrderType.BID ? "buy" : "sell");
+    return request;
   }
 
   /**

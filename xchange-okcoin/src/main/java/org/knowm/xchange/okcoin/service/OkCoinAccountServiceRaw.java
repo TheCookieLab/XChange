@@ -70,7 +70,7 @@ public class OkCoinAccountServiceRaw extends OKCoinBaseTradeService {
   public OKCoinWithdraw withdraw(
       String currencySymbol, String withdrawAddress, BigDecimal amount, String target)
       throws IOException {
-    String fee = null;
+    String fee;
     if (target.equals("address")) { // External address
       if (currencySymbol.startsWith("btc")) fee = "0.002";
       else if (currencySymbol.startsWith("ltc")) fee = "0.001";

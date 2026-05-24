@@ -70,7 +70,8 @@ public class DeribitExchange extends BaseExchange {
 
     for (DeribitCurrency deribitCurrency : activeDeribitCurrencies) {
       currencies.put(
-          new Currency(deribitCurrency.getCurrency()), DeribitAdapters.adaptMeta(deribitCurrency));
+          Currency.getInstance(deribitCurrency.getCurrency()),
+          DeribitAdapters.adaptMeta(deribitCurrency));
     }
 
     List<DeribitInstrument> deribitInstruments =

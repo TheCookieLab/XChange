@@ -107,14 +107,11 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
 
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
-    TimeInForce tif = getOrderFlag(limitOrder, TimeInForce.class).orElse(TimeInForce.GTC);
-    OrderType type;
-    if (limitOrder.hasFlag(org.knowm.xchange.binance.dto.trade.BinanceOrderFlags.LIMIT_MAKER)) {
-      type = OrderType.LIMIT_MAKER;
-      tif = null;
-    } else {
-      type = OrderType.LIMIT;
-    }
+    OrderType type =
+        limitOrder.hasFlag(org.knowm.xchange.binance.dto.trade.BinanceOrderFlags.LIMIT_MAKER)
+            ? OrderType.LIMIT_MAKER
+            : OrderType.LIMIT;
+    TimeInForce tif = resolveTimeInForce(limitOrder);
     return placeOrderAllProducts(
         type, limitOrder, limitOrder.getLimitPrice(), null, null, null, null, tif);
   }
@@ -355,7 +352,7 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
         TradeHistoryParamsIdSpan idParams = (TradeHistoryParamsIdSpan) params;
         try {
           fromId = BinanceAdapters.id(idParams.getStartId());
-        } catch (Throwable ignored) {
+        } catch (IllegalArgumentException ignored) {
         }
       }
       if ((fromId != null) && (startTime != null || endTime != null)) {
@@ -406,6 +403,13 @@ public class BinanceTradeService extends BinanceTradeServiceRaw implements Trade
     } catch (BinanceException e) {
       throw BinanceErrorAdapter.adapt(e);
     }
+  }
+
+  private TimeInForce resolveTimeInForce(LimitOrder limitOrder) {
+    if (limitOrder.hasFlag(org.knowm.xchange.binance.dto.trade.BinanceOrderFlags.LIMIT_MAKER)) {
+      return null;
+    }
+    return getOrderFlag(limitOrder, TimeInForce.class).orElse(TimeInForce.GTC);
   }
 
   @Override

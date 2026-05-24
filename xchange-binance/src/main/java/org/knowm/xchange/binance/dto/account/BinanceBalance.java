@@ -35,6 +35,7 @@ public final class BinanceBalance {
     return locked;
   }
 
+  @Override
   public String toString() {
     return "[" + currency + ", free=" + free + ", locked=" + locked + "]";
   }

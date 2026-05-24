@@ -3,6 +3,7 @@ package org.knowm.xchange.coinsph.service;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.coinsph.CoinsphAdapters;
 import org.knowm.xchange.coinsph.CoinsphExchange;
@@ -123,7 +124,7 @@ public class CoinsphAccountService extends CoinsphAccountServiceRaw implements A
   }
 
   private Map<String, Object> buildExtendInfo(FiatWithdrawFundsParams params) {
-    Map<String, Object> extendInfo = new HashMap<>();
+    Map<String, Object> extendInfo = new ConcurrentHashMap<>();
 
     Beneficiary beneficiary = params.getBeneficiary();
     if (beneficiary != null) {
@@ -151,7 +152,12 @@ public class CoinsphAccountService extends CoinsphAccountServiceRaw implements A
     // Add any custom parameters
     Map<String, Object> customParameters = params.getCustomParameters();
     if (customParameters != null) {
-      extendInfo.putAll(customParameters);
+      customParameters.forEach(
+          (key, value) -> {
+            if (key != null && value != null) {
+              extendInfo.put(key, value);
+            }
+          });
     }
 
     return extendInfo;

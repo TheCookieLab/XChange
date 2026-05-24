@@ -17,10 +17,13 @@ public enum TimeInForce implements IOrderFlags {
 
   @JsonCreator
   public static TimeInForce getTimeInForce(String s) {
+    if (s == null) {
+      throw new IllegalArgumentException("Unknown ordtime in force null.");
+    }
     try {
       return TimeInForce.valueOf(s);
-    } catch (Exception e) {
-      throw new RuntimeException("Unknown ordtime in force " + s + ".");
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Unknown ordtime in force " + s + ".", e);
     }
   }
 }

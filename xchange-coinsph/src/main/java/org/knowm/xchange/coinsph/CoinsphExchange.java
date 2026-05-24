@@ -1,10 +1,12 @@
 package org.knowm.xchange.coinsph;
 
+import java.io.IOException;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.coinsph.dto.CoinsphException;
 import org.knowm.xchange.coinsph.dto.CoinsphJacksonObjectMapperFactory;
 import org.knowm.xchange.coinsph.dto.meta.CoinsphExchangeInfo;
 import org.knowm.xchange.coinsph.service.*;
@@ -33,9 +35,7 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
 
   @Override
   protected void initServices() {
-    this.timestampFactory =
-        CoinsphTimestampFactory.createFactory(
-            getPublicApi(), getExchangeSpecification(), getResilienceRegistries());
+    this.timestampFactory = CoinsphTimestampFactory.createFactory(getPublicApi(), getResilienceRegistries());
     this.marketDataService = new CoinsphMarketDataService(this, getResilienceRegistries());
     this.tradeService = new CoinsphTradeService(this, getResilienceRegistries());
     this.accountService = new CoinsphAccountService(this, getResilienceRegistries());
@@ -65,7 +65,7 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
   }
 
   public static void resetResilienceRegistries() {
-    RESILIENCE_REGISTRIES = null;
+    RESILIENCE_REGISTRIES = CoinsphResilience.createRegistries();
   }
 
   @Override
@@ -160,8 +160,6 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
     try {
       LOG.debug("Starting remoteInit for Coins.ph");
       // Fetch exchange info
-      CoinsphMarketDataServiceRaw marketDataServiceRaw =
-          (CoinsphMarketDataServiceRaw) this.marketDataService;
       CoinsphExchangeInfo exchangeInfo =
           this.publicApi.exchangeInfo(); // Use direct publicApi field
       LOG.debug("Fetched CoinsphExchangeInfo: {}", exchangeInfo);
@@ -180,7 +178,7 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
       }
       LOG.info("Coins.ph remoteInit finished successfully.");
 
-    } catch (Exception e) {
+    } catch (IOException | CoinsphException e) {
       // SynchronizedValueFactory should not throw an exception, so we can catch them here.
       if (timestampFactory instanceof CoinsphTimestampFactory) {
         ((CoinsphTimestampFactory) timestampFactory)

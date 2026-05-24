@@ -2,8 +2,8 @@ package org.knowm.xchange.okcoin.v3.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.knowm.xchange.okcoin.v3.dto.trade.OkexResponse;
@@ -13,7 +13,7 @@ import org.knowm.xchange.okcoin.v3.dto.trade.OkexResponse;
 public class MarginAccountResponse extends OkexResponse {
   @JsonAnySetter
   /** map: currency:BTC-> CurrencyInfo */
-  private Map<String, CurrencyInfo> currencyInfo = new HashMap<>();
+  private Map<String, CurrencyInfo> currencyInfo = new ConcurrentHashMap<>();
 
   /** Instrument */
   @JsonProperty("instrument_id")

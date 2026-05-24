@@ -3,8 +3,8 @@ package org.knowm.xchange.okcoin.v3.dto.account;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.knowm.xchange.okcoin.v3.dto.MarginMode;
@@ -29,7 +29,7 @@ public class FuturesLeverageResponse extends OkexResponse {
   /** ******************************** fixed margin mode ********************************* */
   @JsonAnySetter
   /** map: contract id -> FixedLeverage Contract ID, e.g.“BTC-USD-180213” */
-  private Map<String, FixedLeverage> fixedLeverages = new HashMap<>();
+  private Map<String, FixedLeverage> fixedLeverages = new ConcurrentHashMap<>();
 
   @Data
   public static class FixedLeverage {

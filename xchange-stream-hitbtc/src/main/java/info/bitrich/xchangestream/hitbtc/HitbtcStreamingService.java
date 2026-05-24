@@ -7,8 +7,8 @@ import info.bitrich.xchangestream.hitbtc.dto.HitbtcWebSocketSubscriptionMessage;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
@@ -33,7 +33,7 @@ public class HitbtcStreamingService extends JsonNettyStreamingService {
   private static final String OP_UPDATE = "update";
 
   /** Map request Id to Chanel Name and HitBTC method pair */
-  private final Map<Integer, Pair<String, String>> requests = new HashMap<>();
+  private final Map<Integer, Pair<String, String>> requests = new ConcurrentHashMap<>();
 
   public HitbtcStreamingService(String apiUrl) {
     super(apiUrl, Integer.MAX_VALUE);

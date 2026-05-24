@@ -75,7 +75,7 @@ public class BinanceED25519Digest implements ParamsDigest {
       var payloadBytes = input.getBytes(charSet);
       signer.update(payloadBytes, 0, payloadBytes.length);
       byte[] printBase64Binary = signer.generateSignature();
-      return new String(Base64.getEncoder().encode(printBase64Binary));
+      return Base64.getEncoder().encodeToString(printBase64Binary);
     } catch (CryptoException e) {
       LOG.error("", e);
     }

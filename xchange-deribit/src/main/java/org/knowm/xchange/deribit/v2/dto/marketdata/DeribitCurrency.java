@@ -48,5 +48,5 @@ public class DeribitCurrency {
   private BigDecimal withdrawalFee;
 
   @JsonProperty("withdrawal_priorities")
-  private List<DeribitWithdrawalPriority> withdrawalPriorities = null;
+  private List<DeribitWithdrawalPriority> withdrawalPriorities;
 }
