@@ -2,9 +2,9 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
@@ -185,7 +185,7 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseOrdersResponse cancelOrders(List<String> orderIds, List<String> clientOrderIds)
       throws IOException {
-    Map<String, Object> payload = new HashMap<>();
+    Map<String, Object> payload = new ConcurrentHashMap<>();
     if (orderIds != null && !orderIds.isEmpty()) {
       payload.put("order_ids", orderIds);
     }

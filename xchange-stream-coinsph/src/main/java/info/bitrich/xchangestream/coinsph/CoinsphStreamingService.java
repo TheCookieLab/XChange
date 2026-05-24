@@ -31,8 +31,8 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
       Duration.ofMinutes(30); // Keep-alive typically every 30-50 mins
 
   private final CoinsphAccountServiceRaw accountServiceRaw;
-  private volatile String listenKey = null;
-  private volatile long listenKeyCreateTime = 0;
+  private volatile String listenKey;
+  private volatile long listenKeyCreateTime;
   private final AtomicBoolean isUserDataStreamSubscribed = new AtomicBoolean(false); // Added
   private ScheduledExecutorService listenKeyKeepAliveExecutor;
   private final boolean isPrivateService; // Added flag for private vs public service
@@ -110,7 +110,7 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
           exchange.getClass().getMethod("getUserStreamingBaseUri");
       String baseUri = (String) getUserStreamingBaseUri.invoke(exchange);
       return baseUri + listenKey;
-    } catch (Exception e) {
+    } catch (ReflectiveOperationException | ClassCastException e) {
       LOG.warn("Could not invoke getUserStreamingBaseUri on exchange, using default URL", e);
       return "wss://wsapi.pro.coins.ph/openapi/ws/" + listenKey;
     }
@@ -249,7 +249,7 @@ public class CoinsphStreamingService extends JsonNettyStreamingService {
     // If it's a direct user data message, it might be the payload itself.
 
     try {
-      String channel = getChannelNameFromMessage(message);
+      getChannelNameFromMessage(message);
       JsonNode dataNode = message;
       if (message.has("stream") && message.has("data")) {
         // For combined streams, actual payload is in "data" field

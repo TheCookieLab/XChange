@@ -10,8 +10,12 @@ import org.knowm.xchange.coinsph.CoinsphExchange;
 import org.knowm.xchange.coinsph.dto.CoinsphException;
 import org.knowm.xchange.coinsph.dto.account.*;
 import org.knowm.xchange.currency.Currency;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CoinsphAccountServiceRaw extends CoinsphBaseService {
+
+  private static final Logger LOG = LoggerFactory.getLogger(CoinsphAccountServiceRaw.class);
 
   protected CoinsphAccountServiceRaw(
       CoinsphExchange exchange, ResilienceRegistries resilienceRegistries) {
@@ -214,9 +218,10 @@ public class CoinsphAccountServiceRaw extends CoinsphBaseService {
           fundingRecords.add(new CoinsphFundingRecord(fiatHistory));
         }
       }
-    } catch (Exception e) {
-      // Log and continue if fiat cash in history fails
-      // This allows the method to still return other funding records
+    } catch (IOException | CoinsphException e) {
+      LOG.warn(
+          "Unable to load Coins.ph fiat funding history; continuing with crypto records.",
+          (Throwable) e);
     }
 
     // Sort by timestamp (newest first)

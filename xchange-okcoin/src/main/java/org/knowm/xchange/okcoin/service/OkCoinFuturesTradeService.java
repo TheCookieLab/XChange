@@ -5,10 +5,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -88,7 +88,7 @@ public class OkCoinFuturesTradeService extends OkCoinTradeServiceRaw implements 
       }
     }
 
-    if (orderResults.size() <= 0) {
+    if (orderResults.isEmpty()) {
       return noOpenOrders;
     }
 
@@ -185,16 +185,14 @@ public class OkCoinFuturesTradeService extends OkCoinTradeServiceRaw implements 
   @Override
   public boolean cancelOrder(String orderId) throws IOException {
 
-    boolean ret = false;
     for (Instrument symbol : exchange.getExchangeInstruments()) {
       for (FuturesContract futuresContract : getExchangeContracts()) {
-        if (cancelOrder(new OkCoinFuturesCancelOrderParams(symbol, futuresContract, orderId))) {
-          ret = true;
-          break;
+        if (cancelFuturesOrder(symbol, futuresContract, orderId)) {
+          return true;
         }
       }
     }
-    return ret;
+    return false;
   }
 
   @Override
@@ -233,9 +231,6 @@ public class OkCoinFuturesTradeService extends OkCoinTradeServiceRaw implements 
     long orderId = myParams.getOrderId() != null ? Long.valueOf(myParams.getOrderId()) : -1;
     CurrencyPair currencyPair = myParams.getCurrencyPair();
     String date = myParams.getDate();
-    String page = myParams.getPageNumber().toString();
-    String pageLength = myParams.getPageLength().toString();
-    FuturesContract reqFuturesContract = myParams.futuresContract;
 
     OkCoinFuturesTradeHistoryResult[] orderHistory =
         getFuturesTradesHistory(OkCoinAdapters.adaptSymbol(currencyPair), orderId, date);
@@ -260,7 +255,7 @@ public class OkCoinFuturesTradeService extends OkCoinTradeServiceRaw implements 
 
   @Override
   public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {
-    Map<Instrument, Map<FuturesContract, Set<String>>> ordersToQuery = new HashMap<>();
+    Map<Instrument, Map<FuturesContract, Set<String>>> ordersToQuery = new ConcurrentHashMap<>();
     List<String> orderIdsRequest = new ArrayList<>();
     List<OkCoinFuturesOrder> orderResults = new ArrayList<>();
     List<Order> openOrders = new ArrayList<>();
@@ -270,19 +265,10 @@ public class OkCoinFuturesTradeService extends OkCoinTradeServiceRaw implements 
       Instrument currencyPair = myParams.getInstrument();
       FuturesContract reqFuturesContract = myParams.futuresContract;
       long orderId = myParams.getOrderId() != null ? Long.parseLong(myParams.getOrderId()) : -1;
-
-      if (ordersToQuery.get(currencyPair) == null) {
-        Set<String> orderSet = Collections.singleton(String.valueOf(orderId));
-        HashMap<FuturesContract, Set<String>> futuresContractMap = new HashMap<>();
-        futuresContractMap.put(reqFuturesContract, orderSet);
-        ordersToQuery.put(currencyPair, futuresContractMap);
-
-      } else if (ordersToQuery.get(currencyPair).get(reqFuturesContract) == null) {
-        Set<String> orderSet = Collections.singleton(String.valueOf(orderId));
-        ordersToQuery.get(currencyPair).put(reqFuturesContract, orderSet);
-      } else {
-        ordersToQuery.get(currencyPair).get(reqFuturesContract).add(String.valueOf(orderId));
-      }
+      ordersToQuery
+          .computeIfAbsent(currencyPair, key -> createFuturesContractOrderMap())
+          .computeIfAbsent(reqFuturesContract, key -> createOrderIdSet())
+          .add(String.valueOf(orderId));
     }
     for (Instrument pair : ordersToQuery.keySet()) {
       for (FuturesContract contract : ordersToQuery.get(pair).keySet()) {
@@ -435,6 +421,19 @@ public class OkCoinFuturesTradeService extends OkCoinTradeServiceRaw implements 
     public void setDate(String date) {
       this.date = date;
     }
+  }
+
+  private boolean cancelFuturesOrder(
+      Instrument symbol, FuturesContract futuresContract, String orderId) throws IOException {
+    return cancelOrder(new OkCoinFuturesCancelOrderParams(symbol, futuresContract, orderId));
+  }
+
+  private static Map<FuturesContract, Set<String>> createFuturesContractOrderMap() {
+    return new ConcurrentHashMap<>();
+  }
+
+  private static Set<String> createOrderIdSet() {
+    return ConcurrentHashMap.newKeySet();
   }
 
   public static final class OkCoinFuturesOrderQueryParams extends DefaultQueryOrderParam

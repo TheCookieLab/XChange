@@ -190,8 +190,8 @@ public class CoinsphTradeServiceRaw extends CoinsphBaseService {
   }
 
   public boolean cancelCoinsphOrder(CancelOrderParams params) throws IOException, CoinsphException {
-    String symbol = null;
-    Long orderId = null;
+    String symbol;
+    Long orderId;
     String clientOrderId = null;
 
     if (params instanceof CancelOrderByIdParams) {

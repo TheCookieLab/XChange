@@ -1,6 +1,7 @@
 package org.knowm.xchange.bitget.service;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 import org.knowm.xchange.bitget.BitgetAdapters;
 import org.knowm.xchange.bitget.BitgetExchange;
@@ -39,13 +40,10 @@ public class BitgetTradeServiceRaw extends BitgetBaseService {
         params instanceof TradeHistoryParamsIdSpan
             ? ((TradeHistoryParamsIdSpan) params).getEndId()
             : null;
-    Long from = null;
-    Long to = null;
-    if (params instanceof TradeHistoryParamsTimeSpan) {
-      TradeHistoryParamsTimeSpan paramsTimeSpan = ((TradeHistoryParamsTimeSpan) params);
-      from = paramsTimeSpan.getStartTime() != null ? paramsTimeSpan.getStartTime().getTime() : null;
-      to = paramsTimeSpan.getEndTime() != null ? paramsTimeSpan.getEndTime().getTime() : null;
-    }
+    TradeHistoryParamsTimeSpan paramsTimeSpan =
+        params instanceof TradeHistoryParamsTimeSpan ? (TradeHistoryParamsTimeSpan) params : null;
+    Long from = toEpochMilli(paramsTimeSpan == null ? null : paramsTimeSpan.getStartTime());
+    Long to = toEpochMilli(paramsTimeSpan == null ? null : paramsTimeSpan.getEndTime());
 
     return bitgetAuthenticated
         .fills(
@@ -79,5 +77,9 @@ public class BitgetTradeServiceRaw extends BitgetBaseService {
         .createOrder(
             apiKey, bitgetDigest, passphrase, exchange.getNonceFactory(), bitgetPlaceOrderDto)
         .getData();
+  }
+
+  private static Long toEpochMilli(Date date) {
+    return date == null ? null : date.getTime();
   }
 }

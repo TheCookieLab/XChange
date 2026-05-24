@@ -20,7 +20,7 @@ public enum MarginMode {
     }
     try {
       return MarginMode.valueOf(s);
-    } catch (Exception e) {
+    } catch (IllegalArgumentException e) {
       log.warn("Invalid string for MarginMode '{}'.", s, e);
       return null;
     }

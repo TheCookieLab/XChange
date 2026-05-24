@@ -111,7 +111,7 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
     OrderCancellationRequest req =
         OrderCancellationRequest.builder().instrumentId(instrumentId).build();
-    OrderCancellationResponse o = spotCancelOrder(id, req);
+    spotCancelOrder(id, req);
     return true;
   }
 
@@ -138,16 +138,14 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
     String from = null;
     List<OkexOpenOrder> all = new ArrayList<>();
-    boolean stop = false;
-    do {
-
+    while (true) {
       List<OkexOpenOrder> l = getSpotOrderList(instrument, from, null, orders_limit, state);
       all.addAll(l);
-      stop = l.size() < orders_limit;
-      if (!stop) {
-        from = l.get(l.size() - 1).getOrderId();
+      if (l.size() < orders_limit) {
+        break;
       }
-    } while (!stop);
+      from = l.get(l.size() - 1).getOrderId();
+    }
     return new OpenOrders(all.stream().map(OkexAdaptersV3::convert).collect(Collectors.toList()));
   }
 
@@ -176,15 +174,14 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
     String from = null;
     List<OkexOpenOrder> allOrdersWithTrades = new ArrayList<>();
-    boolean stop = false;
-    do {
+    while (true) {
       List<OkexOpenOrder> l = getSpotOrderList(instrument, from, to, orders_limit, state);
       allOrdersWithTrades.addAll(l);
-      stop = l.size() < orders_limit;
-      if (!stop) {
-        from = l.get(l.size() - 1).getOrderId();
+      if (l.size() < orders_limit) {
+        break;
       }
-    } while (!stop);
+      from = l.get(l.size() - 1).getOrderId();
+    }
     // instrumentId, from, to, limit, state)
 
     List<UserTrade> userTrades = new ArrayList<>();
@@ -201,8 +198,8 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
                     t -> {
                       CurrencyPair p = OkexAdaptersV3.toPair(t.getInstrumentId());
 
-                      BigDecimal amount = null;
-                      Currency feeCurrency = null;
+                      BigDecimal amount;
+                      Currency feeCurrency;
 
                       if (o.getSide() == Side.buy) { // the same side as the order!
                         amount = t.getSize();
@@ -256,15 +253,14 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
     String from = null;
     List<OkexOpenOrder> allOrdersWithTrades = new ArrayList<>();
-    boolean stop = false;
-    do {
+    while (true) {
       List<OkexOpenOrder> l = getMarginOrderList(instrument, from, to, orders_limit, state);
       allOrdersWithTrades.addAll(l);
-      stop = l.size() < orders_limit;
-      if (!stop) {
-        from = l.get(l.size() - 1).getOrderId();
+      if (l.size() < orders_limit) {
+        break;
       }
-    } while (!stop);
+      from = l.get(l.size() - 1).getOrderId();
+    }
     // instrumentId, from, to, limit, state)
 
     List<UserTrade> userTrades = new ArrayList<>();
@@ -281,8 +277,8 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
                     t -> {
                       CurrencyPair p = OkexAdaptersV3.toPair(t.getInstrumentId());
 
-                      BigDecimal amount = null;
-                      Currency feeCurrency = null;
+                      BigDecimal amount;
+                      Currency feeCurrency;
 
                       if (o.getSide() == Side.buy) { // the same side as the order!
                         amount = t.getSize();
@@ -326,32 +322,30 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
   private List<OkexTransaction> fetchTradesForOrder(OkexOpenOrder o) throws IOException {
     String from = null;
     List<OkexTransaction> all = new ArrayList<>();
-    boolean stop = false;
-    do {
+    while (true) {
       List<OkexTransaction> l =
           getSpotTransactionDetails(o.getOrderId(), o.getInstrumentId(), from, null, null);
       all.addAll(l);
-      stop = l.size() < transactions_limit;
-      if (!stop) {
-        from = l.get(l.size() - 1).getLedgerId();
+      if (l.size() < transactions_limit) {
+        break;
       }
-    } while (!stop);
+      from = l.get(l.size() - 1).getLedgerId();
+    }
     return all;
   }
 
   private List<OkexTransaction> fetchMarginTradesForOrder(OkexOpenOrder o) throws IOException {
     String from = null;
     List<OkexTransaction> all = new ArrayList<>();
-    boolean stop = false;
-    do {
+    while (true) {
       List<OkexTransaction> l =
           getMarginTransactionDetails(o.getOrderId(), o.getInstrumentId(), from, null, null);
       all.addAll(l);
-      stop = l.size() < transactions_limit;
-      if (!stop) {
-        from = l.get(l.size() - 1).getLedgerId();
+      if (l.size() < transactions_limit) {
+        break;
       }
-    } while (!stop);
+      from = l.get(l.size() - 1).getLedgerId();
+    }
     return all;
   }
 }

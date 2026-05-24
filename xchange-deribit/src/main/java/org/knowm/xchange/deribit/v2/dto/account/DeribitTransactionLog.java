@@ -120,8 +120,13 @@ public class DeribitTransactionLog {
 
   @JsonCreator
   public DeribitTransactionLog(@JsonProperty("info") Object infoObject) {
-    if (infoObject instanceof Map) {
-      infoMap = (Map<String, Object>) infoObject;
+    if (infoObject instanceof Map<?, ?> rawMap) {
+      rawMap.forEach(
+          (key, value) -> {
+            if (key instanceof String stringKey) {
+              infoMap.put(stringKey, value);
+            }
+          });
     } else if (infoObject instanceof String) {
       infoString = (String) infoObject;
     }
@@ -200,7 +205,7 @@ public class DeribitTransactionLog {
     UNKNOWN
   }
 
-  public static enum UserRole {
+  public enum UserRole {
     @JsonProperty("taker")
     TAKER,
 

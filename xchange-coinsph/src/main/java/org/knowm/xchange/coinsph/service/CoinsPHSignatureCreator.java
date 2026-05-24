@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinsph.service;
 
 import jakarta.ws.rs.QueryParam;
+import java.nio.charset.StandardCharsets;
 import javax.crypto.Mac;
 import org.knowm.xchange.service.BaseParamsDigest;
 import si.mazi.rescu.Params;
@@ -23,10 +24,10 @@ public class CoinsPHSignatureCreator extends BaseParamsDigest {
   @Override
   public String digestParams(RestInvocation restInvocation) {
     Mac mac = getMac();
-    mac.update(getQuery(restInvocation).getBytes());
+    mac.update(getQuery(restInvocation).getBytes(StandardCharsets.UTF_8));
     String body = restInvocation.getRequestBody();
     if (body != null) {
-      mac.update(body.getBytes());
+      mac.update(body.getBytes(StandardCharsets.UTF_8));
     }
     byte[] signature = mac.doFinal();
     String result = bytesToHex(signature);

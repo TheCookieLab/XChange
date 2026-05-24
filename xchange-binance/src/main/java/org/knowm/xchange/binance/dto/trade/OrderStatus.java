@@ -14,10 +14,13 @@ public enum OrderStatus {
 
   @JsonCreator
   public static OrderStatus getOrderStatus(String s) {
+    if (s == null) {
+      throw new IllegalArgumentException("Unknown order status null.");
+    }
     try {
       return OrderStatus.valueOf(s);
-    } catch (Exception e) {
-      throw new RuntimeException("Unknown order status " + s + ".");
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Unknown order status " + s + ".", e);
     }
   }
 }

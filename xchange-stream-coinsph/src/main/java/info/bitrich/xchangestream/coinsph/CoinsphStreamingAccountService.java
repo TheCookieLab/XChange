@@ -7,28 +7,21 @@ import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.Balance;
-import org.knowm.xchange.service.account.AccountService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CoinsphStreamingAccountService implements StreamingAccountService {
-  private static final Logger LOG = LoggerFactory.getLogger(CoinsphStreamingAccountService.class);
-
   private final CoinsphStreamingService service;
-  private final AccountService accountService;
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
 
   /** Constructor with just streaming service. */
   public CoinsphStreamingAccountService(CoinsphStreamingService service) {
     this.service = service;
-    this.accountService = null;
   }
 
   /** Constructor with streaming service and account service. */
   public CoinsphStreamingAccountService(
-      CoinsphStreamingService service, AccountService accountService) {
+      CoinsphStreamingService service,
+      org.knowm.xchange.service.account.AccountService accountService) {
     this.service = service;
-    this.accountService = accountService;
   }
 
   @Override

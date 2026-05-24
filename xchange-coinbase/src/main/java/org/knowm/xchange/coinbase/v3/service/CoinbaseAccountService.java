@@ -73,14 +73,17 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
 
     List<CoinbaseAccount> coinbaseAccounts = getCoinbaseAccounts();
     for (CoinbaseAccount coinbaseAccount : coinbaseAccounts) {
-      CoinbaseAmount balance = coinbaseAccount.getBalance();
-      Wallet wallet = Wallet.Builder.from(Arrays.asList(
-              new Balance(Currency.getInstance(balance.getCurrency()), balance.getValue())))
-          .id(coinbaseAccount.getUuid()).build();
-      wallets.add(wallet);
+      wallets.add(toWallet(coinbaseAccount));
     }
 
     return new AccountInfo(wallets);
+  }
+
+  private Wallet toWallet(CoinbaseAccount coinbaseAccount) {
+    CoinbaseAmount balance = coinbaseAccount.getBalance();
+    Balance xchangeBalance =
+        new Balance(Currency.getInstance(balance.getCurrency()), balance.getValue());
+    return Wallet.Builder.from(Arrays.asList(xchangeBalance)).id(coinbaseAccount.getUuid()).build();
   }
 
   /**

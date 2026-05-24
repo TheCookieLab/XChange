@@ -17,15 +17,12 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.kraken.KrakenExchange;
 import org.knowm.xchange.kraken.dto.account.KrakenWebsocketToken;
 import org.knowm.xchange.kraken.service.KrakenAccountServiceRaw;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author makarid
  */
 public class KrakenStreamingExchange extends KrakenExchange implements StreamingExchange {
 
-  private static final Logger LOG = LoggerFactory.getLogger(KrakenStreamingExchange.class);
   private static final String USE_BETA = "Use_Beta";
   private static final String USE_SPREAD_FOR_TICKER = "Spread_For_Ticker";
   private static final String API_URI = "wss://ws.kraken.com";

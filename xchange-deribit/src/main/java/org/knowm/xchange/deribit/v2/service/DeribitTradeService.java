@@ -263,10 +263,11 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
     String sorting = null;
     if (params instanceof TradeHistoryParamsSorted) {
       TradeHistoryParamsSorted.Order order = ((TradeHistoryParamsSorted) params).getOrder();
-      sorting =
-          order == TradeHistoryParamsSorted.Order.asc
-              ? "asc"
-              : order == TradeHistoryParamsSorted.Order.desc ? "desc" : null;
+      if (order == TradeHistoryParamsSorted.Order.asc) {
+        sorting = "asc";
+      } else if (order == TradeHistoryParamsSorted.Order.desc) {
+        sorting = "desc";
+      }
     }
 
     Boolean includeOld = null;
@@ -274,38 +275,18 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
       includeOld = ((DeribitTradeHistoryParamsOld) params).isIncludeOld();
     }
 
-    DeribitUserTrades deribitUserTrades = null;
-
-    if (startTime != null && endTime != null) {
-      if (instrumentName != null) {
-        deribitUserTrades =
-            super.getUserTradesByInstrumentAndTime(
-                instrumentName, startTime, endTime, limit, includeOld, sorting);
-      } else if (currency != null) {
-        deribitUserTrades =
-            super.getUserTradesByCurrencyAndTime(
-                currency, kind, startTime, endTime, limit, includeOld, sorting);
-      }
-    } else {
-      if (instrumentName != null) {
-        Integer startSeq = startId != null ? Integer.valueOf(startId) : null;
-        Integer endSeq = endId != null ? Integer.valueOf(endId) : null;
-
-        deribitUserTrades =
-            super.getUserTradesByInstrument(
-                instrumentName, startSeq, endSeq, limit, includeOld, sorting);
-      } else if (currency != null) {
-        deribitUserTrades =
-            super.getUserTradesByCurrency(
-                currency, kind, startId, endId, limit, includeOld, sorting);
-      }
-    }
-
-    if (deribitUserTrades == null) {
-      throw new ExchangeException("You should specify either instrument or currency pair");
-    }
-
-    return DeribitAdapters.adaptUserTrades(deribitUserTrades);
+    return DeribitAdapters.adaptUserTrades(
+        loadUserTrades(
+            instrumentName,
+            currency,
+            kind,
+            startTime,
+            endTime,
+            startId,
+            endId,
+            limit,
+            includeOld,
+            sorting));
   }
 
   @Override
@@ -326,5 +307,41 @@ public class DeribitTradeService extends DeribitTradeServiceRaw implements Trade
       orders.add(DeribitAdapters.adaptOrder(getOrderState(orderId)));
     }
     return orders;
+  }
+
+  private DeribitUserTrades loadUserTrades(
+      String instrumentName,
+      String currency,
+      Kind kind,
+      Date startTime,
+      Date endTime,
+      String startId,
+      String endId,
+      Integer limit,
+      Boolean includeOld,
+      String sorting)
+      throws IOException {
+    if (startTime != null && endTime != null) {
+      if (instrumentName != null) {
+        return super.getUserTradesByInstrumentAndTime(
+            instrumentName, startTime, endTime, limit, includeOld, sorting);
+      }
+      if (currency != null) {
+        return super.getUserTradesByCurrencyAndTime(
+            currency, kind, startTime, endTime, limit, includeOld, sorting);
+      }
+    } else {
+      if (instrumentName != null) {
+        Integer startSeq = startId != null ? Integer.valueOf(startId) : null;
+        Integer endSeq = endId != null ? Integer.valueOf(endId) : null;
+        return super.getUserTradesByInstrument(
+            instrumentName, startSeq, endSeq, limit, includeOld, sorting);
+      }
+      if (currency != null) {
+        return super.getUserTradesByCurrency(currency, kind, startId, endId, limit, includeOld, sorting);
+      }
+    }
+
+    throw new ExchangeException("You should specify either instrument or currency pair");
   }
 }

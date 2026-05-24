@@ -4,9 +4,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.coinsph.dto.account.CoinsphAccount;
 import org.knowm.xchange.coinsph.dto.account.CoinsphBalance;
@@ -112,8 +112,8 @@ public final class CoinsphAdapters {
 
   public static ExchangeMetaData adaptExchangeMetaData(CoinsphExchangeInfo exchangeInfo) {
     List<CoinsphSymbol> symbols = exchangeInfo.getSymbols();
-    java.util.Map<Instrument, InstrumentMetaData> currencyPairs = new java.util.HashMap<>();
-    java.util.Map<Currency, CurrencyMetaData> currencies = new java.util.HashMap<>();
+    Map<Instrument, InstrumentMetaData> currencyPairs = new ConcurrentHashMap<>();
+    Map<Currency, CurrencyMetaData> currencies = new ConcurrentHashMap<>();
 
     for (CoinsphSymbol symbol : symbols) {
       CurrencyPair pair = toCurrencyPair(symbol.getSymbol());
@@ -132,16 +132,8 @@ public final class CoinsphAdapters {
               .build();
       currencyPairs.put(pair, pairMetaData);
 
-      if (!currencies.containsKey(pair.getBase())) {
-        currencies.put(
-            pair.getBase(),
-            new CurrencyMetaData(symbol.getBaseAssetPrecision(), null)); // scale, fee
-      }
-      if (!currencies.containsKey(pair.getCounter())) {
-        currencies.put(
-            pair.getCounter(),
-            new CurrencyMetaData(symbol.getQuoteAssetPrecision(), null)); // scale, fee
-      }
+      addCurrencyMetaDataIfMissing(currencies, pair.getBase(), symbol.getBaseAssetPrecision());
+      addCurrencyMetaDataIfMissing(currencies, pair.getCounter(), symbol.getQuoteAssetPrecision());
     }
 
     return new ExchangeMetaData(currencyPairs, currencies, null, null, true);
@@ -292,15 +284,7 @@ public final class CoinsphAdapters {
     if (executedQty != null
         && executedQty.compareTo(BigDecimal.ZERO) > 0
         && cummulativeQuoteQty != null) {
-      try {
-        // Ensure quote currency precision is appropriate here if known, otherwise using a default
-        // like 8
-        averagePrice = cummulativeQuoteQty.divide(executedQty, 8, java.math.RoundingMode.HALF_UP);
-      } catch (ArithmeticException e) {
-        // This might happen if executedQty is extremely small, leading to precision issues
-        // Or if cummulativeQuoteQty is 0 and executedQty is also 0 (already handled by compareTo)
-        // Log error or handle as appropriate; for now, averagePrice remains null
-      }
+      averagePrice = cummulativeQuoteQty.divide(executedQty, 8, java.math.RoundingMode.HALF_UP);
     }
 
     LimitOrder.Builder builder =
@@ -358,21 +342,25 @@ public final class CoinsphAdapters {
   }
 
   public static Map<Instrument, Fee> adaptTradeFees(List<CoinsphTradeFee> coinsphTradeFees) {
-    Map<Instrument, org.knowm.xchange.dto.account.Fee> fees = new HashMap<>();
+    Map<Instrument, Fee> fees = new ConcurrentHashMap<>();
     if (coinsphTradeFees != null) {
       for (CoinsphTradeFee fee : coinsphTradeFees) {
         Instrument instrument = toCurrencyPair(fee.getSymbol());
         if (instrument != null) {
-          // Assuming maker and taker are distinct fees.
-          // XChange Fee DTO takes one maker and one taker fee.
-          fees.put(
-              instrument,
-              new org.knowm.xchange.dto.account.Fee(
-                  fee.getMakerCommission(), fee.getTakerCommission()));
+          fees.put(instrument, adaptFee(fee));
         }
       }
     }
     return fees;
+  }
+
+  private static void addCurrencyMetaDataIfMissing(
+      Map<Currency, CurrencyMetaData> currencies, Currency currency, int scale) {
+    currencies.putIfAbsent(currency, new CurrencyMetaData(scale, null));
+  }
+
+  private static Fee adaptFee(CoinsphTradeFee fee) {
+    return new Fee(fee.getMakerCommission(), fee.getTakerCommission());
   }
 
   public static UserTrade adaptUserTrade(CoinsphUserTrade coinsphTrade) {

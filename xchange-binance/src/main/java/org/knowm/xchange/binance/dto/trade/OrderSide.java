@@ -8,10 +8,13 @@ public enum OrderSide {
 
   @JsonCreator
   public static OrderSide getOrderSide(String s) {
+    if (s == null) {
+      throw new IllegalArgumentException("Unknown order side null.");
+    }
     try {
       return OrderSide.valueOf(s);
-    } catch (Exception e) {
-      throw new RuntimeException("Unknown order side " + s + ".");
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Unknown order side " + s + ".", e);
     }
   }
 }

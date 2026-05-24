@@ -218,8 +218,8 @@ public class CoinsphTradeService extends CoinsphTradeServiceRaw implements Trade
           LOG.warn(
               "Order {} not found in open orders. Cannot query by ID without symbol.", orderId);
         }
-      } catch (Exception e) {
-        LOG.error("Error fetching order {}: {}", orderId, e.getMessage());
+      } catch (IOException | CoinsphException e) {
+        LOG.error("Error fetching order " + orderId, e);
       }
     }
 

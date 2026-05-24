@@ -11,7 +11,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.knowm.xchange.currency.Currency;
@@ -119,36 +119,29 @@ public final class OkCoinAdapters {
 
     OkCoinFunds funds = userInfo.getInfo().getFunds();
 
-    Map<String, Balance.Builder> builders = new TreeMap<>();
+    Map<String, Balance.Builder> builders = new ConcurrentHashMap<>();
 
     for (Map.Entry<String, BigDecimal> available : funds.getFree().entrySet()) {
       builders.put(
-          available.getKey(),
-          new Balance.Builder()
-              .currency(Currency.getInstance(available.getKey()))
-              .available(available.getValue()));
+          available.getKey(), createBalanceBuilder(available.getKey()).available(available.getValue()));
     }
 
     for (Map.Entry<String, BigDecimal> frozen : funds.getFreezed().entrySet()) {
-      Balance.Builder builder = builders.get(frozen.getKey());
-      if (builder == null) {
-        builder = new Balance.Builder().currency(Currency.getInstance(frozen.getKey()));
-      }
+      Balance.Builder builder =
+          builders.computeIfAbsent(frozen.getKey(), OkCoinAdapters::createBalanceBuilder);
       builders.put(frozen.getKey(), builder.frozen(frozen.getValue()));
     }
 
     for (Map.Entry<String, BigDecimal> borrowed : funds.getBorrow().entrySet()) {
-      Balance.Builder builder = builders.get(borrowed.getKey());
-      if (builder == null) {
-        builder = new Balance.Builder().currency(Currency.getInstance(borrowed.getKey()));
-      }
+      Balance.Builder builder =
+          builders.computeIfAbsent(borrowed.getKey(), OkCoinAdapters::createBalanceBuilder);
       builders.put(borrowed.getKey(), builder.borrowed(borrowed.getValue()));
     }
 
     List<Balance> wallet = new ArrayList<>(builders.size());
 
-    for (Balance.Builder builder : builders.values()) {
-      wallet.add(builder.build());
+    for (String currencyCode : builders.keySet().stream().sorted().collect(Collectors.toList())) {
+      wallet.add(builders.get(currencyCode).build());
     }
 
     return new AccountInfo(Wallet.Builder.from(wallet).build());
@@ -322,8 +315,8 @@ public final class OkCoinAdapters {
 
     // Order fill status is being adapted to a trade, there is no dedicated tradeId, so user orderId
     // instead.
-    String tradeId, orderId;
-    tradeId = orderId = String.valueOf(order.getOrderId());
+    String tradeId = String.valueOf(order.getOrderId());
+    String orderId = tradeId;
     return UserTrade.builder()
         .type(adaptOrderType(order.getType()))
         .originalAmount(order.getDealAmount())
@@ -359,7 +352,6 @@ public final class OkCoinAdapters {
           okCoinFuturesTrade.getType().equals(TransactionType.sell) ? OrderType.ASK : OrderType.BID;
       BigDecimal originalAmount = BigDecimal.valueOf(okCoinFuturesTrade.getAmount());
       BigDecimal price = okCoinFuturesTrade.getPrice();
-      Date timestamp = new Date(okCoinFuturesTrade.getTimestamp());
       long transactionId = okCoinFuturesTrade.getId();
       if (transactionId > lastTradeId) {
         lastTradeId = transactionId;
@@ -367,25 +359,43 @@ public final class OkCoinAdapters {
       final String tradeId = String.valueOf(transactionId);
       final String orderId = String.valueOf(okCoinFuturesTrade.getId());
       final CurrencyPair currencyPair = CurrencyPair.BTC_USD;
-
-      BigDecimal feeAmount = BigDecimal.ZERO;
-      UserTrade trade =
-          UserTrade.builder()
-              .type(orderType)
-              .originalAmount(originalAmount)
-              .instrument(currencyPair)
-              .price(price)
-              .timestamp(timestamp)
-              .id(tradeId)
-              .orderId(orderId)
-              .feeAmount(feeAmount)
-              .feeCurrency(Currency.getInstance(currencyPair.getCounter().getCurrencyCode()))
-              .build();
-
-      trades.add(trade);
+      trades.add(
+          adaptFuturesTrade(
+              orderType,
+              originalAmount,
+              currencyPair,
+              price,
+              okCoinFuturesTrade.getTimestamp(),
+              tradeId,
+              orderId));
     }
 
     return new UserTrades(trades, lastTradeId, TradeSortType.SortByID);
+  }
+
+  private static Balance.Builder createBalanceBuilder(String currencyCode) {
+    return new Balance.Builder().currency(Currency.getInstance(currencyCode));
+  }
+
+  private static UserTrade adaptFuturesTrade(
+      OrderType orderType,
+      BigDecimal originalAmount,
+      CurrencyPair currencyPair,
+      BigDecimal price,
+      long timestamp,
+      String tradeId,
+      String orderId) {
+    return UserTrade.builder()
+        .type(orderType)
+        .originalAmount(originalAmount)
+        .instrument(currencyPair)
+        .price(price)
+        .timestamp(new Date(timestamp))
+        .id(tradeId)
+        .orderId(orderId)
+        .feeAmount(BigDecimal.ZERO)
+        .feeCurrency(Currency.getInstance(currencyPair.getCounter().getCurrencyCode()))
+        .build();
   }
 
   private static Date adaptDate(long date) {

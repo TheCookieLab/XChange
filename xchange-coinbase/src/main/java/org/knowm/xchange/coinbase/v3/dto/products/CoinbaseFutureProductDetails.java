@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import lombok.Getter;
 
 /**
@@ -79,7 +80,7 @@ public class CoinbaseFutureProductDetails {
     }
     try {
       return Instant.parse(normalized);
-    } catch (Exception ignore) {
+    } catch (DateTimeParseException ignore) {
       return null;
     }
   }
@@ -96,7 +97,7 @@ public class CoinbaseFutureProductDetails {
     if (normalized.startsWith("P") || normalized.startsWith("p")) {
       try {
         return Duration.parse(normalized.toUpperCase());
-      } catch (Exception ignore) {
+      } catch (DateTimeParseException ignore) {
         return null;
       }
     }

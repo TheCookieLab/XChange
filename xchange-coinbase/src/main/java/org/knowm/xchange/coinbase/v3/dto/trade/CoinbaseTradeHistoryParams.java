@@ -75,11 +75,7 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
    * @param productIds product ids (nullable)
    */
   public void setProductIds(Collection<String> productIds) {
-    if (productIds == null) {
-      this.productIds = null;
-      return;
-    }
-    this.productIds = new HashSet<>(productIds);
+    this.productIds = productIds == null ? new HashSet<>() : new HashSet<>(productIds);
   }
 
   /**
