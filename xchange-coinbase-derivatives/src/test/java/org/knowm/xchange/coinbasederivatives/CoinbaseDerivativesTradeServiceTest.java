@@ -96,8 +96,8 @@ class CoinbaseDerivativesTradeServiceTest {
             true,
             new BigDecimal("99999.75"));
 
-    assertEquals("initial-1", result.primaryOrderId());
-    assertEquals(List.of("parent-1", "triggered-1"), result.relatedOrderIds());
+    assertEquals("parent-1", result.primaryOrderId());
+    assertEquals(List.of("initial-1", "triggered-1"), result.relatedOrderIds());
     assertEquals(1L, result.requestCorrelationId());
     assertTrue(result.reduceOnly());
     assertEquals("duplicate-label", result.label());
@@ -108,6 +108,37 @@ class CoinbaseDerivativesTradeServiceTest {
             .withRequestBody(matchingJsonPath("$.params.trigger", equalTo("last_price")))
             .withRequestBody(matchingJsonPath("$.params.reduce_only", equalTo("true")))
             .withRequestBody(matchingJsonPath("$.params.label", equalTo("duplicate-label"))));
+  }
+
+  @Test
+  void rawPlacementUsesReturnedOrderIdWhenProviderHasNoTriggeringParent() throws Exception {
+    server.stubFor(
+        post(urlEqualTo("/"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"order\":{"
+                            + "\"order_id\":\"standalone-1\","
+                            + "\"instrument_name\":\"BTC_USDC-PERPETUAL\","
+                            + "\"direction\":\"buy\",\"order_type\":\"limit\","
+                            + "\"amount\":0.0001,\"price\":100000.25,\"reduce_only\":false,"
+                            + "\"label\":\"standalone\",\"order_state\":\"open\"},"
+                            + "\"trades\":[]}}")));
+
+    CoinbaseDerivativesPlacementResult result =
+        service.placeOrder(
+            "buy",
+            "BTC_USDC-PERPETUAL",
+            new BigDecimal("0.0001"),
+            "limit",
+            "standalone",
+            new BigDecimal("100000.25"),
+            false,
+            null);
+
+    assertEquals("standalone-1", result.primaryOrderId());
+    assertEquals(List.of(), result.relatedOrderIds());
   }
 
   @Test

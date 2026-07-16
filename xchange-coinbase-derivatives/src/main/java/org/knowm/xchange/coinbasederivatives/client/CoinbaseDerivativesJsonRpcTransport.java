@@ -228,7 +228,7 @@ public final class CoinbaseDerivativesJsonRpcTransport {
     }
     return new CoinbaseDerivativesException(
         error.code(),
-        error.message(),
+        CoinbaseDerivativesRedactor.sanitize(error.message()),
         id,
         method,
         classification,

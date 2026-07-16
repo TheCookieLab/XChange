@@ -24,6 +24,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import org.knowm.xchange.coinbasederivatives.client.CoinbaseDerivativesRedactor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -170,7 +171,7 @@ public class CoinbaseDerivativesStreamingService extends JsonNettyStreamingServi
     return Single.create(
         emitter -> {
           long generation = connectionGeneration.get();
-          if (generation == 0) {
+          if (generation == 0 || !isSocketOpen()) {
             emitter.onError(new CoinbaseDerivativesStreamException("WebSocket is not connected"));
             return;
           }
@@ -214,6 +215,7 @@ public class CoinbaseDerivativesStreamingService extends JsonNettyStreamingServi
                     configureCancelOnDisconnect();
                     resubscribeRegisteredChannels(true);
                   })
+              .doOnError(ignored -> authenticated = false)
               .ignoreElement();
         });
   }
@@ -250,7 +252,6 @@ public class CoinbaseDerivativesStreamingService extends JsonNettyStreamingServi
     long nextGeneration = connectionGeneration.incrementAndGet();
     authenticated = false;
     channelChangeIds.clear();
-    seenEvents.clear();
     cancelReauthentication();
     List<PendingRequest> stale = new ArrayList<>(pendingRequests.values());
     pendingRequests.clear();
@@ -401,7 +402,9 @@ public class CoinbaseDerivativesStreamingService extends JsonNettyStreamingServi
         return;
       }
       String code = error.has("code") ? error.get("code").asText() : "unknown";
-      String message = error.has("message") ? error.get("message").asText() : "malformed error";
+      String message =
+          CoinbaseDerivativesRedactor.sanitize(
+              error.has("message") ? error.get("message").asText() : "malformed error");
       pending.emitter.onError(
           new CoinbaseDerivativesStreamException(
               "Coinbase derivatives JSON-RPC "

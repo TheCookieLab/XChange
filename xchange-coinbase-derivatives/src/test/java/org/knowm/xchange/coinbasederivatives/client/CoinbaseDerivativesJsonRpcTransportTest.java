@@ -9,6 +9,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
@@ -157,11 +158,38 @@ class CoinbaseDerivativesJsonRpcTransportTest {
   void redactionRemovesBearerJwtAndTokenFields() {
     String sanitized =
         CoinbaseDerivativesRedactor.sanitize(
-            "Authorization: Bearer eyJabc.def.sig access_token=topsecret client_secret=hidden");
+            "Authorization: Bearer eyJabc.def.sig access_token=topsecret client_secret=hidden "
+                + "token=oauth-secret key_id=organizations/test/apiKeys/key");
 
     assertFalse(sanitized.contains("eyJabc.def.sig"));
     assertFalse(sanitized.contains("topsecret"));
     assertFalse(sanitized.contains("hidden"));
+    assertFalse(sanitized.contains("oauth-secret"));
+    assertFalse(sanitized.contains("organizations/test/apiKeys/key"));
+  }
+
+  @Test
+  void sanitizesProviderControlledErrorMessagesAndRetainsDiagnosticContext() {
+    server.stubFor(
+        post(urlEqualTo("/"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":"
+                            + "{\"code\":-1,\"message\":\"auth rejected token=oauth-secret "
+                            + "key_id=organizations/test/apiKeys/key\","
+                            + "\"data\":{\"token\":\"response-secret\"}}}")));
+
+    CoinbaseDerivativesException failure =
+        assertThrows(
+            CoinbaseDerivativesException.class,
+            () -> transport().callPublicOnce("public/auth", Map.of(), Map.class));
+
+    assertTrue(failure.getMessage().contains("auth rejected"));
+    assertFalse(failure.getMessage().contains("oauth-secret"));
+    assertFalse(failure.getMessage().contains("organizations/test/apiKeys/key"));
+    assertFalse(failure.getSanitizedDetails().contains("response-secret"));
   }
 
   private CoinbaseDerivativesJsonRpcTransport transport() {

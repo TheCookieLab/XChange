@@ -2,6 +2,7 @@ package org.knowm.xchange.coinbasederivatives;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
@@ -9,12 +10,42 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.coinbasederivatives.dto.account.CoinbaseDerivativesPosition;
 import org.knowm.xchange.coinbasederivatives.dto.marketdata.CoinbaseDerivativesInstrument;
+import org.knowm.xchange.coinbasederivatives.dto.marketdata.CoinbaseDerivativesTicker;
 import org.knowm.xchange.coinbasederivatives.dto.trade.CoinbaseDerivativesOrder;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.instrument.Instrument;
 
 class CoinbaseDerivativesAdaptersTest {
+  @Test
+  void tickerDoesNotExposeOpenInterestAsAnOpeningPrice() {
+    CoinbaseDerivativesTicker provider =
+        new CoinbaseDerivativesTicker(
+            "BTC_USDC-PERPETUAL",
+            1L,
+            new BigDecimal("100000"),
+            new BigDecimal("99999"),
+            new BigDecimal("2"),
+            new BigDecimal("100001"),
+            new BigDecimal("3"),
+            new BigDecimal("100000.5"),
+            new BigDecimal("100000.25"),
+            new BigDecimal("0.0001"),
+            new BigDecimal("0.0008"),
+            new BigDecimal("25000000"),
+            new CoinbaseDerivativesTicker.Stats(
+                new BigDecimal("101000"),
+                new BigDecimal("99000"),
+                new BigDecimal("5000000"),
+                new BigDecimal("1.5")));
+
+    var adapted = CoinbaseDerivativesAdapters.adaptTicker(provider);
+
+    assertNull(adapted.getOpen());
+    assertEquals(new BigDecimal("5000000"), adapted.getVolume());
+    assertEquals(new BigDecimal("100000"), adapted.getLast());
+  }
+
   @Test
   void discoveredPerpetualMapsToFuturesContractAndExactMetadata() {
     CoinbaseDerivativesInstrument provider =

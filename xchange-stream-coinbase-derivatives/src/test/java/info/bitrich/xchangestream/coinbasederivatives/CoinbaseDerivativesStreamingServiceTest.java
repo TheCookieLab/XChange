@@ -17,6 +17,23 @@ class CoinbaseDerivativesStreamingServiceTest {
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Test
+  void requestsDuringReconnectFailFastAndConnectedRequestsStillSend() throws Exception {
+    CapturingService service = service(() -> "jwt");
+    service.beginConnectionGeneration();
+    service.socketOpen = false;
+
+    service
+        .request("private/get_order_state", MAPPER.createObjectNode(), true)
+        .test()
+        .assertError(CoinbaseDerivativesStreamException.class);
+    assertTrue(service.messages.isEmpty());
+
+    service.socketOpen = true;
+    service.request("public/test", MAPPER.createObjectNode(), true).test().assertNotComplete();
+    assertEquals("public/test", MAPPER.readTree(service.lastMessage()).path("method").asText());
+  }
+
+  @Test
   void correlatesNumericIdsAndRejectsPriorConnectionResponses() throws Exception {
     CapturingService service = service(() -> "jwt");
     service.beginConnectionGeneration();
@@ -56,6 +73,53 @@ class CoinbaseDerivativesStreamingServiceTest {
     assertEquals("jwt-2", secondRequest.path("params").path("token").asText());
     service.success(secondRequest.path("id").asLong());
     second.assertComplete();
+  }
+
+  @Test
+  void sanitizesProviderControlledWebSocketErrorMessages() throws Exception {
+    CapturingService service = service(() -> "jwt");
+    service.beginConnectionGeneration();
+
+    TestObserver<JsonNode> response =
+        service.request("public/auth", MAPPER.createObjectNode(), true).test();
+    long id = MAPPER.readTree(service.lastMessage()).path("id").asLong();
+    service.handleProtocolMessage(
+        MAPPER.readTree(
+            "{\"jsonrpc\":\"2.0\",\"id\":"
+                + id
+                + ",\"error\":{\"code\":-1,\"message\":\"auth rejected token=oauth-secret "
+                + "key_id=organizations/test/apiKeys/key\"}}"));
+
+    response.assertError(
+        failure ->
+            failure.getMessage().contains("auth rejected")
+                && !failure.getMessage().contains("oauth-secret")
+                && !failure.getMessage().contains("organizations/test/apiKeys/key"));
+  }
+
+  @Test
+  void failedReauthenticationRevokesPrivateSubscriptionReadiness() throws Exception {
+    CapturingService service = service(() -> "jwt");
+    service.beginConnectionGeneration();
+
+    TestObserver<Void> initialAuthentication = service.reauthenticate().test();
+    service.success(MAPPER.readTree(service.lastMessage()).path("id").asLong());
+    initialAuthentication.assertComplete();
+    assertTrue(service.isAuthenticated());
+
+    TestObserver<Void> failedReauthentication = service.reauthenticate().test();
+    long failedId = MAPPER.readTree(service.lastMessage()).path("id").asLong();
+    service.handleProtocolMessage(
+        MAPPER.readTree(
+            "{\"jsonrpc\":\"2.0\",\"id\":"
+                + failedId
+                + ",\"error\":{\"code\":-1,\"message\":\"expired session\"}}"));
+    failedReauthentication.assertError(CoinbaseDerivativesStreamException.class);
+
+    assertFalse(service.isAuthenticated());
+    int messagesBeforeSubscription = service.messages.size();
+    service.subscribePrivateChannel("user.portfolio.USDC").test();
+    assertEquals(messagesBeforeSubscription, service.messages.size());
   }
 
   @Test
@@ -114,6 +178,28 @@ class CoinbaseDerivativesStreamingServiceTest {
   }
 
   @Test
+  void deduplicatesReplayedEventsAcrossReconnectWithoutDroppingNewVersions() throws Exception {
+    CapturingService service = service(() -> "jwt");
+    service.beginConnectionGeneration();
+    TestObserver<JsonNode> observer =
+        service.subscribePrivateChannel("user.changes.BTC_USDC-PERPETUAL.100ms").test();
+
+    JsonNode firstVersion =
+        notification(
+            "user.changes.BTC_USDC-PERPETUAL.100ms", "{\"trade_id\":\"trade-1\",\"timestamp\":1}");
+    service.handleProtocolMessage(firstVersion);
+
+    service.beginConnectionGeneration();
+    service.handleProtocolMessage(firstVersion);
+    assertEquals(1, observer.values().size());
+
+    service.handleProtocolMessage(
+        notification(
+            "user.changes.BTC_USDC-PERPETUAL.100ms", "{\"trade_id\":\"trade-1\",\"timestamp\":2}"));
+    assertEquals(2, observer.values().size());
+  }
+
+  @Test
   void cancelOnDisconnectDefaultsOffAndCreditBackoffIsBounded() throws Exception {
     CoinbaseDerivativesStreamConfiguration configuration =
         new CoinbaseDerivativesStreamConfiguration(() -> "jwt");
@@ -143,6 +229,7 @@ class CoinbaseDerivativesStreamingServiceTest {
 
   private static final class CapturingService extends CoinbaseDerivativesStreamingService {
     private final List<String> messages = new ArrayList<>();
+    private boolean socketOpen = true;
 
     private CapturingService(CoinbaseDerivativesStreamConfiguration configuration) {
       super("ws://localhost", configuration);
@@ -157,7 +244,7 @@ class CoinbaseDerivativesStreamingServiceTest {
 
     @Override
     public boolean isSocketOpen() {
-      return true;
+      return socketOpen;
     }
 
     private String lastMessage() {

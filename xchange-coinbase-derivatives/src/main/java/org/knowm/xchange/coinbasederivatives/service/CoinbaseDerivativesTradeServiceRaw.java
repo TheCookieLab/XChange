@@ -62,15 +62,22 @@ public class CoinbaseDerivativesTradeServiceRaw extends CoinbaseDerivativesBaseS
     if (order == null || order.orderId() == null) {
       throw new ExchangeException("Coinbase derivatives placement returned no order ID");
     }
+    String primaryOrderId =
+        order.primaryOrderId() == null || order.primaryOrderId().isBlank()
+            ? order.orderId()
+            : order.primaryOrderId();
     List<String> related = new ArrayList<>();
-    if (order.primaryOrderId() != null && !order.primaryOrderId().equals(order.orderId())) {
-      related.add(order.primaryOrderId());
+    if (!primaryOrderId.equals(order.orderId())) {
+      related.add(order.orderId());
     }
     if (order.otoOrderIds() != null) {
-      related.addAll(order.otoOrderIds());
+      order.otoOrderIds().stream()
+          .filter(id -> id != null && !id.isBlank() && !primaryOrderId.equals(id))
+          .filter(id -> !related.contains(id))
+          .forEach(related::add);
     }
     return new CoinbaseDerivativesPlacementResult(
-        order.orderId(),
+        primaryOrderId,
         related,
         response.requestId(),
         order.instrumentName() == null ? instrumentName : order.instrumentName(),

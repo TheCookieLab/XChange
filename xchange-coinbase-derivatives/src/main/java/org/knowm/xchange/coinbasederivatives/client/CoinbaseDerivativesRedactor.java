@@ -10,7 +10,8 @@ public final class CoinbaseDerivativesRedactor {
       Pattern.compile("\\beyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\b");
   private static final Pattern TOKEN_FIELD =
       Pattern.compile(
-          "(?i)(\"?(?:access_token|signed_jwt|jwt|client_secret)\"?\\s*[:=]\\s*\"?)[^\",}\\s]+");
+          "(?i)(\"?(?:access_token|signed_jwt|jwt|token|client_secret|api_key|key_id|key_name)\"?"
+              + "\\s*[:=]\\s*\"?)[^\",}\\s]+");
 
   private CoinbaseDerivativesRedactor() {}
 

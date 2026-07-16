@@ -113,7 +113,6 @@ public final class CoinbaseDerivativesAdapters {
         .high(stats == null ? null : stats.high())
         .low(stats == null ? null : stats.low())
         .volume(stats == null ? null : stats.volume())
-        .open(ticker.openInterest())
         .build();
   }
 
