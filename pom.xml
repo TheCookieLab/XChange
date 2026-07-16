@@ -62,6 +62,7 @@
         <module>xchange-bybit</module>
         <module>xchange-cexio</module>
         <module>xchange-coinbase</module>
+        <module>xchange-coinbase-derivatives</module>
         <module>xchange-coinbasepro</module>
         <module>xchange-coincheck</module>
         <module>xchange-coindeal</module>
@@ -115,6 +116,7 @@
         <module>xchange-stream-bybit</module>
         <module>xchange-stream-cexio</module>
         <module>xchange-stream-coinbase</module>
+        <module>xchange-stream-coinbase-derivatives</module>
         <module>xchange-stream-coinbasepro</module>
         <module>xchange-stream-coincheck</module>
         <module>xchange-stream-coinjar</module>

@@ -1,9 +1,9 @@
 # Coinbase Derivatives Gateway for XChange
 
-Status: Proposed  
-Priority: Urgent  
-Target approval: July 17, 2026  
-Hard external deadline: September 9, 2026
+- Status: Delivered
+- Priority: Urgent
+- Target approval: July 17, 2026
+- Hard external deadline: September 9, 2026
 
 ## Summary
 
@@ -18,6 +18,22 @@ This is a new integration, not a modification of `xchange-coinbase` spot or
 Coinbase-managed account semantics even though its protocol resembles Deribit.
 Reusing Deribit's authenticated transport would create incorrect trust and
 compatibility assumptions.
+
+## Delivery Checklist
+
+- [x] Register the REST and streaming modules in the root reactor.
+- [x] Implement the Coinbase-owned JSON-RPC HTTP transport and authentication lifecycle.
+- [x] Implement market data, account, position, order, and fill adapters and services.
+- [x] Implement the raw placement result contract and non-replay placement semantics.
+- [x] Implement the JSON-RPC WebSocket lifecycle and public/private streaming services.
+- [x] Add deterministic transport, numeric, service, authentication, and lifecycle tests.
+- [x] Document configuration, label semantics, cancel-on-disconnect, and recovery behavior.
+- [x] Run affected-module builds and the repository-root `mvn -B clean install` gate.
+- [x] Complete final QA, exact-head PR monitoring, merge, and post-merge verification.
+
+Implementation evidence (July 16, 2026): REST module tests 19/19, streaming
+module tests 15/15, targeted PMD 0 violations across production and test sources,
+and the 109-project root `mvn -B clean install` reactor completed successfully.
 
 ## Context
 
