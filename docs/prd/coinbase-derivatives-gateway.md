@@ -1,9 +1,9 @@
 # Coinbase Derivatives Gateway for XChange
 
-Status: Delivered  
-Priority: Urgent  
-Target approval: July 17, 2026  
-Hard external deadline: September 9, 2026
+- Status: Delivered
+- Priority: Urgent
+- Target approval: July 17, 2026
+- Hard external deadline: September 9, 2026
 
 ## Summary
 
