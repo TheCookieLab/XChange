@@ -40,11 +40,9 @@
         <module>xchange-ascendex</module>
         <module>xchange-bibox</module>
         <module>xchange-binance</module>
-        <module>xchange-bitbay</module>
         <module>xchange-bitcoinaverage</module>
         <module>xchange-bitcoincore</module>
         <module>xchange-bitcoinde</module>
-        <module>xchange-bitcointoyou</module>
         <module>xchange-bitfinex</module>
         <module>xchange-bitflyer</module>
         <module>xchange-bitget</module>
@@ -77,7 +75,6 @@
         <module>xchange-enigma</module>
         <module>xchange-examples</module>
         <module>xchange-exmo</module>
-        <module>xchange-gateio</module>
         <module>xchange-gateio-v4</module>
         <module>xchange-gemini</module>
         <module>xchange-hitbtc</module>
@@ -91,7 +88,6 @@
         <module>xchange-luno</module>
         <module>xchange-mercadobitcoin</module>
         <module>xchange-mexc</module>
-        <module>xchange-okcoin</module>
         <module>xchange-okex</module>
         <module>xchange-openexchangerates</module>
         <module>xchange-paribu</module>
@@ -127,7 +123,6 @@
         <module>xchange-stream-kraken-v2</module>
         <module>xchange-stream-krakenfutures</module>
         <module>xchange-stream-kucoin</module>
-        <module>xchange-stream-okcoin</module>
         <module>xchange-stream-okex</module>
         <module>xchange-stream-poloniex2</module>
         <module>xchange-stream-service-core</module>
