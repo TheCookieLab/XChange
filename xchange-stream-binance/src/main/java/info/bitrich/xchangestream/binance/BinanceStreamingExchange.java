@@ -86,9 +86,12 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
   }
 
   /**
-   * Binance streaming API expects connections to multiple channels to be defined at connection time. To define the channels for this connection pass a `ProductSubscription` in at connection time.
+   * Binance streaming API expects connections to multiple channels to be defined at connection
+   * time. To define the channels for this connection pass a `ProductSubscription` in at connection
+   * time.
    *
-   * @param args A single `ProductSubscription` to define the subscriptions required to be available during this connection.
+   * @param args A single `ProductSubscription` to define the subscriptions required to be available
+   *     during this connection.
    * @return A completable which fulfils once connection is complete.
    */
   @Override
@@ -154,10 +157,16 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
             orderBookUpdateFrequencyParameter,
             realtimeOrderBookTicker,
             oderBookFetchLimitParameter);
-    streamingAccountService = new BinanceStreamingAccountService(userDataFutureStreamingService, userDataSpotStreamingService, isFuturesEnabled());
+    streamingAccountService =
+        new BinanceStreamingAccountService(
+            userDataFutureStreamingService, userDataSpotStreamingService, isFuturesEnabled());
     streamingTradeService =
         new BinanceStreamingTradeService(
-            this, userDataFutureStreamingService, userDataSpotStreamingService, userTradeStreamingService, getResilienceRegistries());
+            this,
+            userDataFutureStreamingService,
+            userDataSpotStreamingService,
+            userTradeStreamingService,
+            getResilienceRegistries());
 
     return Completable.concat(completables)
         .doOnComplete(
@@ -169,7 +178,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
   private Completable createAndConnectUserDataFutureService(String listenKey) {
     userDataFutureStreamingService =
         BinanceUserDataFutureStreamingService.create(
-            getStreamingBaseUri(), listenKey, exchangeSpecification);
+            getStreamingBaseUri() + "private/", listenKey, exchangeSpecification);
     applyStreamingSpecification(getExchangeSpecification(), userDataFutureStreamingService);
     return userDataFutureStreamingService
         .connect()
@@ -185,8 +194,9 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
                                   createAndConnectUserDataFutureService(newListenKey)
                                       .doOnComplete(
                                           () -> {
-                                            streamingAccountService.setUserDataFutureStreamingService(
-                                                userDataFutureStreamingService);
+                                            streamingAccountService
+                                                .setUserDataFutureStreamingService(
+                                                    userDataFutureStreamingService);
                                             streamingTradeService.setUserDataFutureStreamingService(
                                                 userDataFutureStreamingService);
                                           })));
@@ -298,12 +308,23 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
 
   protected BinanceStreamingService createStreamingService(
       ProductSubscription subscription, KlineSubscription klineSubscription) {
+    String routedPath = "";
+    if (isFuturesEnabled()) {
+      routedPath = "public/";
+      // market path
+      if (subscription.getOrderBook().isEmpty()
+          && (subscription.getTicker().isEmpty() | !realtimeOrderBookTicker)
+          && subscription.getTrades().isEmpty()) {
+        routedPath = "market/";
+      }
+    }
     // new chinese pair, like 币安人生usdt, need urlEncode
     String path =
         getStreamingBaseUri()
+            + routedPath
             + "stream?streams="
             + URLEncoder.encode(
-            buildSubscriptionStreams(subscription, klineSubscription), StandardCharsets.UTF_8);
+                buildSubscriptionStreams(subscription, klineSubscription), StandardCharsets.UTF_8);
 
     BinanceStreamingService streamingService =
         new BinanceStreamingService(

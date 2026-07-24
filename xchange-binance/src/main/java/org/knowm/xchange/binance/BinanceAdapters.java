@@ -186,8 +186,12 @@ public class BinanceAdapters {
   }
 
   public static Instrument adaptSymbol(String symbol, boolean isFuture) {
+    if (symbol.endsWith("_PERP")) {
+      //COIN-Margin instrument
+      String pair = symbol.substring(0, symbol.indexOf("_"));
+      return new FuturesContract(pair.substring(0, pair.indexOf("USD")) + "/USD/PERP");
+    }
     CurrencyPair currencyPair = toCurrencyPair(symbol);
-
     return (isFuture) ? new FuturesContract(currencyPair, "PERP") : currencyPair;
   }
 

@@ -54,7 +54,6 @@
         <module>xchange-bitso</module>
         <module>xchange-bitstamp</module>
         <module>xchange-bity</module>
-        <module>xchange-bitz</module>
         <module>xchange-blockchain</module>
         <module>xchange-btcc</module>
         <module>xchange-btcmarkets</module>
@@ -63,11 +62,8 @@
         <module>xchange-cexio</module>
         <module>xchange-coinbase</module>
         <module>xchange-coinbase-derivatives</module>
-        <module>xchange-coinbasepro</module>
         <module>xchange-coincheck</module>
-        <module>xchange-coindeal</module>
         <module>xchange-coinex</module>
-        <module>xchange-coinfloor</module>
         <module>xchange-coinjar</module>
         <module>xchange-coinmarketcap</module>
         <module>xchange-coinmate</module>
@@ -86,10 +82,8 @@
         <module>xchange-gemini</module>
         <module>xchange-hitbtc</module>
         <module>xchange-huobi</module>
-        <module>xchange-idex</module>
         <module>xchange-independentreserve</module>
         <module>xchange-itbit</module>
-        <module>xchange-koinim</module>
         <module>xchange-kraken</module>
         <module>xchange-krakenfutures</module>
         <module>xchange-kucoin</module>
@@ -117,7 +111,6 @@
         <module>xchange-stream-cexio</module>
         <module>xchange-stream-coinbase</module>
         <module>xchange-stream-coinbase-derivatives</module>
-        <module>xchange-stream-coinbasepro</module>
         <module>xchange-stream-coincheck</module>
         <module>xchange-stream-coinjar</module>
         <module>xchange-stream-coinmate</module>
@@ -140,7 +133,6 @@
         <module>xchange-stream-service-core</module>
         <module>xchange-stream-service-netty</module>
         <module>xchange-stream-service-pubnub</module>
-        <module>xchange-tradeogre</module>
         <module>xchange-truefx</module>
         <module>xchange-upbit</module>
         <module>xchange-vaultoro</module>
@@ -180,10 +172,9 @@
         <version.assertj>3.27.7</version.assertj>
         <version.bouncycastle>1.84</version.bouncycastle>
         <version.byte-buddy-agent>1.18.8</version.byte-buddy-agent>
-        <version.central-publishing-maven-plugin>0.10.0</version.central-publishing-maven-plugin>
+        <version.central-publishing-maven-plugin>0.11.0</version.central-publishing-maven-plugin>
         <version.commons.beanutils>1.11.0</version.commons.beanutils>
         <version.commons.lang3>3.20.0</version.commons.lang3>
-        <version.crypto>5.0.2</version.crypto>
         <version.fasterxml>2.21.3</version.fasterxml>
         <version.fasterxml-annotations>2.21</version.fasterxml-annotations>
         <version.findsecbugs-plugin>1.14.0</version.findsecbugs-plugin>
@@ -194,10 +185,10 @@
         <version.java-jwt>4.5.2</version.java-jwt>
         <version.json-path-assert>3.0.0</version.json-path-assert>
         <version.junit>5.12.2</version.junit>
-        <version.knowm.xchart>3.8.8</version.knowm.xchart>
+        <version.knowm.xchart>4.0.1</version.knowm.xchart>
         <version.lombok>1.18.46</version.lombok>
         <version.maven-compiler-plugin>3.15.0</version.maven-compiler-plugin>
-        <version.maven-enforcer-plugin>3.6.2</version.maven-enforcer-plugin>
+        <version.maven-enforcer-plugin>3.6.3</version.maven-enforcer-plugin>
         <version.maven-failsafe-plugin>3.5.5</version.maven-failsafe-plugin>
         <version.maven-gpg-plugin>3.2.8</version.maven-gpg-plugin>
         <version.maven-javadoc-plugin>3.12.0</version.maven-javadoc-plugin>
@@ -206,11 +197,11 @@
         <version.maven-source-plugin>3.4.0</version.maven-source-plugin>
         <version.maven-surefire-plugin>3.5.5</version.maven-surefire-plugin>
         <version.mockito>5.23.0</version.mockito>
-        <version.netty>4.2.7.Final</version.netty>
+        <version.netty>4.2.14.Final</version.netty>
         <version.pubnub>4.31.3</version.pubnub>
         <version.qos.logback>1.5.32</version.qos.logback>
         <version.reflections>0.10.2</version.reflections>
-        <version.resilience4j>1.7.1</version.resilience4j>
+        <version.resilience4j>2.4.0</version.resilience4j>
         <version.rxjava3>3.1.12</version.rxjava3>
         <version.slf4j>2.0.18</version.slf4j>
         <version.sortpom-maven-plugin>4.0.0</version.sortpom-maven-plugin>
@@ -408,12 +399,6 @@
                 <version>${version.slf4j}</version>
             </dependency>
             <dependency>
-                <groupId>org.web3j</groupId>
-                <artifactId>crypto</artifactId>
-                <version>${version.crypto}</version>
-            </dependency>
-
-            <dependency>
                 <groupId>org.wiremock</groupId>
                 <artifactId>wiremock</artifactId>
                 <version>${version.wiremock}</version>
@@ -549,7 +534,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Ensure compilation is done under Java 8 in all environments -->
+            <!-- Ensure compilation uses the configured Java release in all environments -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

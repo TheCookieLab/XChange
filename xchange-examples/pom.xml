@@ -89,11 +89,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-bitz</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <!-- XChange Blockchain support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -121,12 +116,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>xchange-coinbase</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <!-- XChange Coinbase Pro support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-coinbasepro</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- XChange Coincheck support -->
@@ -193,11 +182,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-koinim</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <!-- XChange Kraken support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
