@@ -38,6 +38,9 @@ mvnw.cmd
 *.swp
 *.swo
 
+# AI
+.agents/
+
 # externalized configuration file for keys
 exchangeConfiguration.json
 *secret.keys
