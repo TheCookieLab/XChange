@@ -10,6 +10,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.prediction.PredictionMarketContract;
 
 public class InstrumentDeserializer extends JsonDeserializer<Instrument> {
 
@@ -28,6 +29,10 @@ public class InstrumentDeserializer extends JsonDeserializer<Instrument> {
     final ObjectCodec oc = jsonParser.getCodec();
     final JsonNode node = oc.readTree(jsonParser);
     final String instrumentString = node.asText();
+    // PredictionMarketContract (PRED/provider/[eventId/]marketId/outcomeId/quote) is prefix-tagged
+    // and must be checked before slash-count conventions.
+    if (PredictionMarketContract.isWireString(instrumentString))
+      return new PredictionMarketContract(instrumentString);
     long count = instrumentString.chars().filter(ch -> ch == '/').count();
     // CurrencyPair (Base/Counter) i.e. BTC/USD
     if (count == 1) return new CurrencyPair(instrumentString);
