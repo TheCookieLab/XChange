@@ -81,6 +81,7 @@
         <module>xchange-huobi</module>
         <module>xchange-independentreserve</module>
         <module>xchange-itbit</module>
+        <module>xchange-kalshi</module>
         <module>xchange-kraken</module>
         <module>xchange-krakenfutures</module>
         <module>xchange-kucoin</module>
