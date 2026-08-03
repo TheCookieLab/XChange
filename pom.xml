@@ -121,6 +121,7 @@
         <module>xchange-stream-gemini-v2</module>
         <module>xchange-stream-hitbtc</module>
         <module>xchange-stream-huobi</module>
+        <module>xchange-stream-kalshi</module>
         <module>xchange-stream-kraken</module>
         <module>xchange-stream-kraken-v2</module>
         <module>xchange-stream-krakenfutures</module>

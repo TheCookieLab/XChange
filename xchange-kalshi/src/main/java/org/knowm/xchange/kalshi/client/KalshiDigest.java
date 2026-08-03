@@ -80,10 +80,13 @@ public final class KalshiDigest implements ParamsDigest {
   }
 
   /**
-   * Signs the canonical {@code timestamp + method + path} payload. Package-private seam for
-   * deterministic signature verification tests.
+   * Signs the canonical {@code timestamp + method + path} payload. Public so the WebSocket
+   * handshake in {@code xchange-stream-kalshi} reuses the exact REST signing rule.
+   *
+   * @param payload canonical {@code timestamp + method + path} string
+   * @return base64-encoded RSA-PSS signature
    */
-  String sign(String payload) {
+  public String sign(String payload) {
     try {
       Signature signature = Signature.getInstance("RSASSA-PSS");
       signature.setParameter(PSS_PARAMETERS);
