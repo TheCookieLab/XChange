@@ -127,6 +127,7 @@
         <module>xchange-stream-krakenfutures</module>
         <module>xchange-stream-kucoin</module>
         <module>xchange-stream-okex</module>
+        <module>xchange-stream-polymarket</module>
         <module>xchange-stream-poloniex2</module>
         <module>xchange-stream-service-core</module>
         <module>xchange-stream-service-netty</module>
