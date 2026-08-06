@@ -11,15 +11,15 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.util.List;
 import org.knowm.xchange.polymarket.dto.account.PolymarketApiCredentials;
 import org.knowm.xchange.polymarket.dto.account.PolymarketBalanceResponse;
 import org.knowm.xchange.polymarket.dto.trade.PolymarketCancelRequest;
 import org.knowm.xchange.polymarket.dto.trade.PolymarketCancelResponse;
 import org.knowm.xchange.polymarket.dto.trade.PolymarketOpenOrder;
 import org.knowm.xchange.polymarket.dto.trade.PolymarketOrderRequest;
+import org.knowm.xchange.polymarket.dto.trade.PolymarketOrdersResponse;
 import org.knowm.xchange.polymarket.dto.trade.PolymarketPostOrderResponse;
-import org.knowm.xchange.polymarket.dto.trade.PolymarketUserTrade;
+import org.knowm.xchange.polymarket.dto.trade.PolymarketTradesResponse;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 
@@ -69,15 +69,21 @@ public interface PolymarketClobAuthenticated {
       PolymarketCancelRequest request)
       throws IOException;
 
-  /** Lists open orders, optionally filtered by market or token; L2-signed. */
+  /**
+   * Lists open orders, optionally filtered by market or token; L2-signed. CLOB V2 returns a
+   * paginated envelope {@code {limit, next_cursor, count, data}}; pass {@code next_cursor} from
+   * the previous page and stop when it is blank (see
+   * https://docs.polymarket.com/api-reference/trade/get-user-orders).
+   */
   @GET
   @Path("data/orders")
-  List<PolymarketOpenOrder> getOrders(
+  PolymarketOrdersResponse getOrders(
       @HeaderParam("POLY_ADDRESS") String walletAddress,
       @HeaderParam("POLY_TIMESTAMP") SynchronizedValueFactory<Long> timestampSeconds,
       @HeaderParam("POLY_API_KEY") String apiKey,
       @HeaderParam("POLY_PASSPHRASE") String passphrase,
       @HeaderParam("POLY_SIGNATURE") ParamsDigest signature,
+      @QueryParam("next_cursor") String cursor,
       @QueryParam("market") String conditionId,
       @QueryParam("asset_id") String tokenId)
       throws IOException;
@@ -94,19 +100,26 @@ public interface PolymarketClobAuthenticated {
       @PathParam("orderId") String orderId)
       throws IOException;
 
-  /** Lists user fills, optionally filtered by condition id; L2-signed. */
+  /**
+   * Lists user fills, optionally filtered by condition id; L2-signed. CLOB V2 requires the
+   * account's {@code maker_address} and returns a paginated envelope {@code {limit, next_cursor,
+   * count, data}}; pass {@code next_cursor} from the previous page and stop at the {@code LTE=}
+   * sentinel or a blank cursor (see https://docs.polymarket.com/api-reference/trade/get-trades).
+   */
   @GET
-  @Path("trades")
-  List<PolymarketUserTrade> getUserTrades(
+  @Path("data/trades")
+  PolymarketTradesResponse getUserTrades(
       @HeaderParam("POLY_ADDRESS") String walletAddress,
       @HeaderParam("POLY_TIMESTAMP") SynchronizedValueFactory<Long> timestampSeconds,
       @HeaderParam("POLY_API_KEY") String apiKey,
       @HeaderParam("POLY_PASSPHRASE") String passphrase,
       @HeaderParam("POLY_SIGNATURE") ParamsDigest signature,
-      @QueryParam("market") String conditionId)
+      @QueryParam("maker_address") String makerAddress,
+      @QueryParam("market") String conditionId,
+      @QueryParam("next_cursor") String cursor)
       throws IOException;
 
-  /** Returns the collateral (USDC) balance in 6-decimal fixed-point; L2-signed. */
+  /** Returns the collateral (pUSD) balance in 6-decimal fixed-point; L2-signed. */
   @GET
   @Path("balance-allowance")
   PolymarketBalanceResponse getBalanceAllowance(

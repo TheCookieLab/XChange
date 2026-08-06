@@ -5,11 +5,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import java.math.BigDecimal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,13 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.exceptions.InstrumentNotValidException;
 import org.knowm.xchange.kalshi.service.KalshiMarketDataService;
 
-/** Wire-level tests for {@link KalshiMarketDataService} against canned Kalshi payloads. */
+/**
+ * Wire-level tests for {@link KalshiMarketDataService} against provider-current Kalshi payloads:
+ * fixed-point dollar prices with four decimals, fixed-point counts with two decimals, {@code
+ * price_ranges} on markets, missing optional fields, and additive unknown fields the DTOs must
+ * tolerate. The fixtures are pinned to the live schema so a future provider migration turns CI
+ * red rather than silently producing an empty book.
+ */
 class KalshiMarketDataServiceTest {
 
   private static final String TICKER = "KXBTC-25DEC31-T90000";
@@ -48,7 +54,7 @@ class KalshiMarketDataServiceTest {
   }
 
   @Test
-  void getTickerAdaptsCentsQuotes() throws Exception {
+  void getTickerAdaptsFixedPointQuotes() throws Exception {
     server.stubFor(
         get(urlEqualTo("/trade-api/v2/markets/" + TICKER))
             .willReturn(
@@ -58,14 +64,20 @@ class KalshiMarketDataServiceTest {
                         "{\"market\":{\"ticker\":\""
                             + TICKER
                             + "\",\"event_ticker\":\"KXBTC-25DEC31\",\"title\":\"BTC\","
-                            + "\"status\":\"open\",\"yes_bid\":53,\"yes_ask\":54,"
-                            + "\"last_price\":52,\"volume\":1000,\"open_interest\":500}}")));
+                            + "\"status\":\"active\",\"yes_bid_dollars\":\"0.4217\","
+                            + "\"yes_ask_dollars\":\"0.4400\",\"last_price_dollars\":\"0.4300\","
+                            + "\"volume_fp\":\"1000.50\",\"open_interest_fp\":\"500.00\","
+                            + "\"notional_value_dollars\":\"1.0000\","
+                            + "\"price_ranges\":[{\"start\":\"0.0000\",\"end\":\"0.1000\","
+                            + "\"step\":\"0.0010\"},{\"start\":\"0.1000\",\"end\":\"0.9000\","
+                            + "\"step\":\"0.0100\"},{\"start\":\"0.9000\",\"end\":\"1.0000\","
+                            + "\"step\":\"0.0010\"}],\"future_field\":\"tolerated\"}}")));
 
     Ticker ticker = service.getTicker(KalshiAdapters.contractForTicker(TICKER));
-    assertEquals(new BigDecimal("0.53"), ticker.getBid());
-    assertEquals(new BigDecimal("0.54"), ticker.getAsk());
-    assertEquals(new BigDecimal("0.52"), ticker.getLast());
-    assertEquals(new BigDecimal("1000"), ticker.getVolume());
+    assertThat(ticker.getBid()).isEqualByComparingTo("0.4217");
+    assertThat(ticker.getAsk()).isEqualByComparingTo("0.4400");
+    assertThat(ticker.getLast()).isEqualByComparingTo("0.4300");
+    assertThat(ticker.getVolume()).isEqualByComparingTo("1000.50");
   }
 
   @Test
@@ -75,33 +87,46 @@ class KalshiMarketDataServiceTest {
             .willReturn(
                 aResponse()
                     .withHeader("Content-Type", "application/json")
-                    .withBody("{\"orderbook\":{\"yes\":[[53,100],[50,10]],\"no\":[[45,80]]}}")));
+                    .withBody(
+                        "{\"orderbook_fp\":{\"yes_dollars\":[[\"0.5300\",\"100.00\"],"
+                            + "[\"0.5000\",\"10.00\"]],\"no_dollars\":[[\"0.4500\",\"80.00\"]]},"
+                            + "\"future_field\":\"tolerated\"}}")));
 
     OrderBook book = service.getOrderBook(KalshiAdapters.contractForTicker(TICKER));
-    assertEquals(2, book.getBids().size());
-    assertEquals(1, book.getAsks().size());
-    assertEquals(new BigDecimal("0.53"), book.getBids().get(0).getLimitPrice());
-    assertEquals(new BigDecimal("0.55"), book.getAsks().get(0).getLimitPrice());
+    assertThat(book.getBids()).hasSize(2);
+    assertThat(book.getAsks()).hasSize(1);
+    assertThat(book.getBids().get(0).getLimitPrice()).isEqualByComparingTo("0.5300");
+    assertThat(book.getBids().get(1).getLimitPrice()).isEqualByComparingTo("0.5000");
+    assertThat(book.getAsks().get(0).getLimitPrice()).isEqualByComparingTo("0.5500");
+    assertThat(book.getAsks().get(0).getOriginalAmount()).isEqualByComparingTo("80.00");
   }
 
   @Test
-  void getTradesMapsNoTakerToAskAggressor() throws Exception {
+  void getTradesMapsAskTakerToAskAggressor() throws Exception {
     server.stubFor(
         get(urlPathEqualTo("/trade-api/v2/markets/trades"))
             .willReturn(
                 aResponse()
                     .withHeader("Content-Type", "application/json")
                     .withBody(
-                        "{\"trades\":[{\"trade_id\":\"t-1\",\"ticker\":\""
+                        "{\"trades\":["
+                            + "{\"trade_id\":\"t-1\",\"ticker\":\""
                             + TICKER
-                            + "\",\"count\":5,\"yes_price\":53,\"taker_side\":\"no\","
-                            + "\"created_time\":\"2026-01-01T00:00:00Z\"}],\"cursor\":\"\"}")));
+                            + "\",\"count_fp\":\"5.50\",\"yes_price_dollars\":\"0.5300\","
+                            + "\"taker_book_side\":\"ask\",\"created_time\":\"2026-01-01T00:00:00Z\"},"
+                            + "{\"trade_id\":\"t-2\",\"ticker\":\""
+                            + TICKER
+                            + "\",\"count_fp\":\"13.50\",\"yes_price_dollars\":\"0.4217\","
+                            + "\"taker_book_side\":\"bid\"}],\"cursor\":\"\"}")));
 
     Trades trades = service.getTrades(KalshiAdapters.contractForTicker(TICKER));
-    assertEquals(1, trades.getTrades().size());
+    assertEquals(2, trades.getTrades().size());
     assertEquals(OrderType.ASK, trades.getTrades().get(0).getType());
-    assertEquals(new BigDecimal("0.53"), trades.getTrades().get(0).getPrice());
+    assertThat(trades.getTrades().get(0).getPrice()).isEqualByComparingTo("0.5300");
+    assertThat(trades.getTrades().get(0).getOriginalAmount()).isEqualByComparingTo("5.50");
     assertEquals("t-1", trades.getTrades().get(0).getId());
+    assertEquals(OrderType.BID, trades.getTrades().get(1).getType());
+    assertThat(trades.getTrades().get(1).getPrice()).isEqualByComparingTo("0.4217");
   }
 
   @Test

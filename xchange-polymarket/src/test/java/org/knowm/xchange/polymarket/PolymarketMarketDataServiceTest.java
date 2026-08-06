@@ -30,15 +30,16 @@ class PolymarketMarketDataServiceTest {
 
   private static final String CONDITION_ID = "0xdd22472e";
   private static final String TOKEN_ID = "713210456792522125";
+  private static final String OTHER_TOKEN_ID = "1041735572147445375";
   private static final PredictionMarketContract CONTRACT =
-      new PredictionMarketContract("polymarket", null, CONDITION_ID, TOKEN_ID, Currency.USD);
+      new PredictionMarketContract("polymarket", null, CONDITION_ID, TOKEN_ID, Currency.PUSD);
 
   private static final String BOOK_BODY =
       "{\"market\":\""
           + CONDITION_ID
           + "\",\"asset_id\":\""
           + TOKEN_ID
-          + "\",\"timestamp\":\"1754230000000\",\"hash\":\"0x\","
+          + "\",\"timestamp\":\"1754230000000\",\"hash\":\"0x\",\"neg_risk\":false,"
           + "\"bids\":[{\"price\":\"0.55\",\"size\":\"100\"},{\"price\":\"0.56\",\"size\":\"50\"}],"
           + "\"asks\":[{\"price\":\"0.60\",\"size\":\"70\"},{\"price\":\"0.59\",\"size\":\"80\"}]}";
 
@@ -115,6 +116,40 @@ class PolymarketMarketDataServiceTest {
     assertEquals(OrderType.ASK, trades.getTrades().get(0).getType());
     assertEquals(CONTRACT, trades.getTrades().get(0).getInstrument());
     assertEquals(new Date(1754230000L * 1000L), trades.getTrades().get(0).getTimestamp());
+  }
+
+  @Test
+  void tradesFilterRowsToTheRequestedOutcomeToken() throws Exception {
+    // The Data API filters by condition and returns rows for BOTH outcome tokens of the market.
+    server.stubFor(
+        get(urlPathEqualTo("/trades"))
+            .withQueryParam("market", equalTo(CONDITION_ID))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "[{\"proxyWallet\":\"0x\",\"side\":\"SELL\",\"asset\":\""
+                            + TOKEN_ID
+                            + "\",\"conditionId\":\""
+                            + CONDITION_ID
+                            + "\",\"size\":3,\"price\":0.56,\"timestamp\":1754230000,"
+                            + "\"title\":\"t\",\"outcome\":\"Yes\",\"outcomeIndex\":0,"
+                            + "\"transactionHash\":\"0xyes\"},"
+                            + "{\"proxyWallet\":\"0x\",\"side\":\"BUY\",\"asset\":\""
+                            + OTHER_TOKEN_ID
+                            + "\",\"conditionId\":\""
+                            + CONDITION_ID
+                            + "\",\"size\":7,\"price\":0.44,\"timestamp\":1754230001,"
+                            + "\"title\":\"t\",\"outcome\":\"No\",\"outcomeIndex\":1,"
+                            + "\"transactionHash\":\"0xno\"}]")));
+
+    Trades trades = service.getTrades(CONTRACT);
+    assertEquals(
+        1,
+        trades.getTrades().size(),
+        "rows for the other outcome token of the same condition must be dropped");
+    assertEquals(CONTRACT, trades.getTrades().get(0).getInstrument());
+    assertEquals("0xyes", trades.getTrades().get(0).getId());
   }
 
   @Test

@@ -9,15 +9,13 @@ import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
-import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kalshi.KalshiAdapters;
 
 /**
- * Authenticated Kalshi user streams (fills and order-state updates). Both require the exchange to
- * be configured with the Kalshi API key id ({@code apiKey}) and RSA private key ({@code
- * secretKey}); without them the methods throw {@link ExchangeSecurityException} before any
- * subscription is attempted.
+ * Authenticated Kalshi user streams (fills and order-state updates). Credentials are mandatory
+ * for every Kalshi WebSocket session and enforced at {@link KalshiStreamingService} construction,
+ * so no per-call guard is needed here.
  */
 public class KalshiStreamingTradeService implements StreamingTradeService {
 
@@ -30,7 +28,6 @@ public class KalshiStreamingTradeService implements StreamingTradeService {
 
   @Override
   public Observable<UserTrade> getUserTrades(Instrument instrument, Object... args) {
-    requireCredentials();
     String ticker = KalshiAdapters.marketTicker(instrument);
     return service
         .subscribeChannel(KalshiStreamingService.CHANNEL_FILL, ticker)
@@ -42,7 +39,6 @@ public class KalshiStreamingTradeService implements StreamingTradeService {
 
   @Override
   public Observable<Order> getOrderChanges(Instrument instrument, Object... args) {
-    requireCredentials();
     String ticker = KalshiAdapters.marketTicker(instrument);
     return service
         .subscribeChannel(KalshiStreamingService.CHANNEL_USER_ORDER, ticker)
@@ -51,12 +47,5 @@ public class KalshiStreamingTradeService implements StreamingTradeService {
                 (Order)
                     KalshiStreamingAdapters.adaptUserOrder(
                         mapper.treeToValue(node.path("msg"), KalshiWsUserOrder.class)));
-  }
-
-  private void requireCredentials() {
-    if (!service.hasCredentials()) {
-      throw new ExchangeSecurityException(
-          "Kalshi user streams require the apiKey and RSA private key (secretKey) credentials");
-    }
   }
 }

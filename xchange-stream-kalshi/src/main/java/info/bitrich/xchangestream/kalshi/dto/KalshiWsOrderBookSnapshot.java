@@ -6,8 +6,9 @@ import java.util.List;
 
 /**
  * Kalshi WebSocket {@code orderbook_snapshot} message payload: the complete aggregated book for
- * one market. Price levels are {@code [price_dollars, contract_count_fp]} string pairs, e.g.
- * {@code ["0.0800", "300.00"]}.
+ * one market. The module subscribes with {@code use_yes_price: true}, so both sides arrive on the
+ * unified yes-leg price scale. Price levels are {@code [price_dollars, contract_count_fp]} string
+ * pairs, e.g. {@code ["0.0800", "300.00"]}.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record KalshiWsOrderBookSnapshot(

@@ -1,8 +1,6 @@
 package info.bitrich.xchangestream.kalshi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,13 +19,13 @@ import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
-import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.kalshi.client.KalshiDigest;
 import org.knowm.xchange.prediction.PredictionMarketContract;
 
 /**
  * Authenticated user-stream tests for {@link KalshiStreamingTradeService}: fill and order-update
- * mapping plus the credentials guard, without a live WebSocket.
+ * mapping, without a live WebSocket. Credentials are mandatory at {@link KalshiStreamingService}
+ * construction, so every fake session carries them.
  */
 class KalshiStreamingTradeServiceTest {
 
@@ -38,16 +36,13 @@ class KalshiStreamingTradeServiceTest {
 
   private static KalshiDigest digest;
 
-  /** Feeds scripted messages; optionally carries credentials. */
+  /** Feeds scripted messages through the channel instead of a socket. */
   private static final class FakeService extends KalshiStreamingService {
     private final List<JsonNode> scripted;
     private final List<String> subscriptions = new ArrayList<>();
 
-    FakeService(List<JsonNode> scripted, boolean withCredentials) {
-      super(
-          "wss://stream.test/ws",
-          withCredentials ? "key-id" : null,
-          withCredentials ? digest : null);
+    FakeService(List<JsonNode> scripted) {
+      super("wss://stream.test/ws", "key-id", digest);
       this.scripted = scripted;
     }
 
@@ -71,15 +66,14 @@ class KalshiStreamingTradeServiceTest {
   }
 
   @Test
-  void userFillsMapThroughTheLegacyNoComplementRule() throws Exception {
+  void userFillsMapThroughTheBookSideDirectionRule() throws Exception {
     FakeService fake =
         new FakeService(
             List.of(
                 MAPPER.readTree(
                     fillJson("yes", "buy", "0.750", "278.00")),
                 MAPPER.readTree(
-                    fillJson("no", "buy", "0.250", "10.00"))),
-            true);
+                    fillJson("no", "buy", "0.250", "10.00"))));
     KalshiStreamingTradeService service = new KalshiStreamingTradeService(fake);
 
     List<UserTrade> fills = service.getUserTrades(CONTRACT).toList().blockingGet();
@@ -96,7 +90,7 @@ class KalshiStreamingTradeServiceTest {
     assertEquals(new BigDecimal("1.50"), buyYes.getFeeAmount());
     assertEquals(Currency.USD, buyYes.getFeeCurrency());
     assertEquals(new Date(1671899397000L), buyYes.getTimestamp());
-    // RULE_LEGACY_NO_COMPLEMENT: buying NO reads as selling YES at the YES price.
+    // RULE_BOOK_SIDE_DIRECTION: buying NO reads as selling YES at the YES price.
     UserTrade buyNo = fills.get(1);
     assertEquals(OrderType.ASK, buyNo.getType());
     assertEquals(new BigDecimal("0.250"), buyNo.getPrice());
@@ -110,8 +104,7 @@ class KalshiStreamingTradeServiceTest {
                 MAPPER.readTree(
                     userOrderJson("resting", "ask", "0.3500", "4.00", "10.00")),
                 MAPPER.readTree(
-                    userOrderJson("executed", "bid", "0.6100", "10.00", "10.00"))),
-            true);
+                    userOrderJson("executed", "bid", "0.6100", "10.00", "10.00"))));
     KalshiStreamingTradeService service = new KalshiStreamingTradeService(fake);
 
     List<LimitOrder> orders =
@@ -134,18 +127,6 @@ class KalshiStreamingTradeServiceTest {
     assertEquals(new Date(1733047200000L), resting.getTimestamp());
     assertEquals(OrderStatus.FILLED, orders.get(1).getStatus());
     assertEquals(OrderType.BID, orders.get(1).getType());
-  }
-
-  @Test
-  void userStreamsRequireCredentialsBeforeSubscribing() {
-    FakeService fake = new FakeService(List.of(), false);
-    KalshiStreamingTradeService service = new KalshiStreamingTradeService(fake);
-
-    ExchangeSecurityException fillsError =
-        assertThrows(ExchangeSecurityException.class, () -> service.getUserTrades(CONTRACT));
-    assertThrows(ExchangeSecurityException.class, () -> service.getOrderChanges(CONTRACT));
-    assertTrue(fillsError.getMessage().contains("apiKey"));
-    assertTrue(fake.subscriptions.isEmpty(), "no subscription may be attempted anonymously");
   }
 
   private static String fillJson(String side, String action, String yesPrice, String count) {

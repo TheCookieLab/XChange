@@ -14,7 +14,7 @@ import org.knowm.xchange.kalshi.dto.marketdata.KalshiMarketsResponse;
 import org.knowm.xchange.kalshi.dto.marketdata.KalshiOrderBookResponse;
 import org.knowm.xchange.kalshi.dto.marketdata.KalshiTradesResponse;
 
-/** Public Kalshi v2 REST endpoints. Prices on this surface are integer cents. */
+/** Public Kalshi v2 REST endpoints. Prices and counts are fixed-point strings. */
 @Path("trade-api/v2")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -42,7 +42,11 @@ public interface KalshiPublic {
   @Path("markets/{ticker}")
   KalshiMarketResponse getMarket(@PathParam("ticker") String ticker) throws IOException;
 
-  /** Returns the YES/NO order book for a market; price levels are integer cents. */
+  /**
+   * Returns the YES/NO order book for a market. Levels are fixed-point
+   * {@code [dollars, count_fp]} string pairs; only bids are returned (NO bids are YES asks at
+   * the complement price).
+   */
   @GET
   @Path("markets/{ticker}/orderbook")
   KalshiOrderBookResponse getOrderBook(

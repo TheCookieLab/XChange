@@ -53,11 +53,10 @@ public class PolymarketTradeService extends PolymarketTradeServiceRaw implements
       conditionId = PolymarketAdapters.conditionId(instrumentParams.getInstrument());
       tokenId = PolymarketAdapters.tokenId(instrumentParams.getInstrument());
     }
+    // /data/orders is already scoped to the user's open orders; no secondary lifecycle filter.
     List<LimitOrder> openOrders = new ArrayList<>();
     for (PolymarketOpenOrder order : getPolymarketOrders(conditionId, tokenId)) {
-      if ("live".equals(order.status())) {
-        openOrders.add(PolymarketAdapters.adaptOrder(order));
-      }
+      openOrders.add(PolymarketAdapters.adaptOrder(order));
     }
     return new OpenOrders(openOrders);
   }
@@ -112,7 +111,7 @@ public class PolymarketTradeService extends PolymarketTradeServiceRaw implements
     }
     List<UserTrade> trades = new ArrayList<>();
     for (PolymarketUserTrade trade : getPolymarketUserTrades(conditionId)) {
-      trades.add(PolymarketAdapters.adaptUserTrade(trade));
+      trades.addAll(PolymarketAdapters.adaptUserTrade(trade, walletAddress));
     }
     return new UserTrades(trades, Trades.TradeSortType.SortByTimestamp);
   }

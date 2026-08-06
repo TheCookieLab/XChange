@@ -25,8 +25,11 @@ import org.knowm.xchange.prediction.PredictionMarketContract;
  * ExchangeException} so the caller can resync over REST, as does a delta arriving before any
  * snapshot. A fresh snapshot always re-anchors the state (the server's documented recovery path).
  *
- * <p>The YES-side levels are generic bids; NO-side levels are generic asks at the complement price
- * {@code 1 - noPrice}, the dollar form of {@link KalshiAdapters#RULE_NO_BID_COMPLEMENT}.
+ * <p>The subscription requests {@code use_yes_price: true}, so the provider reports both sides on
+ * the unified yes-leg price scale: YES-side levels are generic bids; NO-side levels are generic
+ * asks at their reported yes-leg price (a no-side level historically reported as no-leg {@code
+ * 0.30} arrives as {@code 0.70}). No complement conversion is applied; the legacy
+ * {@link KalshiAdapters#RULE_NO_BID_COMPLEMENT} applies to the REST order-book surface only.
  */
 final class KalshiStreamingOrderBook {
 
@@ -90,8 +93,8 @@ final class KalshiStreamingOrderBook {
     bids.sort(Comparator.comparing(LimitOrder::getLimitPrice).reversed());
     List<LimitOrder> asks = new ArrayList<>();
     for (Map.Entry<BigDecimal, BigDecimal> level : noLevels.entrySet()) {
-      // RULE_NO_BID_COMPLEMENT (dollar form): a NO bid at p is a YES ask at 1 - p.
-      asks.add(limitOrder(OrderType.ASK, BigDecimal.ONE.subtract(level.getKey()), level.getValue()));
+      // use_yes_price: true — NO-side levels arrive on the unified yes-leg scale already.
+      asks.add(limitOrder(OrderType.ASK, level.getKey(), level.getValue()));
     }
     asks.sort(Comparator.comparing(LimitOrder::getLimitPrice));
     return new OrderBook(null, asks, bids);

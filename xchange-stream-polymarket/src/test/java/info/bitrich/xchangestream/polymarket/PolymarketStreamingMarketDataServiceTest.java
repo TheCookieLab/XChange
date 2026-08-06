@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.observers.TestObserver;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
@@ -23,6 +25,7 @@ import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.InstrumentNotValidException;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.polymarket.PolymarketAdapters;
 import org.knowm.xchange.prediction.PredictionMarketContract;
 
 /**
@@ -36,8 +39,12 @@ class PolymarketStreamingMarketDataServiceTest {
       "0x9b0f6b43e1a44c2fb2d3a1e5c7d8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6";
   private static final String TOKEN_ID =
       "104173557214744537570424345347209544585775842950109756851652855913015295508992";
+  private static final String TOKEN_ID_B =
+      "71321045679252212594626385532706912750332728571942532289631379312455583992563";
   private static final PredictionMarketContract CONTRACT =
-      new PredictionMarketContract("polymarket", null, CONDITION_ID, TOKEN_ID, Currency.USD);
+      new PredictionMarketContract("polymarket", null, CONDITION_ID, TOKEN_ID, PolymarketAdapters.COLLATERAL);
+  private static final PredictionMarketContract CONTRACT_B =
+      new PredictionMarketContract("polymarket", null, CONDITION_ID, TOKEN_ID_B, PolymarketAdapters.COLLATERAL);
   private static final ObjectMapper MAPPER = StreamingObjectMapperHelper.getObjectMapper();
 
   private static final String SNAPSHOT =
@@ -48,6 +55,29 @@ class PolymarketStreamingMarketDataServiceTest {
           + "\",\"timestamp\":\"1669149841000\",\"hash\":\"0xaaa\","
           + "\"bids\":[{\"price\":\"0.40\",\"size\":\"300\"},{\"price\":\"0.44\",\"size\":\"100\"}],"
           + "\"asks\":[{\"price\":\"0.60\",\"size\":\"250\"},{\"price\":\"0.56\",\"size\":\"150\"}]}";
+
+  private static final String SNAPSHOT_B =
+      "{\"event_type\":\"book\",\"market\":\""
+          + CONDITION_ID
+          + "\",\"asset_id\":\""
+          + TOKEN_ID_B
+          + "\",\"timestamp\":\"1669149841000\",\"hash\":\"0xbbb\","
+          + "\"bids\":[{\"price\":\"0.40\",\"size\":\"300\"},{\"price\":\"0.44\",\"size\":\"100\"}],"
+          + "\"asks\":[{\"price\":\"0.60\",\"size\":\"250\"},{\"price\":\"0.56\",\"size\":\"150\"}]}";
+
+  /** One wire event carrying level updates for two outcome tokens of the same market. */
+  private static final String BATCHED_PRICE_CHANGE =
+      "{\"event_type\":\"price_change\",\"market\":\""
+          + CONDITION_ID
+          + "\",\"timestamp\":\"1669149842000\",\"price_changes\":["
+          + "{\"asset_id\":\""
+          + TOKEN_ID
+          + "\",\"price\":\"0.44\",\"size\":\"0\",\"side\":\"BUY\",\"hash\":\"0xb\","
+          + "\"best_bid\":\"0.40\",\"best_ask\":\"0.56\"},"
+          + "{\"asset_id\":\""
+          + TOKEN_ID_B
+          + "\",\"price\":\"0.58\",\"size\":\"75\",\"side\":\"SELL\",\"hash\":\"0xc\","
+          + "\"best_bid\":\"0.50\",\"best_ask\":\"0.60\"}]}";
 
   /** Feeds scripted messages through the channel instead of a socket. */
   private static final class FakeService extends PolymarketStreamingService {
@@ -71,6 +101,42 @@ class PolymarketStreamingMarketDataServiceTest {
         out.add(String.valueOf(arg));
       }
       return out;
+    }
+  }
+
+  /**
+   * Registers channels with live emitters through the real dispatch path. The base {@code
+   * subscribeChannel} errors the subscriber before connect, so this mirrors its registration
+   * without the disconnected-state error; {@link #messageHandler} then routes inbound events
+   * through the real {@link PolymarketStreamingService#handleMessage} fan-out logic.
+   */
+  private static final class LiveService extends PolymarketStreamingService {
+    LiveService() {
+      super("wss://stream.test/ws/market", null, null, null);
+    }
+
+    @Override
+    public void sendMessage(String message) {
+      // No socket in tests; the base would only log "not open" warnings.
+    }
+
+    @Override
+    public Observable<JsonNode> subscribeChannel(String channelName, Object... args) {
+      String subscriptionUniqueId = getSubscriptionUniqueId(channelName, args);
+      return Observable.<JsonNode>create(
+              emitter ->
+                  channels.computeIfAbsent(
+                      subscriptionUniqueId,
+                      cid -> {
+                        Subscription subscription = new Subscription(emitter, channelName, args);
+                        try {
+                          sendMessage(getSubscribeMessage(channelName, args));
+                        } catch (IOException e) {
+                          emitter.onError(e);
+                        }
+                        return subscription;
+                      }))
+          .share();
     }
   }
 
@@ -242,6 +308,35 @@ class PolymarketStreamingMarketDataServiceTest {
     assertEquals(1, reanchored.getBids().size());
     assertEquals(new BigDecimal("0.50"), reanchored.getBids().get(0).getLimitPrice());
     assertTrue(reanchored.getAsks().isEmpty());
+  }
+
+  @Test
+  void batchedPriceChangeEventUpdatesBothOrderBooksWithoutError() throws Exception {
+    LiveService service = new LiveService();
+    PolymarketStreamingMarketDataService marketData =
+        new PolymarketStreamingMarketDataService(service);
+
+    TestObserver<OrderBook> bookA = marketData.getOrderBook(CONTRACT).test();
+    TestObserver<OrderBook> bookB = marketData.getOrderBook(CONTRACT_B).test();
+
+    service.messageHandler(SNAPSHOT);
+    service.messageHandler(SNAPSHOT_B);
+    // One wire event carrying changes for both tokens must fan out per asset: neither book may
+    // encounter the other token's change (previously the whole node was routed by its first asset
+    // and the second book threw, terminating the stream).
+    service.messageHandler(BATCHED_PRICE_CHANGE);
+
+    bookA.assertNoErrors().assertValueCount(2);
+    bookB.assertNoErrors().assertValueCount(2);
+    // Each book applied only its own asset's change: A's zero-size 0.44 bid was removed, B's
+    // absolute 0.58 ask (size 75) was inserted.
+    OrderBook updatedA = bookA.values().get(1);
+    assertEquals(new BigDecimal("0.40"), updatedA.getBids().get(0).getLimitPrice());
+    assertEquals(1, updatedA.getBids().size());
+    OrderBook updatedB = bookB.values().get(1);
+    assertEquals(new BigDecimal("0.58"), updatedB.getAsks().get(1).getLimitPrice());
+    assertEquals(new BigDecimal("75"), updatedB.getAsks().get(1).getOriginalAmount());
+    assertEquals(new Date(1669149842000L), updatedB.getTimeStamp());
   }
 
   @Test

@@ -1,7 +1,9 @@
 package info.bitrich.xchangestream.kalshi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,13 +19,14 @@ import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PSSParameterSpec;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.kalshi.client.KalshiDigest;
 
 /**
@@ -70,17 +73,35 @@ class KalshiStreamingServiceTest {
   }
 
   @Test
-  void subscribeFrameCarriesChannelAndMarketTicker() throws Exception {
-    CapturingService service = new CapturingService(null, null, () -> 0L);
+  void orderBookSubscribeFramePinsUseYesPriceExactly() throws Exception {
+    CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
     subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_ORDERBOOK, TICKER);
 
     assertEquals(1, service.sent.size());
     JsonNode frame = MAPPER.readTree(service.sent.get(0));
-    assertEquals(1, frame.path("id").asInt());
-    assertEquals("subscribe", frame.path("cmd").asText());
     assertEquals(
-        "orderbook_delta", frame.path("params").path("channels").get(0).asText());
-    assertEquals(TICKER, frame.path("params").path("market_tickers").get(0).asText());
+        MAPPER.readTree(
+            "{\"id\":1,\"cmd\":\"subscribe\",\"params\":{"
+                + "\"channels\":[\"orderbook_delta\"],"
+                + "\"market_tickers\":[\"KXSB-26\"],\"use_yes_price\":true}}"),
+        frame,
+        "order-book subscriptions must pin the unified yes-leg price scale explicitly");
+  }
+
+  @Test
+  void nonOrderBookSubscribeFramesOmitUseYesPrice() throws Exception {
+    CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
+    subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_TRADE, TICKER);
+
+    assertEquals(1, service.sent.size());
+    JsonNode frame = MAPPER.readTree(service.sent.get(0));
+    assertEquals(
+        MAPPER.readTree(
+            "{\"id\":1,\"cmd\":\"subscribe\",\"params\":{"
+                + "\"channels\":[\"trade\"],\"market_tickers\":[\"KXSB-26\"]}}"),
+        frame,
+        "non order-book channels must not carry the order-book pricing parameter");
+    assertFalse(frame.path("params").has("use_yes_price"));
   }
 
   @Test
@@ -91,6 +112,10 @@ class KalshiStreamingServiceTest {
     DefaultHttpHeaders headers = service.getCustomHeaders();
     assertEquals("test-key-id", headers.get("KALSHI-ACCESS-KEY"));
     assertEquals("1754230000000", headers.get("KALSHI-ACCESS-TIMESTAMP"));
+    assertEquals(
+        Set.of("KALSHI-ACCESS-KEY", "KALSHI-ACCESS-TIMESTAMP", "KALSHI-ACCESS-SIGNATURE"),
+        headers.names(),
+        "the authenticated handshake must always emit exactly the three Kalshi headers");
 
     Signature verifier = Signature.getInstance("RSASSA-PSS");
     verifier.setParameter(
@@ -104,14 +129,23 @@ class KalshiStreamingServiceTest {
   }
 
   @Test
-  void anonymousConnectionsSendNoAuthHeaders() {
-    CapturingService service = new CapturingService(null, null, () -> 0L);
-    assertTrue(service.getCustomHeaders().isEmpty());
+  void constructorRequiresBothCredentialHalves() {
+    ExchangeSecurityException missingKey =
+        assertThrows(
+            ExchangeSecurityException.class,
+            () -> new CapturingService(null, digest, () -> 0L));
+    assertTrue(missingKey.getMessage().contains("apiKey"));
+
+    ExchangeSecurityException missingDigest =
+        assertThrows(
+            ExchangeSecurityException.class,
+            () -> new CapturingService("test-key-id", null, () -> 0L));
+    assertTrue(missingDigest.getMessage().contains("secretKey"));
   }
 
   @Test
   void acknowledgementBindsSidToTheSubscription() throws Exception {
-    CapturingService service = new CapturingService(null, null, () -> 0L);
+    CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
     subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_ORDERBOOK, TICKER);
     service.messageHandler(
         "{\"id\":1,\"type\":\"subscribed\",\"msg\":{\"channel\":\"orderbook_delta\",\"sid\":7}}");
@@ -129,7 +163,7 @@ class KalshiStreamingServiceTest {
 
   @Test
   void subscriptionErrorConsumesThePendingRequest() throws Exception {
-    CapturingService service = new CapturingService(null, null, () -> 0L);
+    CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
     subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_FILL, TICKER);
     service.messageHandler(
         "{\"id\":1,\"type\":\"error\",\"msg\":{\"code\":12,\"msg\":\"not authorized\"}}");
@@ -144,7 +178,7 @@ class KalshiStreamingServiceTest {
 
   @Test
   void unsubscribeFrameCarriesTheServerSidOnlyAfterAcknowledgement() throws Exception {
-    CapturingService service = new CapturingService(null, null, () -> 0L);
+    CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
     subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_TRADE, TICKER);
 
     assertNull(
@@ -162,7 +196,7 @@ class KalshiStreamingServiceTest {
 
   @Test
   void resubscribeChannelsResendsFreshSubscribeFrames() throws Exception {
-    CapturingService service = new CapturingService(null, null, () -> 0L);
+    CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
     subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_ORDERBOOK, TICKER);
     subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_TICKER, TICKER);
     service.messageHandler(
@@ -176,7 +210,7 @@ class KalshiStreamingServiceTest {
     service.resubscribeChannels();
 
     assertEquals(4, service.sent.size());
-    Map<String, JsonNode> resubscribedByChannel = new HashMap<>();
+    Map<String, JsonNode> resubscribedByChannel = new ConcurrentHashMap<>();
     for (int i = 2; i < 4; i++) {
       JsonNode frame = MAPPER.readTree(service.sent.get(i));
       resubscribedByChannel.put(frame.path("params").path("channels").get(0).asText(), frame);
@@ -189,6 +223,10 @@ class KalshiStreamingServiceTest {
         "each live subscription gets a fresh request id");
     assertEquals(TICKER, bookFrame.path("params").path("market_tickers").get(0).asText());
     assertEquals(TICKER, tickerFrame.path("params").path("market_tickers").get(0).asText());
+    assertTrue(
+        bookFrame.path("params").path("use_yes_price").asBoolean(),
+        "resubscribed order-book frames must keep the pinned yes-leg pricing mode");
+    assertFalse(tickerFrame.path("params").has("use_yes_price"));
 
     // Fresh acknowledgements restore routing under the new sids.
     service.messageHandler(

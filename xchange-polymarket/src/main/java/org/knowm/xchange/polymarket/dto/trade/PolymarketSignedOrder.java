@@ -1,5 +1,6 @@
 package org.knowm.xchange.polymarket.dto.trade;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -9,6 +10,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * and {@code salt} a caller-controlled integer that scopes retry identity. Instances built by
  * {@code PolymarketAdapters.toSignedOrder} are unsigned; the trade service attaches the EIP-712
  * signature via {@link #withSignature(String)}.
+ *
+ * <p>{@link #negRisk()} is signing context, not wire data: it selects the EIP-712 verifying
+ * contract (standard CTF Exchange or NegRisk CTF Exchange) used by {@code
+ * PolymarketEip712Signer}. It is excluded from JSON serialization.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record PolymarketSignedOrder(
@@ -24,12 +29,13 @@ public record PolymarketSignedOrder(
     @JsonProperty("signatureType") Integer signatureType,
     @JsonProperty("metadata") String metadata,
     @JsonProperty("builder") String builder,
-    @JsonProperty("signature") String signature) {
+    @JsonProperty("signature") String signature,
+    @JsonIgnore Boolean negRisk) {
 
   /** Returns a copy with the EIP-712 signature attached. */
   public PolymarketSignedOrder withSignature(String signatureHex) {
     return new PolymarketSignedOrder(
         salt, maker, signer, tokenId, makerAmount, takerAmount, side, expiration, timestamp,
-        signatureType, metadata, builder, signatureHex);
+        signatureType, metadata, builder, signatureHex, negRisk);
   }
 }

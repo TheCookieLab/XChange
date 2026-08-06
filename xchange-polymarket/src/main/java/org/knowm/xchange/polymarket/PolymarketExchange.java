@@ -18,13 +18,16 @@ import org.knowm.xchange.prediction.PredictionMarketContract;
  * Data (trades/positions) APIs.
  *
  * <p>Instruments are {@link PredictionMarketContract}s whose market id is the condition id and
- * whose outcome id is the CLOB outcome-token id actually traded; outcome tokens are never silently
- * complemented (see {@code PolymarketAdapters}).
+ * whose outcome id is the CLOB outcome-token id actually traded, quoted in pUSD (Polymarket's
+ * native collateral token); outcome tokens are never silently complemented (see {@code
+ * PolymarketAdapters}). Negative-risk markets are fully supported: discovery records the market
+ * type and order signing selects the matching EIP-712 verifying contract.
  *
  * <p>Credential mapping on {@link ExchangeSpecification}: {@code userName} is the wallet address,
  * {@code apiKey}/{@code secretKey}/{@code password} are the L2 API key/secret/passphrase, and the
  * exchange-specific parameter {@link #PARAM_PRIVATE_KEY} holds the EOA private key (hex) used for
- * EIP-712 order signing and L1 credential derivation.
+ * EIP-712 order signing and L1 credential derivation. Only EOA signatures (type 0) are
+ * implemented; proxy, Gnosis Safe, and EIP-1271 wallet strategies are rejected before submission.
  */
 public class PolymarketExchange extends BaseExchange {
 
@@ -88,6 +91,6 @@ public class PolymarketExchange extends BaseExchange {
             .put(instrument, PolymarketAdapters.adaptMetadata(market));
       }
     }
-    exchangeMetaData.getCurrencies().put(Currency.USD, new CurrencyMetaData(6, null));
+    exchangeMetaData.getCurrencies().put(Currency.PUSD, new CurrencyMetaData(6, null));
   }
 }

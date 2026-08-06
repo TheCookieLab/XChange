@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import java.math.BigDecimal;
@@ -18,7 +19,9 @@ import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.polymarket.client.PolymarketTestCredentials;
 import org.knowm.xchange.polymarket.service.PolymarketAccountService;
 
-/** Wire-level test for {@link PolymarketAccountService}: micro-USDC becomes a USD wallet. */
+/**
+ * Wire-level test for {@link PolymarketAccountService}: micro-pUSD becomes a pUSD wallet.
+ */
 class PolymarketAccountServiceTest {
 
   private WireMockServer server;
@@ -59,7 +62,10 @@ class PolymarketAccountServiceTest {
     AccountInfo accountInfo = service.getAccountInfo();
     assertEquals(
         new BigDecimal("1.234567"),
-        accountInfo.getWallet().getBalance(Currency.USD).getAvailable());
+        accountInfo.getWallet().getBalance(Currency.PUSD).getAvailable());
+    assertTrue(
+        !accountInfo.getWallet().getBalances().containsKey(Currency.USD),
+        "collateral is pUSD, not USD");
 
     assertEquals(1, server.getAllServeEvents().size());
     PolymarketTestCredentials.assertL2Signature(

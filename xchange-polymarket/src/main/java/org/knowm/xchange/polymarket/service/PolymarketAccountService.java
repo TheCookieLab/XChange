@@ -6,7 +6,7 @@ import org.knowm.xchange.polymarket.PolymarketAdapters;
 import org.knowm.xchange.polymarket.PolymarketExchange;
 import org.knowm.xchange.service.account.AccountService;
 
-/** Generic account service for Polymarket; the single wallet holds USD (USDC) collateral. */
+/** Generic account service for Polymarket; the single wallet holds pUSD collateral. */
 public class PolymarketAccountService extends PolymarketAccountServiceRaw
     implements AccountService {
 

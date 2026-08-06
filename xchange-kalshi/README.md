@@ -32,15 +32,21 @@ bare form. Generic `CurrencyPair` calls are rejected with
 
 ## Side semantics
 
-Kalshi quotes event markets from the YES side; the adapters apply four named
-provider rules (see `KalshiAdapters`):
+Kalshi quotes event markets from the YES side with fixed-point wire values:
+prices are dollar strings with up to 4 decimals (`*_dollars`, e.g. `"0.4217"`)
+and contract counts are strings with up to 2 decimals (`*_fp`, e.g. `"13.50"`).
+The market's `price_ranges` bands define the valid price grid; the adapters
+apply four named provider rules (see `KalshiAdapters`):
 
 * `RULE_YES_LEG_ONLY` — generic BID places native `bid` (buy YES); generic ASK
   places native `ask` (sell YES).
 * `RULE_NO_BID_COMPLEMENT` — NO-side book bids are exposed as YES asks at the
   complement price `1 - noPrice` dollars.
-* `RULE_LEGACY_NO_COMPLEMENT` — legacy order/fill reads convert `buy NO at q` to
-  ASK YES at `1 - q` and `sell NO` to BID YES at `1 - q`.
+* `RULE_BOOK_SIDE_DIRECTION` — order/fill/trade reads derive direction from the
+  canonical `book_side`: `bid` maps to generic BID (buy YES), `ask` maps to
+  generic ASK (sell YES). Prices are always read from `yes_price_dollars`,
+  which the provider quotes on the YES leg for every direction — a `buy NO at
+  q` record reads as an ASK YES at `1 - q`.
 * `RULE_SIDE_NO_REJECTED` — the explicit `KalshiOrderFlags.SIDE_NO` flag is
   rejected with `NotAvailableFromExchangeException`; NO-leg placement is never
   silently complemented into a YES order.
@@ -55,6 +61,20 @@ identity is the caller's. `KalshiOrderFlags` maps to native fields:
 `FILL_OR_KILL` / `IMMEDIATE_OR_CANCEL` select the time-in-force, and
 `POST_ONLY`, `CANCEL_ON_PAUSE`, `REDUCE_ONLY` pass through. Cancellation
 requires `CancelOrderByIdParams` with the provider order id.
+
+Submitted limit prices and counts are preserved verbatim — never rounded. A
+price with more than 4 decimal places (or outside `(0, 1)` dollars) or a count
+with more than 2 decimal places (or non-positive) is rejected with
+`IllegalArgumentException` before any HTTP call, since rounding would place a
+materially different instruction than the user requested.
+
+## Pagination
+
+Generic collection reads — `getOpenOrders`, `getTradeHistory`,
+`getOpenPositions`, and `getAllOpenKalshiMarkets` — follow the provider's
+`cursor` pagination to exhaustion (bounded to 100 pages, de-duplicated by id)
+and fail loudly instead of silently returning a truncated account or catalog.
+`remoteInit()` registers only markets whose lifecycle status is `active`.
 
 ## Sample
 

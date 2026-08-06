@@ -12,7 +12,7 @@ public class KalshiAccountServiceRaw extends KalshiBaseService {
     super(exchange);
   }
 
-  /** Portfolio balance in integer cents. */
+  /** Portfolio balance; the canonical amount is a fixed-point dollar string. */
   public KalshiBalanceResponse getKalshiBalance() throws IOException {
     return kalshiAuthenticated.getBalance(apiKey, timestampFactory(), digest);
   }

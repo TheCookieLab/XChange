@@ -3,6 +3,7 @@ package org.knowm.xchange.prediction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.io.Serializable;
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Objects;
 import org.knowm.xchange.currency.Currency;
@@ -112,7 +113,10 @@ public class PredictionMarketContract extends Instrument
    */
   @JsonCreator
   public PredictionMarketContract(final String symbol) {
-    String[] parts = symbol == null ? new String[0] : symbol.split("/");
+    // split("/", -1) keeps trailing empty segments so malformed wire strings such as
+    // "PRED/kalshi/m/YES/USD/" are rejected by requireSegment instead of being silently
+    // canonicalized into the valid 5-segment form.
+    String[] parts = symbol == null ? new String[0] : symbol.split("/", -1);
     if ((parts.length != 5 && parts.length != 6) || !WIRE_PREFIX.equals(parts[0])) {
       throw new IllegalArgumentException(
           "Could not parse prediction market contract from '" + symbol + "'");
@@ -190,9 +194,14 @@ public class PredictionMarketContract extends Instrument
    * Prediction outcomes have no base currency; the traded unit is an outcome share, not a currency
    * amount.
    *
+   * <p>This contractually mirrors the {@link Instrument#getBase()} abstraction, which is explicitly
+   * nullable for instruments whose traded unit is not a currency amount. Generic consumers must
+   * check for {@code null} instead of assuming a non-null base.
+   *
    * @return {@code null} always
    */
   @Override
+  @Nullable
   public Currency getBase() {
     return null;
   }

@@ -51,7 +51,7 @@ class KalshiExchangeTest {
                     .withHeader("Content-Type", "application/json")
                     .withBody(
                         "{\"markets\":["
-                            + marketJson("KXBTC-25DEC31-T90000", "KXBTC-25DEC31", "open")
+                            + marketJson("KXBTC-25DEC31-T90000", "KXBTC-25DEC31", "active")
                             + ","
                             + marketJson("KXETH-25DEC31-T4000", "KXETH-25DEC31", "closed")
                             + "],\"cursor\":\"page-2\"}")));
@@ -63,7 +63,7 @@ class KalshiExchangeTest {
                     .withHeader("Content-Type", "application/json")
                     .withBody(
                         "{\"markets\":["
-                            + marketJson("KXFED-26JAN28-H25", "KXFED-26JAN28", "open")
+                            + marketJson("KXFED-26JAN28-H25", "KXFED-26JAN28", "active")
                             + "],\"cursor\":\"\"}")));
 
     exchange.remoteInit();
@@ -91,7 +91,10 @@ class KalshiExchangeTest {
         + eventTicker
         + "\",\"title\":\"t\",\"status\":\""
         + status
-        + "\",\"yes_bid\":53,\"yes_ask\":54,\"last_price\":52,\"volume\":1000,"
-        + "\"open_interest\":500}";
+        + "\",\"yes_bid_dollars\":\"0.5300\",\"yes_ask_dollars\":\"0.5400\","
+        + "\"last_price_dollars\":\"0.5200\",\"volume_fp\":\"1000.00\","
+        + "\"open_interest_fp\":\"500.00\",\"notional_value_dollars\":\"1.0000\","
+        + "\"price_ranges\":[{\"start\":\"0.0000\",\"end\":\"1.0000\",\"step\":\"0.0100\"}],"
+        + "\"future_field\":\"tolerated\"}";
   }
 }

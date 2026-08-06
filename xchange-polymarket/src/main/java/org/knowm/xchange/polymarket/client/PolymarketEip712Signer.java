@@ -30,8 +30,22 @@ import org.knowm.xchange.polymarket.dto.trade.PolymarketSignedOrder;
  *   <li>{@code Order(uint256 salt, address maker, address signer, uint256 tokenId, uint256
  *       makerAmount, uint256 takerAmount, uint8 side, uint8 signatureType, uint256 timestamp,
  *       bytes32 metadata, bytes32 builder)} under domain {@code Polymarket CTF Exchange} v2 on
- *       chain 137 (order placement).
+ *       chain 137 (order placement, contract CTF Exchange V2).
  * </ul>
+ *
+ * <p>Standard and negative-risk markets settle on two different deployments of the same exchange
+ * code, so the order domain differs only in the {@code verifyingContract}: {@link
+ * #CTF_EXCHANGE_ADDRESS} for standard markets, {@link #NEG_RISK_CTF_EXCHANGE_ADDRESS} for
+ * negative-risk markets (both "Polymarket CTF Exchange" v2; addresses from
+ * https://docs.polymarket.com/resources/contracts and https://github.com/Polymarket/ctf-exchange-v2).
+ * The signer reads {@code PolymarketSignedOrder.negRisk()} to select the domain, so the market
+ * type is honored from order construction onward.
+ *
+ * <p>Signature types follow the exchange enum (https://github.com/Polymarket/ctf-exchange-v2,
+ * {@code Structs.sol}): 0 EOA, 1 POLY_PROXY, 2 POLY_GNOSIS_SAFE, 3 POLY_1271. This signer
+ * implements only {@link #SIGNATURE_TYPE_EOA}; the module rejects the other strategies at order
+ * construction (see {@code PolymarketAdapters.toSignedOrder}) rather than submitting an
+ * unsupported signature.
  *
  * <p>Private-key material never appears in exception messages or logs (redaction is covered by
  * tests).
@@ -42,11 +56,33 @@ public final class PolymarketEip712Signer {
   public static final String CLOB_AUTH_MESSAGE =
       "This message attests that I control the given wallet";
 
-  /** Verifying contract of the standard-market exchange domain (negative risk unsupported). */
+  /**
+   * Verifying contract of the standard-market exchange domain. CTF Exchange V2 deployment; source
+   * of truth https://docs.polymarket.com/resources/contracts and
+   * https://github.com/Polymarket/ctf-exchange-v2#readme.
+   */
   public static final String CTF_EXCHANGE_ADDRESS = "0xE111180000d2663C0091e4f400237545B87B996B";
 
-  /** Signature type value for a plain EOA signer. */
+  /**
+   * Verifying contract of the negative-risk exchange domain. NegRisk CTF Exchange V2 deployment
+   * (same exchange code, neg-risk adapter configuration); source of truth
+   * https://docs.polymarket.com/resources/contracts and
+   * https://github.com/Polymarket/ctf-exchange-v2#readme.
+   */
+  public static final String NEG_RISK_CTF_EXCHANGE_ADDRESS =
+      "0xe2222d279d744050d28e00520010520000310F59";
+
+  /** Signature type value for a plain EOA signer (the only strategy this module implements). */
   public static final int SIGNATURE_TYPE_EOA = 0;
+
+  /** Signature type for EOAs owning Polymarket proxy wallets; not implemented, rejected early. */
+  public static final int SIGNATURE_TYPE_POLY_PROXY = 1;
+
+  /** Signature type for EOAs owning Polymarket Gnosis safes; not implemented, rejected early. */
+  public static final int SIGNATURE_TYPE_POLY_GNOSIS_SAFE = 2;
+
+  /** Signature type for EIP-1271 smart-contract wallets (e.g. deposit wallets); not implemented. */
+  public static final int SIGNATURE_TYPE_POLY_1271 = 3;
 
   private static final ECDomainParameters SECP256K1;
   private static final BigInteger HALF_N;
@@ -82,6 +118,12 @@ public final class PolymarketEip712Signer {
           keccak256("Polymarket CTF Exchange".getBytes(StandardCharsets.UTF_8)),
           keccak256("2".getBytes(StandardCharsets.UTF_8)),
           addressWord(CTF_EXCHANGE_ADDRESS));
+  private static final byte[] NEG_RISK_ORDER_DOMAIN_SEPARATOR =
+      domainSeparator(
+          DOMAIN_TYPEHASH,
+          keccak256("Polymarket CTF Exchange".getBytes(StandardCharsets.UTF_8)),
+          keccak256("2".getBytes(StandardCharsets.UTF_8)),
+          addressWord(NEG_RISK_CTF_EXCHANGE_ADDRESS));
 
   static {
     X9ECParameters params = SECNamedCurves.getByName("secp256k1");
@@ -152,7 +194,8 @@ public final class PolymarketEip712Signer {
   }
 
   /**
-   * Signs an unsigned order built by {@code PolymarketAdapters}.
+   * Signs an unsigned order built by {@code PolymarketAdapters}. The EIP-712 domain (standard vs
+   * negative-risk verifying contract) is selected from {@code PolymarketSignedOrder.negRisk()}.
    *
    * @param order order fields as they will be submitted (sans signature)
    * @return {@code 0x}-prefixed EIP-712 signature (r ‖ s ‖ v)
@@ -178,7 +221,44 @@ public final class PolymarketEip712Signer {
                 word(new BigInteger(order.timestamp())),
                 bytes32(order.metadata()),
                 bytes32(order.builder())));
-    return eip712Digest(ORDER_DOMAIN_SEPARATOR, structHash);
+    return eip712Digest(orderDomainSeparator(order), structHash);
+  }
+
+  /**
+   * Hex EIP-712 order typehash; package-private test seam pinned against the published contract
+   * constant in CTF Exchange V2 {@code Structs.sol}.
+   */
+  static String orderTypehashHex() {
+    return "0x" + toHex(ORDER_TYPEHASH);
+  }
+
+  private static byte[] orderDomainSeparator(PolymarketSignedOrder order) {
+    return Boolean.TRUE.equals(order.negRisk()) ? NEG_RISK_ORDER_DOMAIN_SEPARATOR
+        : ORDER_DOMAIN_SEPARATOR;
+  }
+
+  /**
+   * Hex EIP-712 digest of an order for the domain selected by {@code
+   * PolymarketSignedOrder.negRisk()}; package-private test seam pinned by golden-vector tests.
+   */
+  static String orderDigestHex(PolymarketSignedOrder order) {
+    return "0x" + toHex(orderDigest(order));
+  }
+
+  /**
+   * Hex EIP-712 digest of the ClobAuth attestation for a given wallet; package-private test seam
+   * pinned by golden-vector tests.
+   */
+  static String clobAuthDigestHex(String address, String timestampSeconds, BigInteger nonce) {
+    byte[] structHash =
+        keccak256(
+            concat(
+                CLOB_AUTH_TYPEHASH,
+                addressWord(address),
+                keccak256(timestampSeconds.getBytes(StandardCharsets.UTF_8)),
+                word(nonce),
+                keccak256(CLOB_AUTH_MESSAGE.getBytes(StandardCharsets.UTF_8))));
+    return "0x" + toHex(eip712Digest(AUTH_DOMAIN_SEPARATOR, structHash));
   }
 
   private String sign(byte[] domainSeparator, byte[] structHash) {

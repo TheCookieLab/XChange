@@ -53,7 +53,9 @@ public class KalshiExchange extends BaseExchange {
     exchangeMetaData.getInstruments().clear();
     exchangeMetaData.getCurrencies().clear();
     for (KalshiMarket market : markets) {
-      if (!"open".equalsIgnoreCase(market.status())) {
+      // Tradable markets report lifecycle status "active" (the "open" status filter is a query
+      // vocabulary, not the returned status value).
+      if (!"active".equalsIgnoreCase(market.status())) {
         continue;
       }
       Instrument instrument = KalshiAdapters.adaptContract(market);

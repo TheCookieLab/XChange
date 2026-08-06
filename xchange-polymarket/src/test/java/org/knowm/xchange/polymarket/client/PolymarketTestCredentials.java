@@ -89,7 +89,10 @@ public final class PolymarketTestCredentials {
             order.get("signatureType").asInt(),
             order.hasNonNull("metadata") ? order.get("metadata").asText() : null,
             order.get("builder").asText(),
-            null);
+            null,
+            // The neg-risk flag is signing context, not wire data: wire tests sign standard
+            // markets, so the rebuilt order uses the standard domain.
+            Boolean.FALSE);
     String recovered =
         PolymarketEip712Signer.recoverOrderSigner(unsigned, order.get("signature").asText());
     assertEquals(

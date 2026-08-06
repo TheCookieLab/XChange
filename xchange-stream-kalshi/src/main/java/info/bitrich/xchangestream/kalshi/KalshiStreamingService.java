@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.kalshi.client.KalshiDigest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,8 +25,10 @@ import org.slf4j.LoggerFactory;
  * <ul>
  *   <li>Handshake authentication reuses the REST RSA-PSS rule: the client sends {@code
  *       KALSHI-ACCESS-KEY}, {@code KALSHI-ACCESS-TIMESTAMP} (milliseconds) and {@code
- *       KALSHI-ACCESS-SIGNATURE} over {@code timestamp + "GET" + <ws path>}. Without credentials
- *       the handshake is anonymous and only public channels may be subscribed.
+ *       KALSHI-ACCESS-SIGNATURE} over {@code timestamp + "GET" + <ws path>}. Kalshi requires
+ *       credentials for every session — even public market-data channels run over an authenticated
+ *       connection — so the constructor rejects missing credentials with an {@link
+ *       ExchangeSecurityException} naming the missing exchange-specification parameter.
  *   <li>Subscriptions are {@code {"id": N, "cmd": "subscribe", "params": {"channels": [...],
  *       "market_tickers": [...]}}} frames; the server acknowledges with {@code type= subscribed}
  *       carrying a server-assigned {@code sid}.
@@ -42,8 +45,8 @@ import org.slf4j.LoggerFactory;
  */
 public class KalshiStreamingService extends JsonNettyStreamingService {
 
-  /** Public order-book channel: an {@code orderbook_snapshot} then sequenced {@code
-   * orderbook_delta} messages. */
+  /** Public market-data order-book channel: an {@code orderbook_snapshot} then sequenced {@code
+   * orderbook_delta} messages. Subscribeable only over the mandatory authenticated session. */
   public static final String CHANNEL_ORDERBOOK = "orderbook_delta";
 
   /** Public trades channel. */
@@ -77,9 +80,10 @@ public class KalshiStreamingService extends JsonNettyStreamingService {
 
   /**
    * @param apiUrl WebSocket URL, e.g. {@code wss://external-api-ws.kalshi.com/trade-api/ws/v2}
-   * @param apiKey Kalshi API key id, or {@code null} for public-only access
-   * @param digest signer built from the Kalshi RSA private key, or {@code null} for public-only
-   *     access
+   * @param apiKey Kalshi API key id
+   * @param digest signer built from the Kalshi RSA private key
+   * @throws ExchangeSecurityException when either credential half is missing; Kalshi authenticates
+   *     every WebSocket session, public market-data channels included
    */
   public KalshiStreamingService(String apiUrl, String apiKey, KalshiDigest digest) {
     this(apiUrl, apiKey, digest, System::currentTimeMillis);
@@ -89,31 +93,39 @@ public class KalshiStreamingService extends JsonNettyStreamingService {
   KalshiStreamingService(
       String apiUrl, String apiKey, KalshiDigest digest, Supplier<Long> timestampMillis) {
     super(apiUrl);
+    requireCredentials(apiKey, digest);
     this.apiKey = apiKey;
     this.digest = digest;
     this.timestampMillis = timestampMillis;
   }
 
-  /** @return {@code true} when both credential halves are present and user channels may be used */
-  public boolean hasCredentials() {
-    return apiKey != null && digest != null;
+  private static void requireCredentials(String apiKey, KalshiDigest digest) {
+    if (apiKey == null || apiKey.isBlank()) {
+      throw new ExchangeSecurityException(
+          "Kalshi WebSocket sessions require credentials even for public market-data channels:"
+              + " set the Kalshi API key id on the exchange specification (apiKey)");
+    }
+    if (digest == null) {
+      throw new ExchangeSecurityException(
+          "Kalshi WebSocket sessions require credentials even for public market-data channels:"
+              + " set the unencrypted PKCS#8 RSA private key on the exchange specification"
+              + " (secretKey)");
+    }
   }
 
   /**
-   * Builds the RSA-PSS handshake headers. Public (widened from the protected base method) so the
-   * deterministic auth-header tests can inspect them without opening a socket.
+   * Builds the RSA-PSS handshake headers. Kalshi authenticates every session, so the three
+   * headers are always emitted; the signature covers {@code timestamp + "GET" + <ws path>}. Public
+   * (widened from the protected base method) so the deterministic auth-header tests can inspect
+   * them without opening a socket.
    */
   @Override
   public DefaultHttpHeaders getCustomHeaders() {
-    DefaultHttpHeaders headers = new DefaultHttpHeaders();
-    if (!hasCredentials()) {
-      return headers;
-    }
     String timestamp = String.valueOf(timestampMillis.get());
-    headers
-        .add(HEADER_ACCESS_KEY, apiKey)
-        .add(HEADER_ACCESS_TIMESTAMP, timestamp)
-        .add(HEADER_ACCESS_SIGNATURE, digest.sign(timestamp + "GET" + uri.getPath()));
+    DefaultHttpHeaders headers = new DefaultHttpHeaders();
+    headers.add(HEADER_ACCESS_KEY, apiKey);
+    headers.add(HEADER_ACCESS_TIMESTAMP, timestamp);
+    headers.add(HEADER_ACCESS_SIGNATURE, digest.sign(timestamp + "GET" + uri.getPath()));
     return headers;
   }
 
@@ -126,12 +138,27 @@ public class KalshiStreamingService extends JsonNettyStreamingService {
     return super.openConnection();
   }
 
+  /** Snapshot message type (and channel name) of the order-book stream; both order-book channel
+   * names take the {@code use_yes_price} subscription parameter. */
+  private static final String CHANNEL_ORDERBOOK_SNAPSHOT = "orderbook_snapshot";
+
+  private static boolean isOrderBookChannel(String channelName) {
+    return CHANNEL_ORDERBOOK.equals(channelName)
+        || CHANNEL_ORDERBOOK_SNAPSHOT.equals(channelName);
+  }
+
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
     int id = requestId.incrementAndGet();
     pendingSubscribeById.put(id, getSubscriptionUniqueId(channelName, args));
     ObjectNode params = objectMapper.createObjectNode();
     params.putArray("channels").add(channelName);
+    if (isOrderBookChannel(channelName)) {
+      // Kalshi reports NO-side order-book levels on the no-leg scale by default and will flip
+      // that default in a future release; pin the unified yes-leg scale now so NO levels arrive
+      // already on the same price scale as YES levels and need no complement conversion.
+      params.put("use_yes_price", true);
+    }
     if (args != null && args.length > 0) {
       ArrayNode tickers = params.putArray("market_tickers");
       for (Object arg : args) {

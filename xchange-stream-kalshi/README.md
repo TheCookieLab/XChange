@@ -12,16 +12,23 @@ demo environment.
 ## Credentials
 
 The handshake reuses the REST RSA-PSS signing rule: `apiKey` is the API key id
-and `secretKey` the unencrypted PKCS#8 RSA private key. Without credentials the
-connection is anonymous and only the public channels (order book, trades,
-ticker, market lifecycle) may be subscribed; the user streams throw
-`ExchangeSecurityException`.
+and `secretKey` the unencrypted PKCS#8 RSA private key. Kalshi authenticates
+every WebSocket session — public market-data channels included — so credentials
+are **mandatory**: `KalshiStreamingExchange.applySpecification` (and the
+`KalshiStreamingService` constructor) fails fast with an
+`ExchangeSecurityException` naming the missing `apiKey` / `secretKey`
+parameter. Public channels (order book, trades, ticker, market lifecycle)
+remain subscribeable, but only over the authenticated session.
 
 ## Channels and side semantics
 
-* `getOrderBook` — server snapshot followed by sequenced deltas. YES levels are
-  generic bids; NO bids are generic asks at `1 - noPrice` (the dollar form of
-  `RULE_NO_BID_COMPLEMENT`). A sequence gap — or a delta before any snapshot —
+* `getOrderBook` — server snapshot followed by sequenced deltas. The
+  subscription requests `use_yes_price: true`, so both YES and NO levels arrive
+  on the unified yes-leg price scale: YES levels are generic bids, NO levels
+  are generic asks at their reported yes-leg price (a no-side level that would
+  historically arrive at no-leg $0.30 arrives as $0.70). No complement
+  conversion is applied; the REST `RULE_NO_BID_COMPLEMENT` applies to the REST
+  order-book surface only. A sequence gap — or a delta before any snapshot —
   terminates the stream with an `ExchangeException` telling you to resync over
   REST; the module never silently continues on uncertain state.
 * `getTrades` / `getTicker` — public trades and top-of-book.
@@ -29,7 +36,7 @@ ticker, market lifecycle) may be subscribed; the user streams throw
   (created/activated/determined/settled/...) exposed unmapped, since no generic
   DTO models settlement.
 * `getUserTrades` / `getOrderChanges` — credentialed fills and order-state
-  updates. Fill sides follow `RULE_LEGACY_NO_COMPLEMENT`: `buy NO at q` reads as
+  updates. Fill sides follow `RULE_BOOK_SIDE_DIRECTION`: `buy NO at q` reads as
   ASK YES at `1 - q`, `sell NO` as BID YES at `1 - q`.
 
 Routing binds each subscription to the server-assigned `sid` from the

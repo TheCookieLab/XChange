@@ -24,7 +24,8 @@ import org.knowm.xchange.kalshi.KalshiAdapters;
  *
  * <p>The order-book stream anchors on the server snapshot and applies sequenced deltas; sequence
  * gaps terminate the stream with an {@link ExchangeException} instead of silently continuing (see
- * {@link KalshiStreamingOrderBook}).
+ * {@link KalshiStreamingOrderBook}). The subscription requests {@code use_yes_price: true}, so
+ * snapshot and delta levels arrive on the unified yes-leg scale for both sides.
  */
 public class KalshiStreamingMarketDataService implements StreamingMarketDataService {
 

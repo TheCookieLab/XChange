@@ -25,9 +25,10 @@ import org.knowm.xchange.kalshi.KalshiAdapters;
  * <ul>
  *   <li>Trades follow the REST {@code adaptTrades} rule: a {@code no} taker side reads as an
  *       ask-side aggressor on the YES leg.
- *   <li>Fills follow {@link KalshiAdapters#RULE_LEGACY_NO_COMPLEMENT}: {@code buy yes}/{@code sell
- *       no} read as BID, {@code sell yes}/{@code buy no} read as ASK, always priced at {@code
- *       yes_price_dollars} (the YES complement of a NO-side price).
+ *   <li>Fills follow {@link KalshiAdapters#RULE_BOOK_SIDE_DIRECTION}: the legacy {@code action}/
+ *       {@code side} pair collapses to the canonical {@code book_side} truth table ({@code buy
+ *       yes}/{@code sell no} read as BID, {@code sell yes}/{@code buy no} read as ASK), always
+ *       priced at {@code yes_price_dollars} (the YES complement of a NO-side price).
  *   <li>User orders follow {@link KalshiAdapters#RULE_YES_LEG_ONLY}: the documented {@code
  *       book_side} is the YES-book side the order rests on, so {@code bid} maps to generic BID and
  *       {@code ask} to generic ASK at {@code yes_price_dollars}. An unrecognized {@code
@@ -62,7 +63,7 @@ public final class KalshiStreamingAdapters {
         .build();
   }
 
-  /** Adapts a user fill per {@link KalshiAdapters#RULE_LEGACY_NO_COMPLEMENT}. */
+  /** Adapts a user fill per {@link KalshiAdapters#RULE_BOOK_SIDE_DIRECTION}. */
   public static UserTrade adaptFill(KalshiWsFill fill) {
     return UserTrade.builder()
         .type(genericType(fill.action(), fill.side()))
@@ -113,7 +114,7 @@ public final class KalshiStreamingAdapters {
   private static OrderType genericType(String action, String side) {
     boolean buy = "buy".equalsIgnoreCase(action);
     boolean yes = !"no".equalsIgnoreCase(side);
-    // RULE_LEGACY_NO_COMPLEMENT: buy+no -> ASK YES, sell+no -> BID YES.
+    // RULE_BOOK_SIDE_DIRECTION: buy+no -> ASK YES, sell+no -> BID YES.
     return buy == yes ? OrderType.BID : OrderType.ASK;
   }
 

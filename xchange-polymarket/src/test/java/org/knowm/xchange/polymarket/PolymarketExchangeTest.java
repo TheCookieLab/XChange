@@ -28,6 +28,7 @@ class PolymarketExchangeTest {
 
   @BeforeEach
   void setUp() {
+    PolymarketAdapters.resetNegRiskRegistry();
     server = new WireMockServer(options().dynamicPort());
     server.start();
     exchange = new PolymarketExchange();
@@ -60,12 +61,21 @@ class PolymarketExchangeTest {
         get(urlPathEqualTo("/markets"))
             .withQueryParam("offset", equalTo("0"))
             .willReturn(
-                aResponse().withHeader("Content-Type", "application/json").withBody(page1)));
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    // Connection: close keeps the rescu client from pooling a connection that
+                    // Jetty may idle-close between the two paginated requests (sporadic
+                    // NoHttpResponseException "Unexpected end of file from server").
+                    .withHeader("Connection", "close")
+                    .withBody(page1)));
     server.stubFor(
         get(urlPathEqualTo("/markets"))
             .withQueryParam("offset", equalTo("100"))
             .willReturn(
-                aResponse().withHeader("Content-Type", "application/json").withBody(page2)));
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withHeader("Connection", "close")
+                    .withBody(page2)));
 
     exchange.remoteInit();
 
@@ -76,21 +86,26 @@ class PolymarketExchangeTest {
     assertEquals(4, instruments.size(), "two tokens each for 0xaaa and 0xbbb; closed excluded");
     assertTrue(
         instruments.containsKey(
-            new PredictionMarketContract("polymarket", null, "0xaaa", "t1", Currency.USD)));
+            new PredictionMarketContract("polymarket", null, "0xaaa", "t1", Currency.PUSD)));
     assertTrue(
         instruments.containsKey(
-            new PredictionMarketContract("polymarket", null, "0xaaa", "t2", Currency.USD)));
+            new PredictionMarketContract("polymarket", null, "0xaaa", "t2", Currency.PUSD)));
     assertTrue(
         instruments.containsKey(
-            new PredictionMarketContract("polymarket", null, "0xbbb", "t4", Currency.USD)));
+            new PredictionMarketContract("polymarket", null, "0xbbb", "t4", Currency.PUSD)));
+    assertTrue(
+        instruments.containsKey(
+            new PredictionMarketContract("polymarket", null, "0xbbb", "t3", Currency.PUSD)));
 
     var metadata =
         instruments.get(new PredictionMarketContract("polymarket", null, "0xaaa", "t1",
-            Currency.USD));
+            Currency.PUSD));
     assertEquals(4, metadata.getPriceScale());
     assertEquals(new BigDecimal("0.001"), metadata.getPriceStepSize());
     assertEquals(new BigDecimal("5"), metadata.getMinimumAmount());
-    assertTrue(exchange.getExchangeMetaData().getCurrencies().containsKey(Currency.USD));
+    assertEquals(Currency.PUSD, metadata.getTradingFeeCurrency());
+    assertTrue(exchange.getExchangeMetaData().getCurrencies().containsKey(Currency.PUSD));
+    assertEquals(Boolean.FALSE, PolymarketAdapters.negRiskForCondition("0xaaa"));
     assertEquals(2, server.getAllServeEvents().size(), "paging must stop at the short page");
   }
 
@@ -108,6 +123,6 @@ class PolymarketExchangeTest {
         + "\\\"]\",\"active\":true,\"closed\":"
         + closed
         + ",\"enableOrderBook\":true,\"orderMinSize\":5,\"orderPriceMinTickSize\":0.001,"
-        + "\"volume\":\"1000\"}";
+        + "\"volume\":\"1000\",\"negRisk\":false}";
   }
 }

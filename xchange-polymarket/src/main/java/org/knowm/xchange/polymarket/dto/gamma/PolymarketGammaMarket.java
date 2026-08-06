@@ -21,4 +21,5 @@ public record PolymarketGammaMarket(
     @JsonProperty("enableOrderBook") Boolean enableOrderBook,
     @JsonProperty("orderMinSize") BigDecimal orderMinSize,
     @JsonProperty("orderPriceMinTickSize") BigDecimal orderPriceMinTickSize,
-    @JsonProperty("volume") String volume) {}
+    @JsonProperty("volume") String volume,
+    @JsonProperty("negRisk") Boolean negRisk) {}

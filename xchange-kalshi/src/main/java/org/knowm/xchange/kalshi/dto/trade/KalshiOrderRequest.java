@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * V2 event-order create request body. {@code price} is a fixed-point dollar string (up to 6
+ * V2 event-order create request body. {@code price} is a fixed-point dollar string (up to 4
  * decimal places), {@code count} a fixed-point string with up to 2 decimal places, and {@code
  * side} is {@code bid} (buy YES) or {@code ask} (sell YES).
  */

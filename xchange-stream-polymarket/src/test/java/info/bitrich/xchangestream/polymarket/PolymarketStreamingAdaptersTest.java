@@ -25,6 +25,7 @@ import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.polymarket.PolymarketAdapters;
 import org.knowm.xchange.prediction.PredictionMarketContract;
 
 /**
@@ -38,7 +39,7 @@ class PolymarketStreamingAdaptersTest {
   private static final String TOKEN_ID =
       "104173557214744537570424345347209544585775842950109756851652855913015295508992";
   private static final PredictionMarketContract CONTRACT =
-      new PredictionMarketContract("polymarket", null, CONDITION_ID, TOKEN_ID, Currency.USD);
+      new PredictionMarketContract("polymarket", null, CONDITION_ID, TOKEN_ID, PolymarketAdapters.COLLATERAL);
   private static final ObjectMapper MAPPER = StreamingObjectMapperHelper.getObjectMapper();
 
   @Test

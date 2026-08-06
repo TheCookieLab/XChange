@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 
-/** Collateral balance response; {@code balance} is a 6-decimal fixed-point USDC string. */
+/** Collateral balance response; {@code balance} is a 6-decimal fixed-point pUSD string. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record PolymarketBalanceResponse(
     @JsonProperty("balance") String balance,

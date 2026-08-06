@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -28,6 +30,7 @@ import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.InstrumentNotValidException;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.polymarket.client.PolymarketEip712Signer;
 import org.knowm.xchange.polymarket.dto.account.PolymarketBalanceResponse;
 import org.knowm.xchange.polymarket.dto.data.PolymarketDataPosition;
 import org.knowm.xchange.polymarket.dto.data.PolymarketDataTrade;
@@ -50,7 +53,12 @@ import org.knowm.xchange.prediction.PredictionMarketContract;
  *       token carried as the contract's outcome id, {@code ASK} maps to {@code SELL}, at the
  *       quoted price in dollars per share.
  *   <li>{@link #RULE_AMOUNT_ENCODING} — maker/taker amounts are 6-decimal fixed-point integer
- *       strings; BUY posts USDC notional (size × price) as maker amount, SELL posts shares.
+ *       strings; BUY posts pUSD notional (size × price) as maker amount, SELL posts shares.
+ *   <li>{@link #RULE_QUANTITY_ENCODING} — read-side order/fill quantities are also 6-decimal
+ *       fixed-point micro-units ({@code 100000000} = 100 shares); prices stay decimal dollars.
+ *   <li>{@link #RULE_MAKER_TAKER} — a user fill belongs to the user's own order: the taker leg for
+ *       {@code TAKER} rows, one fill per {@code maker_orders} entry owned by the account for
+ *       {@code MAKER} rows.
  *   <li>{@link #RULE_NO_COMPLEMENT} — outcome tokens are never silently complemented: every CLOB
  *       record adapts to the contract of the token it actually references.
  * </ul>
@@ -60,6 +68,9 @@ public final class PolymarketAdapters {
   /** Prediction-market provider id used in every Polymarket {@link PredictionMarketContract}. */
   public static final String PROVIDER = "polymarket";
 
+  /** Quote collateral of every Polymarket contract and wallet balance: pUSD. */
+  public static final Currency COLLATERAL = Currency.PUSD;
+
   /** Named provider rule: side mapping for placement and reads. */
   public static final String RULE_TOKEN_DIRECT =
       "Polymarket CLOB BUY on the contract's outcome token maps to generic BID, SELL to ASK,"
@@ -67,9 +78,21 @@ public final class PolymarketAdapters {
 
   /** Named provider rule: 6-decimal fixed-point maker/taker amount encoding. */
   public static final String RULE_AMOUNT_ENCODING =
-      "Polymarket maker/taker amounts are 6-decimal fixed-point micro-units: BUY posts USDC"
+      "Polymarket maker/taker amounts are 6-decimal fixed-point micro-units: BUY posts pUSD"
           + " notional (size x price) as makerAmount with shares as takerAmount; SELL posts"
-          + " shares as makerAmount with USDC notional as takerAmount; half-up rounding.";
+          + " shares as makerAmount with pUSD notional as takerAmount; half-up rounding.";
+
+  /** Named provider rule: 6-decimal fixed-point decoding of read-side order/fill quantities. */
+  public static final String RULE_QUANTITY_ENCODING =
+      "Polymarket /data/order(s) and /data/trades quantities (original_size, size_matched, size,"
+          + " matched_amount) are 6-decimal fixed-point micro-units: 100000000 represents 100"
+          + " shares; prices are decimal dollars per share.";
+
+  /** Named provider rule: maker/taker attribution of user fills. */
+  public static final String RULE_MAKER_TAKER =
+      "A Polymarket user fill is attributed to the user's own order: a TAKER row uses"
+          + " taker_order_id and the row size; a MAKER row yields one fill per maker_orders entry"
+          + " whose maker_address is the configured account.";
 
   /** Named provider rule: complement tokens are addressed, never substituted. */
   public static final String RULE_NO_COMPLEMENT =
@@ -79,7 +102,27 @@ public final class PolymarketAdapters {
   private static final BigDecimal MICRO = BigDecimal.valueOf(1_000_000L);
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
+  /**
+   * Condition id → negative-risk flag learned from the Gamma catalog and CLOB books. The generic
+   * {@link PredictionMarketContract} cannot carry the market type, so discovery records it here
+   * and order placement reads it to select the EIP-712 verifying contract.
+   */
+  private static final Map<String, Boolean> NEG_RISK_BY_CONDITION = new ConcurrentHashMap<>();
+
   private PolymarketAdapters() {}
+
+  /** Resets the negative-risk registry; test seam. */
+  static void resetNegRiskRegistry() {
+    NEG_RISK_BY_CONDITION.clear();
+  }
+
+  /**
+   * Negative-risk flag recorded for a condition, or {@code null} when the market has not been seen
+   * by discovery ({@code remoteInit()}) or an order-book fetch.
+   */
+  public static Boolean negRiskForCondition(String conditionId) {
+    return NEG_RISK_BY_CONDITION.get(conditionId);
+  }
 
   /**
    * Parses the stringified JSON array of CLOB token ids on a Gamma market.
@@ -104,7 +147,7 @@ public final class PolymarketAdapters {
    *
    * @param market Gamma market record
    * @param outcomeIndex index into the outcomes/token-id arrays (0 = primary outcome)
-   * @return prediction-market contract quoted in USD (USDC collateral)
+   * @return prediction-market contract quoted in pUSD (Polymarket collateral)
    */
   public static PredictionMarketContract adaptContract(
       PolymarketGammaMarket market, int outcomeIndex) {
@@ -113,8 +156,11 @@ public final class PolymarketAdapters {
       throw new IllegalArgumentException(
           "Outcome index " + outcomeIndex + " out of range for market " + market.conditionId());
     }
+    if (market.conditionId() != null && market.negRisk() != null) {
+      NEG_RISK_BY_CONDITION.put(market.conditionId(), market.negRisk());
+    }
     return new PredictionMarketContract(
-        PROVIDER, null, market.conditionId(), tokenIds.get(outcomeIndex), Currency.USD);
+        PROVIDER, null, market.conditionId(), tokenIds.get(outcomeIndex), COLLATERAL);
   }
 
   /**
@@ -124,7 +170,7 @@ public final class PolymarketAdapters {
    * @param tokenId CLOB outcome-token id
    */
   public static PredictionMarketContract contractForToken(String conditionId, String tokenId) {
-    return new PredictionMarketContract(PROVIDER, null, conditionId, tokenId, Currency.USD);
+    return new PredictionMarketContract(PROVIDER, null, conditionId, tokenId, COLLATERAL);
   }
 
   /**
@@ -157,11 +203,15 @@ public final class PolymarketAdapters {
         .priceStepSize(market.orderPriceMinTickSize())
         .minimumAmount(market.orderMinSize())
         .contractValue(BigDecimal.ONE)
+        .tradingFeeCurrency(COLLATERAL)
         .build();
   }
 
   /** Adapts a CLOB book to generic depth; levels arrive worst-first and are re-sorted. */
   public static OrderBook adaptOrderBook(PolymarketBookResponse book) {
+    if (book.market() != null && book.negRisk() != null) {
+      NEG_RISK_BY_CONDITION.put(book.market(), book.negRisk());
+    }
     PredictionMarketContract contract = contractForToken(book.market(), book.assetId());
     List<LimitOrder> bids = new ArrayList<>();
     List<LimitOrder> asks = new ArrayList<>();
@@ -187,7 +237,8 @@ public final class PolymarketAdapters {
   /** Adapts a CLOB book's top of book to a generic ticker. */
   public static Ticker adaptTicker(PolymarketBookResponse book) {
     OrderBook orderBook = adaptOrderBook(book);
-    Ticker.Builder builder = new Ticker.Builder().instrument(contractForToken(book.market(), book.assetId()));
+    Ticker.Builder builder =
+        new Ticker.Builder().instrument(contractForToken(book.market(), book.assetId()));
     if (!orderBook.getBids().isEmpty()) {
       builder.bid(orderBook.getBids().get(0).getLimitPrice());
     }
@@ -222,10 +273,32 @@ public final class PolymarketAdapters {
    * @param walletAddress EOA address used as maker and signer
    * @param salt caller-supplied salt scoping retry identity
    * @param timestampMs creation time in unix milliseconds
+   * @param negRisk whether the market settles on the NegRisk CTF Exchange; recorded on the order
+   *     so the signer selects the matching EIP-712 verifying contract
+   * @param signatureType CLOB signature strategy; only {@link
+   *     PolymarketEip712Signer#SIGNATURE_TYPE_EOA} is implemented — anything else fails fast
+   *     before an order can reach submission
    * @return unsigned order ready for {@code PolymarketEip712Signer.signOrder}
    */
   public static PolymarketSignedOrder toSignedOrder(
-      LimitOrder order, String walletAddress, BigDecimal salt, long timestampMs) {
+      LimitOrder order,
+      String walletAddress,
+      BigDecimal salt,
+      long timestampMs,
+      boolean negRisk,
+      int signatureType) {
+    if (signatureType != PolymarketEip712Signer.SIGNATURE_TYPE_EOA) {
+      throw new NotAvailableFromExchangeException(
+          "Polymarket order signing implements only EOA signatures (signature type "
+              + PolymarketEip712Signer.SIGNATURE_TYPE_EOA
+              + "); proxy ("
+              + PolymarketEip712Signer.SIGNATURE_TYPE_POLY_PROXY
+              + "), Gnosis Safe ("
+              + PolymarketEip712Signer.SIGNATURE_TYPE_POLY_GNOSIS_SAFE
+              + "), and EIP-1271 ("
+              + PolymarketEip712Signer.SIGNATURE_TYPE_POLY_1271
+              + ") wallet strategies are not supported.");
+    }
     String tokenId = tokenId(order.getInstrument());
     BigDecimal price = order.getLimitPrice();
     if (price == null
@@ -242,7 +315,7 @@ public final class PolymarketAdapters {
       throw new IllegalArgumentException("Polymarket order size must be positive: " + size);
     }
     BigDecimal shareMicros = size.multiply(MICRO).setScale(0, RoundingMode.HALF_UP);
-    BigDecimal usdcMicros =
+    BigDecimal pusdMicros =
         size.multiply(price).multiply(MICRO).setScale(0, RoundingMode.HALF_UP);
     boolean buy = order.getType() == OrderType.BID;
     return new PolymarketSignedOrder(
@@ -250,15 +323,16 @@ public final class PolymarketAdapters {
         walletAddress,
         walletAddress,
         tokenId,
-        (buy ? usdcMicros : shareMicros).toPlainString(),
-        (buy ? shareMicros : usdcMicros).toPlainString(),
+        (buy ? pusdMicros : shareMicros).toPlainString(),
+        (buy ? shareMicros : pusdMicros).toPlainString(),
         buy ? "BUY" : "SELL",
         "0",
         BigDecimal.valueOf(timestampMs).toBigInteger().toString(),
-        PolymarketEip712SignerHolder.SIGNATURE_TYPE_EOA,
+        PolymarketEip712Signer.SIGNATURE_TYPE_EOA,
         null,
         "0x" + "00".repeat(32),
-        null);
+        null,
+        negRisk);
   }
 
   /** Maps the order type flag set to the CLOB order-type string. */
@@ -272,62 +346,105 @@ public final class PolymarketAdapters {
     return "GTC";
   }
 
-  /** Maps a CLOB order record to a generic limit order per {@link #RULE_NO_COMPLEMENT}. */
+  /**
+   * Maps a CLOB order record to a generic limit order per {@link #RULE_NO_COMPLEMENT} and {@link
+   * #RULE_QUANTITY_ENCODING}.
+   */
   public static LimitOrder adaptOrder(PolymarketOpenOrder order) {
     LimitOrder.Builder builder =
         new LimitOrder.Builder(
                 "SELL".equalsIgnoreCase(order.side()) ? OrderType.ASK : OrderType.BID,
                 contractForToken(order.market(), order.assetId()))
-            .originalAmount(parseDecimal(order.originalSize()))
+            .originalAmount(decodeMicros(order.originalSize()))
             .limitPrice(parseDecimal(order.price()))
             .id(order.id())
             .timestamp(parseEpochSeconds(order.createdAt()))
             .orderStatus(adaptOrderStatus(order.status(), order.sizeMatched()));
-    BigDecimal matched = parseDecimal(order.sizeMatched());
+    BigDecimal matched = decodeMicros(order.sizeMatched());
     if (matched != null && matched.compareTo(BigDecimal.ZERO) > 0) {
       builder.cumulativeAmount(matched);
     }
     return builder.build();
   }
 
-  /** Maps a CLOB user fill to a generic user trade per {@link #RULE_NO_COMPLEMENT}. */
-  public static UserTrade adaptUserTrade(PolymarketUserTrade trade) {
-    return UserTrade.builder()
-        .type("SELL".equalsIgnoreCase(trade.side()) ? OrderType.ASK : OrderType.BID)
-        .originalAmount(parseDecimal(trade.size()))
-        .instrument(contractForToken(trade.market(), trade.assetId()))
-        .price(parseDecimal(trade.price()))
-        .timestamp(parseEpochSeconds(trade.matchTime()))
-        .id(trade.id())
-        .orderId(trade.takerOrderId())
-        .build();
+  /**
+   * Maps a CLOB user fill to the generic user trades of the user's own orders per {@link
+   * #RULE_MAKER_TAKER}, {@link #RULE_NO_COMPLEMENT}, and {@link #RULE_QUANTITY_ENCODING}. A taker
+   * fill is the single {@code taker_order_id} leg; a maker fill yields one trade per {@code
+   * maker_orders} entry whose maker address is the configured account.
+   *
+   * @param trade CLOB fill
+   * @param accountAddress the authenticated account's wallet address, used to attribute maker
+   *     fills; required for maker rows
+   * @return one user trade per fill on the user's own orders
+   */
+  public static List<UserTrade> adaptUserTrade(
+      PolymarketUserTrade trade, String accountAddress) {
+    String traderSide = trade.traderSide() == null ? "" : trade.traderSide().toUpperCase();
+    if ("TAKER".equals(traderSide)) {
+      // The user took liquidity: their own order is the taker leg.
+      return List.of(
+          userTrade(trade, trade.takerOrderId(), trade.side(), trade.size(), trade.price()));
+    }
+    if ("MAKER".equals(traderSide)) {
+      List<UserTrade> fills = new ArrayList<>();
+      if (trade.makerOrders() != null) {
+        for (PolymarketUserTrade.MakerOrder maker : trade.makerOrders()) {
+          if (maker.makerAddress() != null
+              && maker.makerAddress().equalsIgnoreCase(accountAddress)) {
+            fills.add(
+                userTrade(
+                    trade, maker.orderId(), maker.side(), maker.matchedAmount(), maker.price()));
+          }
+        }
+      }
+      if (fills.isEmpty()) {
+        throw new ExchangeException(
+            "Polymarket maker fill "
+                + trade.id()
+                + " has no maker_orders entry owned by account "
+                + accountAddress);
+      }
+      return fills;
+    }
+    throw new ExchangeException(
+        "Polymarket user trade has unrecognized trader_side: " + trade.traderSide());
   }
 
   /** Maps CLOB lifecycle status to the generic order status. */
   static OrderStatus adaptOrderStatus(String status, String sizeMatched) {
-    String value = status == null ? "" : status;
+    String value = status == null ? "" : status.toUpperCase();
+    if (value.startsWith("ORDER_STATUS_")) {
+      value = value.substring("ORDER_STATUS_".length());
+    }
+    if ("LIVE".equals(value)) {
+      BigDecimal matched = decodeMicros(sizeMatched);
+      return matched != null && matched.compareTo(BigDecimal.ZERO) > 0
+          ? OrderStatus.PARTIALLY_FILLED
+          : OrderStatus.OPEN;
+    }
     return switch (value) {
-      case "live" ->
-          parseDecimal(sizeMatched) != null
-                  && parseDecimal(sizeMatched).compareTo(BigDecimal.ZERO) > 0
-              ? OrderStatus.PARTIALLY_FILLED
-              : OrderStatus.OPEN;
-      case "matched" -> OrderStatus.FILLED;
-      case "canceled" -> OrderStatus.CANCELED;
-      case "delayed" -> OrderStatus.PENDING_NEW;
+      case "MATCHED" -> OrderStatus.FILLED;
+      case "CANCELED" -> OrderStatus.CANCELED;
+      case "CANCELED_MARKET_RESOLVED" -> OrderStatus.CANCELED;
+      case "DELAYED" -> OrderStatus.PENDING_NEW;
+      case "INVALID" -> OrderStatus.REJECTED;
       default -> OrderStatus.UNKNOWN;
     };
   }
 
-  /** Adapts the collateral balance (6-decimal fixed-point USDC) to a single USD wallet. */
+  /**
+   * Adapts the collateral balance (6-decimal fixed-point pUSD micro-units, {@link
+   * #RULE_QUANTITY_ENCODING}) to a single pUSD wallet.
+   */
   public static AccountInfo adaptAccountInfo(PolymarketBalanceResponse balance) {
-    BigDecimal available =
-        balance.balance() == null
-            ? BigDecimal.ZERO
-            : new BigDecimal(balance.balance()).movePointLeft(6);
+    BigDecimal available = decodeMicros(balance.balance());
+    if (available == null) {
+      available = BigDecimal.ZERO;
+    }
     Wallet wallet =
         new Wallet(
-            null, null, List.of(new Balance(Currency.USD, available, available)), null, null, null);
+            null, null, List.of(new Balance(COLLATERAL, available, available)), null, null, null);
     return new AccountInfo(wallet);
   }
 
@@ -344,6 +461,34 @@ public final class PolymarketAdapters {
               .build());
     }
     return adapted;
+  }
+
+  /**
+   * Decodes a 6-decimal fixed-point quantity string (micro-units) to shares per {@link
+   * #RULE_QUANTITY_ENCODING}: {@code "100000000"} → {@code 100}, {@code "100050000"} → {@code
+   * 100.05}. Returns {@code null} for blank input.
+   */
+  public static BigDecimal decodeMicros(String microUnits) {
+    if (microUnits == null || microUnits.isBlank()) {
+      return null;
+    }
+    BigDecimal shares = new BigDecimal(microUnits).movePointLeft(6).stripTrailingZeros();
+    // Integral quantities decode to scale 0 (100, not 1E+2) so equality against
+    // plain integer BigDecimals holds; fractional quantities keep their decimals.
+    return shares.scale() < 0 ? shares.setScale(0) : shares;
+  }
+
+  private static UserTrade userTrade(
+      PolymarketUserTrade trade, String orderId, String side, String size, String price) {
+    return UserTrade.builder()
+        .type("SELL".equalsIgnoreCase(side) ? OrderType.ASK : OrderType.BID)
+        .originalAmount(decodeMicros(size))
+        .instrument(contractForToken(trade.market(), trade.assetId()))
+        .price(parseDecimal(price))
+        .timestamp(parseEpochSeconds(trade.matchTime()))
+        .id(trade.id())
+        .orderId(orderId)
+        .build();
   }
 
   private static LimitOrder level(
@@ -371,11 +516,5 @@ public final class PolymarketAdapters {
         return null;
       }
     }
-  }
-
-  /** Indirection to the signature-type constant without a package cycle in javadoc. */
-  private static final class PolymarketEip712SignerHolder {
-    private static final int SIGNATURE_TYPE_EOA =
-        org.knowm.xchange.polymarket.client.PolymarketEip712Signer.SIGNATURE_TYPE_EOA;
   }
 }

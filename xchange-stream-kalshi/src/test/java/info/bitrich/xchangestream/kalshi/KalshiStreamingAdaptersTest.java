@@ -38,7 +38,7 @@ class KalshiStreamingAdaptersTest {
   }
 
   @Test
-  void fillSideTruthTableMatchesTheRestLegacyNoComplementRule() {
+  void fillSideTruthTableMatchesTheRestBookSideDirectionRule() {
     assertEquals(OrderType.BID, adaptFillType("buy", "yes"));
     assertEquals(OrderType.ASK, adaptFillType("sell", "yes"));
     assertEquals(OrderType.ASK, adaptFillType("buy", "no"));

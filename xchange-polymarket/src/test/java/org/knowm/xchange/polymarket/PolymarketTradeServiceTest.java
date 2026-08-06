@@ -33,13 +33,16 @@ import org.knowm.xchange.exceptions.InstrumentNotValidException;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.polymarket.client.PolymarketTestCredentials;
 import org.knowm.xchange.polymarket.dto.account.PolymarketApiCredentials;
+import org.knowm.xchange.polymarket.dto.gamma.PolymarketGammaMarket;
 import org.knowm.xchange.polymarket.service.PolymarketTradeService;
 import org.knowm.xchange.prediction.PredictionMarketContract;
 import org.knowm.xchange.service.trade.params.DefaultCancelOrderParamId;
 
 /**
- * Wire-level tests for {@link PolymarketTradeService}. L1/L2 auth headers and the EIP-712 order
- * signature are verified against the captured requests; side/amount semantics live in {@link
+ * Wire-level tests for {@link PolymarketTradeService} against the current CLOB V2 contracts:
+ * paginated {@code {limit, next_cursor, count, data}} envelopes, {@code ORDER_STATUS_*} names, and
+ * 6-decimal fixed-point quantities. L1/L2 auth headers and the EIP-712 order signature are
+ * verified against the captured requests; side/amount semantics live in {@link
  * PolymarketAdaptersTest}.
  */
 class PolymarketTradeServiceTest {
@@ -47,7 +50,7 @@ class PolymarketTradeServiceTest {
   private static final String CONDITION_ID = "0xdd22472e";
   private static final String TOKEN_ID = "713210456792522125";
   private static final PredictionMarketContract CONTRACT =
-      new PredictionMarketContract("polymarket", null, CONDITION_ID, TOKEN_ID, Currency.USD);
+      new PredictionMarketContract("polymarket", null, CONDITION_ID, TOKEN_ID, Currency.PUSD);
 
   private WireMockServer server;
   private PolymarketTradeService service;
@@ -57,6 +60,15 @@ class PolymarketTradeServiceTest {
     server = new WireMockServer(options().dynamicPort());
     server.start();
     service = (PolymarketTradeService) exchange(true).getTradeService();
+    // Discovery normally records the market type; the wire tests hand-build the contract, so seed
+    // the negative-risk registry the same way remoteInit() would.
+    PolymarketAdapters.resetNegRiskRegistry();
+    PolymarketAdapters.adaptContract(
+        new PolymarketGammaMarket(
+            "1", CONDITION_ID, "q?", "[\"Yes\",\"No\"]", "[\"0.5\",\"0.5\"]",
+            "[\"" + TOKEN_ID + "\",\"1041735572147445375\"]", true, false, true,
+            new BigDecimal("5"), new BigDecimal("0.001"), "1000", false),
+        0);
   }
 
   @AfterEach
@@ -131,6 +143,21 @@ class PolymarketTradeServiceTest {
   }
 
   @Test
+  void placementWithoutKnownMarketTypeFailsFastBeforeAnyHttpCall() {
+    PolymarketAdapters.resetNegRiskRegistry();
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, CONTRACT)
+            .originalAmount(new BigDecimal("10"))
+            .limitPrice(new BigDecimal("0.56"))
+            .build();
+    NotAvailableFromExchangeException e =
+        assertThrows(
+            NotAvailableFromExchangeException.class, () -> service.placeLimitOrder(order));
+    assertTrue(e.getMessage().contains("remoteInit"), "message must name the remediation");
+    assertEquals(0, server.getAllServeEvents().size());
+  }
+
+  @Test
   void placeMarketOrderIsRejectedWithoutHttpCall() {
     MarketOrder order =
         new MarketOrder.Builder(OrderType.BID, CONTRACT).originalAmount(BigDecimal.ONE).build();
@@ -182,62 +209,133 @@ class PolymarketTradeServiceTest {
   }
 
   @Test
-  void getOpenOrdersKeepsOnlyLiveOrders() throws Exception {
+  void getOpenOrdersFollowsEnvelopePaginationAndDecodesFixedMath() throws Exception {
+    // Two pages, copied from the current /data/orders contract: envelope, ORDER_STATUS_* names,
+    // and fixed-math quantities. The first-page order is repeated on the second page to prove
+    // deduplication.
     server.stubFor(
         get(urlPathEqualTo("/data/orders"))
             .willReturn(
                 aResponse()
                     .withHeader("Content-Type", "application/json")
+                    .withBody(ordersPage("MTAw", orderJson("ord-1", "100000000", "50000000")))));
+    server.stubFor(
+        get(urlPathEqualTo("/data/orders"))
+            .withQueryParam("next_cursor", equalTo("MTAw"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
                     .withBody(
-                        "[{\"id\":\"ord-1\",\"status\":\"live\",\"owner\":\"o\","
-                            + "\"maker_address\":\"0x11\",\"market\":\""
-                            + CONDITION_ID
-                            + "\",\"asset_id\":\""
-                            + TOKEN_ID
-                            + "\",\"outcome\":\"Yes\",\"side\":\"BUY\",\"original_size\":\"10\","
-                            + "\"size_matched\":\"0\",\"price\":\"0.56\",\"expiration\":\"0\","
-                            + "\"order_type\":\"GTC\",\"created_at\":\"1754230000\"},"
-                            + "{\"id\":\"ord-2\",\"status\":\"matched\",\"owner\":\"o\","
-                            + "\"maker_address\":\"0x11\",\"market\":\""
-                            + CONDITION_ID
-                            + "\",\"asset_id\":\""
-                            + TOKEN_ID
-                            + "\",\"outcome\":\"Yes\",\"side\":\"BUY\",\"original_size\":\"5\","
-                            + "\"size_matched\":\"5\",\"price\":\"0.50\",\"expiration\":\"0\","
-                            + "\"order_type\":\"GTC\",\"created_at\":\"1754230000\"}]")));
+                        ordersPage(
+                            "",
+                            orderJson("ord-1", "100000000", "50000000"),
+                            orderJson("ord-2", "200000000", "0")))));
 
     OpenOrders openOrders = service.getOpenOrders();
-    assertEquals(1, openOrders.getOpenOrders().size());
-    LimitOrder order = openOrders.getOpenOrders().get(0);
-    assertEquals("ord-1", order.getId());
-    assertEquals(OrderType.BID, order.getType());
-    assertEquals(new BigDecimal("0.56"), order.getLimitPrice());
+    assertEquals(2, openOrders.getOpenOrders().size(), "both pages aggregated, deduped");
+    LimitOrder partial = openOrders.getOpenOrders().stream()
+        .filter(o -> "ord-1".equals(o.getId()))
+        .findFirst()
+        .orElseThrow();
+    assertEquals(
+        new BigDecimal("100"),
+        partial.getOriginalAmount(),
+        "100000000 micro-units is 100 shares");
+    assertEquals(
+        new BigDecimal("50"),
+        partial.getCumulativeAmount(),
+        "50000000 micro-units is a 50-share partial fill");
+    assertEquals(new BigDecimal("0.56"), partial.getLimitPrice(), "price stays decimal dollars");
+    LimitOrder resting = openOrders.getOpenOrders().stream()
+        .filter(o -> "ord-2".equals(o.getId()))
+        .findFirst()
+        .orElseThrow();
+    assertEquals(new BigDecimal("200"), resting.getOriginalAmount());
+
+    assertEquals(2, server.getAllServeEvents().size(), "two pages were fetched");
     PolymarketTestCredentials.assertL2Signature(
         server.getAllServeEvents().get(0).getRequest(), "GET");
   }
 
   @Test
-  void getTradeHistoryAdaptsUserFills() throws Exception {
+  void getTradeHistoryReadsTheDataTradesEnvelopeWithMakerAddress() throws Exception {
     server.stubFor(
-        get(urlPathEqualTo("/trades"))
+        get(urlPathEqualTo("/data/trades"))
+            .withQueryParam("maker_address", equalTo(PolymarketTestCredentials.WALLET_ADDRESS))
             .willReturn(
                 aResponse()
                     .withHeader("Content-Type", "application/json")
                     .withBody(
-                        "[{\"id\":\"fill-1\",\"taker_order_id\":\"ord-1\",\"market\":\""
-                            + CONDITION_ID
-                            + "\",\"asset_id\":\""
-                            + TOKEN_ID
-                            + "\",\"outcome\":\"Yes\",\"side\":\"SELL\",\"size\":\"3\","
-                            + "\"price\":\"0.56\",\"status\":\"MATCHED\","
-                            + "\"match_time\":\"1754230000\",\"trader_side\":\"TAKER\","
-                            + "\"owner\":\"o\"}]")));
+                        tradesPage(
+                            "LTE=",
+                            "{\"id\":\"fill-1\",\"taker_order_id\":\"ord-1\",\"market\":\""
+                                + CONDITION_ID
+                                + "\",\"asset_id\":\""
+                                + TOKEN_ID
+                                + "\",\"outcome\":\"Yes\",\"side\":\"SELL\",\"size\":\"100000000\","
+                                + "\"fee_rate_bps\":\"30\",\"price\":\"0.56\","
+                                + "\"status\":\"TRADE_STATUS_CONFIRMED\","
+                                + "\"match_time\":\"1754230000\",\"trader_side\":\"TAKER\","
+                                + "\"owner\":\"o\",\"maker_address\":\""
+                                + PolymarketTestCredentials.WALLET_ADDRESS
+                                + "\",\"maker_orders\":[]}"))));
 
     var history = service.getTradeHistory(null);
     assertEquals(1, history.getUserTrades().size());
-    assertEquals("fill-1", history.getUserTrades().get(0).getId());
-    assertEquals(OrderType.ASK, history.getUserTrades().get(0).getType());
-    assertEquals(new BigDecimal("0.56"), history.getUserTrades().get(0).getPrice());
+    var trade = history.getUserTrades().get(0);
+    assertEquals("fill-1", trade.getId());
+    assertEquals("ord-1", trade.getOrderId(), "taker fill is the user's taker order");
+    assertEquals(OrderType.ASK, trade.getType());
+    assertEquals(
+        new BigDecimal("100"),
+        trade.getOriginalAmount(),
+        "100000000 micro-units is 100 shares");
+    assertEquals(new BigDecimal("0.56"), trade.getPrice());
+  }
+
+  @Test
+  void getTradeHistoryEmitsOneFillPerOwnedMakerOrder() throws Exception {
+    server.stubFor(
+        get(urlPathEqualTo("/data/trades"))
+            .withQueryParam("maker_address", equalTo(PolymarketTestCredentials.WALLET_ADDRESS))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        tradesPage(
+                            "",
+                            "{\"id\":\"fill-2\",\"taker_order_id\":\"taker-ord\",\"market\":\""
+                                + CONDITION_ID
+                                + "\",\"asset_id\":\""
+                                + TOKEN_ID
+                                + "\",\"outcome\":\"Yes\",\"side\":\"SELL\",\"size\":\"60000000\","
+                                + "\"price\":\"0.56\",\"status\":\"TRADE_STATUS_CONFIRMED\","
+                                + "\"match_time\":\"1754230000\",\"trader_side\":\"MAKER\","
+                                + "\"owner\":\"o\",\"maker_address\":\""
+                                + PolymarketTestCredentials.WALLET_ADDRESS
+                                + "\",\"maker_orders\":["
+                                + "{\"order_id\":\"maker-ord-1\",\"owner\":\"o\",\"maker_address\":\""
+                                + PolymarketTestCredentials.WALLET_ADDRESS
+                                + "\",\"matched_amount\":\"40000000\",\"price\":\"0.55\","
+                                + "\"fee_rate_bps\":\"0\",\"asset_id\":\""
+                                + TOKEN_ID
+                                + "\",\"outcome\":\"Yes\",\"side\":\"BUY\"},"
+                                + "{\"order_id\":\"foreign-ord\",\"owner\":\"x\",\"maker_address\":\""
+                                + "0x"
+                                + "22".repeat(20)
+                                + "\",\"matched_amount\":\"20000000\",\"price\":\"0.57\","
+                                + "\"side\":\"BUY\"}]}"))));
+
+    var history = service.getTradeHistory(null);
+    assertEquals(
+        1,
+        history.getUserTrades().size(),
+        "only maker_orders entries owned by the account are attributed");
+    var trade = history.getUserTrades().get(0);
+    assertEquals("maker-ord-1", trade.getOrderId());
+    assertEquals(OrderType.BID, trade.getType(), "maker order side, not the row side");
+    assertEquals(new BigDecimal("40"), trade.getOriginalAmount());
+    assertEquals(new BigDecimal("0.55"), trade.getPrice(), "maker order price");
   }
 
   @Test
@@ -263,9 +361,51 @@ class PolymarketTradeServiceTest {
 
     OpenPositions positions = service.getOpenPositions();
     assertEquals(1, positions.getOpenPositions().size());
-    assertEquals(CONDITION_ID,
+    assertEquals(
+        CONDITION_ID,
         ((PredictionMarketContract) positions.getOpenPositions().get(0).getInstrument())
             .getMarketId());
+  }
+
+  private static String ordersPage(String nextCursor, String... orders) {
+    StringBuilder data = new StringBuilder();
+    for (String order : orders) {
+      if (data.length() > 0) {
+        data.append(',');
+      }
+      data.append(order);
+    }
+    return "{\"limit\":100,\"next_cursor\":\"" + nextCursor + "\",\"count\":" + orders.length
+        + ",\"data\":[" + data + "]}";
+  }
+
+  private static String orderJson(String id, String originalSize, String sizeMatched) {
+    return "{\"id\":\""
+        + id
+        + "\",\"status\":\"ORDER_STATUS_LIVE\",\"owner\":\"o\",\"maker_address\":\""
+        + PolymarketTestCredentials.WALLET_ADDRESS
+        + "\",\"market\":\""
+        + CONDITION_ID
+        + "\",\"asset_id\":\""
+        + TOKEN_ID
+        + "\",\"outcome\":\"Yes\",\"side\":\"BUY\",\"original_size\":\""
+        + originalSize
+        + "\",\"size_matched\":\""
+        + sizeMatched
+        + "\",\"price\":\"0.56\",\"expiration\":\"0\",\"order_type\":\"GTC\","
+        + "\"created_at\":1754230000}";
+  }
+
+  private static String tradesPage(String nextCursor, String... trades) {
+    StringBuilder data = new StringBuilder();
+    for (String trade : trades) {
+      if (data.length() > 0) {
+        data.append(',');
+      }
+      data.append(trade);
+    }
+    return "{\"limit\":100,\"next_cursor\":\"" + nextCursor + "\",\"count\":" + trades.length
+        + ",\"data\":[" + data + "]}";
   }
 
   private org.knowm.xchange.Exchange exchange(boolean withPrivateKey) {

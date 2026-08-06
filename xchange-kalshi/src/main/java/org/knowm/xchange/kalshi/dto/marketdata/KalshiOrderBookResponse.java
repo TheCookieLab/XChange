@@ -5,17 +5,24 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /**
- * Kalshi order book response. Levels are {@code [priceCents, count]} pairs: the {@code yes} list
- * holds YES bids, the {@code no} list holds NO bids (equivalently YES asks at the complement
- * price).
+ * Kalshi order book response ({@code GET /markets/{ticker}/orderbook}).
+ *
+ * <p>The provider returns only bids: {@code yes_dollars} holds YES bid levels and
+ * {@code no_dollars} holds NO bid levels (equivalently YES asks at the complement price
+ * {@code 1 - price}). Each level is a fixed-point string pair
+ * {@code [price_dollars, count_fp]} — for example {@code ["0.4200", "13.00"]} — where the
+ * price has up to 4 decimal places and the count up to 2.
+ *
+ * @see <a href="https://docs.kalshi.com/api-reference/market/get-market-orderbook">Kalshi
+ *     Get Market Orderbook</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record KalshiOrderBookResponse(
-    @JsonProperty("orderbook") KalshiOrderBookLevels orderbook) {
+    @JsonProperty("orderbook_fp") KalshiOrderBookLevels orderbookFp) {
 
-  /** YES and NO bid level lists. */
+  /** YES and NO bid level lists as {@code [dollars, fp]} string pairs. */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record KalshiOrderBookLevels(
-      @JsonProperty("yes") List<List<Integer>> yes,
-      @JsonProperty("no") List<List<Integer>> no) {}
+      @JsonProperty("yes_dollars") List<List<String>> yesDollars,
+      @JsonProperty("no_dollars") List<List<String>> noDollars) {}
 }

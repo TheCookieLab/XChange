@@ -13,9 +13,14 @@ them with `polymarket.ws.market.uri` and `polymarket.ws.user.uri`.
 ## Credentials
 
 The market channel connects anonymously. The user channel shares the REST L2
-credential triplet: `apiKey`, `secretKey`, and `password` (passphrase). Without
-all three, `getUserTrades` / `getOrderChanges` throw `ExchangeSecurityException`
-before any subscription is attempted.
+credential triplet: `apiKey`, `secretKey`, and `password` (passphrase).
+
+Without the full triplet the exchange runs in *public-only* mode: only the
+market socket is created, the user socket is never connected or health-checked
+(the server may close an unsubscribed user connection), `getStreamingTradeService`
+returns `null`, and `isAlive()` / reconnect / disconnect cover the market
+connection alone. With all three credentials, `getUserTrades` /
+`getOrderChanges` are available and the user socket joins every lifecycle path.
 
 ## Channels and side semantics
 
@@ -43,8 +48,17 @@ substituted).
 
 Every market event for one token shares a single memoized subscription, as do
 the user events for one condition id; disposing the last reference unsubscribes
-the channel, and reconnects resubscribe automatically. The heartbeat is the
-documented application-level text `PING`/`PONG` on reader idle.
+the channel, and reconnects resubscribe automatically. Only the first
+subscription on a connection uses the initial frame (`type` `market`/`user`,
+with `auth` on the user channel); every later subscription is a dynamic update
+frame (`operation` `subscribe`), and the first frame after a reconnect is again
+the initial form. Batched `price_change` events (level updates for several
+outcome tokens in one frame) are split per asset before dispatch, so each
+market channel only ever sees its own updates. The heartbeat is the documented
+application-level text `PING`, written by a scheduled task every 10 seconds
+independent of inbound traffic (the server replies `PONG`, which is swallowed);
+the task starts on connect, is cancelled on disconnect or socket close, and a
+reconnect starts exactly one new task.
 
 The RTDS crypto-oracle stream is intentionally out of scope: it carries no
 order-book or user data, so it does not fit the generic streaming surface.

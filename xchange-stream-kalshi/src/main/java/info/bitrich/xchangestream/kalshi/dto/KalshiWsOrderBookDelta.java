@@ -5,8 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Kalshi WebSocket {@code orderbook_delta} message payload: a signed contract-count change at one
- * price level of one side. {@code deltaFp} is a signed fixed-point string (2 decimals); a level is
- * removed when its running count reaches zero.
+ * price level of one side. The module subscribes with {@code use_yes_price: true}, so {@code
+ * price_dollars} is on the unified yes-leg scale for both sides. {@code deltaFp} is a signed
+ * fixed-point string (2 decimals); a level is removed when its running count reaches zero.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record KalshiWsOrderBookDelta(

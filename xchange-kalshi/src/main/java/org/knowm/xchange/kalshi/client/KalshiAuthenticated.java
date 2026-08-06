@@ -27,14 +27,15 @@ import si.mazi.rescu.SynchronizedValueFactory;
  *
  * <p>Order placement uses the V2 event-orders surface ({@code POST /portfolio/events/orders}),
  * which is YES-leg only with fixed-point dollar price strings. Order queries and cancellation use
- * the legacy {@code /portfolio/orders} surface, whose prices are integer cents.
+ * the {@code /portfolio/orders} surface, whose prices are fixed-point dollar strings and counts
+ * fixed-point count strings, with the canonical {@code book_side} direction field.
  */
 @Path("trade-api/v2")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public interface KalshiAuthenticated {
 
-  /** Returns the portfolio balance in integer cents. */
+  /** Returns the portfolio balance; the canonical amount is a fixed-point dollar string. */
   @GET
   @Path("portfolio/balance")
   KalshiBalanceResponse getBalance(

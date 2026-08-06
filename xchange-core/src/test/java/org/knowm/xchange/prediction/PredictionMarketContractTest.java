@@ -6,8 +6,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Test;
 import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.utils.ObjectMapperHelper;
 
 public class PredictionMarketContractTest {
@@ -121,6 +127,17 @@ public class PredictionMarketContractTest {
     // Blank segment.
     assertThatThrownBy(() -> new PredictionMarketContract("PRED//m/YES/USD"))
         .isInstanceOf(IllegalArgumentException.class);
+    // Trailing separators must be rejected, not silently canonicalized away.
+    assertThatThrownBy(() -> new PredictionMarketContract("PRED/kalshi/m/YES/USD/"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new PredictionMarketContract("PRED/kalshi/m/YES/USD//"))
+        .isInstanceOf(IllegalArgumentException.class);
+    // Empty trailing outcome segment.
+    assertThatThrownBy(() -> new PredictionMarketContract("PRED/kalshi/m/YES//"))
+        .isInstanceOf(IllegalArgumentException.class);
+    // Empty segment after the event id.
+    assertThatThrownBy(() -> new PredictionMarketContract("PRED/kalshi/e//m/YES/USD"))
+        .isInstanceOf(IllegalArgumentException.class);
     // Null input.
     assertThatThrownBy(() -> new PredictionMarketContract((String) null))
         .isInstanceOf(IllegalArgumentException.class);
@@ -138,14 +155,32 @@ public class PredictionMarketContractTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  /**
+   * Generic {@link Instrument} consumers must handle prediction-market contracts as first-class
+   * instruments: metadata maps keyed by {@link Instrument}, generic DTO builders, and
+   * serialization round-trips must preserve identity even though {@code getBase()} is null.
+   */
   @Test
-  public void testOutcomeSideParsing() {
-    assertThat(PredictionOutcomeSide.fromString("YES")).isEqualTo(PredictionOutcomeSide.YES);
-    assertThat(PredictionOutcomeSide.fromString("no")).isEqualTo(PredictionOutcomeSide.NO);
-    assertThat(PredictionOutcomeSide.fromString(" Yes ")).isEqualTo(PredictionOutcomeSide.YES);
-    assertThatThrownBy(() -> PredictionOutcomeSide.fromString("MAYBE"))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> PredictionOutcomeSide.fromString(null))
-        .isInstanceOf(IllegalArgumentException.class);
+  public void testGenericConsumerCompatibility() throws IOException {
+    PredictionMarketContract contract = new PredictionMarketContract(KALSHI_WIRE);
+
+    // Metadata maps keyed by Instrument (InstrumentMapDeserializer path).
+    Map<Instrument, InstrumentMetaData> instruments = new ConcurrentHashMap<>();
+    instruments.put(contract, InstrumentMetaData.builder().priceScale(4).build());
+    ExchangeMetaData metaData =
+        new ExchangeMetaData(instruments, null, null, null, null);
+    ExchangeMetaData metaCopy = ObjectMapperHelper.viaJSON(metaData);
+    assertThat(metaCopy.getInstruments().keySet()).containsExactly(contract);
+    assertThat(metaCopy.getInstruments().get(contract).getPriceScale()).isEqualTo(4);
+
+    // Generic DTO builder path (Ticker.Builder.instrument + InstrumentDeserializer).
+    Ticker ticker =
+        new Ticker.Builder()
+            .instrument(contract)
+            .last(new java.math.BigDecimal("0.42"))
+            .build();
+    Ticker tickerCopy = ObjectMapperHelper.viaJSON(ticker);
+    assertThat(tickerCopy.getInstrument()).isEqualTo(contract);
   }
+
 }

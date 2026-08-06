@@ -10,9 +10,12 @@ import info.bitrich.xchangestream.kalshi.dto.KalshiWsMarketLifecycle;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
 import java.math.BigDecimal;
+import java.security.KeyPairGenerator;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -23,6 +26,7 @@ import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.InstrumentNotValidException;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.kalshi.client.KalshiDigest;
 import org.knowm.xchange.prediction.PredictionMarketContract;
 
 /**
@@ -44,13 +48,15 @@ class KalshiStreamingMarketDataServiceTest {
           + "[\"0.2200\",\"333.00\"]],\"no_dollars_fp\":[[\"0.5400\",\"20.00\"],"
           + "[\"0.5600\",\"146.00\"]]}}";
 
+  private static KalshiDigest digest;
+
   /** Feeds scripted messages through the channel instead of a socket. */
   private static final class FakeService extends KalshiStreamingService {
     private final List<JsonNode> scripted;
     private final List<String> subscriptions = new ArrayList<>();
 
     FakeService(List<JsonNode> scripted) {
-      super("wss://stream.test/ws", null, null);
+      super("wss://stream.test/ws", "key-id", digest);
       this.scripted = scripted;
     }
 
@@ -67,6 +73,18 @@ class KalshiStreamingMarketDataServiceTest {
       }
       return out;
     }
+  }
+
+  @BeforeAll
+  static void generateKeyPair() throws Exception {
+    KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+    generator.initialize(2048);
+    String pem =
+        "-----BEGIN PRIVATE KEY-----\n"
+            + Base64.getMimeEncoder(64, new byte[] {'\n'})
+                .encodeToString(generator.generateKeyPair().getPrivate().getEncoded())
+            + "\n-----END PRIVATE KEY-----";
+    digest = KalshiDigest.createInstance(pem);
   }
 
   @Test
@@ -98,10 +116,10 @@ class KalshiStreamingMarketDataServiceTest {
     assertEquals(new BigDecimal("0.2200"), snapshotBook.getBids().get(0).getLimitPrice());
     assertEquals(new BigDecimal("333.00"), snapshotBook.getBids().get(0).getOriginalAmount());
     assertEquals(new BigDecimal("0.0800"), snapshotBook.getBids().get(1).getLimitPrice());
-    // RULE_NO_BID_COMPLEMENT (dollar form): NO 0.54/0.56 become YES asks at 0.46/0.44.
-    assertEquals(new BigDecimal("0.4400"), snapshotBook.getAsks().get(0).getLimitPrice());
-    assertEquals(new BigDecimal("146.00"), snapshotBook.getAsks().get(0).getOriginalAmount());
-    assertEquals(new BigDecimal("0.4600"), snapshotBook.getAsks().get(1).getLimitPrice());
+    // use_yes_price: true — NO levels arrive on the unified yes-leg scale already (no complement).
+    assertEquals(new BigDecimal("0.5400"), snapshotBook.getAsks().get(0).getLimitPrice());
+    assertEquals(new BigDecimal("20.00"), snapshotBook.getAsks().get(0).getOriginalAmount());
+    assertEquals(new BigDecimal("0.5600"), snapshotBook.getAsks().get(1).getLimitPrice());
     assertEquals(CONTRACT, snapshotBook.getBids().get(0).getInstrument());
 
     OrderBook afterYesDelta = books.get(1);
@@ -109,7 +127,7 @@ class KalshiStreamingMarketDataServiceTest {
 
     OrderBook afterNoDelta = books.get(2);
     assertEquals(1, afterNoDelta.getAsks().size(), "the emptied NO level must disappear");
-    assertEquals(new BigDecimal("0.4400"), afterNoDelta.getAsks().get(0).getLimitPrice());
+    assertEquals(new BigDecimal("0.5600"), afterNoDelta.getAsks().get(0).getLimitPrice());
   }
 
   @Test

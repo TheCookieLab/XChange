@@ -26,7 +26,11 @@ public class KalshiMarketDataServiceRaw extends KalshiBaseService {
     return kalshiPublic.getMarkets(limit, cursor, status, null);
   }
 
-  /** All {@code open} markets, following the cursor pagination to completion. */
+  /**
+   * All {@code open} markets, following the cursor pagination to completion. Fails loudly when
+   * the cursor never terminates within {@link #MAX_PAGES} pages so a catalog built by {@code
+   * remoteInit} is never silently truncated.
+   */
   public List<KalshiMarket> getAllOpenKalshiMarkets() throws IOException {
     List<KalshiMarket> markets = new ArrayList<>();
     String cursor = null;
@@ -40,7 +44,10 @@ public class KalshiMarketDataServiceRaw extends KalshiBaseService {
         return markets;
       }
     }
-    return markets;
+    throw new IllegalStateException(
+        "Kalshi market pagination did not terminate within "
+            + MAX_PAGES
+            + " pages; refusing to return a truncated catalog");
   }
 
   /** Single market by ticker. */

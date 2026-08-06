@@ -1,23 +1,25 @@
 *Project:* XChange
 *Source issue:* [CF-375](https://linear.app/cookiefactory/issue/CF-375/xchange-prediction-market-support)
 *Author:* Codex (automated)
-*Status:* Delivered
+*Status:* In review (protocol-compat remediation complete, PR open)
 *Last updated:* 2026-08-06
 
 ---
 
 ## Status
 
-* Lifecycle: `Delivered`
-* Blocking state: `None`
+* Lifecycle: `In review`
+* Blocking state: `Protocol-compatibility and regression gaps (PR #14 review)`
 * Active phase: `Phase 3 - validation, release readiness, and hardening`
-* Active task: `None`
-* Overall: `11/11` checklist tasks complete
+* Active task: `Remediate PR #14 review threads; land and merge`
+* Overall: `11/11` checklist tasks complete (remediation pass open)
 
 ### Delivery log
 
 * 2026-08-06 (feature/deliver-prd-cf-375-20260803-164858):
-  * Tasks 2, 5-11 done: adapter truth tables locked; all four modules (xchange-kalshi, xchange-polymarket, xchange-stream-kalshi, xchange-stream-polymarket) built and tested; provider metadata resources in place; READMEs complete; full reactor build green (1:50 min); dependency convergence and duplicate-POM gates pass; 158+ new tests, 0 failures. OWASP dependency-check requires NVD API key (environment-configured, not a code blocker).
+  * PR #14 production-readiness review found the first delivery consumed removed/superseded provider wire schemas (Kalshi integer-cent/count fields removed March 2026; Polymarket CLOB V2 envelopes/statuses/fixed-math; WS auth and heartbeat requirements). All 20 review threads were remediated at root cause in the same branch: Kalshi read surface migrated to `*_dollars`/`*_fp`/`book_side` fixed-point fields, off-grid order prices rejected instead of rounded, cursor pagination to exhaustion, fixtures pinned to current schemas; Kalshi WS now requires the authenticated handshake and pins `use_yes_price: true`; Polymarket migrated to `{limit,next_cursor,count,data}` envelopes on `/data/orders` and `/data/trades`, central 6-decimal fixed-math decoding, `ORDER_STATUS_*` mapping, maker/taker fill attribution via account-owned `maker_orders`, pUSD collateral identity, neg-risk EIP-712 domain support with fail-fast on unsupported signature strategies, byte-for-byte golden vectors from the official py-clob-client, and token-level `getTrades` filtering; Polymarket WS now sends initial-vs-dynamic subscribe frames with reconnect reset, fans out multi-asset `price_change` events per token, heartbeats PING on a scheduled 10s writer task, and excludes the user socket from public-only health/lifecycle. Core: `PredictionMarketContract` rejects trailing-separator wire forms via `split("/", -1)` and `Instrument#getBase()` is explicitly nullable with generic-consumer compatibility tests. Affected reactor green: core 89, kalshi 38, polymarket 69, kalshi-stream 29, polymarket-stream 43 tests, 0 failures.
+* 2026-08-06 (feature/deliver-prd-cf-375-20260803-164858):
+  * Tasks 2, 5-11 done: adapter truth tables locked; all four modules (xchange-kalshi, xchange-polymarket, xchange-stream-kalshi, xchange-stream-polymarket) built and tested; provider metadata resources in place; READMEs complete; full reactor build green (1:50 min); dependency convergence and duplicate-POM gates pass; 158+ new tests, 0 failures. OWASP dependency-check requires NVD API key (environment-configured, not a code blocker). Superseded by the remediation pass above after the PR #14 review.
 * 2026-08-03 (feature/deliver-prd-cf-375-20260803-164858):
   * Task 1 done: locked `PredictionMarketContract` wire form `PRED/<provider>/[<eventId>/]<marketId>/<outcomeId>/<quoteCurrency>`; prefix dispatch added to `InstrumentDeserializer`/`InstrumentMapDeserializer` ahead of slash-count conventions. Round-trip tests cover currency pair, futures, options, and prediction-market forms.
   * Task 3 done: dependency decision requires no new managed versions. Kalshi RSA-PSS uses JDK `java.security` + managed `bcpkix-jdk18on` 1.84 for PEM/PKCS#8; Polymarket L2 HMAC uses JDK `javax.crypto`; Polymarket L1 EIP-712 uses managed `bcprov-jdk18on` 1.84 (Keccak-256, secp256k1). No Web3j.
