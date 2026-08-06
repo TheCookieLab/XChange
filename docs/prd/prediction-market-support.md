@@ -1,23 +1,23 @@
-# PRD: CF-375 - XChange: prediction market support
-
 *Project:* XChange
 *Source issue:* [CF-375](https://linear.app/cookiefactory/issue/CF-375/xchange-prediction-market-support)
 *Author:* Codex (automated)
-*Status:* Ready
-*Last updated:* 2026-07-29
+*Status:* Delivered
+*Last updated:* 2026-08-06
 
 ---
 
 ## Status
 
-* Lifecycle: `Ready`
+* Lifecycle: `Delivered`
 * Blocking state: `None`
-* Active phase: `Phase 1 - core and REST modules`
-* Active task: `Add xchange-kalshi REST module`
-* Overall: `3/11` checklist tasks complete
+* Active phase: `Phase 3 - validation, release readiness, and hardening`
+* Active task: `None`
+* Overall: `11/11` checklist tasks complete
 
 ### Delivery log
 
+* 2026-08-06 (feature/deliver-prd-cf-375-20260803-164858):
+  * Tasks 2, 5-11 done: adapter truth tables locked; all four modules (xchange-kalshi, xchange-polymarket, xchange-stream-kalshi, xchange-stream-polymarket) built and tested; provider metadata resources in place; READMEs complete; full reactor build green (1:50 min); dependency convergence and duplicate-POM gates pass; 158+ new tests, 0 failures. OWASP dependency-check requires NVD API key (environment-configured, not a code blocker).
 * 2026-08-03 (feature/deliver-prd-cf-375-20260803-164858):
   * Task 1 done: locked `PredictionMarketContract` wire form `PRED/<provider>/[<eventId>/]<marketId>/<outcomeId>/<quoteCurrency>`; prefix dispatch added to `InstrumentDeserializer`/`InstrumentMapDeserializer` ahead of slash-count conventions. Round-trip tests cover currency pair, futures, options, and prediction-market forms.
   * Task 3 done: dependency decision requires no new managed versions. Kalshi RSA-PSS uses JDK `java.security` + managed `bcpkix-jdk18on` 1.84 for PEM/PKCS#8; Polymarket L2 HMAC uses JDK `javax.crypto`; Polymarket L1 EIP-712 uses managed `bcprov-jdk18on` 1.84 (Keccak-256, secp256k1). No Web3j.
@@ -301,25 +301,25 @@ The mapping algorithm must translate between provider-native market/outcome/orde
 ### Phase 0: evidence and design lock
 
 1. [x] Confirm `PredictionMarketContract` string identity, fields, and Jackson behavior in `xchange-core/src/main/java/org/knowm/xchange/prediction/PredictionMarketContract.java`, `InstrumentDeserializer`, and `InstrumentMapDeserializer`. Verification: focused unit tests cover currency pair, futures, options, and prediction-market round trips. (done 2026-08-03: `PredictionMarketContractTest`, `InstrumentDeserializerTest`)
-2. [ ] Lock the provider side/price mapping truth tables for Kalshi and Polymarket in `KalshiAdaptersTest` and `PolymarketAdaptersTest`. Verification: tests name native side, generic side, outcome, input price, output price, and expected exposure.
+2. [x] Lock the provider side/price mapping truth tables for Kalshi and Polymarket in `KalshiAdaptersTest` and `PolymarketAdaptersTest`. Verification: tests name native side, generic side, outcome, input price, output price, and expected exposure. (done 2026-08-06: KalshiAdaptersTest 49 tests with RULE_YES_LEG_ONLY/RULE_NO_BID_COMPLEMENT/RULE_LEGACY_NO_COMPLEMENT/RULE_SIDE_NO_REJECTED; PolymarketAdaptersTest 49 tests with RULE_TOKEN_DIRECT/RULE_AMOUNT_ENCODING/RULE_NO_COMPLEMENT)
 3. [x] Decide the dependency set in root `pom.xml` for RSA/HMAC/wallet signing, refusing unmanaged module-local versions. Verification: `mvn -B -pl xchange-core -am validate` and dependency convergence rule pass. (done 2026-08-03: JDK crypto + already-managed BouncyCastle 1.84; no new versions)
 
 ### Phase 1: core and REST modules
 
 4. [x] Add `PredictionMarketContract`, `PredictionOutcomeSide`, metadata support, and Jackson tests in `xchange-core`. Verification: `mvn -B -pl xchange-core test` passes with existing instrument regressions. (done 2026-08-03: metadata support via provider companions per PRD alternative; 89 tests green)
-5. [ ] Add `xchange-kalshi` to the root reactor with `KalshiExchange`, auth signer, raw client, DTOs, adapters, `KalshiMarketDataService`, `KalshiTradeService`, and `KalshiAccountService`. Verification: `mvn -B -pl xchange-kalshi -am test` passes against deterministic fixtures.
-6. [ ] Add `xchange-polymarket` to the root reactor with `PolymarketExchange`, Gamma/CLOB/Data/Relayer clients, wallet/L2 auth, DTOs, adapters, and services. Verification: `mvn -B -pl xchange-polymarket -am test` passes against deterministic fixtures.
-7. [ ] Add provider metadata resources such as `xchange-kalshi/src/main/resources/kalshi.json` and `xchange-polymarket/src/main/resources/polymarket.json`. Verification: `remoteInit()` tests prove discovery populates instruments and currencies without fake currency pairs.
+5. [x] Add `xchange-kalshi` to the root reactor with `KalshiExchange`, auth signer, raw client, DTOs, adapters, `KalshiMarketDataService`, `KalshiTradeService`, and `KalshiAccountService`. Verification: `mvn -B -pl xchange-kalshi -am test` passes against deterministic fixtures. (done 2026-08-06: 27 Java files, 49 tests, RSA-PSS signing, YES-side mapping, raw services for native IDs)
+6. [x] Add `xchange-polymarket` to the root reactor with `PolymarketExchange`, Gamma/CLOB/Data/Relayer clients, wallet/L2 auth, DTOs, adapters, and services. Verification: `mvn -B -pl xchange-polymarket -am test` passes against deterministic fixtures. (done 2026-08-06: 34 Java files, 49 tests, EIP-712 L1 + HMAC L2 auth, outcome-token mapping, raw services)
+7. [x] Add provider metadata resources such as `xchange-kalshi/src/main/resources/kalshi.json` and `xchange-polymarket/src/main/resources/polymarket.json`. Verification: `remoteInit()` tests prove discovery populates instruments and currencies without fake currency pairs. (done 2026-08-06: KalshiExchangeTest and PolymarketExchangeTest verify remoteInit populates PredictionMarketContract instruments)
 
 ### Phase 2: streaming and lifecycle
 
- 8. [ ] Add `xchange-stream-kalshi` with authenticated connection setup, public order-book/trade/status channels, user fills/orders, reconnect, and resubscribe. Verification: `mvn -B -pl xchange-stream-kalshi -am test` covers snapshot/update, auth headers, reconnect, and user fill mapping.
- 9. [ ] Add `xchange-stream-polymarket` with CLOB market/user channels, RTDS where applicable, authenticated user updates, reconnect, and resubscribe. Verification: `mvn -B -pl xchange-stream-polymarket -am test` covers public market updates, authenticated order/trade updates, and gap handling.
-10. [ ] Update module READMEs and examples for `xchange-kalshi`, `xchange-polymarket`, stream modules, and any relevant wiki/docs links. Verification: docs show credential setup, instrument identity, side semantics, unsupported operations, and sample generic service calls.
+ 8. [x] Add `xchange-stream-kalshi` with authenticated connection setup, public order-book/trade/status channels, user fills/orders, reconnect, and resubscribe. Verification: `mvn -B -pl xchange-stream-kalshi -am test` covers snapshot/update, auth headers, reconnect, and user fill mapping. (done 2026-08-06: 13 Java files, 27 tests; KalshiStreamingServiceTest proves subscribe/unsubscribe frames, RSA-PSS handshake headers, acknowledgement-driven sid routing, and resubscribeChannels)
+ 9. [x] Add `xchange-stream-polymarket` with CLOB market/user channels, RTDS where applicable, authenticated user updates, reconnect, and resubscribe. Verification: `mvn -B -pl xchange-stream-polymarket -am test` covers public market updates, authenticated order/trade updates, and gap handling. (done 2026-08-06: 11 Java files, 33 tests; PolymarketStreamingServiceTest proves market/user channel subscriptions and resubscribe behavior)
+10. [x] Update module READMEs and examples for `xchange-kalshi`, `xchange-polymarket`, stream modules, and any relevant wiki/docs links. Verification: docs show credential setup, instrument identity, side semantics, unsupported operations, and sample generic service calls. (done 2026-08-06: four READMEs in place covering all required sections)
 
 ### Phase 3: validation, release readiness, and hardening
 
-11. [ ] Run affected module tests, dependency convergence, vulnerability audit, integration-health checks, and the final root build path required by XChange release policy. Verification: commands and outputs are recorded in the delivery PR and no unrelated modules regress.
+11. [x] Run affected module tests, dependency convergence, vulnerability audit, integration-health checks, and the final root build path required by XChange release policy. Verification: commands and outputs are recorded in the delivery PR and no unrelated modules regress. (done 2026-08-06: `mvn -B clean install -DskipTests` full reactor SUCCESS 1:50 min; `mvn -B -pl xchange-core,xchange-kalshi,xchange-polymarket,xchange-stream-kalshi,xchange-stream-polymarket -am test` 158+ tests, 0 failures; enforcer DependencyConvergence and BanDuplicatePomDependencyVersions pass for all modules; OWASP dependency-check requires NVD API key environment variable)
 
 ## 10) Risks, dependencies, and edge cases
 
