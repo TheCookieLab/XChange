@@ -5,11 +5,15 @@ import com.fasterxml.jackson.databind.KeyDeserializer;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
+import org.knowm.xchange.prediction.PredictionMarketContract;
 
 public class InstrumentMapDeserializer extends KeyDeserializer {
 
   @Override
   public Object deserializeKey(String s, DeserializationContext deserializationContext) {
+    // PredictionMarketContract (PRED/provider/[eventId/]marketId/outcomeId/quote) is prefix-tagged
+    // and must be checked before slash-count conventions.
+    if (PredictionMarketContract.isWireString(s)) return new PredictionMarketContract(s);
     long count = s.chars().filter(ch -> ch == '/').count();
     // CurrencyPair (Base/Counter) i.e. BTC/USD
     if (count == 1) return new CurrencyPair(s);

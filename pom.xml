@@ -81,6 +81,7 @@
         <module>xchange-huobi</module>
         <module>xchange-independentreserve</module>
         <module>xchange-itbit</module>
+        <module>xchange-kalshi</module>
         <module>xchange-kraken</module>
         <module>xchange-krakenfutures</module>
         <module>xchange-kucoin</module>
@@ -93,6 +94,7 @@
         <module>xchange-paribu</module>
         <module>xchange-paymium</module>
         <module>xchange-poloniex</module>
+        <module>xchange-polymarket</module>
         <module>xchange-ripple</module>
         <module>xchange-simulated</module>
 
@@ -119,12 +121,14 @@
         <module>xchange-stream-gemini-v2</module>
         <module>xchange-stream-hitbtc</module>
         <module>xchange-stream-huobi</module>
+        <module>xchange-stream-kalshi</module>
         <module>xchange-stream-kraken</module>
         <module>xchange-stream-kraken-v2</module>
         <module>xchange-stream-krakenfutures</module>
         <module>xchange-stream-kucoin</module>
         <module>xchange-stream-okex</module>
         <module>xchange-stream-poloniex2</module>
+        <module>xchange-stream-polymarket</module>
         <module>xchange-stream-service-core</module>
         <module>xchange-stream-service-netty</module>
         <module>xchange-stream-service-pubnub</module>
