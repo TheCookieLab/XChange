@@ -1,0 +1,28 @@
+{
+  "currencies": {
+    "ETH": {
+      "scale": 18
+    },
+    "WETH": {
+      "scale": 18
+    },
+    "USDC": {
+      "scale": 6
+    },
+    "USDT": {
+      "scale": 6
+    },
+    "DAI": {
+      "scale": 18
+    },
+    "WBTC": {
+      "scale": 8
+    },
+    "UNI": {
+      "scale": 18
+    },
+    "LINK": {
+      "scale": 18
+    }
+  }
+}
