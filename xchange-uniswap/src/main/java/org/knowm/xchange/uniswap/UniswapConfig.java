@@ -20,6 +20,8 @@ import org.knowm.xchange.uniswap.TokenRegistry.Token;
 import org.knowm.xchange.uniswap.protocol.UniswapAbiEncoder;
 import org.knowm.xchange.uniswap.signing.EnvironmentSecretProvider;
 import org.knowm.xchange.uniswap.util.Addresses;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Typed, immutable configuration of a {@link UniswapExchange} instance, parsed fail-closed from an
@@ -30,6 +32,8 @@ import org.knowm.xchange.uniswap.util.Addresses;
  * org.knowm.xchange.uniswap.signing.SecretProvider} at signing time.
  */
 public final class UniswapConfig {
+
+  private static final Logger logger = LoggerFactory.getLogger(UniswapConfig.class);
 
   /** Parameter keys understood by {@link #from(ExchangeSpecification)}. */
   public static final class Keys {
@@ -261,6 +265,7 @@ public final class UniswapConfig {
       }
     } catch (UnsupportedOperationException e) {
       // non-POSIX filesystem: existence and regular-file checks above still apply
+      logger.debug("keystore permission check not supported on this filesystem: {}", path);
     } catch (java.io.IOException e) {
       throw new IllegalArgumentException("cannot read keystore permissions: " + path, e);
     }
@@ -295,7 +300,7 @@ public final class UniswapConfig {
       return tokens;
     } catch (IllegalArgumentException e) {
       throw e;
-    } catch (Exception e) {
+    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
       throw new IllegalArgumentException(Keys.TOKENS + " is not valid JSON", e);
     }
   }
@@ -335,7 +340,7 @@ public final class UniswapConfig {
       return pools;
     } catch (IllegalArgumentException e) {
       throw e;
-    } catch (Exception e) {
+    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
       throw new IllegalArgumentException(Keys.POOL_KEYS + " is not valid JSON", e);
     }
   }
@@ -343,7 +348,7 @@ public final class UniswapConfig {
   private static Deployment deployment(String json) {
     try {
       JsonNode root = MAPPER.readTree(json);
-      Map<DeploymentRegistry.Contract, String> codeHashes = new java.util.LinkedHashMap<>();
+      Map<DeploymentRegistry.Contract, String> codeHashes = new java.util.concurrent.ConcurrentHashMap<>();
       JsonNode hashes = root.path("codeHashes");
       codeHashes.put(DeploymentRegistry.Contract.POOL_MANAGER, hashes.path("poolManager").asText(""));
       codeHashes.put(DeploymentRegistry.Contract.QUOTER, hashes.path("quoter").asText(""));
@@ -359,7 +364,7 @@ public final class UniswapConfig {
           codeHashes);
     } catch (IllegalArgumentException e) {
       throw e;
-    } catch (Exception e) {
+    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
       throw new IllegalArgumentException(Keys.DEPLOYMENTS + " is not valid JSON", e);
     }
   }

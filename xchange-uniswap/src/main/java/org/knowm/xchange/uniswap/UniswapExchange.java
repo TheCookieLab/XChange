@@ -138,7 +138,7 @@ public class UniswapExchange extends BaseExchange {
         throw new ExchangeException("password provider " + className + " does not implement SecretProvider");
       }
       return (SecretProvider) instance;
-    } catch (ReflectiveOperationException | RuntimeException e) {
+    } catch (ReflectiveOperationException e) {
       throw new ExchangeException("cannot instantiate password provider " + className + ": " + e.getMessage(), e);
     }
   }

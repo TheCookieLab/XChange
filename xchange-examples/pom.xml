@@ -238,6 +238,11 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>xchange-uniswap</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>xchange-upbit</artifactId>
             <version>${project.version}</version>
         </dependency>

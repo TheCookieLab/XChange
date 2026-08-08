@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.uniswap.util.Addresses;
 
 /**
@@ -42,8 +43,8 @@ public final class TokenRegistry {
 
   /** Builds a registry from an ordered collection of tokens, rejecting duplicates. */
   public static TokenRegistry of(Iterable<Token> tokens) {
-    Map<String, Token> bySymbol = new LinkedHashMap<>();
-    Map<String, Token> byAddress = new LinkedHashMap<>();
+    Map<String, Token> bySymbol = new ConcurrentHashMap<>();
+    Map<String, Token> byAddress = new ConcurrentHashMap<>();
     for (Token token : tokens) {
       Token previous = bySymbol.putIfAbsent(token.symbol(), token);
       if (previous != null) {

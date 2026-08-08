@@ -34,7 +34,6 @@ public class UniswapAccountServiceRaw extends BaseExchangeService<UniswapExchang
 
   /** Balance of a configured token (or the native currency) in human-readable units. */
   public BigDecimal getBalance(Currency currency) throws IOException {
-    UniswapConfig config = exchange.getConfig();
     BigInteger atBlock = exchange.getNodeClient().blockNumber();
     return getBalance(currency, atBlock);
   }

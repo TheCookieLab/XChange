@@ -172,7 +172,7 @@ public final class PoolKeyRegistry {
 
   /** Builds a registry from an ordered collection of already-validated pools. */
   public static PoolKeyRegistry of(Iterable<PoolDefinition> pools, TokenRegistry tokens) {
-    Map<String, PoolDefinition> byPair = new LinkedHashMap<>();
+    Map<String, PoolDefinition> byPair = new java.util.concurrent.ConcurrentHashMap<>();
     for (PoolDefinition pool : pools) {
       PoolDefinition previous = byPair.putIfAbsent(pool.pairKey(), pool);
       if (previous != null) {

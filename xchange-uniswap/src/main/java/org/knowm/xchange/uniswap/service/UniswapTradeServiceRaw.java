@@ -166,7 +166,7 @@ public class UniswapTradeServiceRaw extends BaseExchangeService<UniswapExchange>
         UniswapAbiEncoder.encodeExecuteCalldata(
             new byte[] {UniswapAbiEncoder.COMMAND_V4_SWAP}, List.of(v4Actions), deadline);
 
-    long gasLimit = gasLimit(config, router, executeCalldata, maxFeePerGas);
+    long gasLimit = gasLimit(config, router, executeCalldata);
     BigInteger inputBalance = exchange.getNodeClient().tokenBalance(inputAddress, config.walletAddress(), block);
     BigInteger requiredInput = ask ? amountSpecified : limitAmount;
     if (inputBalance.compareTo(requiredInput) < 0) {
@@ -304,7 +304,7 @@ public class UniswapTradeServiceRaw extends BaseExchangeService<UniswapExchange>
     byte[] calldata =
         UniswapAbiEncoder.permit2ApproveCalldata(
             token.address(), router, amount, BigInteger.valueOf(expirationEpochSeconds));
-    long gasLimit = gasLimit(config, config.deployment().permit2(), calldata, maxFeePerGas);
+    long gasLimit = gasLimit(config, config.deployment().permit2(), calldata);
     SignedTransaction signed =
         sign(config.deployment().permit2(), calldata, gasLimit, maxFeePerGas, maxPriorityFeePerGas, config);
     exchange.getNodeClient().sendRawTransaction(signed.signedBytes());
@@ -334,7 +334,7 @@ public class UniswapTradeServiceRaw extends BaseExchangeService<UniswapExchange>
     BigInteger maxPriorityFeePerGas = maxPriorityFeePerGas(config);
     byte[] calldata =
         UniswapAbiEncoder.permit2ApproveCalldata(token.address(), router, approveAmount, deadline);
-    long gasLimit = gasLimit(config, config.deployment().permit2(), calldata, maxFeePerGas);
+    long gasLimit = gasLimit(config, config.deployment().permit2(), calldata);
     SignedTransaction signed =
         sign(config.deployment().permit2(), calldata, gasLimit, maxFeePerGas, maxPriorityFeePerGas, config);
     exchange.getNodeClient().sendRawTransaction(signed.signedBytes());
@@ -434,7 +434,7 @@ public class UniswapTradeServiceRaw extends BaseExchangeService<UniswapExchange>
     return suggested.min(cap);
   }
 
-  private long gasLimit(UniswapConfig config, String to, byte[] data, BigInteger maxFeePerGas) throws IOException {
+  private long gasLimit(UniswapConfig config, String to, byte[] data) throws IOException {
     BigInteger estimate = exchange.getNodeClient().estimateGas(config.walletAddress(), to, data);
     if (estimate.signum() <= 0) {
       throw new ExchangeException("gas estimate is zero");
@@ -480,7 +480,6 @@ public class UniswapTradeServiceRaw extends BaseExchangeService<UniswapExchange>
   private UniswapOrder skeletonFromReceipt(String hash, TransactionReceipt receipt) {
     Deployment deployment = exchange.getConfig().deployment();
     String poolManager = deployment.poolManager().toLowerCase();
-    String router = deployment.universalRouter().toLowerCase();
     for (org.web3j.protocol.core.methods.response.Log log : receipt.getLogs()) {
       if (log.getAddress() == null
           || !log.getAddress().toLowerCase().equals(poolManager)
@@ -489,44 +488,58 @@ public class UniswapTradeServiceRaw extends BaseExchangeService<UniswapExchange>
           || !UniswapReceiptDecoder.SWAP_EVENT_TOPIC.equals(log.getTopics().get(0))) {
         continue;
       }
-      String poolId = log.getTopics().get(1);
-      String sender = log.getTopics().get(2);
-      if (!router.equals(sender)) {
-        continue;
-      }
-      for (PoolDefinition pool : exchange.getConfig().pools().all()) {
-        if (!pool.poolId().equals(poolId)) {
-          continue;
-        }
-        List<String> words = UniswapReceiptDecoder.splitWords(log.getData());
-        if (words.size() < 2) {
-          continue;
-        }
-        BigInteger amount0 = UniswapReceiptDecoder.twosComplement(words.get(0));
-        BigInteger amount1 = UniswapReceiptDecoder.twosComplement(words.get(1));
-        boolean inputIsBase = amount0.signum() < 0
-            ? pool.baseSymbol().equals(exchange.getConfig().tokens().byAddress(pool.currency0()).symbol())
-            : pool.baseSymbol().equals(exchange.getConfig().tokens().byAddress(pool.currency1()).symbol());
-        OrderType type = inputIsBase ? OrderType.ASK : OrderType.BID;
-        Token baseToken = exchange.getConfig().tokens().bySymbol(pool.baseSymbol());
-        BigInteger baseAmount = inputIsBase ? amount0.negate() : amount1;
-        return new UniswapOrder(
-            hash,
-            new CurrencyPair(pool.baseSymbol(), pool.quoteSymbol()),
-            type,
-            UniswapOrderStatus.MINED,
-            Amounts.toHuman(baseAmount, baseToken.decimals()),
-            null,
-            null,
-            null,
-            Instant.now(),
-            Instant.now(),
-            receipt.getBlockNumber(),
-            List.of(),
-            null);
+      UniswapOrder order = skeletonFromSwapLog(hash, log, receipt);
+      if (order != null) {
+        return order;
       }
     }
     return null;
+  }
+
+  /** Builds a minimal order from one matching PoolManager swap log. */
+  private UniswapOrder skeletonFromSwapLog(
+      String hash, org.web3j.protocol.core.methods.response.Log log, TransactionReceipt receipt) {
+    String poolId = log.getTopics().get(1);
+    String sender = log.getTopics().get(2);
+    if (!exchange.getConfig().deployment().universalRouter().toLowerCase().equals(sender)) {
+      return null;
+    }
+    PoolDefinition pool = null;
+    for (PoolDefinition candidate : exchange.getConfig().pools().all()) {
+      if (candidate.poolId().equals(poolId)) {
+        pool = candidate;
+        break;
+      }
+    }
+    if (pool == null) {
+      return null;
+    }
+    List<String> words = UniswapReceiptDecoder.splitWords(log.getData());
+    if (words.size() < 2) {
+      return null;
+    }
+    BigInteger amount0 = UniswapReceiptDecoder.twosComplement(words.get(0));
+    BigInteger amount1 = UniswapReceiptDecoder.twosComplement(words.get(1));
+    boolean inputIsBase = amount0.signum() < 0
+        ? pool.baseSymbol().equals(exchange.getConfig().tokens().byAddress(pool.currency0()).symbol())
+        : pool.baseSymbol().equals(exchange.getConfig().tokens().byAddress(pool.currency1()).symbol());
+    OrderType type = inputIsBase ? OrderType.ASK : OrderType.BID;
+    Token baseToken = exchange.getConfig().tokens().bySymbol(pool.baseSymbol());
+    BigInteger baseAmount = inputIsBase ? amount0.negate() : amount1;
+    return new UniswapOrder(
+        hash,
+        new CurrencyPair(pool.baseSymbol(), pool.quoteSymbol()),
+        type,
+        UniswapOrderStatus.MINED,
+        Amounts.toHuman(baseAmount, baseToken.decimals()),
+        null,
+        null,
+        null,
+        Instant.now(),
+        Instant.now(),
+        receipt.getBlockNumber(),
+        List.of(),
+        null);
   }
 
   private static UniswapOrder skeleton(String hash, CurrencyPair pair, OrderType type, UniswapOrderStatus status) {

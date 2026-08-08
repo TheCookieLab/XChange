@@ -160,8 +160,8 @@ public final class UniswapNodeClient implements AutoCloseable {
   public BigInteger priorityFeePerGas() {
     try {
       BigInteger fee = web3j.ethMaxPriorityFeePerGas().send().getMaxPriorityFeePerGas();
-      return fee.signum() > 0 ? fee : DEFAULT_GWEI;
-    } catch (Exception e) {
+      return fee != null && fee.signum() > 0 ? fee : DEFAULT_GWEI;
+    } catch (IOException e) {
       return DEFAULT_GWEI;
     }
   }

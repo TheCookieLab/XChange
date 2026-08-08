@@ -30,6 +30,17 @@
         </dependency>
 
         <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.web3j</groupId>
             <artifactId>core</artifactId>
             <exclusions>
@@ -47,22 +58,17 @@
                     <groupId>org.java-websocket</groupId>
                     <artifactId>Java-WebSocket</artifactId>
                 </exclusion>
+                <!-- tuweni-bytes' optional vertx Buffer interop drags a netty 4.1 graph into a
+                     reactor that manages netty 4.2; web3j never references vertx classes -->
+                <exclusion>
+                    <groupId>io.vertx</groupId>
+                    <artifactId>vertx-core</artifactId>
+                </exclusion>
                 <exclusion>
                     <groupId>software.amazon.awssdk</groupId>
                     <artifactId>kms</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

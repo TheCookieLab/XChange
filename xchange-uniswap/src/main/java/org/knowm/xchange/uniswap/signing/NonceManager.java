@@ -23,15 +23,11 @@ public final class NonceManager {
    */
   public long reserve(String address, BigIntegerSupplier onChainCount) {
     String key = normalize(address);
-    AtomicLong highWater =
-        localHighWater.computeIfAbsent(key, ignored -> new AtomicLong(Long.MIN_VALUE));
-    long next;
     long observed = onChainCount.get().longValueExact();
-    synchronized (highWater) {
-      next = Math.max(observed, highWater.get());
-      highWater.set(next + 1);
-    }
-    return next;
+    AtomicLong highWater =
+        localHighWater.computeIfAbsent(key, ignored -> new AtomicLong(0));
+    // atomically: next = max(local, observed); local = next + 1
+    return highWater.accumulateAndGet(observed, (local, observedCount) -> Math.max(local, observedCount) + 1) - 1;
   }
 
   /**
@@ -41,10 +37,8 @@ public final class NonceManager {
   public void sync(String address, long confirmedCount) {
     String key = normalize(address);
     AtomicLong highWater =
-        localHighWater.computeIfAbsent(key, ignored -> new AtomicLong(Long.MIN_VALUE));
-    synchronized (highWater) {
-      highWater.set(Math.max(highWater.get(), confirmedCount + 1));
-    }
+        localHighWater.computeIfAbsent(key, ignored -> new AtomicLong(0));
+    highWater.accumulateAndGet(confirmedCount, (local, confirmed) -> Math.max(local, confirmed + 1));
   }
 
   /** Drops all local nonce state (for tests). */
