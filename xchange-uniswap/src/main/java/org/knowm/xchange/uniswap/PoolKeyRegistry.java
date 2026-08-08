@@ -195,11 +195,6 @@ public final class PoolKeyRegistry {
     return byPair.values();
   }
 
-  /** The sorted-currency helpers for pool validation (exposed for tests). */
-  static BigInteger addressValue(String address) {
-    return Addresses.value(address);
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) {

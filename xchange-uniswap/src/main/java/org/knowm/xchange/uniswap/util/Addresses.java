@@ -38,14 +38,7 @@ public final class Addresses {
     return hex.length() == 40 && hex.chars().allMatch(Addresses::isHexDigit);
   }
 
-  /** Returns true when {@code normalizedAddress} is the zero address. */
-  public static boolean isZero(String normalizedAddress) {
-    return isValid(normalizedAddress)
-        && normalizedAddress.substring(2).chars().allMatch(c -> c == '0');
-  }
-
-  private static boolean isHexDigit(int c) {
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+  private static boolean isHexDigit(int c) {    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
   }
 
   private static String clean(String address) {

@@ -61,7 +61,7 @@ public final class UniswapReceiptDecoder {
         }
         String logPoolId = log.getTopics().get(1);
         String logSender = log.getTopics().get(2);
-        if (!poolId.equals(logPoolId) || !router.equals(logSender)) {
+        if (poolId == null || !poolId.equals(logPoolId) || !router.equals(logSender)) {
           continue;
         }
         List<String> data = splitWords(log.getData());

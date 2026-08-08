@@ -21,7 +21,6 @@ import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.EthTransaction;
-import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.protocol.http.HttpService;
 
@@ -170,7 +169,16 @@ public final class UniswapNodeClient implements AutoCloseable {
   public BigInteger estimateGas(String from, String to, byte[] data) throws IOException {
     Transaction transaction =
         new Transaction(from, null, null, null, to, null, Abi.toHex(data));
-    return web3j.ethEstimateGas(transaction).send().getAmountUsed();
+    org.web3j.protocol.core.methods.response.EthEstimateGas response =
+        web3j.ethEstimateGas(transaction).send();
+    if (response.hasError()) {
+      throw new IOException("eth_estimateGas failed: " + response.getError().getMessage());
+    }
+    BigInteger estimate = response.getAmountUsed();
+    if (estimate == null) {
+      throw new IOException("eth_estimateGas returned no estimate");
+    }
+    return estimate;
   }
 
   /** Decodes an {@code eth_call} output carrying a single uint256. */
@@ -181,11 +189,6 @@ public final class UniswapNodeClient implements AutoCloseable {
       throw new IllegalArgumentException("call output is not a uint256: " + Abi.toHex(output));
     }
     return (BigInteger) decoded.get(0).getValue();
-  }
-
-  /** The address that emitted a log (normalized lowercase). */
-  public static String logAddress(Log log) {
-    return log.getAddress() == null ? null : log.getAddress().toLowerCase();
   }
 
   @Override
