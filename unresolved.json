@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "cf-374-canary",
+      "date": "2026-08-08",
+      "summary": "Unfunded node smoke and funded mainnet canary for xchange-uniswap require the hardened node, wallet funding, and separate approval.",
+      "tracker": "https://linear.app/cookiefactory/issue/CF-436",
+      "blocked": true,
+      "details": "Runbook in xchange-uniswap/README.md; deployment code hashes must be pinned before funded use."
+    },
+    {
+      "id": "cf-374-nvd-scan",
+      "date": "2026-08-08",
+      "summary": "OWASP dependency-check NVD scan cannot run without an NVD API key; OSV audit of the resolved compile graph is clean as a substitute.",
+      "tracker": null,
+      "blocked": true,
+      "details": "Configure nvdApiKey (settings.xml or -DnvdApiKey) and re-run mvn org.owasp:dependency-check-maven:check."
+    }
+  ]
+}
