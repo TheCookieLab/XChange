@@ -14,6 +14,7 @@ import lombok.Getter;
  */
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Deprecated
 public class CoinbaseV2Money {
 
   private final BigDecimal amount;

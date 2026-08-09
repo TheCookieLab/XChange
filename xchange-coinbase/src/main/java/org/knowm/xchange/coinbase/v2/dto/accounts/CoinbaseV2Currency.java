@@ -10,6 +10,7 @@ import lombok.Getter;
  */
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Deprecated
 public class CoinbaseV2Currency {
 
   private final String code;

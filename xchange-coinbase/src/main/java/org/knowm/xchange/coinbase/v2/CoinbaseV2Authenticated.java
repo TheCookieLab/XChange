@@ -27,6 +27,7 @@ import si.mazi.rescu.ParamsDigest;
  */
 @Path("/v2")
 @Produces(MediaType.APPLICATION_JSON)
+@Deprecated
 public interface CoinbaseV2Authenticated {
 
   /**

@@ -247,9 +247,9 @@ Not needed for this feature. The product-identity mapper is a catalog/registry w
 
 ### Phase 7: legacy v2 migration, docs, reference checklist
 
-19. [ ] Inventory v2 surface (`org.knowm.xchange.coinbase.v2.*`, `CoinbaseV2Authenticated`, `listV2Accounts/listV2AccountTransactions`, examples); mark deprecated entry points with v3 replacements; add migration docs + examples (credentials, product mapping, order placement, history pagination, streaming). Verification: migration doc review; compatibility tests for supported delegation.
-20. [ ] Define the v2 removal release/window per repository compatibility policy (decision needed — see Open Questions). Verification: decision recorded in PRD/docs.
-21. [ ] Publish the reference-module checklist (this PRD's conventions) in maintainers' docs; update module README. Verification: docs review.
+19. [x] Inventory v2 surface (`org.knowm.xchange.coinbase.v2.*`, `CoinbaseV2Authenticated`, `listV2Accounts/listV2AccountTransactions`, examples); mark deprecated entry points with v3 replacements; add migration docs + examples (credentials, product mapping, order placement, history pagination, streaming). Verification: migration doc review; compatibility tests for supported delegation.
+20. [x] Define the v2 removal release/window per repository compatibility policy (decision needed — see Open Questions). Verification: decision recorded in PRD/docs.
+21. [x] Publish the reference-module checklist (this PRD's conventions) in maintainers' docs; update module README. Verification: docs review.
 
 ### Phase 8: validation and rollout gates
 
@@ -300,5 +300,10 @@ Not needed for this feature. The product-identity mapper is a catalog/registry w
 **Non-blocking**
 
 1. Legacy v2 removal release window — which release removes `org.knowm.xchange.coinbase.v2.*` compatibility helpers, per repository compatibility policy and usage evidence? (Implementation-time decision; Phase 7 task 20.)
+   **DECIDED (2026-08-09):** remove in the next major release. All v2 symbols are now
+   `@Deprecated` with v3 replacements documented; the remaining v2-only capability
+   (deposit/withdrawal transaction history) has no Advanced Trade v3 equivalent yet, so
+   removal is gated on provider parity or an explicit decision to drop that surface.
+   Migration guide: `docs/coinbase-v2-to-v3-migration.md`.
 2. Endpoints found by the matrix pass that are stable but unimplemented (e.g. additional order/reporting or portfolio-hedge endpoints not yet in `CoinbaseAuthenticated`) — implement in this issue or record as unsupported with rationale? (Phase 3 task 8; default: record unsupported unless trivial.)
 3. `STATUS`/`TICKER_BATCH`/`L2_DATA` channels — include in the lifecycle matrix now or track as VNext? (Default: include in matrix, wire only if stable and demanded by a use case.)

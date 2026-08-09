@@ -13,6 +13,7 @@ import lombok.Getter;
  */
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Deprecated
 public class CoinbaseV2Pagination {
 
   private final String endingBefore;
