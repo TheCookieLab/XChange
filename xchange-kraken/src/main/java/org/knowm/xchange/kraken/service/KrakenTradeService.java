@@ -16,10 +16,13 @@ import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kraken.KrakenAdapters;
 import org.knowm.xchange.kraken.KrakenUtils;
+import org.knowm.xchange.kraken.dto.trade.KrakenAmendOrderResponse;
+import org.knowm.xchange.kraken.dto.trade.KrakenCancelAllOrdersAfterResponse;
 import org.knowm.xchange.kraken.dto.trade.KrakenOrder;
 import org.knowm.xchange.kraken.dto.trade.KrakenTrade;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelAllOrders;
+import org.knowm.xchange.service.trade.params.orders.PlaceOrderKnownParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
@@ -93,6 +96,55 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
   public boolean cancelOrder(String orderId) throws IOException {
 
     return super.cancelKrakenOrder(orderId).getCount() > 0;
+  }
+
+  /**
+   * Atomically amends a live order via the Kraken AmendOrder endpoint.
+   *
+   * <p>The default XChange implementation cancels and re-places the order, which is not atomic;
+   * Kraken supports in-place amendment, so this override uses {@code AmendOrder}. The amended
+   * order keeps its Kraken identifiers where possible. An ambiguous outcome is never replayed:
+   * on transport failure the caller must reconcile by order id or {@code cl_ord_id}.
+   *
+   * @param limitOrder order with {@code id} (Kraken txid) or {@code userReference}
+   *     (userref/cl_ord_id) identifying the live order and the new price/volume
+   * @return the amended order's Kraken id (new id when the amend replaced the order)
+   */
+  @Override
+  public String changeOrder(LimitOrder limitOrder) throws IOException {
+
+    String clientOrderId = getClientOrderId(limitOrder).orElse(limitOrder.getUserReference());
+    KrakenAmendOrderResponse response =
+        super.amendKrakenOrder(
+            limitOrder.getId(),
+            clientOrderId,
+            limitOrder.getOriginalAmount(),
+            limitOrder.getLimitPrice() == null ? null : limitOrder.getLimitPrice().toPlainString(),
+            null,
+            null,
+            null);
+    if (response.getOrderId() != null) {
+      return response.getOrderId();
+    }
+    if (response.getNewOrderId() != null) {
+      return response.getNewOrderId();
+    }
+    return response.getAmendId();
+  }
+
+  /**
+   * Arms or disarms the cancel-all-after (dead-man) timer for the Spot account.
+   *
+   * <p>All open orders are cancelled when the timer expires unless it is re-armed. A timeout of
+   * zero disables the timer. This can cancel all open orders; enable it deliberately.
+   *
+   * @param timeoutSeconds timer length in seconds ({@code 0} disables, max 86400)
+   * @return typed provider result with current and trigger times
+   */
+  public KrakenCancelAllOrdersAfterResponse cancelAllOrdersAfter(long timeoutSeconds)
+      throws IOException {
+
+    return super.cancelAllKrakenOrdersAfter(timeoutSeconds);
   }
 
   @Override

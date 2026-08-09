@@ -1,0 +1,13 @@
+{
+  "error": [],
+  "result": {
+    "amendid": "AA12-BB34-CC56",
+    "order_id": "TXID1-KRAKEN-ORDER",
+    "cl_ord_id": "my-client-id-1",
+    "new_order_id": null,
+    "new_cl_ord_id": null,
+    "status": "ok",
+    "reject_reason": null,
+    "event_errors": []
+  }
+}

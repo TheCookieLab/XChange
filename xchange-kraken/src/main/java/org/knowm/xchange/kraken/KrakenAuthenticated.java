@@ -26,6 +26,9 @@ import org.knowm.xchange.kraken.dto.account.results.KrakenWebsocketTokenResult;
 import org.knowm.xchange.kraken.dto.account.results.WithdrawInfoResult;
 import org.knowm.xchange.kraken.dto.account.results.WithdrawResult;
 import org.knowm.xchange.kraken.dto.account.results.WithdrawStatusResult;
+import org.knowm.xchange.kraken.dto.trade.results.KrakenAddOrderBatchResult;
+import org.knowm.xchange.kraken.dto.trade.results.KrakenAmendOrderResult;
+import org.knowm.xchange.kraken.dto.trade.results.KrakenCancelAllOrdersAfterResult;
 import org.knowm.xchange.kraken.dto.trade.results.KrakenCancelOrderResult;
 import org.knowm.xchange.kraken.dto.trade.results.KrakenClosedOrdersResult;
 import org.knowm.xchange.kraken.dto.trade.results.KrakenOpenOrdersResult;
@@ -150,6 +153,42 @@ public interface KrakenAuthenticated extends Kraken {
       @FormParam("close") Map<String, String> closeOrder,
       @FormParam("timeinforce") String timeInForce,
       @FormParam("cl_ord_id") String clientOrderId,
+      @HeaderParam("API-Key") String apiKey,
+      @HeaderParam("API-Sign") ParamsDigest signer,
+      @FormParam("nonce") SynchronizedValueFactory<Long> nonce)
+      throws IOException;
+
+  @POST
+  @Path("private/AmendOrder")
+  @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+  KrakenAmendOrderResult amendOrder(
+      @FormParam("order_id") String orderId,
+      @FormParam("cl_ord_id") String clientOrderId,
+      @FormParam("order_qty") BigDecimal orderQty,
+      @FormParam("limit_price") String limitPrice,
+      @FormParam("trigger_price") String triggerPrice,
+      @FormParam("post_only") Boolean postOnly,
+      @FormParam("validate") Boolean validate,
+      @HeaderParam("API-Key") String apiKey,
+      @HeaderParam("API-Sign") ParamsDigest signer,
+      @FormParam("nonce") SynchronizedValueFactory<Long> nonce)
+      throws IOException;
+
+  @POST
+  @Path("private/AddOrderBatch")
+  @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+  KrakenAddOrderBatchResult addOrderBatch(
+      @FormParam("orders") String ordersJson,
+      @HeaderParam("API-Key") String apiKey,
+      @HeaderParam("API-Sign") ParamsDigest signer,
+      @FormParam("nonce") SynchronizedValueFactory<Long> nonce)
+      throws IOException;
+
+  @POST
+  @Path("private/CancelAllOrdersAfter")
+  @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+  KrakenCancelAllOrdersAfterResult cancelAllOrdersAfter(
+      @FormParam("timeout") long timeoutSeconds,
       @HeaderParam("API-Key") String apiKey,
       @HeaderParam("API-Sign") ParamsDigest signer,
       @FormParam("nonce") SynchronizedValueFactory<Long> nonce)
