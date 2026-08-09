@@ -12,9 +12,9 @@
 
 * Lifecycle: `Ready`
 * Blocking state: `None`
-- Active phase: `Phase 3 — Futures REST parity`
-- Active task: `task 7 — complete Futures instruments, positions, wallets, funding, history, triggers, reduce-only, dead-man`
-- Overall: `6/26` checklist tasks complete
+- Active phase: `Phase 4 — Spot WS v2 lifecycle and channels`
+- Active task: `task 8 — conditional private socket, dual-socket disconnect/alive, token refresh`
+- Overall: `7/26` checklist tasks complete
 
 ## Execution Status
 
@@ -251,8 +251,9 @@
 
 ### Phase 3: Futures REST parity
 
-7. [ ] Complete Futures instruments, positions (leverage/margin/PnL/liquidation), wallets/collateral, account logs, funding history, order/trade history, triggers, reduce-only, and dead-man.
+7. [x] Complete Futures instruments, positions (leverage/margin/PnL/liquidation), wallets/collateral, account logs, funding history, order/trade history, triggers, reduce-only, and dead-man.
    Verification: futures unit tests; extend `KrakenFuturesPrivateDataIntegration` for credential-gated smokes.
+   Evidence: commit `047afd780a` — `KrakenFuturesOpenPosition` extended with markPrice/limitPrice/liqPrice/unrealized+realized PnL and funding/collateral/leverage/margin/initialMargin/maintMargin/indexPrice/value and the real v3 `instrument` field (symbol kept as legacy alias); `adaptAccounts` entry-price fallback to limitPrice (fixes NPE on real v3 payloads); new `POST /api/v3/accountlog` (since/max_count/before/after) with typed entries carrying the stable id cursor and wallet/balance/change; new `POST /api/v3/fundinghistory` (lastFundingTime) with typed payments; raw + high-level service methods, structured `KrakenFuturesException` on errors; wallets/collateral, triggers (stopPrice/triggerSignal), reduce-only, amend, batch, fills/orders-status and cancel-all-after were already present and verified. New `KrakenFuturesAccountJSONTest` (3 parse tests) + v3 fixtures.
 
 ### Phase 4: Spot WS v2 lifecycle and channels
 
