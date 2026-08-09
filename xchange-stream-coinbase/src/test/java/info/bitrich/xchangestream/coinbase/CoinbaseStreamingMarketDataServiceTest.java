@@ -3,6 +3,7 @@ package info.bitrich.xchangestream.coinbase;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,6 +18,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseFutureProductDetails;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbasePerpetualDetails;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.CandleStick;
@@ -237,10 +242,77 @@ class CoinbaseStreamingMarketDataServiceTest {
   }
 
   @Test
-  void getTradesHonorsProductIdOverrideAndKeepsInstrumentCurrencyPair() throws Exception {
+  void getTradesResolvesProductIdThroughIdentityCatalog() throws Exception {
     ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
     spec.setExchangeSpecificParametersItem(
-        CoinbaseStreamingExchange.PARAM_PRODUCT_ID_OVERRIDE, "BTC-PERP");
+        CoinbaseStreamingExchange.PARAM_PRODUCT_IDENTITY,
+        CoinbaseProductIdentity.build(
+            Collections.singletonList(
+                new CoinbaseProductResponse(
+                    "BTC-USD", null, null, null, null, null, "BTC", "USD", "SPOT", "EXCHANGE", null))));
+
+    JsonNode message =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"channel\": \"market_trades\",\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"trades\": [\n"
+                + "        {\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
+                + "          \"trade_id\": \"t1\",\n"
+                + "          \"price\": \"100\",\n"
+                + "          \"size\": \"0.1\",\n"
+                + "          \"side\": \"BUY\",\n"
+                + "          \"time\": \"2024-01-01T00:00:00Z\"\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+
+    StubStreamingService streamingService = new StubStreamingService(Observable.just(message));
+    CoinbaseStreamingMarketDataService service =
+        new CoinbaseStreamingMarketDataService(streamingService, null, spec);
+
+    List<Trade> trades = service.getTrades(CurrencyPair.BTC_USD).toList().blockingGet();
+
+    assertEquals(1, trades.size());
+    Trade trade = trades.get(0);
+    assertEquals(CurrencyPair.BTC_USD, trade.getInstrument());
+    assertEquals("t1", trade.getId());
+    assertEquals(new BigDecimal("100"), trade.getPrice());
+    assertEquals(new BigDecimal("0.1"), trade.getOriginalAmount());
+
+    CoinbaseSubscriptionRequest request = streamingService.lastRequest();
+    assertEquals(CoinbaseChannel.MARKET_TRADES, request.getChannel());
+    assertEquals(Collections.singletonList("BTC-USD"), request.getProductIds());
+  }
+
+  @Test
+  void getTradesRejectsProductAbsentFromIdentityCatalog() {
+    ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+    spec.setExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_PRODUCT_IDENTITY,
+        CoinbaseProductIdentity.build(
+            Collections.singletonList(
+                new CoinbaseProductResponse(
+                    "ETH-USD", null, null, null, null, null, "ETH", "USD", "SPOT", "EXCHANGE", null))));
+
+    StubStreamingService streamingService = new StubStreamingService(Observable.empty());
+    CoinbaseStreamingMarketDataService service =
+        new CoinbaseStreamingMarketDataService(streamingService, null, spec);
+
+    assertThrows(
+        CoinbaseProductIdentity.AmbiguousMappingException.class,
+        () -> service.getTrades(CurrencyPair.BTC_USD));
+  }
+
+  @Test
+  void deprecatedProductIdOverrideStillWorksAsEscapeHatch() throws Exception {
+    ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+    spec.setExchangeSpecificParametersItem("Coinbase_Product_Id_Override", "BTC-PERP");
 
     JsonNode message =
         MAPPER.readTree(
@@ -268,26 +340,22 @@ class CoinbaseStreamingMarketDataServiceTest {
         new CoinbaseStreamingMarketDataService(streamingService, null, spec);
 
     List<Trade> trades = service.getTrades(CurrencyPair.BTC_USD).toList().blockingGet();
-
     assertEquals(1, trades.size());
-    Trade trade = trades.get(0);
-    assertEquals(CurrencyPair.BTC_USD, trade.getInstrument());
-    assertEquals("t1", trade.getId());
-    assertEquals(new BigDecimal("100"), trade.getPrice());
-    assertEquals(new BigDecimal("0.1"), trade.getOriginalAmount());
 
     CoinbaseSubscriptionRequest request = streamingService.lastRequest();
-    assertEquals(CoinbaseChannel.MARKET_TRADES, request.getChannel());
     assertEquals(Collections.singletonList("BTC-PERP"), request.getProductIds());
   }
 
+
   @Test
-  void getCandlesHonorsProductIdOverride() throws Exception {
+  void getCandlesResolvesProductIdThroughIdentityCatalog() throws Exception {
     ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
     spec.setExchangeSpecificParametersItem(
-        CoinbaseStreamingExchange.PARAM_PRODUCT_ID_OVERRIDE, "BTC-PERP");
-    spec.setExchangeSpecificParametersItem(
-        CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_PRODUCT_TYPE, "FUTURE");
+        CoinbaseStreamingExchange.PARAM_PRODUCT_IDENTITY,
+        CoinbaseProductIdentity.build(
+            Collections.singletonList(
+                new CoinbaseProductResponse(
+                    "BTC-USD", null, null, null, null, null, "BTC", "USD", "SPOT", "EXCHANGE", null))));
 
     JsonNode message =
         MAPPER.readTree(
@@ -298,7 +366,7 @@ class CoinbaseStreamingMarketDataServiceTest {
                 + "      \"type\": \"snapshot\",\n"
                 + "      \"candles\": [\n"
                 + "        {\n"
-                + "          \"product_id\": \"BTC-PERP\",\n"
+                + "          \"product_id\": \"BTC-USD\",\n"
                 + "          \"start\": \"1704067200\",\n"
                 + "          \"open\": \"100\",\n"
                 + "          \"close\": \"110\",\n"
@@ -315,19 +383,17 @@ class CoinbaseStreamingMarketDataServiceTest {
     CoinbaseStreamingMarketDataService service =
         new CoinbaseStreamingMarketDataService(streamingService, null, spec);
 
-    CoinbaseCandleSubscriptionParams params =
-        new CoinbaseCandleSubscriptionParams(CoinbaseCandleGranularity.ONE_MINUTE);
-
     List<CandleStick> candles =
-        service.getCandles(CurrencyPair.BTC_USD, params).toList().blockingGet();
-
+        service
+            .getCandles(
+                CurrencyPair.BTC_USD, new CoinbaseCandleSubscriptionParams(CoinbaseCandleGranularity.ONE_MINUTE))
+            .toList()
+            .blockingGet();
     assertEquals(1, candles.size());
 
     CoinbaseSubscriptionRequest request = streamingService.lastRequest();
     assertEquals(CoinbaseChannel.CANDLES, request.getChannel());
-    assertEquals(Collections.singletonList("BTC-PERP"), request.getProductIds());
-    assertEquals("ONE_MINUTE", request.getChannelArgs().get("granularity"));
-    assertEquals("FUTURE", request.getChannelArgs().get("product_type"));
+    assertEquals(Collections.singletonList("BTC-USD"), request.getProductIds());
   }
 
   @Test

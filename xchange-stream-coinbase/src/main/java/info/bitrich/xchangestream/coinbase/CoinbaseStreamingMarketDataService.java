@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.CandleStick;
@@ -51,6 +52,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   private final OrderBookSnapshotProvider snapshotProvider;
   private final ExchangeSpecification exchangeSpecification;
   private final String productIdOverride;
+  private final CoinbaseProductIdentity productIdentity;
   private final Map<CurrencyPair, OrderBookState> orderBooks = new ConcurrentHashMap<>();
   // Cache observables per currency pair to enable replay for new subscribers
   // Key format: "CURRENCY_PAIR:channel" to differentiate between level2 and level2_batch
@@ -62,10 +64,19 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       CoinbaseStreamingService streamingService,
       OrderBookSnapshotProvider snapshotProvider,
       ExchangeSpecification spec) {
+    this(streamingService, snapshotProvider, spec, resolveProductIdentity(spec));
+  }
+
+  CoinbaseStreamingMarketDataService(
+      CoinbaseStreamingService streamingService,
+      OrderBookSnapshotProvider snapshotProvider,
+      ExchangeSpecification spec,
+      CoinbaseProductIdentity productIdentity) {
     this.streamingService = streamingService;
     this.snapshotProvider = snapshotProvider != null ? snapshotProvider : pair -> null;
     this.exchangeSpecification = spec;
     this.productIdOverride = resolveProductIdOverride(spec);
+    this.productIdentity = productIdentity;
   }
 
   void ensureHeartbeatsSubscription() {
@@ -415,10 +426,62 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   }
 
   private String resolveProductId(CurrencyPair currencyPair) {
+    if (productIdentity != null) {
+      String productId = productIdentity.productId(currencyPair);
+      if (productId != null) {
+        return productId;
+      }
+      if (productIdOverride == null) {
+        throw new CoinbaseProductIdentity.AmbiguousMappingException(
+            "no Coinbase product id for currency pair '"
+                + currencyPair
+                + "' in the configured product catalog");
+      }
+    }
     if (productIdOverride != null) {
+      LOG.warn(
+          "Coinbase_Product_Id_Override is deprecated and will be removed; use a CoinbaseProductIdentity catalog instead");
       return productIdOverride;
     }
     return CoinbaseProductIds.productId(currencyPair);
+  }
+
+  /**
+   * Resolves the native Coinbase product id for any instrument through the configured identity
+   * catalog. Ambiguous or unknown instruments are rejected instead of silently mapped.
+   *
+   * @throws CoinbaseProductIdentity.AmbiguousMappingException when no identity catalog is
+   *     configured or the instrument cannot be resolved losslessly
+   */
+  private String resolveProductId(Instrument instrument) {
+    if (productIdentity == null) {
+      if (instrument instanceof CurrencyPair) {
+        return resolveProductId((CurrencyPair) instrument);
+      }
+      throw new CoinbaseProductIdentity.AmbiguousMappingException(
+          "no Coinbase product identity catalog configured; cannot resolve instrument '"
+              + instrument
+              + "'");
+    }
+    if (instrument instanceof CurrencyPair) {
+      String productId = productIdentity.productId(instrument);
+      if (productId != null) {
+        return productId;
+      }
+      return resolveProductId((CurrencyPair) instrument);
+    }
+    return productIdentity.requireProductId(instrument);
+  }
+
+  private static CoinbaseProductIdentity resolveProductIdentity(ExchangeSpecification spec) {
+    if (spec == null) {
+      return null;
+    }
+    Object raw = spec.getExchangeSpecificParametersItem(CoinbaseStreamingExchange.PARAM_PRODUCT_IDENTITY);
+    if (raw instanceof CoinbaseProductIdentity) {
+      return (CoinbaseProductIdentity) raw;
+    }
+    return null;
   }
 
   private List<Ticker> adaptTickers(CoinbaseStreamingMessage message,

@@ -2,6 +2,7 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.Coinbase;
@@ -30,7 +31,7 @@ import si.mazi.rescu.ParamsDigest;
  * use {@link CoinbaseMarketDataService} which wraps this service and provides adapters.
  * </p>
  */
-class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
+public class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
 
   /**
    * Constructs a new raw market data service using the exchange's default configuration.
@@ -106,6 +107,28 @@ class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
           null, null, null, null);
     }
     return publicClientOrThrow().listPublicProducts(null, null, productType, null, null, null, null, null);
+  }
+
+  /**
+   * Lists one bounded page of products using offset pagination.
+   *
+   * @param limit maximum results per page (nullable to use server defaults)
+   * @param offset zero-based page offset (nullable)
+   * @param productType optional filter (e.g. "SPOT", "FUTURE"); null returns all types
+   * @return the page of products
+   * @throws Exception on transport or serialization failure
+   */
+  public List<CoinbaseProductResponse> listProducts(Integer limit, Integer offset, String productType)
+      throws Exception {
+    if (hasAuthentication()) {
+      CoinbaseProductsResponse response =
+          coinbaseAdvancedTrade.listProducts(authTokenCreator, limit, offset, productType, null, null,
+              null, null, null, null);
+      return response == null ? Collections.emptyList() : response.getProducts();
+    }
+    CoinbaseProductsResponse response =
+        publicClientOrThrow().listPublicProducts(limit, offset, productType, null, null, null, null, null);
+    return response == null ? Collections.emptyList() : response.getProducts();
   }
 
   /**

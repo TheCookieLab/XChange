@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
 import org.knowm.xchange.coinbase.v3.CoinbaseV3Digest;
 import org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataService;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -49,8 +50,18 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
    *
    * <p><strong>Note:</strong> The override is global for the exchange instance. If you subscribe to
    * multiple currency pairs, all market data subscriptions will use the same overridden product id.
+   *
+   * @deprecated use {@link #PARAM_PRODUCT_IDENTITY} with a {@link CoinbaseProductIdentity} catalog;
+   *     this global override is retained as a temporary escape hatch and will be removed.
    */
+  @Deprecated
   public static final String PARAM_PRODUCT_ID_OVERRIDE = "Coinbase_Product_Id_Override";
+  /**
+   * Optional {@link CoinbaseProductIdentity} catalog resolving Coinbase product ids losslessly for
+   * spot, futures, and perpetual instruments. When configured, it is the primary identity strategy
+   * and replaces the global {@link #PARAM_PRODUCT_ID_OVERRIDE} workaround.
+   */
+  public static final String PARAM_PRODUCT_IDENTITY = "Coinbase_Product_Identity";
   public static final String PARAM_WEBSOCKET_JWT_SUPPLIER =
       "Coinbase_Websocket_Jwt_Supplier";
 
@@ -158,7 +169,26 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   protected CoinbaseStreamingMarketDataService createStreamingMarketDataService(
       ExchangeSpecification exchangeSpecification) {
     return new CoinbaseStreamingMarketDataService(
-        streamingService, createSnapshotProvider(), exchangeSpecification);
+        streamingService,
+        createSnapshotProvider(),
+        exchangeSpecification,
+        resolveProductIdentity(exchangeSpecification));
+  }
+
+  private static CoinbaseProductIdentity resolveProductIdentity(
+      ExchangeSpecification exchangeSpecification) {
+    if (exchangeSpecification == null) {
+      return null;
+    }
+    Object raw =
+        exchangeSpecification.getExchangeSpecificParametersItem(PARAM_PRODUCT_IDENTITY);
+    if (raw instanceof CoinbaseProductIdentity) {
+      return (CoinbaseProductIdentity) raw;
+    }
+    LOG.warn(
+        "Ignoring Coinbase product identity parameter of unsupported type: {}",
+        raw == null ? "null" : raw.getClass().getName());
+    return null;
   }
 
   /**
