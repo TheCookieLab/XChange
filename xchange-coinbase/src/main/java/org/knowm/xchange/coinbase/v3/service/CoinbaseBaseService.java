@@ -4,6 +4,7 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.coinbase.v3.Coinbase;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.CoinbaseV3Authentication;
 import org.knowm.xchange.coinbase.v3.CoinbaseV3Digest;
 import org.knowm.xchange.service.BaseExchangeService;
 import org.knowm.xchange.service.BaseService;
@@ -33,6 +34,16 @@ public class CoinbaseBaseService extends BaseExchangeService implements BaseServ
   public CoinbaseBaseService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade,
       ParamsDigest authTokenCreator) {
     this(exchange, coinbaseAdvancedTrade, authTokenCreator, createPublicClient(exchange));
+  }
+
+  /**
+   * Constructs the base service from a shared typed authentication component, so REST and
+   * WebSocket transports use one validated key-material contract.
+   */
+  public CoinbaseBaseService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade,
+      CoinbaseV3Authentication authentication) {
+    this(exchange, coinbaseAdvancedTrade, authentication == null ? null : authentication.restDigest(),
+        createPublicClient(exchange));
   }
 
   public CoinbaseBaseService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade,

@@ -120,12 +120,12 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
 
   @Override
   public void messageHandler(String message) {
-    LOG.info("Coinbase WebSocket received message (length={} bytes): {}", message.length(), 
-        message.length() > 200 ? message.substring(0, 200) + "..." : message);
-    if (message.length() > 10 * 1024 * 1024) { // Log warning for messages > 10MB
-      LOG.warn("Received very large message ({} MB) - this may indicate a large order book snapshot", 
+    if (message != null && message.length() > 10 * 1024 * 1024) { // Log warning for messages > 10MB
+      LOG.warn(
+          "Received very large message ({} MB) - this may indicate a large order book snapshot",
           message.length() / (1024 * 1024));
     }
+    LOG.debug("Coinbase WebSocket received message (length={} bytes)", message == null ? 0 : message.length());
     super.messageHandler(message);
   }
 
@@ -278,15 +278,8 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
       CoinbaseRateLimiter limiter =
           state.requiresAuthentication() ? privateRateLimiter : publicRateLimiter;
       limiter.acquire();
-      String payloadJson;
-      try {
-        payloadJson = objectMapper.writeValueAsString(payload);
-      } catch (Exception e) {
-        payloadJson = payload.toString();
-      }
       LOG.info("Sending Coinbase WebSocket {} message for channel {} with products: {} (hasJWT: {})", 
           type, state.channel.channelName(), sanitized, payload.containsKey("jwt"));
-      LOG.info("Full subscribe payload: {}", payloadJson);
       sendObjectMessage(payload);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();

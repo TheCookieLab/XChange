@@ -7,8 +7,6 @@ import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -18,6 +16,7 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
+import org.knowm.xchange.coinbase.v3.CoinbaseV3Authentication;
 import org.knowm.xchange.coinbase.v3.CoinbaseV3Digest;
 import org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataService;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -64,6 +63,13 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   public static final String PARAM_PRODUCT_IDENTITY = "Coinbase_Product_Identity";
   public static final String PARAM_WEBSOCKET_JWT_SUPPLIER =
       "Coinbase_Websocket_Jwt_Supplier";
+  /**
+   * Optional typed {@link CoinbaseV3Authentication} shared by REST and WebSocket transports.
+   * Preferred over {@link #PARAM_WEBSOCKET_JWT_SUPPLIER}; supersedes the reflective
+   * CoinbaseWebsocketAuthentication helper path.
+   */
+  public static final String PARAM_WEBSOCKET_AUTHENTICATION =
+      "Coinbase_Websocket_Authentication";
 
   // WebSocket endpoints for Coinbase Advanced Trade
   // Note: There is no sandbox environment for WebSocket connections
@@ -303,8 +309,22 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
       return injectedSupplier;
     }
 
-    Supplier<String> helperSupplier = attemptHelperJwtSupplier(specification);
-    return helperSupplier != null ? helperSupplier : createLocalJwtSupplier(specification);
+    CoinbaseV3Authentication injectedAuthentication = extractAuthentication(specification);
+    if (injectedAuthentication != null) {
+      return injectedAuthentication.websocketJwtSupplier();
+    }
+
+    try {
+      CoinbaseV3Authentication authentication = CoinbaseV3Authentication.from(specification);
+      if (authentication != null) {
+        return authentication.websocketJwtSupplier();
+      }
+    } catch (IllegalStateException invalidKeyMaterial) {
+      LOG.warn(
+          "Coinbase v3 API credentials are invalid; private WebSocket channels will be unavailable: {}",
+          invalidKeyMaterial.getMessage());
+    }
+    return createLocalJwtSupplier(specification);
   }
 
   @SuppressWarnings("unchecked")
@@ -323,6 +343,21 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
     return null;
   }
 
+  private CoinbaseV3Authentication extractAuthentication(ExchangeSpecification specification) {
+    Object param =
+        specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_AUTHENTICATION);
+    if (param == null) {
+      return null;
+    }
+    if (param instanceof CoinbaseV3Authentication) {
+      return (CoinbaseV3Authentication) param;
+    }
+    LOG.warn(
+        "Ignoring Coinbase websocket authentication parameter of unsupported type: {}",
+        param.getClass().getName());
+    return null;
+  }
+
   private CoinbaseStreamingMarketDataService.OrderBookSnapshotProvider createSnapshotProvider() {
     if (marketDataService instanceof CoinbaseMarketDataService) {
       CoinbaseMarketDataService coinbaseMarketDataService =
@@ -332,25 +367,6 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
     LOG.warn(
         "Coinbase market data service not available for snapshot recovery; falling back to streaming updates only");
     return currencyPair -> null;
-  }
-
-  @SuppressWarnings("unchecked")
-  private Supplier<String> attemptHelperJwtSupplier(ExchangeSpecification specification) {
-    try {
-      Class<?> helperClass =
-          Class.forName("org.knowm.xchange.coinbase.v3.service.CoinbaseWebsocketAuthentication");
-      Method supplierMethod = helperClass.getMethod("websocketJwtSupplier", ExchangeSpecification.class);
-      return (Supplier<String>) supplierMethod.invoke(null, specification);
-    } catch (ClassNotFoundException e) {
-      LOG.debug(
-          "CoinbaseWebsocketAuthentication helper not found on classpath; falling back to inline JWT supplier");
-      return null;
-    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-      LOG.warn(
-          "Failed to use CoinbaseWebsocketAuthentication helper; falling back to inline JWT supplier",
-          e);
-      return null;
-    }
   }
 
   private Supplier<String> createLocalJwtSupplier(ExchangeSpecification specification) {

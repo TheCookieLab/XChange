@@ -217,9 +217,9 @@ Not needed for this feature. The product-identity mapper is a catalog/registry w
 
 ### Phase 2: typed authentication and redaction
 
-4. [ ] Introduce the shared typed auth component in `xchange-coinbase` (REST `ParamsDigest` + WS JWT supplier from one key-validation path); replace `CoinbaseWebsocketAuthentication` usage. Verification: `CoinbaseV3DigestTest` + new auth-contract tests (key formats, invalid keys, injectable token creation).
-5. [ ] Delete `CoinbaseStreamingExchange#attemptHelperJwtSupplier` reflection; wire both sockets to the typed component. Verification: grep shows no `Class.forName`/reflective auth in production code; `CoinbaseStreamingExchangeTest` passes.
-6. [ ] Redact logs: remove INFO full-payload logging in `CoinbaseStreamingService#messageHandler` and `#sendChannelCommand`; apply `CoinbaseDerivativesRedactor`-style sanitization to errors. Verification: deterministic redaction tests (JWT/bearer/key fields); log inspection in tests.
+4. [x] Introduce the shared typed auth component in `xchange-coinbase` (REST `ParamsDigest` + WS JWT supplier from one key-validation path); replace `CoinbaseWebsocketAuthentication` usage. Verification: `CoinbaseV3DigestTest` + new auth-contract tests (key formats, invalid keys, injectable token creation).
+5. [x] Delete `CoinbaseStreamingExchange#attemptHelperJwtSupplier` reflection; wire both sockets to the typed component. Verification: grep shows no `Class.forName`/reflective auth in production code; `CoinbaseStreamingExchangeTest` passes.
+6. [x] Redact logs: remove INFO full-payload logging in `CoinbaseStreamingService#messageHandler` and `#sendChannelCommand`; apply `CoinbaseDerivativesRedactor`-style sanitization to errors. Verification: deterministic redaction tests (JWT/bearer/key fields); log inspection in tests.
 
 ### Phase 3: REST parity and pagination
 
