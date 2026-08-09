@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.kraken.config.Config;
-import info.bitrich.xchangestream.kraken.dto.common.ChannelType;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenBookMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenOhlcMessage;
@@ -49,7 +48,8 @@ class KrakenStreamingBookChannelTest {
 
   @Test
   void book_snapshot_emits_order_book() throws Exception {
-    KrakenBookMessage snapshot = readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
+    KrakenBookMessage snapshot =
+        readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
 
     when(krakenStreamingService.subscribeChannel(eq("book"), eq(CurrencyPair.BTC_USD)))
         .thenReturn(Observable.just(snapshot));
@@ -65,13 +65,16 @@ class KrakenStreamingBookChannelTest {
     assertThat(book.getBids().get(0).getOriginalAmount()).isEqualByComparingTo("1.5");
     assertThat(book.getAsks().get(0).getLimitPrice()).isEqualByComparingTo("66500.2");
     assertThat(book.getBids().get(0).getType()).isEqualTo(Order.OrderType.BID);
-    verify(krakenStreamingService, never()).resubscribeChannel(eq("book"), eq(CurrencyPair.BTC_USD));
+    verify(krakenStreamingService, never())
+        .resubscribeChannel(eq("book"), eq(CurrencyPair.BTC_USD));
   }
 
   @Test
   void book_update_merges_levels_and_applies_removals() throws Exception {
-    KrakenBookMessage snapshot = readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
-    KrakenBookMessage update = readMessage("sample-messages/book-update.json", KrakenBookMessage.class);
+    KrakenBookMessage snapshot =
+        readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
+    KrakenBookMessage update =
+        readMessage("sample-messages/book-update.json", KrakenBookMessage.class);
 
     when(krakenStreamingService.subscribeChannel(eq("book"), eq(CurrencyPair.BTC_USD)))
         .thenReturn(Observable.just(snapshot, update));
@@ -86,16 +89,19 @@ class KrakenStreamingBookChannelTest {
         .extracting(b -> b.getLimitPrice())
         .containsExactly(
             new BigDecimal("66501.0"), new BigDecimal("66500.1"), new BigDecimal("66490.0"));
-    verify(krakenStreamingService, never()).resubscribeChannel(eq("book"), eq(CurrencyPair.BTC_USD));
+    verify(krakenStreamingService, never())
+        .resubscribeChannel(eq("book"), eq(CurrencyPair.BTC_USD));
   }
 
   @Test
   void checksum_mismatch_triggers_gap_recovery_and_rebuild() throws Exception {
-    KrakenBookMessage snapshot = readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
+    KrakenBookMessage snapshot =
+        readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
     // corrupt the checksum: the computed value will not match
     KrakenBookMessage badSnapshot = snapshot.toBuilder().build();
     badSnapshot.getPayload().setChecksum(123456789L);
-    KrakenBookMessage goodSnapshot = readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
+    KrakenBookMessage goodSnapshot =
+        readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
 
     when(krakenStreamingService.subscribeChannel(eq("book"), eq(CurrencyPair.BTC_USD)))
         .thenReturn(Observable.just(badSnapshot, goodSnapshot));
@@ -131,7 +137,8 @@ class KrakenStreamingBookChannelTest {
 
   @Test
   void book_message_routes_by_symbol() throws Exception {
-    KrakenBookMessage snapshot = readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
+    KrakenBookMessage snapshot =
+        readMessage("sample-messages/book-snapshot.json", KrakenBookMessage.class);
 
     assertThat(snapshot.getChannelId()).isEqualTo("book_BTC/USD");
   }
@@ -144,14 +151,14 @@ class KrakenStreamingBookChannelTest {
             info.bitrich.xchangestream.kraken.dto.response.KrakenStatusMessage.class);
     assertThat(status.getChannelId()).isEqualTo("status");
 
-    when(krakenStreamingService.subscribeChannel(eq("status")))
-        .thenReturn(Observable.just(status));
+    when(krakenStreamingService.subscribeChannel(eq("status"))).thenReturn(Observable.just(status));
 
     var observer = service.getSystemStatus().test();
     observer.awaitCount(1);
     observer.dispose();
 
     assertThat(observer.values().get(0).getStatus())
-        .isEqualTo(info.bitrich.xchangestream.kraken.dto.response.KrakenStatusMessage.Status.ONLINE);
+        .isEqualTo(
+            info.bitrich.xchangestream.kraken.dto.response.KrakenStatusMessage.Status.ONLINE);
   }
 }

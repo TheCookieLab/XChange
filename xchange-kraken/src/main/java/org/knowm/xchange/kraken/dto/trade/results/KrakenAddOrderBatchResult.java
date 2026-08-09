@@ -13,7 +13,8 @@ public class KrakenAddOrderBatchResult extends KrakenResult<KrakenAddOrderBatchR
    * @param error
    */
   public KrakenAddOrderBatchResult(
-      @JsonProperty("result") KrakenAddOrderBatchResponse result, @JsonProperty("error") String[] error) {
+      @JsonProperty("result") KrakenAddOrderBatchResponse result,
+      @JsonProperty("error") String[] error) {
 
     super(result, error);
   }

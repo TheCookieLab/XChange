@@ -41,8 +41,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Legacy Kraken Spot WebSocket v1 transport.
  *
- * @deprecated Superseded by the v2 protocol in {@code xchange-stream-kraken-v2}. Kept only for
- *     the compatibility grace period of the legacy module.
+ * @deprecated Superseded by the v2 protocol in {@code xchange-stream-kraken-v2}. Kept only for the
+ *     compatibility grace period of the legacy module.
  * @author makarid, pchertalev
  */
 @Deprecated
@@ -140,7 +140,8 @@ public class KrakenStreamingService extends JsonNettyStreamingService {
 
     try {
       JsonNode event = message.get(EVENT);
-      KrakenEventType krakenEvent = event == null ? null : KrakenEventType.getEvent(event.textValue());
+      KrakenEventType krakenEvent =
+          event == null ? null : KrakenEventType.getEvent(event.textValue());
       if (krakenEvent != null) {
         switch (krakenEvent) {
           case pingStatus:

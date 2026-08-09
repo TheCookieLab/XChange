@@ -47,22 +47,30 @@ public class KrakenFuturesException extends ExchangeException {
     this.errors = Arrays.stream(errors).map(KrakenFuturesRedactor::sanitize).toArray(String[]::new);
   }
 
-  /** @return exchange domain the failure occurred in */
+  /**
+   * @return exchange domain the failure occurred in
+   */
   public String getDomain() {
     return domain;
   }
 
-  /** @return operation that failed */
+  /**
+   * @return operation that failed
+   */
   public String getOperation() {
     return operation;
   }
 
-  /** @return retry classification for the provider error */
+  /**
+   * @return retry classification for the provider error
+   */
   public RetryClass getRetryClass() {
     return retryClass;
   }
 
-  /** @return sanitized provider error codes/messages */
+  /**
+   * @return sanitized provider error codes/messages
+   */
   public String[] getErrors() {
     return errors;
   }

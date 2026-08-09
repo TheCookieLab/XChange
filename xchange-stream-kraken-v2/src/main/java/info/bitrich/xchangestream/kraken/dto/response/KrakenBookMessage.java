@@ -11,9 +11,9 @@ import lombok.extern.jackson.Jacksonized;
 /**
  * Order book message (snapshot or incremental update) on the {@code book} channel.
  *
- * <p>A snapshot carries the full book; an update carries per-level deltas where a quantity of
- * zero removes the level. Both may carry a checksum of the top 10 price levels per side (see
- * {@link info.bitrich.xchangestream.kraken.KrakenStreamingAdapters#checksum}).
+ * <p>A snapshot carries the full book; an update carries per-level deltas where a quantity of zero
+ * removes the level. Both may carry a checksum of the top 10 price levels per side (see {@link
+ * info.bitrich.xchangestream.kraken.KrakenStreamingAdapters#checksum}).
  */
 @Data
 @SuperBuilder(toBuilder = true)
@@ -50,7 +50,9 @@ public class KrakenBookMessage extends KrakenDataMessage<KrakenBookMessage.Krake
     @JsonProperty("timestamp")
     private String timestamp;
 
-    /** @return the checksum of the top levels as sent by the provider, or {@code null} */
+    /**
+     * @return the checksum of the top levels as sent by the provider, or {@code null}
+     */
     public Long getChecksum() {
       return checksum;
     }

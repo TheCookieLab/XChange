@@ -36,8 +36,8 @@ public class KrakenFuturesAccountServiceRaw extends KrakenFuturesBaseService {
   /**
    * Fetches the account activity log (deposits, withdrawals, transfers, fee payments, funding).
    *
-   * <p>Entries are returned newest first and are ordered by the provider-generated id, which is
-   * the stable cursor for incremental pulls.
+   * <p>Entries are returned newest first and are ordered by the provider-generated id, which is the
+   * stable cursor for incremental pulls.
    *
    * @param since only return entries on or after this RFC3339 time, or {@code null}
    * @param maxCount maximum number of entries, or {@code null} for the provider default

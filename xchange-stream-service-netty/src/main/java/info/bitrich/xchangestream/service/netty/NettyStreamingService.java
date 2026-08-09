@@ -634,12 +634,16 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
     }
   }
 
-  /** @return whether automatic reconnection is enabled; subclasses may override the scheduler */
+  /**
+   * @return whether automatic reconnection is enabled; subclasses may override the scheduler
+   */
   protected boolean isAutoReconnect() {
     return autoReconnect;
   }
 
-  /** @return the current websocket channel, or {@code null} before the first connection */
+  /**
+   * @return the current websocket channel, or {@code null} before the first connection
+   */
   protected Channel getWebSocketChannel() {
     return webSocketChannel;
   }

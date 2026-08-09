@@ -3,7 +3,6 @@ package org.knowm.xchange.krakenfutures.service;
 import java.io.IOException;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
-import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.krakenfutures.KrakenFuturesAuthenticated;
 import org.knowm.xchange.krakenfutures.dto.KrakenFuturesResult;
 import org.knowm.xchange.krakenfutures.dto.trade.KrakenFuturesOpenPositions;

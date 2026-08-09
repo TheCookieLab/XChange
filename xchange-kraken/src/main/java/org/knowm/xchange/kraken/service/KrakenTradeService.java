@@ -22,7 +22,6 @@ import org.knowm.xchange.kraken.dto.trade.KrakenOrder;
 import org.knowm.xchange.kraken.dto.trade.KrakenTrade;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelAllOrders;
-import org.knowm.xchange.service.trade.params.orders.PlaceOrderKnownParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
@@ -102,9 +101,9 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
    * Atomically amends a live order via the Kraken AmendOrder endpoint.
    *
    * <p>The default XChange implementation cancels and re-places the order, which is not atomic;
-   * Kraken supports in-place amendment, so this override uses {@code AmendOrder}. The amended
-   * order keeps its Kraken identifiers where possible. An ambiguous outcome is never replayed:
-   * on transport failure the caller must reconcile by order id or {@code cl_ord_id}.
+   * Kraken supports in-place amendment, so this override uses {@code AmendOrder}. The amended order
+   * keeps its Kraken identifiers where possible. An ambiguous outcome is never replayed: on
+   * transport failure the caller must reconcile by order id or {@code cl_ord_id}.
    *
    * @param limitOrder order with {@code id} (Kraken txid) or {@code userReference}
    *     (userref/cl_ord_id) identifying the live order and the new price/volume

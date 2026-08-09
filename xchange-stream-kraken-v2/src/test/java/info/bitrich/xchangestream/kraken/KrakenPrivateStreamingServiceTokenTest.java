@@ -7,19 +7,20 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import info.bitrich.xchangestream.kraken.dto.response.KrakenResult;
+import info.bitrich.xchangestream.kraken.dto.response.KrakenWebsocketToken;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import info.bitrich.xchangestream.kraken.dto.response.KrakenResult;
-import info.bitrich.xchangestream.kraken.dto.response.KrakenWebsocketToken;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import si.mazi.rescu.ParamsDigest;
 
-/** Single-flight websocket token refresh and generation-scoped reauth. */class KrakenPrivateStreamingServiceTokenTest {
+/** Single-flight websocket token refresh and generation-scoped reauth. */
+class KrakenPrivateStreamingServiceTokenTest {
 
   private KrakenAuthenticated krakenAuthenticated;
   private KrakenStreamingExchange exchange;
@@ -34,10 +35,7 @@ import si.mazi.rescu.ParamsDigest;
 
     service =
         new KrakenPrivateStreamingService(
-            "wss://ws-auth.kraken.com/v2",
-            exchange,
-            krakenAuthenticated,
-            mock(ParamsDigest.class));
+            "wss://ws-auth.kraken.com/v2", exchange, krakenAuthenticated, mock(ParamsDigest.class));
   }
 
   @SuppressWarnings("unchecked")
@@ -105,7 +103,8 @@ import si.mazi.rescu.ParamsDigest;
     service.getSubscribeMessage("balances", (Object) CurrencyPair.BTC_USD);
 
     // simulate TTL expiry without waiting
-    service.setTokenFetchedAtMillis(System.currentTimeMillis() - KrakenPrivateStreamingService.TOKEN_TTL_MILLIS - 1);
+    service.setTokenFetchedAtMillis(
+        System.currentTimeMillis() - KrakenPrivateStreamingService.TOKEN_TTL_MILLIS - 1);
     stubToken("tok-2");
     service.getSubscribeMessage("balances", (Object) CurrencyPair.BTC_USD);
 

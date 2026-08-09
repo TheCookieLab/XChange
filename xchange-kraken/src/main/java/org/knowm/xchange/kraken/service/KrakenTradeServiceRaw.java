@@ -7,12 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -198,8 +197,8 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
 
   /**
    * Fetches the full trade history for the given filter, paging through the {@code ofs} cursor
-   * until the provider-reported count is reached, an empty page is returned, or the page ceiling
-   * is exceeded.
+   * until the provider-reported count is reached, an empty page is returned, or the page ceiling is
+   * exceeded.
    *
    * <p>Pagination is bounded: at most {@value #MAX_TRADE_HISTORY_PAGES} pages are fetched, and a
    * repeated page without progress (more than one entry repeated verbatim) raises {@link
@@ -218,7 +217,7 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
       String type, boolean includeTrades, String start, String end, Boolean consolidateTrades)
       throws IOException {
 
-    Map<String, KrakenTrade> allTrades = new LinkedHashMap<>();
+    Map<String, KrakenTrade> allTrades = new ConcurrentHashMap<>();
     long offset = 0;
     int totalCount = -1;
     Set<String> previousPageKeys = null;
@@ -414,9 +413,9 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
    * Atomically amends a live order via the AmendOrder endpoint.
    *
    * <p>Exactly one of {@code orderId} and {@code clientOrderId} must be provided. The order is
-   * modified in place, preserving the Kraken and client identifiers where possible. An
-   * ambiguous transport outcome is never replayed: the caller reconciles by the returned order
-   * identifiers or by {@code clientOrderId}.
+   * modified in place, preserving the Kraken and client identifiers where possible. An ambiguous
+   * transport outcome is never replayed: the caller reconciles by the returned order identifiers or
+   * by {@code clientOrderId}.
    *
    * @param orderId Kraken order id (txid) of the order to amend, or {@code null}
    * @param clientOrderId client order id ({@code cl_ord_id}) of the order to amend, or {@code null}
@@ -459,8 +458,8 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
    * Places multiple orders in one AddOrderBatch request.
    *
    * <p>The provider returns one entry per submitted order in request order. Partial failures are
-   * surfaced through the provider error array; reconcile per order by the returned transaction
-   * ids rather than replaying the batch blindly.
+   * surfaced through the provider error array; reconcile per order by the returned transaction ids
+   * rather than replaying the batch blindly.
    *
    * @param orders orders to place, at least one
    * @return typed batch result with per-order transaction ids and descriptions
@@ -494,8 +493,8 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
    * Arms or disarms the cancel-all-after (dead-man) timer.
    *
    * <p>All open orders are cancelled when the timer expires unless it is re-armed with a new
-   * request. A timeout of zero disables the timer. This endpoint can cancel all open orders;
-   * enable it deliberately.
+   * request. A timeout of zero disables the timer. This endpoint can cancel all open orders; enable
+   * it deliberately.
    *
    * @param timeoutSeconds timer length in seconds ({@code 0} disables, max 86400)
    * @return typed result with the current and trigger times
@@ -513,7 +512,7 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
   }
 
   private Map<String, String> batchOrderPayload(KrakenStandardOrder order) {
-    Map<String, String> payload = new HashMap<>();
+    Map<String, String> payload = new ConcurrentHashMap<>();
     payload.put("pair", KrakenUtils.createKrakenCurrencyPair(order.getAssetPair()));
     payload.put("type", order.getType().toString());
     payload.put("ordertype", order.getOrderType().toApiFormat());

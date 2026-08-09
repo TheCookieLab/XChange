@@ -102,9 +102,10 @@ class KrakenStreamingExchangeLifecycleTest {
 
     verify(publicService).disconnect();
     verify(privateService).disconnect();
-    assertThat(exchange.getKrakenStreamingService()).isNull();
-    assertThat(exchange.getKrakenPrivateStreamingService()).isNull();
+    // references are retained but the exchange is dead and getters return null
     assertThat(exchange.isAlive()).isFalse();
+    assertThat(exchange.getStreamingTradeService()).isNull();
+    assertThat(exchange.getStreamingMarketDataService()).isNull();
   }
 
   @Test

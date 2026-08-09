@@ -6,9 +6,9 @@ import java.util.List;
 /**
  * Result of the Kraken AddOrderBatch endpoint.
  *
- * <p>The provider returns one entry per submitted order, in request order; each entry carries
- * the exchange transaction id and a description. Raw identity is preserved so partial batch
- * outcomes can be reconciled per order.
+ * <p>The provider returns one entry per submitted order, in request order; each entry carries the
+ * exchange transaction id and a description. Raw identity is preserved so partial batch outcomes
+ * can be reconciled per order.
  */
 public class KrakenAddOrderBatchResponse {
 
@@ -18,7 +18,9 @@ public class KrakenAddOrderBatchResponse {
     this.orders = orders;
   }
 
-  /** @return per-order results in request order */
+  /**
+   * @return per-order results in request order
+   */
   public List<KrakenBatchOrder> getOrders() {
     return orders;
   }
@@ -44,17 +46,23 @@ public class KrakenAddOrderBatchResponse {
       this.closeDescription = description == null ? null : description.getCloseDescription();
     }
 
-    /** @return exchange transaction id of the submitted order */
+    /**
+     * @return exchange transaction id of the submitted order
+     */
     public String getTransactionId() {
       return transactionId;
     }
 
-    /** @return native order description text */
+    /**
+     * @return native order description text
+     */
     public String getOrderDescription() {
       return orderDescription;
     }
 
-    /** @return native close-order description text, when present */
+    /**
+     * @return native close-order description text, when present
+     */
     public String getCloseDescription() {
       return closeDescription;
     }

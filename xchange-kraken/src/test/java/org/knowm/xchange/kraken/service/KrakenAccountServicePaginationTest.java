@@ -4,10 +4,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
-import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -33,8 +33,7 @@ public class KrakenAccountServicePaginationTest extends KrakenExchangeWiremock {
   }
 
   private void stubLedgerPage(String bodyFileName, boolean withOffset) {
-    MappingBuilder builder =
-        post(urlEqualTo("/0/private/Ledgers"));
+    MappingBuilder builder = post(urlEqualTo("/0/private/Ledgers"));
     if (withOffset) {
       builder = builder.withRequestBody(matching(".*ofs=.*"));
     } else {
@@ -48,8 +47,7 @@ public class KrakenAccountServicePaginationTest extends KrakenExchangeWiremock {
   }
 
   private void stubEmptyLedgerPage(boolean withOffset) {
-    MappingBuilder builder =
-        post(urlEqualTo("/0/private/Ledgers"));
+    MappingBuilder builder = post(urlEqualTo("/0/private/Ledgers"));
     if (withOffset) {
       builder = builder.withRequestBody(matching(".*ofs=.*"));
     } else {

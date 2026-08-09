@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Test;
 public class KrakenFuturesAccountJSONTest {
 
   private static final ObjectMapper MAPPER =
-      new ObjectMapper().disable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+      new ObjectMapper()
+          .disable(
+              com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
   private static <T> T parse(String resource, Class<T> type) throws IOException {
     try (InputStream in = KrakenFuturesAccountJSONTest.class.getResourceAsStream(resource)) {
@@ -22,7 +24,8 @@ public class KrakenFuturesAccountJSONTest {
   @Test
   void open_positions_carry_full_risk_detail() throws IOException {
     org.knowm.xchange.krakenfutures.dto.trade.KrakenFuturesOpenPositions positions =
-        parse("/org/knowm/xchange/krakenfutures/dto/account/openpositions.json",
+        parse(
+            "/org/knowm/xchange/krakenfutures/dto/account/openpositions.json",
             org.knowm.xchange.krakenfutures.dto.trade.KrakenFuturesOpenPositions.class);
 
     assertThat(positions.isSuccess()).isTrue();
@@ -50,7 +53,8 @@ public class KrakenFuturesAccountJSONTest {
   @Test
   void account_log_parses_entries_with_cursor_ids() throws IOException {
     KrakenFuturesAccountLog log =
-        parse("/org/knowm/xchange/krakenfutures/dto/account/accountlog.json",
+        parse(
+            "/org/knowm/xchange/krakenfutures/dto/account/accountlog.json",
             KrakenFuturesAccountLog.class);
 
     assertThat(log.isSuccess()).isTrue();
@@ -70,13 +74,13 @@ public class KrakenFuturesAccountJSONTest {
   @Test
   void funding_history_parses_payments() throws IOException {
     KrakenFuturesFundingHistory history =
-        parse("/org/knowm/xchange/krakenfutures/dto/account/fundinghistory.json",
+        parse(
+            "/org/knowm/xchange/krakenfutures/dto/account/fundinghistory.json",
             KrakenFuturesFundingHistory.class);
 
     assertThat(history.isSuccess()).isTrue();
     assertThat(history.getHistory()).hasSize(1);
-    KrakenFuturesFundingHistory.KrakenFuturesFundingPayment payment =
-        history.getHistory().get(0);
+    KrakenFuturesFundingHistory.KrakenFuturesFundingPayment payment = history.getHistory().get(0);
     assertThat(payment.getInstrument()).isEqualTo("PI_XBTUSD");
     assertThat(payment.getFundingRate()).isEqualByComparingTo("0.0001");
     assertThat(payment.getMarkPrice()).isEqualByComparingTo("50000");

@@ -24,8 +24,8 @@ public final class KrakenFuturesRedactor {
   private KrakenFuturesRedactor() {}
 
   /**
-   * Returns the input with bearer tokens, JWTs, and sensitive named fields replaced by
-   * {@code <redacted>} markers, or {@code null} when the input is {@code null}.
+   * Returns the input with bearer tokens, JWTs, and sensitive named fields replaced by {@code
+   * <redacted>} markers, or {@code null} when the input is {@code null}.
    *
    * @param value raw diagnostic text
    * @return sanitized text

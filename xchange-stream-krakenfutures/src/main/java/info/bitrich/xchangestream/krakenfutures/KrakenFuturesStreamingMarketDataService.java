@@ -9,8 +9,8 @@ import info.bitrich.xchangestream.krakenfutures.dto.KrakenFuturesStreamingTradeR
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.*;
 import org.knowm.xchange.dto.trade.LimitOrder;
@@ -25,8 +25,8 @@ public class KrakenFuturesStreamingMarketDataService implements StreamingMarketD
 
   private final ObjectMapper objectMapper = StreamingObjectMapperHelper.getObjectMapper();
   private final KrakenFuturesStreamingService service;
-  private final Map<Instrument, OrderBook> orderBookMap = new HashMap<>();
-  private final Map<Instrument, Long> lastSeqMap = new HashMap<>();
+  private final Map<Instrument, OrderBook> orderBookMap = new ConcurrentHashMap<>();
+  private final Map<Instrument, Long> lastSeqMap = new ConcurrentHashMap<>();
 
   public KrakenFuturesStreamingMarketDataService(KrakenFuturesStreamingService service) {
     this.service = service;

@@ -31,7 +31,8 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
   private final SynchronizedValueFactory<Long> nonceFactory =
       new CurrentTimeIncrementalNonceFactory(TimeUnit.MILLISECONDS);
 
-  private volatile String cachedToken;
+  private final java.util.concurrent.atomic.AtomicReference<String> cachedToken =
+      new java.util.concurrent.atomic.AtomicReference<>();
   private volatile long tokenFetchedAtMillis;
 
   /** Test seam: rewinds the token fetch time to force a refresh on the next subscribe. */
@@ -41,7 +42,7 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
 
   /** Drops the cached token so the next private-channel subscribe re-authenticates. */
   void invalidateToken() {
-    cachedToken = null;
+    cachedToken.set(null);
     tokenFetchedAtMillis = 0;
   }
 
@@ -111,17 +112,19 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
   private String getWebsocketToken() throws IOException {
     synchronized (this) {
       long now = System.currentTimeMillis();
-      if (cachedToken != null && now - tokenFetchedAtMillis < TOKEN_TTL_MILLIS) {
-        return cachedToken;
+      String token = cachedToken.get();
+      if (token != null && now - tokenFetchedAtMillis < TOKEN_TTL_MILLIS) {
+        return token;
       }
       var tokenResult =
           krakenAuthenticated.getWebsocketToken(
               krakenStreamingExchange.getExchangeSpecification().getApiKey(),
               signatureCreator,
               nonceFactory);
-      cachedToken = tokenResult.getResult().getToken();
+      token = tokenResult.getResult().getToken();
+      cachedToken.set(token);
       tokenFetchedAtMillis = now;
-      return cachedToken;
+      return token;
     }
   }
 }

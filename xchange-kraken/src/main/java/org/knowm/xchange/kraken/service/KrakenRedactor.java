@@ -5,10 +5,9 @@ import java.util.regex.Pattern;
 /**
  * Removes credentials, tokens, and sensitive identifiers from diagnostic text.
  *
- * <p>Kraken provider error arrays can echo request parameters such as API keys, signatures,
- * nonces, one-time passwords, WebSocket tokens, and withdrawal addresses. All error messages and
- * structured failure details in this module pass through {@link #sanitize(String)} before they
- * reach callers.
+ * <p>Kraken provider error arrays can echo request parameters such as API keys, signatures, nonces,
+ * one-time passwords, WebSocket tokens, and withdrawal addresses. All error messages and structured
+ * failure details in this module pass through {@link #sanitize(String)} before they reach callers.
  */
 public final class KrakenRedactor {
 
@@ -25,8 +24,8 @@ public final class KrakenRedactor {
   private KrakenRedactor() {}
 
   /**
-   * Returns the input with bearer tokens, JWTs, and sensitive named fields replaced by
-   * {@code <redacted>} markers, or {@code null} when the input is {@code null}.
+   * Returns the input with bearer tokens, JWTs, and sensitive named fields replaced by {@code
+   * <redacted>} markers, or {@code null} when the input is {@code null}.
    *
    * @param value raw diagnostic text
    * @return sanitized text

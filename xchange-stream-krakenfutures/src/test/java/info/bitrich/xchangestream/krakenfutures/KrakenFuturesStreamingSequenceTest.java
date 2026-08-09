@@ -41,7 +41,8 @@ class KrakenFuturesStreamingSequenceTest {
     return objectMapper.readTree(body);
   }
 
-  private String snapshotBody(long seq, String bidPrice, String bidQty, String askPrice, String askQty) {
+  private String snapshotBody(
+      long seq, String bidPrice, String bidQty, String askPrice, String askQty) {
     return "{\"feed\":\"book_snapshot\",\"product_id\":\"PI_XBTUSD\",\"timestamp\":\"2022-01-01T00:00:00.000Z\",\"seq\":"
         + seq
         + ",\"bids\":[{\"price\":\""
@@ -84,8 +85,12 @@ class KrakenFuturesStreamingSequenceTest {
     assertThat(observer.values()).hasSize(3);
 
     OrderBook book = observer.values().get(2);
-    assertThat(book.getBids()).extracting(b -> b.getLimitPrice()).containsExactly(new BigDecimal("100.5"), new BigDecimal("100.0"));
-    assertThat(book.getAsks()).extracting(a -> a.getLimitPrice()).containsExactly(new BigDecimal("101.0"), new BigDecimal("101.5"));
+    assertThat(book.getBids())
+        .extracting(b -> b.getLimitPrice())
+        .containsExactly(new BigDecimal("100.5"), new BigDecimal("100.0"));
+    assertThat(book.getAsks())
+        .extracting(a -> a.getLimitPrice())
+        .containsExactly(new BigDecimal("101.0"), new BigDecimal("101.5"));
     verify(service, never()).resubscribeChannel(eq("bookPF_XBTUSD"));
   }
 
@@ -121,8 +126,10 @@ class KrakenFuturesStreamingSequenceTest {
     observer.dispose();
 
     verify(service, never()).resubscribeChannel(eq("bookPF_XBTUSD"));
-    assertThat(observer.values().get(0).getBids().get(0).getLimitPrice()).isEqualByComparingTo("100.0");
-    assertThat(observer.values().get(1).getBids().get(0).getLimitPrice()).isEqualByComparingTo("100.5");
+    assertThat(observer.values().get(0).getBids().get(0).getLimitPrice())
+        .isEqualByComparingTo("100.0");
+    assertThat(observer.values().get(1).getBids().get(0).getLimitPrice())
+        .isEqualByComparingTo("100.5");
   }
 
   @Test
@@ -140,7 +147,8 @@ class KrakenFuturesStreamingSequenceTest {
                 json(
                     fillsBody
                         .replace("\"seq\":5", "\"seq\":6")
-                        .replace("\"fill_id\":\"f5\"", "\"fill_id\":\"f6\"")))); // redelivered seq 6
+                        .replace(
+                            "\"fill_id\":\"f5\"", "\"fill_id\":\"f6\"")))); // redelivered seq 6
     KrakenFuturesStreamingTradeService serviceUnderTest =
         new KrakenFuturesStreamingTradeService(service);
 

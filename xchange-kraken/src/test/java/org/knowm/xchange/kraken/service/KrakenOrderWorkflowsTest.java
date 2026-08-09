@@ -87,7 +87,9 @@ public class KrakenOrderWorkflowsTest extends KrakenExchangeWiremock {
   void amend_order_requires_an_identity() {
     assertThatExceptionOfType(ExchangeException.class)
         .isThrownBy(
-            () -> raw.amendKrakenOrder(null, null, new BigDecimal("0.5"), "50000.0", null, null, null))
+            () ->
+                raw.amendKrakenOrder(
+                    null, null, new BigDecimal("0.5"), "50000.0", null, null, null))
         .withMessageContaining("order_id or cl_ord_id");
     verify(0, postRequestedFor(urlEqualTo("/0/private/AmendOrder")));
   }
@@ -98,7 +100,8 @@ public class KrakenOrderWorkflowsTest extends KrakenExchangeWiremock {
 
     KrakenException exception =
         org.assertj.core.api.Assertions.catchThrowableOfType(
-            () -> raw.amendKrakenOrder("TXID1", null, new BigDecimal("0.5"), null, null, null, null),
+            () ->
+                raw.amendKrakenOrder("TXID1", null, new BigDecimal("0.5"), null, null, null, null),
             KrakenException.class);
 
     assertThat(exception).isNotNull();
@@ -174,7 +177,8 @@ public class KrakenOrderWorkflowsTest extends KrakenExchangeWiremock {
 
   @Test
   void placement_with_user_reference_sends_userref() throws IOException {
-    stubEndpoint("/0/private/AddOrder", "0_private_addorder-69864b03-6284-40f6-9928-578407607328.json");
+    stubEndpoint(
+        "/0/private/AddOrder", "0_private_addorder-69864b03-6284-40f6-9928-578407607328.json");
 
     raw.placeKrakenLimitOrder(
         new org.knowm.xchange.dto.trade.LimitOrder.Builder(
@@ -191,13 +195,11 @@ public class KrakenOrderWorkflowsTest extends KrakenExchangeWiremock {
 
   @Test
   void placement_with_client_order_id_param_sends_cl_ord_id() throws IOException {
-    stubEndpoint("/0/private/AddOrder", "0_private_addorder-69864b03-6284-40f6-9928-578407607328.json");
+    stubEndpoint(
+        "/0/private/AddOrder", "0_private_addorder-69864b03-6284-40f6-9928-578407607328.json");
 
     raw.placeKrakenLimitOrder(
-        new ClientIdLimitOrder(
-            new BigDecimal("0.002"),
-            new BigDecimal("50000.0"),
-            "MY-CL-ORD-ID"));
+        new ClientIdLimitOrder(new BigDecimal("0.002"), new BigDecimal("50000.0"), "MY-CL-ORD-ID"));
 
     verify(
         postRequestedFor(urlEqualTo("/0/private/AddOrder"))

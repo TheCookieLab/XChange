@@ -17,9 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.zip.CRC32;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.CRC32;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.account.Balance;
@@ -66,15 +66,14 @@ public class KrakenStreamingAdapters {
 
   /**
    * Computes the Kraken v2 order book checksum: CRC32 over the top 10 bid levels (best first)
-   * followed by the top 10 ask levels (best first), each level formatted as {@code price:qty}
-   * with 8 decimal places and levels joined by commas.
+   * followed by the top 10 ask levels (best first), each level formatted as {@code price:qty} with
+   * 8 decimal places and levels joined by commas.
    *
    * @param bids bid levels by price (any order)
    * @param asks ask levels by price (any order)
    * @return CRC32 checksum
    */
-  public static long checksum(
-      Map<BigDecimal, BigDecimal> bids, Map<BigDecimal, BigDecimal> asks) {
+  public static long checksum(Map<BigDecimal, BigDecimal> bids, Map<BigDecimal, BigDecimal> asks) {
     List<String> levels = new ArrayList<>();
     appendLevels(levels, bids, true); // best bid first
     appendLevels(levels, asks, false); // best ask first

@@ -61,7 +61,8 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
   @Override
   public Observable<Order> getOrderChanges(CurrencyPair currencyPair, Object... args) {
     if (streamingService == null) {
-      return Observable.error(new IllegalStateException("Private Kraken streaming service unavailable"));
+      return Observable.error(
+          new IllegalStateException("Private Kraken streaming service unavailable"));
     }
     if (!ownTradesObservableSet) {
       synchronized (this) {
@@ -122,7 +123,8 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
   @Override
   public Observable<UserTrade> getUserTrades(CurrencyPair currencyPair, Object... args) {
     if (streamingService == null) {
-      return Observable.error(new IllegalStateException("Private Kraken streaming service unavailable"));
+      return Observable.error(
+          new IllegalStateException("Private Kraken streaming service unavailable"));
     }
     if (!userTradeObservableSet) {
       synchronized (this) {

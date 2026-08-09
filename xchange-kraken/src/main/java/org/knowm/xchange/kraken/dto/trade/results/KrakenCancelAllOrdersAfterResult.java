@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.knowm.xchange.kraken.dto.KrakenResult;
 import org.knowm.xchange.kraken.dto.trade.KrakenCancelAllOrdersAfterResponse;
 
-public class KrakenCancelAllOrdersAfterResult extends KrakenResult<KrakenCancelAllOrdersAfterResponse> {
+public class KrakenCancelAllOrdersAfterResult
+    extends KrakenResult<KrakenCancelAllOrdersAfterResponse> {
 
   /**
    * Constructor

@@ -465,9 +465,7 @@ public class KrakenAdaptersTest {
 
     ExchangeMetaData metaData =
         KrakenAdapters.adaptToExchangeMetaData(
-            null,
-            Map.of("XXBTZUSD", regular, "XXBTZUSD.d", dark),
-            Map.of("XXBT", asset));
+            null, Map.of("XXBTZUSD", regular, "XXBTZUSD.d", dark), Map.of("XXBT", asset));
 
     assertThat(metaData.getInstruments().keySet()).containsExactly(CurrencyPair.BTC_USD);
   }

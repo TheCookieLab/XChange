@@ -6,9 +6,9 @@ import java.util.List;
 /**
  * Result of the Kraken AmendOrder endpoint.
  *
- * <p>AmendOrder modifies a live order in place, preserving the Kraken and client order
- * identifiers where possible. The response carries the amend transaction id, the order
- * identifiers after the amend, and any rejection reason.
+ * <p>AmendOrder modifies a live order in place, preserving the Kraken and client order identifiers
+ * where possible. The response carries the amend transaction id, the order identifiers after the
+ * amend, and any rejection reason.
  */
 public class KrakenAmendOrderResponse {
 
@@ -41,42 +41,58 @@ public class KrakenAmendOrderResponse {
     this.eventErrors = eventErrors;
   }
 
-  /** @return unique Kraken identifier generated for the amend transaction */
+  /**
+   * @return unique Kraken identifier generated for the amend transaction
+   */
   public String getAmendId() {
     return amendId;
   }
 
-  /** @return Kraken identifier of the amended order, when populated in the request */
+  /**
+   * @return Kraken identifier of the amended order, when populated in the request
+   */
   public String getOrderId() {
     return orderId;
   }
 
-  /** @return client identifier of the amended order, when populated in the request */
+  /**
+   * @return client identifier of the amended order, when populated in the request
+   */
   public String getClientOrderId() {
     return clientOrderId;
   }
 
-  /** @return new Kraken order id when the amend effectively replaced the order */
+  /**
+   * @return new Kraken order id when the amend effectively replaced the order
+   */
   public String getNewOrderId() {
     return newOrderId;
   }
 
-  /** @return new client order id when the amend effectively replaced the order */
+  /**
+   * @return new client order id when the amend effectively replaced the order
+   */
   public String getNewClientOrderId() {
     return newClientOrderId;
   }
 
-  /** @return status of the amend operation */
+  /**
+   * @return status of the amend operation
+   */
   public String getStatus() {
     return status;
   }
 
-  /** @return rejection reason, when the amend was rejected */
+  /**
+   * @return rejection reason, when the amend was rejected
+   */
   public String getRejectReason() {
     return rejectReason;
   }
 
-  /** @return non-fatal event warnings, when present */
+  /**
+   * @return non-fatal event warnings, when present
+   */
   public List<String> getEventErrors() {
     return eventErrors;
   }

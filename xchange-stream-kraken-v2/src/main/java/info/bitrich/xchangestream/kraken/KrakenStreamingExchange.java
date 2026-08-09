@@ -16,10 +16,12 @@ import org.knowm.xchange.ExchangeSpecification;
  *
  * <p>Lifecycle: the private (authenticated) socket is conditional — it is only created and
  * connected when API credentials are present in the {@link ExchangeSpecification}. Without
- * credentials, {@link #getStreamingTradeService()} and {@link #getStreamingAccountService()}
- * return {@code null} and only the public socket is used. Each successful {@link #connect()}
- * bumps the per-socket generation; the previously connected sockets are disconnected so stale
- * generations cannot deliver events after a re-connect.
+ * credentials, {@link #getStreamingTradeService()} and {@link #getStreamingAccountService()} return
+ * {@code null} and only the public socket is used. Each successful {@link #connect()} bumps the
+ * per-socket generation; the previously connected sockets are disconnected so stale generations
+ * cannot deliver events after a re-connect. Service references are kept after {@link #disconnect()}
+ * (sockets are closed, {@link #isAlive()} is {@code false}, and the streaming getters return {@code
+ * null}); a later {@link #connect()} replaces them with fresh sockets.
  */
 @Getter
 public class KrakenStreamingExchange extends BaseExchange implements StreamingExchange {
@@ -27,6 +29,7 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
   private final AtomicLong publicGeneration = new AtomicLong();
   private final AtomicLong privateGeneration = new AtomicLong();
 
+  private volatile boolean connected;
   private KrakenStreamingService krakenStreamingService;
   private KrakenPrivateStreamingService krakenPrivateStreamingService;
   private StreamingMarketDataService streamingMarketDataService;
@@ -40,14 +43,13 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
     KrakenPrivateStreamingService previousPrivate = krakenPrivateStreamingService;
     if (privateRequired) {
       krakenPrivateStreamingService = createPrivateService();
+      streamingTradeService = new KrakenStreamingTradeService(krakenPrivateStreamingService);
+      streamingAccountService = new KrakenStreamingAccountService(krakenPrivateStreamingService);
       privateGeneration.incrementAndGet();
-    } else {
-      krakenPrivateStreamingService = null;
+    } else if (previousPrivate != null) {
+      // credentials dropped since the last connect: retire the stale private socket
+      previousPrivate.disconnect().subscribe();
     }
-    streamingTradeService =
-        privateRequired ? new KrakenStreamingTradeService(krakenPrivateStreamingService) : null;
-    streamingAccountService =
-        privateRequired ? new KrakenStreamingAccountService(krakenPrivateStreamingService) : null;
 
     KrakenStreamingService previousPublic = krakenStreamingService;
     krakenStreamingService = createPublicService();
@@ -68,6 +70,7 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
       krakenPrivateStreamingService.connect().blockingAwait();
     }
 
+    connected = true;
     return krakenStreamingService.connect();
   }
 
@@ -96,48 +99,62 @@ public class KrakenStreamingExchange extends BaseExchange implements StreamingEx
 
   @Override
   public Completable disconnect() {
-    KrakenPrivateStreamingService privateService = krakenPrivateStreamingService;
-    krakenPrivateStreamingService = null;
-    streamingTradeService = null;
-    streamingAccountService = null;
-
-    KrakenStreamingService service = krakenStreamingService;
-    krakenStreamingService = null;
-    streamingMarketDataService = null;
-
-    Completable publicDisconnect = service != null ? service.disconnect() : Completable.complete();
-    if (privateService != null) {
-      return publicDisconnect.andThen(privateService.disconnect());
+    connected = false;
+    Completable publicDisconnect =
+        krakenStreamingService != null
+            ? krakenStreamingService.disconnect()
+            : Completable.complete();
+    if (krakenPrivateStreamingService != null) {
+      return publicDisconnect.andThen(krakenPrivateStreamingService.disconnect());
     }
     return publicDisconnect;
   }
 
   @Override
   public boolean isAlive() {
-    KrakenStreamingService publicService = krakenStreamingService;
-    if (publicService == null || !publicService.isSocketOpen()) {
+    if (!connected || krakenStreamingService == null || !krakenStreamingService.isSocketOpen()) {
       return false;
     }
     if (privateSocketRequired()) {
-      KrakenPrivateStreamingService privateService = krakenPrivateStreamingService;
-      return privateService != null && privateService.isSocketOpen();
+      return krakenPrivateStreamingService != null && krakenPrivateStreamingService.isSocketOpen();
     }
     return true;
   }
 
   @Override
   public void useCompressedMessages(boolean compressedMessages) {
-    krakenStreamingService.useCompressedMessages(compressedMessages);
+    if (krakenStreamingService != null) {
+      krakenStreamingService.useCompressedMessages(compressedMessages);
+    }
   }
 
-  /** @return the generation of the currently connected public socket, starting at 1 */
+  /**
+   * @return the generation of the currently connected public socket, starting at 1
+   */
   public long getPublicGeneration() {
     return publicGeneration.get();
   }
 
-  /** @return the generation of the currently connected private socket, starting at 1 */
+  /**
+   * @return the generation of the currently connected private socket, starting at 1
+   */
   public long getPrivateGeneration() {
     return privateGeneration.get();
+  }
+
+  @Override
+  public StreamingMarketDataService getStreamingMarketDataService() {
+    return connected ? streamingMarketDataService : null;
+  }
+
+  @Override
+  public StreamingTradeService getStreamingTradeService() {
+    return connected && privateSocketRequired() ? streamingTradeService : null;
+  }
+
+  @Override
+  public StreamingAccountService getStreamingAccountService() {
+    return connected && privateSocketRequired() ? streamingAccountService : null;
   }
 
   @Override

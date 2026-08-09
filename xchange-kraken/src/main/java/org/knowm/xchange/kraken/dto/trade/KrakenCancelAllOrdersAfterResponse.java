@@ -21,12 +21,16 @@ public class KrakenCancelAllOrdersAfterResponse {
     this.triggerTime = triggerTime;
   }
 
-  /** @return engine time when the request was handled (RFC3339) */
+  /**
+   * @return engine time when the request was handled (RFC3339)
+   */
   public String getCurrentTime() {
     return currentTime;
   }
 
-  /** @return time at which all open orders will be cancelled unless the timer is re-armed */
+  /**
+   * @return time at which all open orders will be cancelled unless the timer is re-armed
+   */
   public String getTriggerTime() {
     return triggerTime;
   }

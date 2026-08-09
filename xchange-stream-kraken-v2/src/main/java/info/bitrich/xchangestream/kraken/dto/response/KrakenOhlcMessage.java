@@ -2,7 +2,6 @@ package info.bitrich.xchangestream.kraken.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
-import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;

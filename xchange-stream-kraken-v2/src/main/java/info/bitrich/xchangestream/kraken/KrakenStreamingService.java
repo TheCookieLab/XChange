@@ -74,7 +74,10 @@ public class KrakenStreamingService extends NettyStreamingService<KrakenMessage>
     return delay;
   }
 
-  /** @return the next backoff delay for the current failure count, bounded by {@value #RECONNECT_MAX_DELAY} */
+  /**
+   * @return the next backoff delay for the current failure count, bounded by {@value
+   *     #RECONNECT_MAX_DELAY}
+   */
   Duration nextReconnectDelay() {
     int attempts = reconnectAttempts.get();
     long delayMillis = RECONNECT_BASE_DELAY.toMillis() * (1L << Math.min(attempts, 10));
@@ -84,25 +87,6 @@ public class KrakenStreamingService extends NettyStreamingService<KrakenMessage>
   /** Test seam: resets the backoff sequence as if the last connection had succeeded. */
   void resetReconnectBackoff() {
     reconnectAttempts.set(0);
-  }
-
-  /**
-   * Re-sends the subscribe message for an already-registered subscription.
-   *
-   * <p>Used for gap recovery: the provider answers with a fresh snapshot on the same channel, so
-   * the existing emitter keeps receiving the rebuilt state.
-   */
-  public void resubscribeChannel(String channelName, Object... args) {
-    String subscriptionUniqueId = getSubscriptionUniqueId(channelName, args);
-    if (!channels.containsKey(subscriptionUniqueId)) {
-      log.warn("Cannot resubscribe unknown channel {}", subscriptionUniqueId);
-      return;
-    }
-    try {
-      sendMessage(getSubscribeMessage(channelName, args));
-    } catch (IOException e) {
-      log.error("Failed to resubscribe channel {}", subscriptionUniqueId, e);
-    }
   }
 
   @Override

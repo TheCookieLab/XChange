@@ -454,8 +454,7 @@ public class KrakenAdapters {
       BigDecimal resultMakerFee = null;
       BigDecimal resultTakerFee = null;
       int makerVolCompTakerVol = quantityMaker.compareTo(quantityTaker);
-      if ((makerVolCompTakerVol > 0 || makerFeeIdx >= maker.size())
-          && takerFeeIdx < taker.size()) {
+      if ((makerVolCompTakerVol > 0 || makerFeeIdx >= maker.size()) && takerFeeIdx < taker.size()) {
         if (makerFeeIdx < 1) {
           throw new IllegalStateException(
               "Kraken exchange specified fee tiers such that the maker fee was unspecified before a nonzero quantity was traded.");
@@ -499,7 +498,9 @@ public class KrakenAdapters {
       KrakenAssetPair krakenPair, InstrumentMetaData originalMeta) {
     // lot_multiplier is 1 when the provider omits it
     BigDecimal volumeMultiplier =
-        krakenPair.getVolumeMultiplier() == null ? BigDecimal.ONE : krakenPair.getVolumeMultiplier();
+        krakenPair.getVolumeMultiplier() == null
+            ? BigDecimal.ONE
+            : krakenPair.getVolumeMultiplier();
     // Normalize order minimum into base units; ordermin is optional per provider
     BigDecimal minimumAmount =
         krakenPair.getOrderMin() == null

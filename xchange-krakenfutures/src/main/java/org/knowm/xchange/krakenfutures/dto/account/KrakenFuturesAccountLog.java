@@ -11,8 +11,8 @@ import org.knowm.xchange.krakenfutures.dto.KrakenFuturesResult;
 /**
  * Account activity log (deposits, withdrawals, transfers, fee payments, funding).
  *
- * <p>Entries are returned newest first and are ordered by the provider-generated id; the id is
- * the stable cursor for incremental pulls.
+ * <p>Entries are returned newest first and are ordered by the provider-generated id; the id is the
+ * stable cursor for incremental pulls.
  */
 @Getter
 @ToString

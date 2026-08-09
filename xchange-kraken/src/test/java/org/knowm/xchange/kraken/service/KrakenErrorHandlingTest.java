@@ -60,8 +60,7 @@ public class KrakenErrorHandlingTest {
         .isEqualTo(RetryClass.RETRYABLE_RATE_LIMIT);
     assertThat(KrakenException.classify("EService:Unavailable"))
         .isEqualTo(RetryClass.RETRYABLE_TRANSIENT);
-    assertThat(KrakenException.classify("EService:Busy"))
-        .isEqualTo(RetryClass.RETRYABLE_TRANSIENT);
+    assertThat(KrakenException.classify("EService:Busy")).isEqualTo(RetryClass.RETRYABLE_TRANSIENT);
     assertThat(KrakenException.classify("EOrder:Unknown order"))
         .isEqualTo(RetryClass.NON_RETRYABLE);
     assertThat(KrakenException.classify("EAPI:Invalid key")).isEqualTo(RetryClass.NON_RETRYABLE);
@@ -91,7 +90,9 @@ public class KrakenErrorHandlingTest {
   void checkResult_falls_back_to_structured_exception() {
     KrakenException exception =
         org.assertj.core.api.Assertions.catchThrowableOfType(
-            () -> service.checkResult(failingResult("EOrder:Unknown order", "detail two"), "placeOrder"),
+            () ->
+                service.checkResult(
+                    failingResult("EOrder:Unknown order", "detail two"), "placeOrder"),
             KrakenException.class);
 
     assertThat(exception).isNotNull();

@@ -44,8 +44,7 @@ public class KrakenFuturesAccountService extends KrakenFuturesAccountServiceRaw
    * Fetches funding payments after the given time; see {@link
    * KrakenFuturesAccountServiceRaw#getKrakenFuturesFundingHistory}.
    */
-  public KrakenFuturesFundingHistory getFundingHistory(String lastFundingTime)
-      throws IOException {
+  public KrakenFuturesFundingHistory getFundingHistory(String lastFundingTime) throws IOException {
 
     return super.getKrakenFuturesFundingHistory(lastFundingTime);
   }

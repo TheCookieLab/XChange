@@ -3,7 +3,6 @@ package info.bitrich.xchangestream.kraken;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.kraken.dto.common.ChannelType;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenBookMessage;
-import info.bitrich.xchangestream.kraken.dto.response.KrakenBookMessage.KrakenBookLevel;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenBookMessage.KrakenBookLevels;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenDataMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenMessage.KrakenMessageType;
@@ -72,8 +71,8 @@ public class KrakenStreamingMarketDataService implements StreamingMarketDataServ
    * Incremental order book with checksum validation and gap recovery.
    *
    * <p>Snapshots replace the local book; updates apply per-level deltas (a zero quantity removes
-   * the level). Every message carrying a checksum is validated against the top 10 levels per
-   * side; on mismatch the local book is discarded, the channel is resubscribed to trigger a fresh
+   * the level). Every message carrying a checksum is validated against the top 10 levels per side;
+   * on mismatch the local book is discarded, the channel is resubscribed to trigger a fresh
    * snapshot, and emissions resume only once the rebuilt book is consistent.
    */
   @Override
@@ -149,8 +148,11 @@ public class KrakenStreamingMarketDataService implements StreamingMarketDataServ
   static final class BookState {
 
     private final Instrument instrument;
-    private final Map<BigDecimal, BigDecimal> bids = new TreeMap<>(java.util.Collections.reverseOrder());
-    private final Map<BigDecimal, BigDecimal> asks = new TreeMap<>();
+    private final Map<BigDecimal, BigDecimal> bids =
+        java.util.Collections.synchronizedSortedMap(
+            new TreeMap<>(java.util.Collections.reverseOrder()));
+    private final Map<BigDecimal, BigDecimal> asks =
+        java.util.Collections.synchronizedSortedMap(new TreeMap<>());
 
     BookState(Instrument instrument) {
       this.instrument = instrument;
@@ -168,13 +170,18 @@ public class KrakenStreamingMarketDataService implements StreamingMarketDataServ
       applyLevels(asks, payload.getAsks());
     }
 
-    private static void applyLevels(Map<BigDecimal, BigDecimal> levels, List<List<String>> rawLevels) {
+    private static BigDecimal toBigDecimal(String value) {
+      return new BigDecimal(value);
+    }
+
+    private static void applyLevels(
+        Map<BigDecimal, BigDecimal> levels, List<List<String>> rawLevels) {
       for (List<String> raw : rawLevels) {
         if (raw.size() < 2) {
           continue;
         }
-        BigDecimal price = new BigDecimal(raw.get(0));
-        BigDecimal quantity = new BigDecimal(raw.get(1));
+        BigDecimal price = toBigDecimal(raw.get(0));
+        BigDecimal quantity = toBigDecimal(raw.get(1));
         if (quantity.signum() == 0) {
           levels.remove(price);
         } else {

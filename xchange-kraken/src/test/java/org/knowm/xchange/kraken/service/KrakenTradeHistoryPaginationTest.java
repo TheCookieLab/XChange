@@ -66,8 +66,7 @@ public class KrakenTradeHistoryPaginationTest extends KrakenExchangeWiremock {
     // fallback page for the offset cursor (not reached)
     stubPage("0_private_tradeshistory-empty.json", "ofs=4");
 
-    KrakenTradeHistory history =
-        raw.getKrakenTradeHistoryAll(null, false, null, null, null);
+    KrakenTradeHistory history = raw.getKrakenTradeHistoryAll(null, false, null, null, null);
 
     assertThat(history.getCount()).isEqualTo(4);
     assertThat(history.getTrades()).hasSize(4);
@@ -85,8 +84,7 @@ public class KrakenTradeHistoryPaginationTest extends KrakenExchangeWiremock {
     stubPage("0_private_tradeshistory-page1.json");
     stubPage("0_private_tradeshistory-page2.json", "ofs=2");
 
-    KrakenTradeHistory history =
-        raw.getKrakenTradeHistoryAll(null, false, null, null, null);
+    KrakenTradeHistory history = raw.getKrakenTradeHistoryAll(null, false, null, null, null);
 
     assertThat(history.getTrades()).hasSize(4);
     assertThat(history.getTrades())
@@ -103,8 +101,7 @@ public class KrakenTradeHistoryPaginationTest extends KrakenExchangeWiremock {
     stubPage("0_private_tradeshistory-page1.json");
     stubPage("0_private_tradeshistory-empty.json", "ofs=2");
 
-    KrakenTradeHistory history =
-        raw.getKrakenTradeHistoryAll(null, false, null, null, null);
+    KrakenTradeHistory history = raw.getKrakenTradeHistoryAll(null, false, null, null, null);
 
     // provider count claims 4 but the next page is empty: stop with what was collected
     assertThat(history.getTrades()).hasSize(2);
