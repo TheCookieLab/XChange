@@ -312,7 +312,9 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
 
   private void resubscribeOpenStreams() {
     streamingMarketDataService.resubscribe();
-    tradeService.resubscribe();
+    if (tradeService != null) {
+      tradeService.resubscribe();
+    }
   }
 
   @Override
