@@ -12,9 +12,9 @@
 
 * Lifecycle: `Ready`
 * Blocking state: `None`
-- Active phase: `Phase 6 — legacy migration and validation`
-- Active task: `task 13 — deprecate xchange-stream-kraken v1 with migration guide`
-- Overall: `12/26` checklist tasks complete
+- Active phase: `implementation checkpoint complete — handoff to qa-and-ship`
+- Active task: `PR handoff, final gate, merge, deploy (qa-and-ship)`
+- Overall: `14/26` checklist tasks complete
 
 ## Execution Status
 
@@ -278,10 +278,12 @@
 
 ### Phase 6: legacy migration and validation
 
-13. [ ] Deprecate `xchange-stream-kraken` (markers, guide, v1 compatibility suite, v2 parity table).
+13. [x] Deprecate `xchange-stream-kraken` (markers, guide, v1 compatibility suite, v2 parity table).
     Verification: migration/compilation tests; v1 suite passes.
-14. [ ] Run full validation: `mvn -B -pl xchange-kraken,xchange-krakenfutures,xchange-stream-kraken,xchange-stream-kraken-v2,xchange-stream-krakenfutures -am test`, targeted PMD/formatting, root `mvn -B clean install`.
+    Evidence: commit `afce328053` — all public entry points of `xchange-stream-kraken` (`KrakenStreamingExchange`, `KrakenStreamingService`, market data/trade services, adapters, checksum) carry `@Deprecated` with migration Javadoc pointing to v2; family guide gains a v1→v2 channel parity table (ticker, trade, book, OHLC, status, order changes, executions, balances) plus reconnect/checksum/dedup capabilities and the private-socket credential requirement; v1 compatibility suite (`KrakenStreamingChecksumTest`, `KrakenStreamingAdaptersTest`) green with markers.
+14. [x] Run full validation: `mvn -B -pl xchange-kraken,xchange-krakenfutures,xchange-stream-kraken,xchange-stream-kraken-v2,xchange-stream-krakenfutures -am test`, targeted PMD/formatting, root `mvn -B clean install`.
     Verification: green module, PMD, and root builds.
+    Evidence: five-module `-am test` green (221 tests across the five modules; BUILD SUCCESS); `scripts/pmd-check --changed` reports zero new violations on added lines (remaining 73 violations are pre-existing on untouched lines); `fmt:check` clean on the changed modules after `fmt:format` pass (commit `3c26a614e0`); root `mvn -B clean install` BUILD SUCCESS (reactor summary verified).
 
 ## 10) Risks, dependencies, and edge cases
 
