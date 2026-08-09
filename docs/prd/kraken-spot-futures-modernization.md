@@ -12,9 +12,9 @@
 
 * Lifecycle: `Ready`
 * Blocking state: `None`
-- Active phase: `Phase 2 — Spot order and post-trade capabilities`
-- Active task: `task 6 — modern post-trade/history endpoints with bounded pagination`
-- Overall: `5/26` checklist tasks complete
+- Active phase: `Phase 3 — Futures REST parity`
+- Active task: `task 7 — complete Futures instruments, positions, wallets, funding, history, triggers, reduce-only, dead-man`
+- Overall: `6/26` checklist tasks complete
 
 ## Execution Status
 
@@ -245,8 +245,9 @@
 5. [x] Add atomic amend, batch, cancel-all-after/dead-man, and client-ID consistency to `xchange-kraken` (REST bindings in `KrakenAuthenticated`, raw/high-level services, DTOs).
    Verification: order workflow tests incl. typed raw results and no-blind-replay reconciliation tests.
    Evidence: commit `13938bd990` — `AmendOrder` binding + `KrakenAmendOrderResponse` (amendid, order_id, cl_ord_id, new_order_id, new_cl_ord_id, status, reject_reason, event_errors); raw `amendKrakenOrder` requires exactly one of `order_id`/`cl_ord_id`; `KrakenTradeService.changeOrder` overrides the cancel+re-place default with an atomic amend and returns the amended id; `AddOrderBatch` binding with manually serialized per-order payloads (userref/ordertype/type/pair/price/price2/volume/leverage/oflags/timeinforce/starttm/expiretm/cl_ord_id) and typed per-order txid/description results; `CancelAllOrdersAfter` binding + typed currentTime/triggerTime result, high-level convenience documented as deliberately opt-in dead-man; placement client-ID consistency (`PlaceOrderParams.CLIENT_ORDER_ID` → `cl_ord_id`, `userReference` → `userref`); no blind replay — failed placement surfaces typed exception with exactly one HTTP request. New `KrakenOrderWorkflowsTest` (10 wiremock tests) + 5 fixtures.
-6. [ ] Add modern post-trade/history endpoints with bounded pagination.
+6. [x] Add modern post-trade/history endpoints with bounded pagination.
    Verification: post-trade tests with cursor boundaries.
+   Evidence: commit `7c5ffa0385` — `TradesHistory` binding gains `consolidate_trades` (modern Kraken flag consolidating trades by txid); `KrakenTradeHistoryParams` exposes `includeTrades`/`consolidateTrades`; raw `getKrakenTradeHistoryAll` pages the `ofs` cursor until provider `count` is reached, an empty page is returned, or `MAX_TRADE_HISTORY_PAGES` (1000) is exceeded, throwing `ExchangeException` on a repeated page without progress; high-level `getTradeHistory` performs the bounded full fetch when no explicit offset is given (explicit offset keeps single-page semantics). New `KrakenTradeHistoryPaginationTest` (6 tests) covering count-reached stop, offset following, empty-page stop, no-progress guard, flag transmission, and single-page explicit offset.
 
 ### Phase 3: Futures REST parity
 
