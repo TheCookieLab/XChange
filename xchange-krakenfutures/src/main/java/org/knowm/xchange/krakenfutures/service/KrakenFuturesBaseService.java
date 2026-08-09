@@ -5,6 +5,7 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.krakenfutures.KrakenFuturesAuthenticated;
+import org.knowm.xchange.krakenfutures.dto.KrakenFuturesResult;
 import org.knowm.xchange.krakenfutures.dto.trade.KrakenFuturesOpenPositions;
 import org.knowm.xchange.service.BaseExchangeService;
 import org.knowm.xchange.service.BaseService;
@@ -41,11 +42,23 @@ public class KrakenFuturesBaseService extends BaseExchangeService implements Bas
             exchange.getExchangeSpecification().getApiKey(),
             signatureCreator,
             exchange.getNonceFactory());
+    checkSuccess(openPositions, "getKrakenFuturesOpenPositions");
+    return openPositions;
+  }
 
-    if (openPositions.isSuccess()) {
-      return openPositions;
-    } else {
-      throw new ExchangeException("Error getting CF open positions: " + openPositions.getError());
+  /**
+   * Verifies a provider result and throws a structured {@link KrakenFuturesException} carrying
+   * domain, operation, retry classification, and redacted error details when it is unsuccessful.
+   *
+   * @param result provider result, may be {@code null}
+   * @param operation failing operation
+   */
+  protected void checkSuccess(KrakenFuturesResult result, String operation) {
+    if (result != null && result.isSuccess()) {
+      return;
     }
+    String error = result == null ? "missing result" : result.getError();
+    throw new KrakenFuturesException(
+        "futures", operation, KrakenFuturesException.classify(error), new String[] {error});
   }
 }

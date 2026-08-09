@@ -2,7 +2,6 @@ package org.knowm.xchange.krakenfutures.service;
 
 import java.io.IOException;
 import org.knowm.xchange.Exchange;
-import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.krakenfutures.KrakenFuturesAdapters;
 import org.knowm.xchange.krakenfutures.dto.marketData.KrakenFuturesInstruments;
@@ -36,22 +35,16 @@ public class KrakenFuturesMarketDataServiceRaw extends KrakenFuturesBaseService 
 
     KrakenFuturesTickers tickers = krakenFuturesAuthenticated.getTickers();
 
-    if (tickers.isSuccess()) {
-      return tickers;
-    } else {
-      throw new ExchangeException("Error getting CF tickers: " + tickers.getError());
-    }
+    checkSuccess(tickers, "getKrakenFuturesTickers");
+    return tickers;
   }
 
   public KrakenFuturesInstruments getKrakenFuturesInstruments() throws IOException {
 
     KrakenFuturesInstruments instruments = krakenFuturesAuthenticated.getInstruments();
 
-    if (instruments.isSuccess()) {
-      return instruments;
-    } else {
-      throw new ExchangeException("Error getting CF instruments: " + instruments.getError());
-    }
+    checkSuccess(instruments, "getKrakenFuturesInstruments");
+    return instruments;
   }
 
   public KrakenFuturesOrderBook getKrakenFuturesOrderBook(Instrument instrument)
@@ -61,12 +54,9 @@ public class KrakenFuturesMarketDataServiceRaw extends KrakenFuturesBaseService 
         krakenFuturesAuthenticated.getOrderBook(
             KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument));
 
-    if (orderBook.isSuccess()) {
-      orderBook.setInstrument(instrument);
-      return orderBook;
-    } else {
-      throw new ExchangeException("Error getting CF order book: " + orderBook.getError());
-    }
+    checkSuccess(orderBook, "getKrakenFuturesOrderBook");
+    orderBook.setInstrument(instrument);
+    return orderBook;
   }
 
   public KrakenFuturesPublicFills getKrakenFuturesTrades(Instrument instrument) throws IOException {
@@ -75,11 +65,8 @@ public class KrakenFuturesMarketDataServiceRaw extends KrakenFuturesBaseService 
         krakenFuturesAuthenticated.getHistory(
             KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument));
 
-    if (publicFills.isSuccess()) {
-      publicFills.setInstrument(instrument);
-      return publicFills;
-    } else {
-      throw new ExchangeException("Error getting CF public fills: " + publicFills.getError());
-    }
+    checkSuccess(publicFills, "getKrakenFuturesTrades");
+    publicFills.setInstrument(instrument);
+    return publicFills;
   }
 }

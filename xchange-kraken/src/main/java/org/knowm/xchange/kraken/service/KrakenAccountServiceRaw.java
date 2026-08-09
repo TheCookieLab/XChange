@@ -13,6 +13,7 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.exceptions.DepositAddressAmbiguousException;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.kraken.KrakenUtils;
 import org.knowm.xchange.kraken.dto.account.DepostitStatus;
 import org.knowm.xchange.kraken.dto.account.KrakenDepositAddress;
@@ -308,9 +309,20 @@ public class KrakenAccountServiceRaw extends KrakenBaseService {
   }
 
   /**
+   * Maximum number of ledger pages fetched by the full-history iteration before it fails. Guards
+   * against provider-side pagination loops and unbounded history downloads.
+   */
+  public static final int MAX_LEDGER_PAGES = 1000;
+
+  /**
    * Retrieves all ledger entries between the start date and the end date. This method iterates over
    * ledger pages until it has retrieved all entries between the start date and the end date. The
    * ledger records the activity (trades, deposit, withdrawals) of the account for all assets.
+   *
+   * <p>Iteration is bounded: it fails with an {@link ExchangeException} when the provider returns a
+   * repeated page without advancing the offset, or when the page ceiling ({@link
+   * #MAX_LEDGER_PAGES}) is exceeded. Offsets are inclusive: the entry at {@code offset} is the
+   * first entry returned, and pages are fetched in chronological ascending order.
    *
    * @param assets Set of assets to restrict output to (can be null, defaults to all)
    * @param ledgerType {@link LedgerType} to retrieve (can be null, defaults to all types)
@@ -333,13 +345,34 @@ public class KrakenAccountServiceRaw extends KrakenBaseService {
       longOffset = offset;
     }
 
+    int pages = 0;
     while (!lastLedgerMap.isEmpty()) {
+      if (pages >= MAX_LEDGER_PAGES) {
+        throw new ExchangeException(
+            "Kraken ledger iteration exceeded the page ceiling of "
+                + MAX_LEDGER_PAGES
+                + "; aborting instead of fetching an unbounded history");
+      }
       longOffset += lastLedgerMap.size();
-      lastLedgerMap = getKrakenPartialLedgerInfo(ledgerType, start, end, longOffset, assets);
-      if (lastLedgerMap.size() == 1 && fullLedgerMap.keySet().containsAll(lastLedgerMap.keySet())) {
+      Map<String, KrakenLedger> next =
+          getKrakenPartialLedgerInfo(ledgerType, start, end, longOffset, assets);
+      pages++;
+      if (next.isEmpty()) {
         break;
       }
-      fullLedgerMap.putAll(lastLedgerMap);
+      if (fullLedgerMap.keySet().containsAll(next.keySet())) {
+        // A repeated page means the provider ignored the offset: a full-size repeat is a
+        // pagination loop, while a single duplicate entry is the known exhaustion edge case.
+        if (next.size() > 1) {
+          throw new ExchangeException(
+              "Kraken ledger pagination made no progress at offset "
+                  + longOffset
+                  + "; aborting to avoid an infinite loop");
+        }
+        break;
+      }
+      fullLedgerMap.putAll(next);
+      lastLedgerMap = next;
     }
     return fullLedgerMap;
   }

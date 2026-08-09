@@ -13,8 +13,8 @@
 * Lifecycle: `Ready`
 * Blocking state: `None`
 - Active phase: `Phase 1 — family architecture and metadata`
-- Active task: `task 3 — typed continuation pagination`
-- Overall: `1/26` checklist tasks complete
+- Active task: `task 1 — family architecture doc and capability matrix`
+- Overall: `3/26` checklist tasks complete
 
 ## Execution Status
 
@@ -232,10 +232,12 @@
 2. [x] Rework Spot/Futures metadata: authoritative instruments, currencies, trading rules, and fee schedules; remove the `KrakenExchange.java:46-49` caveat; make `KrakenAdapters.adaptFeeTiers` accurate.
    Verification: metadata unit tests with exact decimals/aliases; targeted `mvn -B -pl xchange-kraken,xchange-krakenfutures -am test`.
    Evidence: caveat removed (`KrakenExchange.java`); `adaptPair` keeps tradingFee null when fee data is absent (no misleading zero), falls back to first maker tier; `adaptFeeTiers` copies before sorting and fails explicitly on one-sided tier data; `adaptPair` tolerates missing ordermin/lot_multiplier. New tests `testAdaptToExchangeMetaData_AccurateFeesAndDecimals`, `_SkipsDarkMarkets`, `testAdaptPair_NoMisleadingFeeWhenUnavailable`. xchange-kraken unit suite 57/57 green.
-3. [ ] Add typed continuation pagination for ledgers, orders, trades, deposits/withdrawals (Spot) and histories/account logs (Futures) with cursor protection.
+3. [x] Add typed continuation pagination for ledgers, orders, trades, deposits/withdrawals (Spot) and histories/account logs (Futures) with cursor protection.
    Verification: pagination tests incl. repeated/no-progress cursors.
-4. [ ] Extend structured errors/rate limits/redaction across Spot and Futures REST (`KrakenBaseService.checkResult` and futures equivalent).
+   Evidence: `getKrakenLedgerInfo` full-history iteration now bounded — page ceiling (`MAX_LEDGER_PAGES=1000`, throws when exceeded) and repeated-page no-progress detection (throws `ExchangeException`); single-duplicate-entry exhaustion edge preserved. Raw `ofs` continuation documented as inclusive/chronological. New wiremock tests `full_fetch_stops_at_empty_page` (exactly 2 requests) and `repeated_page_without_progress_fails`. Futures history endpoints are absent from the wire API and land in task 7.
+4. [x] Extend structured errors/rate limits/redaction across Spot and Futures REST (`KrakenBaseService.checkResult` and futures equivalent).
    Verification: error-classification and redaction fixture tests.
+   Evidence: new `KrakenException`/`KrakenFuturesException` carrying domain, operation, retry class (NON_RETRYABLE / RETRYABLE_RATE_LIMIT / RETRYABLE_TRANSIENT / UNKNOWN), and sanitized error arrays; `KrakenRedactor`/`KrakenFuturesRedactor` redact api keys/secrets/signatures/nonces/OTPs/tokens/bearers/JWTs/addresses; `checkResult` keeps typed exceptions with redacted messages and falls back to the structured exception; all futures raw error sites (orders, cancel, batch, fills, positions, tickers, instruments, order book, history) now throw `KrakenFuturesException`; fixed copy-paste "limit order" message in market/stop order paths. New tests `KrakenErrorHandlingTest` (5), `KrakenFuturesRedactorTest` (3); junit-jupiter + assertj test deps added to xchange-krakenfutures pom.
 
 ### Phase 2: Spot order and post-trade capabilities
 
