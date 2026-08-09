@@ -431,50 +431,56 @@ public class KrakenAdapters {
   }
 
   protected static FeeTier[] adaptFeeTiers(List<KrakenFee> makerFees, List<KrakenFee> takerFees) {
-    Collections.sort(makerFees);
-    Collections.sort(takerFees);
+    if (makerFees.isEmpty() != takerFees.isEmpty()) {
+      throw new IllegalStateException(
+          "Kraken exchange returned incomplete fee tier data: maker and taker fee lists must both be present.");
+    }
+    List<KrakenFee> maker = new ArrayList<>(makerFees);
+    List<KrakenFee> taker = new ArrayList<>(takerFees);
+    Collections.sort(maker);
+    Collections.sort(taker);
     List<FeeTier> resultFeeTiers = new ArrayList<FeeTier>();
     int makerFeeIdx = 0;
     int takerFeeIdx = 0;
 
-    while (makerFeeIdx < makerFees.size() || takerFeeIdx < takerFees.size()) {
-      int curMakerIdx = Math.min(makerFeeIdx, makerFees.size() - 1);
-      int curTakerIdx = Math.min(takerFeeIdx, takerFees.size() - 1);
+    while (makerFeeIdx < maker.size() || takerFeeIdx < taker.size()) {
+      int curMakerIdx = Math.min(makerFeeIdx, maker.size() - 1);
+      int curTakerIdx = Math.min(takerFeeIdx, taker.size() - 1);
 
-      BigDecimal quantityMaker = makerFees.get(curMakerIdx).getVolume();
-      BigDecimal quantityTaker = takerFees.get(curTakerIdx).getVolume();
+      BigDecimal quantityMaker = maker.get(curMakerIdx).getVolume();
+      BigDecimal quantityTaker = taker.get(curTakerIdx).getVolume();
 
       BigDecimal resultQuantity = null;
       BigDecimal resultMakerFee = null;
       BigDecimal resultTakerFee = null;
       int makerVolCompTakerVol = quantityMaker.compareTo(quantityTaker);
-      if ((makerVolCompTakerVol > 0 || makerFeeIdx >= makerFees.size())
-          && takerFeeIdx < takerFees.size()) {
+      if ((makerVolCompTakerVol > 0 || makerFeeIdx >= maker.size())
+          && takerFeeIdx < taker.size()) {
         if (makerFeeIdx < 1) {
           throw new IllegalStateException(
               "Kraken exchange specified fee tiers such that the maker fee was unspecified before a nonzero quantity was traded.");
         }
-        KrakenFee takerFeeData = takerFees.get(curTakerIdx);
+        KrakenFee takerFeeData = taker.get(curTakerIdx);
         resultTakerFee = takerFeeData.getPercentFee();
-        resultMakerFee = makerFees.get(makerFeeIdx - 1).getPercentFee();
+        resultMakerFee = maker.get(makerFeeIdx - 1).getPercentFee();
         resultQuantity = takerFeeData.getVolume();
         takerFeeIdx++;
-      } else if ((makerVolCompTakerVol < 0 || takerFeeIdx >= takerFees.size())
-          && makerFeeIdx < makerFees.size()) {
+      } else if ((makerVolCompTakerVol < 0 || takerFeeIdx >= taker.size())
+          && makerFeeIdx < maker.size()) {
         if (takerFeeIdx < 1) {
           throw new IllegalStateException(
               "Kraken exchange specified fee tiers such that the taker fee was unspecified before a nonzero quantity was traded.");
         }
-        KrakenFee makerFeeData = makerFees.get(curMakerIdx);
+        KrakenFee makerFeeData = maker.get(curMakerIdx);
         resultMakerFee = makerFeeData.getPercentFee();
-        resultTakerFee = takerFees.get(takerFeeIdx - 1).getPercentFee();
+        resultTakerFee = taker.get(takerFeeIdx - 1).getPercentFee();
         resultQuantity = makerFeeData.getVolume();
         makerFeeIdx++;
-      } else { // makerVolCompTakerVol == 0 && makerFeeIdx < makerFees.size() && takerFeeIdx <
-        // takerFees.size()
-        KrakenFee makerFeeData = makerFees.get(curMakerIdx);
+      } else { // makerVolCompTakerVol == 0 && makerFeeIdx < maker.size() && takerFeeIdx <
+        // taker.size()
+        KrakenFee makerFeeData = maker.get(curMakerIdx);
         resultMakerFee = makerFeeData.getPercentFee();
-        resultTakerFee = takerFees.get(curTakerIdx).getPercentFee();
+        resultTakerFee = taker.get(curTakerIdx).getPercentFee();
         resultQuantity = makerFeeData.getVolume();
 
         takerFeeIdx++;
@@ -491,23 +497,34 @@ public class KrakenAdapters {
 
   private static InstrumentMetaData adaptPair(
       KrakenAssetPair krakenPair, InstrumentMetaData originalMeta) {
-    // Normalize order minimum into base units
-    BigDecimal minimumAmount = krakenPair.getOrderMin().multiply(krakenPair.getVolumeMultiplier());
+    // lot_multiplier is 1 when the provider omits it
+    BigDecimal volumeMultiplier =
+        krakenPair.getVolumeMultiplier() == null ? BigDecimal.ONE : krakenPair.getVolumeMultiplier();
+    // Normalize order minimum into base units; ordermin is optional per provider
+    BigDecimal minimumAmount =
+        krakenPair.getOrderMin() == null
+            ? null
+            : krakenPair.getOrderMin().multiply(volumeMultiplier);
     // effective step size in base units
     // stepSize = lot_multiplier × 10^(-lot_decimals)
     BigDecimal volumeStepSize =
         BigDecimal.ONE
             .divide(BigDecimal.TEN.pow(krakenPair.getVolumeLotScale()))
-            .multiply(krakenPair.getVolumeMultiplier());
-    // --- Trading fee: first tier as default ---
-    BigDecimal tradingFee =
-        krakenPair.getFees().isEmpty()
-            ? BigDecimal.ZERO
-            : krakenPair.getFees().get(0).getPercentFee().divide(BigDecimal.valueOf(100));
+            .multiply(volumeMultiplier);
+    // --- Trading fee: first tier as default (taker, falling back to maker) ---
+    BigDecimal tradingFee = null;
+    if (!krakenPair.getFees().isEmpty()) {
+      tradingFee = krakenPair.getFees().get(0).getPercentFee().movePointLeft(2);
+    } else if (!krakenPair.getFees_maker().isEmpty()) {
+      tradingFee = krakenPair.getFees_maker().get(0).getPercentFee().movePointLeft(2);
+    }
 
     return InstrumentMetaData.builder()
         .tradingFee(tradingFee)
-        .feeTiers(adaptFeeTiers(krakenPair.getFees_maker(), krakenPair.getFees()))
+        .feeTiers(
+            krakenPair.getFees().isEmpty() || krakenPair.getFees_maker().isEmpty()
+                ? new FeeTier[0]
+                : adaptFeeTiers(krakenPair.getFees_maker(), krakenPair.getFees()))
         .tradingFeeCurrency(
             KrakenUtils.translateKrakenCurrencyCode(krakenPair.getFeeVolumeCurrency()))
         .minimumAmount(minimumAmount)

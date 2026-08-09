@@ -43,8 +43,7 @@ public class KrakenExchange extends BaseExchange implements Exchange {
     KrakenAssets assets = ((KrakenMarketDataServiceRaw) marketDataService).getKrakenAssets();
     KrakenUtils.clearAssets();
 
-    // Note: CurrencyPair Metadata will not contain accurate maker/taker fees
-    // Note: Currency Metadata will only contain price scale
+    // Fee schedules and price scales come from the live AssetPairs/Assets responses
     exchangeMetaData =
         KrakenAdapters.adaptToExchangeMetaData(
             exchangeMetaData, assetPairs.getAssetPairMap(), assets.getAssetPairMap());
