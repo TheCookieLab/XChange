@@ -1,14 +1,18 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseCommitConvertTradeRequest;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteRequest;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteResponse;
@@ -19,6 +23,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
@@ -124,7 +129,7 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    * @param userNativeCurrency optional native currency (deprecated, defaults to USD)
    * @param useSimplifiedTotalValueCalculation optional flag for simplified calculation
    * @return response containing filtered orders and pagination cursor
-   * @throws IOException if a network or serialization error occurs
+   * @throws IOException if there is an error communicating with the Coinbase API
    */
   public CoinbaseListOrdersResponse listOrders(
       List<String> orderIds,
@@ -152,18 +157,58 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   }
 
   /**
+   * Iterates order history across pages with a bounded, loop-safe cursor loop.
+   *
+   * <p>Stops when the caller-provided limit is reached, the server stops returning cursors, a
+   * repeated cursor is detected, or the hard page bound is exceeded. Filters mirror {@link
+   * #listOrders(List, List, String, List, List, List, String, String, String, String, String, List,
+   * String, Integer, String, String, String, Boolean)}.
+   *
+   * @param limit optional maximum number of orders to collect; null collects all pages
+   * @return all collected orders
+   * @throws IOException on transport failure
+   * @throws org.knowm.xchange.exceptions.ExchangeException when pagination does not advance
+   */
+  public List<CoinbaseOrderDetail> listOrdersBounded(Integer limit) throws IOException {
+    List<CoinbaseOrderDetail> orders = new ArrayList<>();
+    Set<String> seenCursors = new HashSet<>();
+    int page = 0;
+    String cursor = null;
+    do {
+      final String requestCursor = cursor;
+      CoinbaseListOrdersResponse response = CoinbaseRetry.readWithBackoff(() -> listOrders(
+          null, null, null, null, null, null, null, null, null, null, null, null, null, limit,
+          requestCursor, null, null, null));
+      cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "orders");
+      page++;
+      if (response.getOrders() != null) {
+        orders.addAll(response.getOrders());
+      }
+    } while (cursor != null && !cursor.isEmpty() && (limit == null || orders.size() < limit));
+    return orders;
+  }
+
+  /**
    * Creates an order (market/limit/stop) by forwarding the request as-is to Coinbase.
    * Caller is responsible for constructing the correct request per Coinbase Advanced Trade.
    */
   public CoinbaseCreateOrderResponse createOrder(CoinbaseOrderRequest request) throws IOException {
-    return coinbaseAdvancedTrade.createOrder(authTokenCreator, request);
+    try {
+      return coinbaseAdvancedTrade.createOrder(authTokenCreator, request);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException("createOrder", request.getClientOrderId(), transportFailure);
+    }
   }
 
   /**
    * Edit an existing order natively via Advanced Trade.
    */
   public CoinbaseOrdersResponse editOrder(CoinbaseEditOrderRequest request) throws IOException {
-    return coinbaseAdvancedTrade.editOrder(authTokenCreator, request);
+    try {
+      return coinbaseAdvancedTrade.editOrder(authTokenCreator, request);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException("editOrder", request.getOrderId(), transportFailure);
+    }
   }
 
   /**
@@ -260,7 +305,11 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseConvertTradeResponse commitConvertTrade(String tradeId,
       CoinbaseCommitConvertTradeRequest request) throws IOException {
-    return coinbaseAdvancedTrade.commitConvertTrade(authTokenCreator, tradeId, request);
+    try {
+      return coinbaseAdvancedTrade.commitConvertTrade(authTokenCreator, tradeId, request);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException("commitConvertTrade", tradeId, transportFailure);
+    }
   }
 
   /**

@@ -12,6 +12,7 @@ import org.knowm.xchange.coinbase.v2.dto.CoinbaseV2Money;
  * transfers that affect collateral independently of trading fills.</p>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Deprecated
 public class CoinbaseV2Transaction {
 
   private final String id;

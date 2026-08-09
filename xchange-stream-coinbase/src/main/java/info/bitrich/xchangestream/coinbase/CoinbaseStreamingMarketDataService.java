@@ -2,6 +2,7 @@ package info.bitrich.xchangestream.coinbase;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseOrderBookGap;
 import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingCandle;
 import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingEvent;
 import info.bitrich.xchangestream.coinbase.dto.CoinbaseStreamingLevel2Update;
@@ -12,6 +13,7 @@ import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.subjects.PublishSubject;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -26,6 +28,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.CandleStick;
@@ -51,6 +54,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   private final OrderBookSnapshotProvider snapshotProvider;
   private final ExchangeSpecification exchangeSpecification;
   private final String productIdOverride;
+  private final CoinbaseProductIdentity productIdentity;
   private final Map<CurrencyPair, OrderBookState> orderBooks = new ConcurrentHashMap<>();
   // Cache observables per currency pair to enable replay for new subscribers
   // Key format: "CURRENCY_PAIR:channel" to differentiate between level2 and level2_batch
@@ -62,10 +66,19 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       CoinbaseStreamingService streamingService,
       OrderBookSnapshotProvider snapshotProvider,
       ExchangeSpecification spec) {
+    this(streamingService, snapshotProvider, spec, resolveProductIdentity(spec));
+  }
+
+  CoinbaseStreamingMarketDataService(
+      CoinbaseStreamingService streamingService,
+      OrderBookSnapshotProvider snapshotProvider,
+      ExchangeSpecification spec,
+      CoinbaseProductIdentity productIdentity) {
     this.streamingService = streamingService;
     this.snapshotProvider = snapshotProvider != null ? snapshotProvider : pair -> null;
     this.exchangeSpecification = spec;
     this.productIdOverride = resolveProductIdOverride(spec);
+    this.productIdentity = productIdentity;
   }
 
   void ensureHeartbeatsSubscription() {
@@ -256,6 +269,23 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     return getOrderBook(currencyPair, true);
   }
 
+  /**
+   * Sequence-discontinuity events for a currency pair's order book.
+   *
+   * <p>Subscribing does not itself open a level2 subscription; the events come from the
+   * {@link #getOrderBook(CurrencyPair)} processing pipeline. Each event reports the expected and
+   * received sequence and whether the book was rebuilt from a REST snapshot; a gap with
+   * {@code recovered=false} leaves a stale book and must not be silently ignored.
+   *
+   * @param currencyPair the currency pair whose book is watched
+   * @return gap events for the pair
+   */
+  public Observable<CoinbaseOrderBookGap> getOrderBookGaps(CurrencyPair currencyPair) {
+    OrderBookState state = orderBooks.computeIfAbsent(
+        currencyPair, pair -> new OrderBookState(pair, snapshotProvider, resolveProductId(pair)));
+    return state.gapEvents();
+  }
+
   @Override
   public Observable<OrderBook> getOrderBook(Instrument instrument, Object... args) {
     if (instrument instanceof CurrencyPair) {
@@ -415,10 +445,36 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   }
 
   private String resolveProductId(CurrencyPair currencyPair) {
+    if (productIdentity != null) {
+      String productId = productIdentity.productId(currencyPair);
+      if (productId != null) {
+        return productId;
+      }
+      if (productIdOverride == null) {
+        throw new CoinbaseProductIdentity.AmbiguousMappingException(
+            "no Coinbase product id for currency pair '"
+                + currencyPair
+                + "' in the configured product catalog");
+      }
+    }
     if (productIdOverride != null) {
+      LOG.warn(
+          "Coinbase_Product_Id_Override is deprecated and will be removed; use a CoinbaseProductIdentity catalog instead");
       return productIdOverride;
     }
     return CoinbaseProductIds.productId(currencyPair);
+  }
+
+
+  private static CoinbaseProductIdentity resolveProductIdentity(ExchangeSpecification spec) {
+    if (spec == null) {
+      return null;
+    }
+    Object raw = spec.getExchangeSpecificParametersItem(CoinbaseStreamingExchange.PARAM_PRODUCT_IDENTITY);
+    if (raw instanceof CoinbaseProductIdentity) {
+      return (CoinbaseProductIdentity) raw;
+    }
+    return null;
   }
 
   private List<Ticker> adaptTickers(CoinbaseStreamingMessage message,
@@ -528,6 +584,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     // multiple subscribers or different schedulers
     private final AtomicLong lastSequence = new AtomicLong(-1);
     private volatile boolean hasSnapshot;
+    private final PublishSubject<CoinbaseOrderBookGap> gapEvents = PublishSubject.create();
 
     OrderBookState(CurrencyPair currencyPair, OrderBookSnapshotProvider snapshotProvider) {
       this(currencyPair, snapshotProvider, null);
@@ -601,7 +658,12 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
                 currencyPair,
                 expected,
                 sequence);
-            if (recoverFromSnapshot(sequence)) {
+            boolean recovered = recoverFromSnapshot(sequence);
+            // Always surface the discontinuity; a failed recovery leaves a stale book
+            // and must not be silently swallowed.
+            gapEvents.onNext(
+                new CoinbaseOrderBookGap(currencyPair, expected, sequence, recovered));
+            if (recovered) {
               changed = true;
             } else {
               continue;
@@ -834,6 +896,11 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       asks.clear();
       lastSequence.set(-1);
       hasSnapshot = false;
+    }
+
+    /** Sequence-discontinuity events detected by this state; late subscribers miss earlier gaps. */
+    Observable<CoinbaseOrderBookGap> gapEvents() {
+      return gapEvents;
     }
   }
 }
