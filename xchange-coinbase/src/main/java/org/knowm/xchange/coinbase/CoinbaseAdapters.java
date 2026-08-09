@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
@@ -156,7 +157,15 @@ public final class CoinbaseAdapters {
    * filtering to orders in an open state.
    */
   public static OpenOrders adaptOpenOrders(CoinbaseListOrdersResponse response) {
-    List<LimitOrder> open = response.getOrders().stream()
+    return adaptOpenOrders(response.getOrders());
+  }
+
+  /**
+   * Adapt Coinbase order details into XChange OpenOrders (LimitOrders only), filtering to orders
+   * in an open state.
+   */
+  public static OpenOrders adaptOpenOrders(List<CoinbaseOrderDetail> orders) {
+    List<LimitOrder> open = orders.stream()
         .filter(detail -> {
           Order.OrderStatus s = adaptOrderStatus(detail.getStatus());
           return s != null && s.isOpen();

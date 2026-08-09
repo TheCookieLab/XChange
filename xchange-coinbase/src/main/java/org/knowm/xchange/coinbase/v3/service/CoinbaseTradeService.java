@@ -3,6 +3,8 @@ package org.knowm.xchange.coinbase.v3.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -148,10 +150,14 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
         (CoinbaseTradeHistoryParams) params;
 
     List<UserTrade> trades = new ArrayList<>();
+    Set<String> seenCursors = new HashSet<>();
+    int page = 0;
     String cursor;
     do {
       CoinbaseOrdersResponse response = listFills(
           v3Params);
+      cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "fills");
+      page++;
       for (CoinbaseFill fill : response.getFills()) {
         UserTrade trade = UserTrade.builder()
             .type(fill.getOrderType()).originalAmount(fill.getSize()).instrument(fill.getInstrument())
@@ -160,7 +166,6 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
             .feeCurrency(fill.getFeeCurrency()).build();
         trades.add(trade);
       }
-      cursor = response.getCursor();
       v3Params.setNextPageCursor(cursor);
     } while (cursor != null && !cursor.isEmpty() && (v3Params.getLimit() == null
         || trades.size() < v3Params.getLimit()));
@@ -182,7 +187,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public OpenOrders getOpenOrders() throws IOException {
-    return CoinbaseAdapters.adaptOpenOrders(super.listOrders());
+    return CoinbaseAdapters.adaptOpenOrders(listOrdersBounded(null));
   }
 
   /**

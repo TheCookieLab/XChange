@@ -2,7 +2,9 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.coinbase.v2.CoinbaseV2Authenticated;
@@ -86,10 +88,13 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
 
     String cursor = null;
     Boolean hasNext;
+    Set<String> seenCursors = new HashSet<>();
+    int page = 0;
     do {
       CoinbaseAccountsResponse response = coinbaseAdvancedTrade.listAccounts(authTokenCreator, 250,
           cursor);
-      cursor = response.getCursor();
+      cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "accounts");
+      page++;
       hasNext = response.getHasNext();
       tmpList = response.getAccounts();
 

@@ -1,8 +1,11 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -19,6 +22,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
@@ -124,7 +128,7 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    * @param userNativeCurrency optional native currency (deprecated, defaults to USD)
    * @param useSimplifiedTotalValueCalculation optional flag for simplified calculation
    * @return response containing filtered orders and pagination cursor
-   * @throws IOException if a network or serialization error occurs
+   * @throws IOException if there is an error communicating with the Coinbase API
    */
   public CoinbaseListOrdersResponse listOrders(
       List<String> orderIds,
@@ -149,6 +153,37 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
         orderStatus, timeInForces, orderTypes, orderSide, startDate, endDate, orderPlacementSource,
         contractExpiryType, assetFilters, retailPortfolioId, limit, cursor, sortBy,
         userNativeCurrency, useSimplifiedTotalValueCalculation);
+  }
+
+  /**
+   * Iterates order history across pages with a bounded, loop-safe cursor loop.
+   *
+   * <p>Stops when the caller-provided limit is reached, the server stops returning cursors, a
+   * repeated cursor is detected, or the hard page bound is exceeded. Filters mirror {@link
+   * #listOrders(List, List, String, List, List, List, String, String, String, String, String, List,
+   * String, Integer, String, String, String, Boolean)}.
+   *
+   * @param limit optional maximum number of orders to collect; null collects all pages
+   * @return all collected orders
+   * @throws IOException on transport failure
+   * @throws org.knowm.xchange.exceptions.ExchangeException when pagination does not advance
+   */
+  public List<CoinbaseOrderDetail> listOrdersBounded(Integer limit) throws IOException {
+    List<CoinbaseOrderDetail> orders = new ArrayList<>();
+    Set<String> seenCursors = new HashSet<>();
+    int page = 0;
+    String cursor = null;
+    do {
+      CoinbaseListOrdersResponse response = listOrders(
+          null, null, null, null, null, null, null, null, null, null, null, null, null, limit,
+          cursor, null, null, null);
+      cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "orders");
+      page++;
+      if (response.getOrders() != null) {
+        orders.addAll(response.getOrders());
+      }
+    } while (cursor != null && !cursor.isEmpty() && (limit == null || orders.size() < limit));
+    return orders;
   }
 
   /**

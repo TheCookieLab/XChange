@@ -17,7 +17,8 @@ public class CoinbaseAccountsResponse {
   @Getter
   private final Integer size;
 
-  private CoinbaseAccountsResponse(@JsonProperty("accounts") final List<CoinbaseAccount> accounts,
+  /** Constructs an accounts response; also used by Jackson for wire deserialization. */
+  public CoinbaseAccountsResponse(@JsonProperty("accounts") final List<CoinbaseAccount> accounts,
       @JsonProperty("has_next") Boolean hasNext, @JsonProperty("cursor") String cursor,
       @JsonProperty("size") Integer size) {
     this.accounts = accounts == null ? Collections.emptyList() : Collections.unmodifiableList(accounts);
