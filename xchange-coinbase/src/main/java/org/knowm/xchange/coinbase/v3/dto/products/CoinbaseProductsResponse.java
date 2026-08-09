@@ -12,7 +12,11 @@ public class CoinbaseProductsResponse {
   @Getter
   private final List<CoinbaseProductResponse> products;
 
-  private CoinbaseProductsResponse(@JsonProperty("products") List<CoinbaseProductResponse> products) {
+  /**
+   * Constructs a products response; the {@code products} member is used by Jackson for wire
+   * deserialization and by tests/offline catalog builders for deterministic construction.
+   */
+  public CoinbaseProductsResponse(@JsonProperty("products") List<CoinbaseProductResponse> products) {
     this.products = products == null ? Collections.emptyList() : Collections.unmodifiableList(products);
   }
 

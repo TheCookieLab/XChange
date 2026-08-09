@@ -11,6 +11,7 @@ import org.knowm.xchange.coinbase.v2.dto.CoinbaseV2Pagination;
  * Coinbase API v2 response wrapper for {@code GET /v2/accounts}.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Deprecated
 public class CoinbaseV2AccountsResponse {
 
   private final CoinbaseV2Pagination pagination;

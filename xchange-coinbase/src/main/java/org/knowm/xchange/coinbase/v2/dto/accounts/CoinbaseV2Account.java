@@ -12,6 +12,7 @@ import org.knowm.xchange.coinbase.v2.dto.CoinbaseV2Money;
  * used as the anchor for transaction history in {@code /v2/accounts/{account_id}/transactions}.</p>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Deprecated
 public class CoinbaseV2Account {
 
   private final String id;

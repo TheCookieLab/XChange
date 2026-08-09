@@ -5,11 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.coinbase.dto.CoinbaseFuturesBalanceSummary;
 import info.bitrich.xchangestream.coinbase.dto.CoinbaseUserOrderEvent;
 import io.reactivex.rxjava3.core.Observable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.trade.UserTrade;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -809,6 +811,70 @@ class CoinbaseStreamingTradeServiceTest {
         // If the bug existed, we might see 4.0 or 5.0 due to seeing null after removal
         assertTrue(totalAmount.compareTo(new BigDecimal("3.0")) == 0,
             "Total must be exactly 3.0, proving atomic removal prevents race condition");
+    }
+
+    @Test
+    void terminalOrderDedupCacheIsBounded() throws Exception {
+        // Shrink the TTL and cleanup interval so the bounded-memory path is deterministic.
+        long originalTtl = CoinbaseStreamingTradeService.TERMINAL_ORDER_TTL_MS;
+        long originalInterval = CoinbaseStreamingTradeService.CLEANUP_INTERVAL;
+        long originalClock = CoinbaseStreamingTradeService.DEDUP_CLOCK_OVERRIDE_MILLIS;
+        CoinbaseStreamingTradeService.TERMINAL_ORDER_TTL_MS = 1;
+        CoinbaseStreamingTradeService.CLEANUP_INTERVAL = 1;
+        CoinbaseStreamingTradeService.DEDUP_CLOCK_OVERRIDE_MILLIS =
+            System.currentTimeMillis() + 5000;
+        try {
+            ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+            spec.setApiKey("key");
+            spec.setSecretKey("secret");
+
+            List<JsonNode> terminalEvents = new java.util.ArrayList<>();
+            for (int i = 0; i < 50; i++) {
+                terminalEvents.add(MAPPER.readTree("{\n" +
+                    "  \"channel\": \"user\",\n" +
+                    "  \"events\": [\n" +
+                    "    {\n" +
+                    "      \"type\": \"update\",\n" +
+                    "      \"orders\": [\n" +
+                    "        {\n" +
+                    "          \"order_id\": \"bounded-order-" + i + "\",\n" +
+                    "          \"product_id\": \"BTC-USD\",\n" +
+                    "          \"order_side\": \"buy\",\n" +
+                    "          \"avg_price\": \"50000\",\n" +
+                    "          \"size\": \"1.0\",\n" +
+                    "          \"cumulative_quantity\": \"1.0\",\n" +
+                    "          \"leaves_quantity\": \"0.0\",\n" +
+                    "          \"status\": \"FILLED\",\n" +
+                    "          \"event_time\": \"2024-01-01T00:00:01Z\"\n" +
+                    "        }\n" +
+                    "      ]\n" +
+                    "    }\n" +
+                    "  ]\n" +
+                    "}"));
+            }
+
+            CoinbaseStreamingTradeService service =
+                new CoinbaseStreamingTradeService(
+                    new CoinbaseStreamingTestUtils.StubStreamingService(
+                        Observable.fromIterable(terminalEvents)),
+                    spec);
+            List<UserTrade> emitted =
+                service.getUserTrades(CurrencyPair.BTC_USD).toList().blockingGet();
+
+            // With TTL=0 and interval=1, cleanup prunes everything older than now, so the
+            // terminal-order dedup cache must be empty: dedup memory is bounded.
+            Field field = CoinbaseStreamingTradeService.class.getDeclaredField("processedTerminalOrders");
+            field.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Long> cache =
+                (java.util.Map<String, Long>) field.get(service);
+            assertTrue(cache.isEmpty(), "terminal-order dedup cache must prune expired entries");
+            assertEquals(50, emitted.size());
+        } finally {
+            CoinbaseStreamingTradeService.TERMINAL_ORDER_TTL_MS = originalTtl;
+            CoinbaseStreamingTradeService.CLEANUP_INTERVAL = originalInterval;
+            CoinbaseStreamingTradeService.DEDUP_CLOCK_OVERRIDE_MILLIS = originalClock;
+        }
     }
 
 }

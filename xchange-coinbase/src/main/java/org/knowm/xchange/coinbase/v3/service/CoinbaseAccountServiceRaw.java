@@ -2,7 +2,9 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.coinbase.v2.CoinbaseV2Authenticated;
@@ -27,6 +29,7 @@ import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateral
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPortfolioSummaryResponse;
+import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbaseMovePortfolioFundsRequest;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioRequest;
@@ -86,10 +89,14 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
 
     String cursor = null;
     Boolean hasNext;
+    Set<String> seenCursors = new HashSet<>();
+    int page = 0;
     do {
-      CoinbaseAccountsResponse response = coinbaseAdvancedTrade.listAccounts(authTokenCreator, 250,
-          cursor);
-      cursor = response.getCursor();
+      final String requestCursor = cursor;
+      CoinbaseAccountsResponse response = CoinbaseRetry.readWithBackoff(() ->
+          coinbaseAdvancedTrade.listAccounts(authTokenCreator, 250, requestCursor));
+      cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "accounts");
+      page++;
       hasNext = response.getHasNext();
       tmpList = response.getAccounts();
 
@@ -246,6 +253,12 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * <p>This is primarily used to discover an account id (for example a USD wallet) for subsequent
    * calls to {@link #listV2AccountTransactions(String, Integer, String, String, String)}.</p>
    *
+   * <p><strong>Deprecated:</strong> the v2 REST surface is scheduled for removal in the next
+   * major release. Advanced Trade v3 balances are available through
+   * {@link #getCoinbaseAccounts()}; the v2 account-id discovery path remains only until a v3
+   * deposit/withdrawal history endpoint is available. See
+   * docs/coinbase-v2-to-v3-migration.md.</p>
+   *
    * @param limit max results per page (nullable to use server defaults)
    * @param startingAfter pagination cursor (nullable)
    * @param endingBefore pagination cursor (nullable)
@@ -253,6 +266,7 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * @return raw v2 accounts response
    * @throws IOException if a network or serialization error occurs
    */
+  @Deprecated
   public CoinbaseV2AccountsResponse listV2Accounts(Integer limit, String startingAfter,
       String endingBefore, String order) throws IOException {
     return coinbaseV2.listAccounts(authTokenCreator, limit, startingAfter, endingBefore, order);
@@ -265,6 +279,10 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * independently of trading fills. Callers should apply strict type filtering to avoid double
    * counting trade-related activity.</p>
    *
+   * <p><strong>Deprecated:</strong> the v2 REST surface is scheduled for removal in the next
+   * major release. Deposit/withdrawal history is not yet exposed by the Advanced Trade v3 API;
+   * see docs/coinbase-v2-to-v3-migration.md for the migration status.</p>
+   *
    * @param accountId Coinbase v2 account id (required)
    * @param limit max results per page (nullable to use server defaults)
    * @param startingAfter pagination cursor (nullable)
@@ -273,6 +291,7 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * @return raw v2 transactions response
    * @throws IOException if a network or serialization error occurs
    */
+  @Deprecated
   public CoinbaseV2TransactionsResponse listV2AccountTransactions(String accountId, Integer limit,
       String startingAfter, String endingBefore, String order) throws IOException {
     return coinbaseV2.listTransactions(authTokenCreator, accountId, limit, startingAfter, endingBefore, order);
@@ -415,7 +434,11 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseAllocatePortfolioResponse allocatePortfolio(CoinbaseAllocatePortfolioRequest request)
       throws IOException {
-    return coinbaseAdvancedTrade.allocatePortfolio(authTokenCreator, request);
+    try {
+      return coinbaseAdvancedTrade.allocatePortfolio(authTokenCreator, request);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException("allocatePortfolio", request.getPortfolioUuid(), transportFailure);
+    }
   }
 
 }

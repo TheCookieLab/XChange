@@ -8,6 +8,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.subjects.PublishSubject;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -24,8 +25,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
 import org.knowm.xchange.coinbase.v3.CoinbaseV3Digest;
+import org.knowm.xchange.coinbase.v3.dto.CoinbaseException;
+import org.knowm.xchange.coinbase.v3.dto.CoinbaseException.CoinbaseError;
+import org.knowm.xchange.coinbase.v3.dto.RetryClassification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +53,16 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
   private final CoinbaseRateLimiter privateRateLimiter;
   private final long jwtRefreshPeriodSeconds;
   private ScheduledExecutorService jwtRefreshScheduler;
+
+  /**
+   * Monotonic connection generation: incremented every time the socket goes down or is
+   * disconnected. Commands issued against an older generation are stale once a new connection is
+   * established and are dropped instead of being sent on the new socket.
+   */
+  private final AtomicLong connectionGeneration = new AtomicLong();
+
+  /** Classified protocol errors reported by the provider (type=error messages). */
+  private final PublishSubject<Throwable> protocolErrors = PublishSubject.create();
 
   private final Map<CoinbaseChannel, ChannelState> channelStates = new ConcurrentHashMap<>();
 
@@ -120,13 +136,52 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
 
   @Override
   public void messageHandler(String message) {
-    LOG.info("Coinbase WebSocket received message (length={} bytes): {}", message.length(), 
-        message.length() > 200 ? message.substring(0, 200) + "..." : message);
-    if (message.length() > 10 * 1024 * 1024) { // Log warning for messages > 10MB
-      LOG.warn("Received very large message ({} MB) - this may indicate a large order book snapshot", 
+    if (message != null && message.length() > 10 * 1024 * 1024) { // Log warning for messages > 10MB
+      LOG.warn(
+          "Received very large message ({} MB) - this may indicate a large order book snapshot",
           message.length() / (1024 * 1024));
     }
+    LOG.debug("Coinbase WebSocket received message (length={} bytes)", message == null ? 0 : message.length());
+    if (message != null) {
+      try {
+        JsonNode parsed = objectMapper.readTree(message);
+        JsonNode type = parsed.get("type");
+        if (type != null && "error".equals(type.asText())) {
+          String errorMessage =
+              parsed.hasNonNull("message") ? parsed.get("message").asText() : "Unknown Coinbase WebSocket error";
+          protocolErrors.onNext(classifyProtocolError(errorMessage));
+        }
+      } catch (IOException malformed) {
+        LOG.debug("Ignoring malformed Coinbase WebSocket message: {}", malformed.getMessage());
+      }
+    }
     super.messageHandler(message);
+  }
+
+  private static CoinbaseException classifyProtocolError(String errorMessage) {
+    RetryClassification classification =
+        errorMessage.toLowerCase().contains("authent")
+            ? RetryClassification.AUTHENTICATION
+            : RetryClassification.PERMANENT;
+    return new CoinbaseException(
+        Collections.singletonList(new CoinbaseError("WS_ERROR", errorMessage)), classification);
+  }
+
+  /**
+   * Classified protocol errors reported by the provider (type=error messages). The classification
+   * mirrors the REST {@link RetryClassification} contract so replay-safe decisions apply to
+   * WebSocket operations too.
+   */
+  Observable<Throwable> protocolErrors() {
+    return protocolErrors;
+  }
+
+  /**
+   * Current connection generation; increments whenever the socket goes down or is disconnected.
+   * Package-private for tests.
+   */
+  long currentGeneration() {
+    return connectionGeneration.get();
   }
 
   Observable<JsonNode> subscribeChannel(CoinbaseSubscriptionRequest request) {
@@ -156,6 +211,15 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
     }
 
     scheduleJwtRefreshIfActive(state);
+
+    Throwable pendingFailure = state.consumePendingFailure();
+    if (pendingFailure != null) {
+      LOG.warn(
+          "Failing pending Coinbase websocket subscription for channel {}: {}",
+          state.channel.channelName(),
+          pendingFailure.getMessage());
+      return Observable.error(pendingFailure);
+    }
     return state.stream;
   }
 
@@ -233,6 +297,7 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
 
   @Override
   public Completable disconnect() {
+    connectionGeneration.incrementAndGet();
     return super.disconnect()
         .doFinally(
             () -> {
@@ -277,16 +342,27 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
     try {
       CoinbaseRateLimiter limiter =
           state.requiresAuthentication() ? privateRateLimiter : publicRateLimiter;
+      long generation = connectionGeneration.get();
       limiter.acquire();
-      String payloadJson;
-      try {
-        payloadJson = objectMapper.writeValueAsString(payload);
-      } catch (Exception e) {
-        payloadJson = payload.toString();
+      if (generation != connectionGeneration.get()) {
+        // The connection went down (and possibly came back) while we were throttling.
+        // Sending this command now would target the new socket with stale intent; the
+        // reconnect flow re-subscribes all active channels, so drop it.
+        LOG.debug(
+            "Dropping stale Coinbase websocket {} command for channel {} issued in generation {} "
+                + "(current {})",
+            type, state.channel.channelName(), generation, connectionGeneration.get());
+        if (SUBSCRIBE.equals(type) && state.requiresAuthentication()) {
+          // A pending user-channel request can never be acked on the old generation: fail it
+          // so subscribers do not hang waiting for a subscription response.
+          state.markPendingFailure(
+              new CoinbaseUnknownOutcomeException(
+                  "websocketSubscribe", state.channel.channelName(), null));
+        }
+        return;
       }
       LOG.info("Sending Coinbase WebSocket {} message for channel {} with products: {} (hasJWT: {})", 
           type, state.channel.channelName(), sanitized, payload.containsKey("jwt"));
-      LOG.info("Full subscribe payload: {}", payloadJson);
       sendObjectMessage(payload);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -390,6 +466,7 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
     @Override
     public void channelInactive(io.netty.channel.ChannelHandlerContext ctx) {
       super.channelInactive(ctx);
+      connectionGeneration.incrementAndGet();
       channelStates.values().forEach(ChannelState::resetPending);
     }
   }
@@ -434,6 +511,8 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
     private Observable<JsonNode> stream;
     private boolean usesExplicitProducts = true;
     private ScheduledFuture<?> jwtRefreshFuture;
+    /** Failure of a pending user-channel request whose command was dropped as stale. */
+    private Throwable pendingFailure;
 
     private ChannelState(CoinbaseChannel channel) {
       this.channel = channel;
@@ -532,6 +611,17 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
       synchronized (this) {
         pendingSubscribe.addAll(productRefCounts.keySet());
       }
+    }
+
+    synchronized void markPendingFailure(Throwable failure) {
+      pendingFailure = failure;
+    }
+
+    /** Consumes and returns the pending-request failure, if any, for the next subscriber. */
+    synchronized Throwable consumePendingFailure() {
+      Throwable failure = pendingFailure;
+      pendingFailure = null;
+      return failure;
     }
 
     List<String> sanitizeProductIds(List<String> rawProducts) {

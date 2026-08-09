@@ -3,6 +3,7 @@ package info.bitrich.xchangestream.coinbase;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,6 +20,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.util.function.Supplier;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -435,6 +437,82 @@ class CoinbaseStreamingExchangeTest {
         CoinbaseStreamingExchange.PROD_WS_URI);
   }
 
+  @Test
+  void connectWithCredentialsConnectsMarketDataAndUserSockets() {
+    testStreamingService = new TestStreamingService();
+    exchange.setTestStreamingService(testStreamingService);
+    spec.setExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_WEBSOCKET_JWT_SUPPLIER,
+        (Supplier<String>) () -> "jwt-token");
+
+    exchange.connect().blockingAwait();
+
+    assertNotNull(exchange.getStreamingMarketDataService());
+    assertNotNull(exchange.getStreamingTradeService());
+    assertNotNull(exchange.getUserStreamingServiceForTesting());
+    assertTrue(exchange.getUserStreamingServiceForTesting() != exchange.streamingService);
+  }
+
+  @Test
+  void publicOnlyUsageOpensNoUserSocket() {
+    testStreamingService = new TestStreamingService();
+    exchange.setTestStreamingService(testStreamingService);
+    // No credentials: only the market data socket may be opened.
+    exchange.tradeService = null;
+
+    exchange.connect().blockingAwait();
+
+    assertNotNull(exchange.getStreamingMarketDataService());
+    assertNull(exchange.getUserStreamingServiceForTesting());
+    assertNull(exchange.getStreamingTradeService());
+  }
+
+  @Test
+  void disconnectIsIdempotentAndLivenessIsNullSafe() {
+    testStreamingService = new TestStreamingService();
+    exchange.setTestStreamingService(testStreamingService);
+    spec.setExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_WEBSOCKET_JWT_SUPPLIER,
+        (Supplier<String>) () -> "jwt-token");
+    exchange.connect().blockingAwait();
+    assertTrue(exchange.isAlive());
+
+    exchange.disconnect().blockingAwait();
+    assertFalse(exchange.isAlive());
+    // A second disconnect must complete cleanly (no services left to tear down).
+    exchange.disconnect().blockingAwait();
+    // Liveness observables are null-safe after teardown: they complete empty instead of NPE.
+    assertEquals(0, exchange.connectionStateObservable().count().blockingGet());
+    assertEquals(0, exchange.connectionIdle().count().blockingGet());
+    assertEquals(0, exchange.reconnectFailure().count().blockingGet());
+    assertNull(exchange.getStreamingTradeService());
+    assertNull(exchange.getStreamingMarketDataService());
+  }
+
+  @Test
+  void livenessObservablesAreNullSafeBeforeConnect() {
+    // Never connected: no services exist, observables must be empty, not throw.
+    assertEquals(0, exchange.connectionStateObservable().count().blockingGet());
+    assertEquals(0, exchange.connectionIdle().count().blockingGet());
+    assertEquals(0, exchange.reconnectFailure().count().blockingGet());
+    assertFalse(exchange.isAlive());
+    assertNull(exchange.getStreamingTradeService());
+  }
+
+  @Test
+  void userWsUriParamResolvesUserEndpoint() {
+    ExchangeSpecification resolvedSpec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+    resolvedSpec.setExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_USER_WS_URI, "wss://user-custom.example.com");
+    assertEquals(
+        "wss://user-custom.example.com",
+        CoinbaseStreamingExchange.resolveUserWebsocketUrl(resolvedSpec));
+    assertEquals(
+        CoinbaseStreamingExchange.USER_ORDER_DATA_WS_URI,
+        CoinbaseStreamingExchange.resolveUserWebsocketUrl(
+            new ExchangeSpecification(CoinbaseStreamingExchange.class)));
+  }
+
   @SuppressWarnings("unchecked")
   private List<Disposable> getProductSubscriptions() {
     return exchange.getProductSubscriptionsForTesting();
@@ -469,6 +547,20 @@ class CoinbaseStreamingExchangeTest {
         return testStreamingService;
       }
       return super.createStreamingService(exchangeSpecification);
+    }
+
+    @Override
+    protected CoinbaseStreamingService createUserStreamingService(
+        ExchangeSpecification exchangeSpecification) {
+      // Return the injected test service if available, otherwise delegate to parent
+      if (testStreamingService != null) {
+        return new TestStreamingService();
+      }
+      return super.createUserStreamingService(exchangeSpecification);
+    }
+
+    CoinbaseStreamingService getUserStreamingServiceForTesting() {
+      return userStreamingService;
     }
 
     @SuppressWarnings("unchecked")
