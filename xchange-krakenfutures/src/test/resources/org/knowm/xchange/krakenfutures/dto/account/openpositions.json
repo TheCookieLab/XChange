@@ -1,0 +1,26 @@
+{
+  "result": "success",
+  "serverTime": "2022-12-25T09:30:59.123456Z",
+  "openPositions": [
+    {
+      "instrument": "PI_XBTUSD",
+      "side": "long",
+      "size": 1,
+      "markPrice": 50000,
+      "limitPrice": 49999.5,
+      "liqPrice": 12345,
+      "unrealizedFunding": -0.0001,
+      "realizedFunding": 0.0001,
+      "unrealizedPnl": 123,
+      "realizedPnl": 45,
+      "collateral": 1000,
+      "leverage": 50,
+      "margin": 20,
+      "initialMargin": 10,
+      "maintMargin": 5,
+      "indexPrice": 49999,
+      "value": 50000,
+      "type": "position"
+    }
+  ]
+}

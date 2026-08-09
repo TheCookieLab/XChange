@@ -117,8 +117,12 @@ public class KrakenFuturesAdapters {
     BigDecimal totalOpenPositionsUsdValue = BigDecimal.ZERO;
 
     for (KrakenFuturesOpenPosition openPosition : krakenFuturesOpenPositions.getOpenPositions()) {
+      BigDecimal entryPrice =
+          (openPosition.getPrice() != null)
+              ? openPosition.getPrice()
+              : openPosition.getLimitPrice();
       totalOpenPositionsUsdValue =
-          totalOpenPositionsUsdValue.add(openPosition.getPrice().multiply(openPosition.getSize()));
+          totalOpenPositionsUsdValue.add(entryPrice.multiply(openPosition.getSize()));
     }
 
     return new AccountInfo(
