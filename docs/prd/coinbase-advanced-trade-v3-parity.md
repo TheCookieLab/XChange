@@ -229,8 +229,8 @@ Not needed for this feature. The product-identity mapper is a catalog/registry w
 ### Phase 4: trading results, error policy, replay safety
 
  9. [x] Extend `CoinbaseException`/stream errors to the structured contract (code/type/message, status or WS op, correlation id, retry classification, sanitized details). Verification: error-shape fixture tests.
-10. [ ] Classify create/edit/convert/allocate as non-replayable after ambiguous transport; add bounded reconciliation by `client_order_id`/order id; surface structured unknown-outcome exception; document `Order.userReference` constraints. Verification: replay-classification unit tests proving no blind retry; integration smoke read-only checks.
-11. [ ] Parse rate-limit/retry metadata when provided; bounded jittered backoff for replay-safe operations only. Verification: backoff tests with canned rate-limit responses.
+10. [x] Classify create/edit/convert/allocate as non-replayable after ambiguous transport; add bounded reconciliation by `client_order_id`/order id; surface structured unknown-outcome exception; document `Order.userReference` constraints. Verification: replay-classification unit tests proving no blind retry; integration smoke read-only checks.
+11. [x] Parse rate-limit/retry metadata when provided; bounded jittered backoff for replay-safe operations only. Verification: backoff tests with canned rate-limit responses.
 
 ### Phase 5: dual WebSocket lifecycle
 
