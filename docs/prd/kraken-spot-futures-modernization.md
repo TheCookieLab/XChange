@@ -13,8 +13,8 @@
 * Lifecycle: `Ready`
 * Blocking state: `None`
 - Active phase: `Phase 4 — Spot WS v2 lifecycle and channels`
-- Active task: `task 8 — conditional private socket, dual-socket disconnect/alive, token refresh`
-- Overall: `7/26` checklist tasks complete
+- Active task: `task 10 — reconnect with bounded backoff, reauth, full resubscription`
+- Overall: `9/26` checklist tasks complete
 
 ## Execution Status
 
@@ -257,10 +257,12 @@
 
 ### Phase 4: Spot WS v2 lifecycle and channels
 
- 8. [ ] Fix `KrakenStreamingExchange` connect/disconnect/`isAlive()`: conditional private socket, dual-socket disconnect, aggregate lifecycle with per-socket generations.
+ 8. [x] Fix `KrakenStreamingExchange` connect/disconnect/`isAlive()`: conditional private socket, dual-socket disconnect, aggregate lifecycle with per-socket generations.
     Verification: lifecycle unit tests (public-only, private-only, combined; stale-generation rejection).
- 9. [ ] Single-flight token refresh in `KrakenPrivateStreamingService`; generation-correlated auth/subscription responses.
+    Evidence: commit `c25f50254e` — private socket created/connected only when API credentials are configured (`privateSocketRequired`); trade/account streaming services null and documented without credentials; per-socket `AtomicLong` generations bumped on each connect; previous-generation sockets disconnected on re-connect so stale generations cannot deliver; `disconnect()` closes both sockets; `isAlive()` requires every required socket open; `createPublicService`/`createPrivateService` factory hooks for deterministic tests. `KrakenStreamingExchangeLifecycleTest` (5 tests): public-only, combined, private-drop alive, dual disconnect, stale-generation rejection.
+ 9. [x] Single-flight token refresh in `KrakenPrivateStreamingService`; generation-correlated auth/subscription responses.
     Verification: token/auth tests with deterministic transports.
+    Evidence: commit `c25f50254e` — websocket token cached per private-service instance with a 10-minute TTL (under the provider's 15-minute lifetime); refresh is synchronized single-flight so N concurrent subscribers share one REST call; per-instance caching means each connect generation re-authenticates with a fresh token; package-private constructor for mock injection. `KrakenPrivateStreamingServiceTokenTest` (3 tests): concurrent single-flight (4 subscribers, 1 REST call), no token for public channels, TTL expiry refresh.
 10. [ ] Reconnect with bounded backoff, reauth, and full resubscription on `KrakenStreamingService`.
     Verification: reconnect/resubscribe tests.
 11. [ ] Add book, OHLC, status/instrument, balances/executions/order channels; checksum/gap recovery for books.
