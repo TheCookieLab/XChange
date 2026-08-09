@@ -43,8 +43,11 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
   
   // Counter for opportunistic cleanup - trigger cleanup every N operations
   private final AtomicLong operationCount = new AtomicLong(0);
-  private static final long CLEANUP_INTERVAL = 100; // Cleanup every 100 operations
-  private static final long TERMINAL_ORDER_TTL_MS = 10 * 60 * 1000; // 10 minutes TTL
+  // Package-private (non-final) so tests can shrink them for deterministic bounded-memory checks.
+  static long CLEANUP_INTERVAL = 100; // Cleanup every 100 operations
+  static long TERMINAL_ORDER_TTL_MS = 10 * 60 * 1000; // 10 minutes TTL
+  /** Test clock seam; -1 (default) uses the system clock. */
+  static volatile long DEDUP_CLOCK_OVERRIDE_MILLIS = -1;
 
   CoinbaseStreamingTradeService(
       CoinbaseStreamingService streamingService,
@@ -353,7 +356,7 @@ public class CoinbaseStreamingTradeService implements StreamingTradeService {
   private void maybeCleanupProcessedTerminalOrders() {
     long count = operationCount.incrementAndGet();
     if (count % CLEANUP_INTERVAL == 0) {
-      long now = System.currentTimeMillis();
+      long now = DEDUP_CLOCK_OVERRIDE_MILLIS >= 0 ? DEDUP_CLOCK_OVERRIDE_MILLIS : System.currentTimeMillis();
       long cutoffTime = now - TERMINAL_ORDER_TTL_MS;
       
       // Remove entries older than the TTL

@@ -468,6 +468,38 @@ class CoinbaseStreamingExchangeTest {
   }
 
   @Test
+  void disconnectIsIdempotentAndLivenessIsNullSafe() {
+    testStreamingService = new TestStreamingService();
+    exchange.setTestStreamingService(testStreamingService);
+    spec.setExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_WEBSOCKET_JWT_SUPPLIER,
+        (Supplier<String>) () -> "jwt-token");
+    exchange.connect().blockingAwait();
+    assertTrue(exchange.isAlive());
+
+    exchange.disconnect().blockingAwait();
+    assertFalse(exchange.isAlive());
+    // A second disconnect must complete cleanly (no services left to tear down).
+    exchange.disconnect().blockingAwait();
+    // Liveness observables are null-safe after teardown: they complete empty instead of NPE.
+    assertEquals(0, exchange.connectionStateObservable().count().blockingGet());
+    assertEquals(0, exchange.connectionIdle().count().blockingGet());
+    assertEquals(0, exchange.reconnectFailure().count().blockingGet());
+    assertNull(exchange.getStreamingTradeService());
+    assertNull(exchange.getStreamingMarketDataService());
+  }
+
+  @Test
+  void livenessObservablesAreNullSafeBeforeConnect() {
+    // Never connected: no services exist, observables must be empty, not throw.
+    assertEquals(0, exchange.connectionStateObservable().count().blockingGet());
+    assertEquals(0, exchange.connectionIdle().count().blockingGet());
+    assertEquals(0, exchange.reconnectFailure().count().blockingGet());
+    assertFalse(exchange.isAlive());
+    assertNull(exchange.getStreamingTradeService());
+  }
+
+  @Test
   void userWsUriParamResolvesUserEndpoint() {
     ExchangeSpecification resolvedSpec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
     resolvedSpec.setExchangeSpecificParametersItem(

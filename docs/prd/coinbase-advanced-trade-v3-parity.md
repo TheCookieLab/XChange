@@ -241,9 +241,9 @@ Not needed for this feature. The product-identity mapper is a catalog/registry w
 
 ### Phase 6: order-book recovery, deduplication, lifecycle hardening
 
-16. [ ] Emit a dedicated gap event from `OrderBookState#process` on sequence discontinuity; rebuild from `recoverFromSnapshot`; surface failure to subscribers (no silent continue). Verification: gap/rebuild/failure tests in `CoinbaseStreamingMarketDataServiceTest`.
-17. [ ] Event dedup by stable provider ids (order/trade/event id + version) bounded like the derivatives LRU; keep fill-delta semantics. Verification: duplicate/late-event tests; bounded-memory assertion.
-18. [ ] Make disconnect idempotent and liveness observables null-safe (`isAlive`, `connectionStateObservable`, `connectionIdle`). Verification: exchange lifecycle tests.
+16. [x] Emit a dedicated gap event from `OrderBookState#process` on sequence discontinuity; rebuild from `recoverFromSnapshot`; surface failure to subscribers (no silent continue). Verification: gap/rebuild/failure tests in `CoinbaseStreamingMarketDataServiceTest`.
+17. [x] Event dedup by stable provider ids (order/trade/event id + version) bounded like the derivatives LRU; keep fill-delta semantics. Verification: duplicate/late-event tests; bounded-memory assertion.
+18. [x] Make disconnect idempotent and liveness observables null-safe (`isAlive`, `connectionStateObservable`, `connectionIdle`). Verification: exchange lifecycle tests.
 
 ### Phase 7: legacy v2 migration, docs, reference checklist
 

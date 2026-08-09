@@ -30,6 +30,7 @@ import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import info.bitrich.xchangestream.coinbase.CoinbaseStreamingTestUtils.StubStreamingService;
 import info.bitrich.xchangestream.coinbase.adapters.CoinbaseStreamingAdapters;
+import info.bitrich.xchangestream.coinbase.dto.CoinbaseOrderBookGap;
 
 class CoinbaseStreamingMarketDataServiceTest {
 
@@ -138,6 +139,8 @@ class CoinbaseStreamingMarketDataServiceTest {
 
     CoinbaseStreamingMarketDataService.OrderBookState state =
         new CoinbaseStreamingMarketDataService.OrderBookState(CurrencyPair.BTC_USD, provider);
+    io.reactivex.rxjava3.observers.TestObserver<CoinbaseOrderBookGap> gaps =
+        state.gapEvents().test();
 
     JsonNode firstUpdate =
         MAPPER.readTree(
@@ -178,12 +181,66 @@ class CoinbaseStreamingMarketDataServiceTest {
     OrderBook recovered =
         state.process(CoinbaseStreamingAdapters.toStreamingMessage(gapUpdate)).blockingGet();
     assertEquals(2, provider.callCount());
+    gaps.assertValueCount(1);
+    CoinbaseOrderBookGap gap = gaps.values().get(0);
+    assertEquals(101, gap.getExpectedSequence());
+    assertEquals(102, gap.getReceivedSequence());
+    assertTrue(gap.isRecovered());
     assertEquals(2, recovered.getBids().size());
     assertEquals("1.8", recovered.getAsks().get(0).getOriginalAmount().toPlainString());
     assertEquals("101", recovered.getBids().get(0).getLimitPrice().toPlainString());
     assertEquals("1.5", recovered.getBids().get(0).getOriginalAmount().toPlainString());
     assertEquals("100", recovered.getBids().get(1).getLimitPrice().toPlainString());
     assertEquals("1", recovered.getBids().get(1).getOriginalAmount().toPlainString());
+  }
+
+  @Test
+  void unrecoverableGapSurfacesEventAndDoesNotEmitBook() throws Exception {
+    CoinbaseStreamingMarketDataService.OrderBookSnapshotProvider noRecovery =
+        currencyPair -> null;
+    CoinbaseStreamingMarketDataService.OrderBookState state =
+        new CoinbaseStreamingMarketDataService.OrderBookState(
+            CurrencyPair.BTC_USD, noRecovery);
+    io.reactivex.rxjava3.observers.TestObserver<CoinbaseOrderBookGap> gaps =
+        state.gapEvents().test();
+
+    JsonNode snapshot =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"snapshot\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 10,\n"
+                + "      \"bids\": [[\"100\", \"2\"]],\n"
+                + "      \"asks\": [[\"110\", \"3\"]]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+    assertTrue(state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot)).isEmpty().blockingGet() == false);
+
+    JsonNode gapUpdate =
+        MAPPER.readTree(
+            "{\n"
+                + "  \"events\": [\n"
+                + "    {\n"
+                + "      \"type\": \"l2update\",\n"
+                + "      \"product_id\": \"BTC-USD\",\n"
+                + "      \"sequence\": 12,\n"
+                + "      \"updates\": [\n"
+                + "        {\"side\": \"bid\", \"price_level\": \"100\", \"new_quantity\": \"1\"}\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}");
+    assertTrue(state.process(CoinbaseStreamingAdapters.toStreamingMessage(gapUpdate)).isEmpty().blockingGet());
+
+    gaps.assertValueCount(1);
+    CoinbaseOrderBookGap gap = gaps.values().get(0);
+    assertEquals(11, gap.getExpectedSequence());
+    assertEquals(12, gap.getReceivedSequence());
+    assertFalse(gap.isRecovered());
+    assertEquals(CurrencyPair.BTC_USD, gap.getCurrencyPair());
   }
 
   @Test
