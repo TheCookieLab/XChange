@@ -12,9 +12,9 @@
 
 * Lifecycle: `Ready`
 * Blocking state: `None`
-- Active phase: `Phase 1 — family architecture and metadata`
-- Active task: `task 1 — family architecture doc and capability matrix`
-- Overall: `3/26` checklist tasks complete
+- Active phase: `Phase 2 — Spot order and post-trade capabilities`
+- Active task: `task 5 — atomic amend, batch, dead-man, client-ID consistency`
+- Overall: `4/26` checklist tasks complete
 
 ## Execution Status
 
@@ -227,8 +227,9 @@
 
 ### Phase 1: family architecture and metadata
 
-1. [ ] Publish the Kraken family architecture doc and capability matrix (canonical artifacts per protocol, layered service shape, legacy v1 migration plan).
+1. [x] Publish the Kraken family architecture doc and capability matrix (canonical artifacts per protocol, layered service shape, legacy v1 migration plan).
    Verification: `docs/` guide reviewed; module READMEs updated.
+   Evidence: `docs/kraken-family.md` (artifact ownership table, layered architecture, capability matrix, v1→v2 migration, dead-man safety, build gates); READMEs added for xchange-kraken, xchange-krakenfutures, xchange-stream-kraken, xchange-stream-krakenfutures; v2 README kept.
 2. [x] Rework Spot/Futures metadata: authoritative instruments, currencies, trading rules, and fee schedules; remove the `KrakenExchange.java:46-49` caveat; make `KrakenAdapters.adaptFeeTiers` accurate.
    Verification: metadata unit tests with exact decimals/aliases; targeted `mvn -B -pl xchange-kraken,xchange-krakenfutures -am test`.
    Evidence: caveat removed (`KrakenExchange.java`); `adaptPair` keeps tradingFee null when fee data is absent (no misleading zero), falls back to first maker tier; `adaptFeeTiers` copies before sorting and fails explicitly on one-sided tier data; `adaptPair` tolerates missing ordermin/lot_multiplier. New tests `testAdaptToExchangeMetaData_AccurateFeesAndDecimals`, `_SkipsDarkMarkets`, `testAdaptPair_NoMisleadingFeeWhenUnavailable`. xchange-kraken unit suite 57/57 green.
