@@ -223,12 +223,12 @@ Not needed for this feature. The product-identity mapper is a catalog/registry w
 
 ### Phase 3: REST parity and pagination
 
-7. [ ] Complete bounded pagination: repeated-cursor/no-progress guard in `CoinbaseAccountServiceRaw#getCoinbaseAccounts` and `CoinbaseTradeService#getTradeHistory`; bounded high-level iteration for `CoinbaseTradeServiceRaw#listOrders`. Verification: unit tests with canned cursor sequences (progress, repeated cursor, limit cutoff).
-8. [ ] Close matrix gaps: implement or explicitly record as unsupported (with rationale) every stable endpoint found by the matrix. Verification: matrix rows match code; `CoinbasePublicEndpointsIntegration`/sandbox matrix reflect the final set.
+7. [x] Complete bounded pagination: repeated-cursor/no-progress guard in `CoinbaseAccountServiceRaw#getCoinbaseAccounts` and `CoinbaseTradeService#getTradeHistory`; bounded high-level iteration for `CoinbaseTradeServiceRaw#listOrders`. Verification: unit tests with canned cursor sequences (progress, repeated cursor, limit cutoff).
+8. [x] Close matrix gaps: implement or explicitly record as unsupported (with rationale) every stable endpoint found by the matrix. Verification: matrix rows match code; `CoinbasePublicEndpointsIntegration`/sandbox matrix reflect the final set.
 
 ### Phase 4: trading results, error policy, replay safety
 
- 9. [ ] Extend `CoinbaseException`/stream errors to the structured contract (code/type/message, status or WS op, correlation id, retry classification, sanitized details). Verification: error-shape fixture tests.
+ 9. [x] Extend `CoinbaseException`/stream errors to the structured contract (code/type/message, status or WS op, correlation id, retry classification, sanitized details). Verification: error-shape fixture tests.
 10. [ ] Classify create/edit/convert/allocate as non-replayable after ambiguous transport; add bounded reconciliation by `client_order_id`/order id; surface structured unknown-outcome exception; document `Order.userReference` constraints. Verification: replay-classification unit tests proving no blind retry; integration smoke read-only checks.
 11. [ ] Parse rate-limit/retry metadata when provided; bounded jittered backoff for replay-safe operations only. Verification: backoff tests with canned rate-limit responses.
 
