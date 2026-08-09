@@ -294,7 +294,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
             });
   }
 
-  private void scheduleReconnect() {
+  protected void scheduleReconnect() {
     if (autoReconnect) {
       LOG.info("Scheduling reconnection");
 
@@ -613,5 +613,15 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
 
   public void setAutoReconnect(boolean autoReconnect) {
     this.autoReconnect = autoReconnect;
+  }
+
+  /** @return whether automatic reconnection is enabled; subclasses may override the scheduler */
+  protected boolean isAutoReconnect() {
+    return autoReconnect;
+  }
+
+  /** @return the current websocket channel, or {@code null} before the first connection */
+  protected Channel getWebSocketChannel() {
+    return webSocketChannel;
   }
 }

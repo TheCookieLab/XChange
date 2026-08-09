@@ -7,9 +7,13 @@ import info.bitrich.xchangestream.kraken.dto.response.KrakenDataMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenMessage;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextHandler;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.utils.ArrayUtils;
@@ -17,10 +21,69 @@ import org.knowm.xchange.utils.ArrayUtils;
 @Slf4j
 public class KrakenStreamingService extends NettyStreamingService<KrakenMessage> {
 
+  /** Base reconnect delay, doubled on each consecutive failure. */
+  static final Duration RECONNECT_BASE_DELAY = Duration.ofSeconds(1);
+
+  /** Upper bound for the exponential reconnect backoff. */
+  static final Duration RECONNECT_MAX_DELAY = Duration.ofSeconds(30);
+
   protected final ObjectMapper objectMapper = Config.getInstance().getObjectMapper();
+
+  private final AtomicInteger reconnectAttempts = new AtomicInteger();
 
   public KrakenStreamingService(String apiUri) {
     super(apiUri, Integer.MAX_VALUE);
+
+    // a successful connection resets the backoff sequence
+    subscribeConnectionSuccess().subscribe(e -> reconnectAttempts.set(0));
+  }
+
+  /**
+   * Schedules a reconnect with bounded exponential backoff: 1s, 2s, 4s, ... capped at 30s. The
+   * backoff sequence resets on the first successful connection.
+   */
+  @Override
+  protected void scheduleReconnect() {
+    if (!isAutoReconnect()) {
+      return;
+    }
+    long delayMillis = recordReconnectDelay().toMillis();
+    log.info("Scheduling reconnection in {} ms", delayMillis);
+    Channel channel = getWebSocketChannel();
+    if (channel != null && channel.eventLoop() != null) {
+      channel
+          .eventLoop()
+          .schedule(
+              () ->
+                  connect()
+                      .subscribe(
+                          () -> log.info("Reconnection complete"),
+                          e -> log.error("Reconnection failed: {}", e.getMessage())),
+              delayMillis,
+              TimeUnit.MILLISECONDS);
+    }
+  }
+
+  /**
+   * Records one reconnect failure and returns the delay for it: the base delay doubled per
+   * consecutive failure, bounded at the max. Called once per failed connection attempt.
+   */
+  Duration recordReconnectDelay() {
+    Duration delay = nextReconnectDelay();
+    reconnectAttempts.incrementAndGet();
+    return delay;
+  }
+
+  /** @return the next backoff delay for the current failure count, bounded by {@value #RECONNECT_MAX_DELAY} */
+  Duration nextReconnectDelay() {
+    int attempts = reconnectAttempts.get();
+    long delayMillis = RECONNECT_BASE_DELAY.toMillis() * (1L << Math.min(attempts, 10));
+    return Duration.ofMillis(Math.min(delayMillis, RECONNECT_MAX_DELAY.toMillis()));
+  }
+
+  /** Test seam: resets the backoff sequence as if the last connection had succeeded. */
+  void resetReconnectBackoff() {
+    reconnectAttempts.set(0);
   }
 
   @Override

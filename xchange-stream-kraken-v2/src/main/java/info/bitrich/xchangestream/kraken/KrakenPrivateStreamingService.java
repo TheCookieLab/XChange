@@ -39,6 +39,12 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
     this.tokenFetchedAtMillis = tokenFetchedAtMillis;
   }
 
+  /** Drops the cached token so the next private-channel subscribe re-authenticates. */
+  void invalidateToken() {
+    cachedToken = null;
+    tokenFetchedAtMillis = 0;
+  }
+
   public KrakenPrivateStreamingService(String apiUri, KrakenStreamingExchange exchange) {
     super(apiUri);
 
@@ -50,6 +56,9 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
         KrakenDigest.createInstance(exchange.getExchangeSpecification().getSecretKey());
 
     krakenStreamingExchange = exchange;
+
+    // every (re)connection gets a fresh websocket token: reauth is tied to the socket generation
+    subscribeConnectionSuccess().subscribe(e -> invalidateToken());
   }
 
   KrakenPrivateStreamingService(
