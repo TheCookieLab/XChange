@@ -12,9 +12,9 @@
 
 * Lifecycle: `Ready`
 * Blocking state: `None`
-- Active phase: `Phase 5 — Futures WS sequence recovery`
-- Active task: `task 12 — validate seq continuity, gap detection with snapshot rebuild, private event dedup`
-- Overall: `11/26` checklist tasks complete
+- Active phase: `Phase 6 — legacy migration and validation`
+- Active task: `task 13 — deprecate xchange-stream-kraken v1 with migration guide`
+- Overall: `12/26` checklist tasks complete
 
 ## Execution Status
 
@@ -272,8 +272,9 @@
 
 ### Phase 5: Futures WS sequence recovery
 
-12. [ ] Validate `seq` continuity on book snapshots/deltas and fills in `KrakenFuturesStreamingMarketDataService`; gap detection with fresh-snapshot rebuild; deduplicate private events; dead-man integration.
+12. [x] Validate `seq` continuity on book snapshots/deltas and fills in `KrakenFuturesStreamingMarketDataService`; gap detection with fresh-snapshot rebuild; deduplicate private events; dead-man integration.
     Verification: sequence gap/rebuild and dedup tests.
+    Evidence: commit `d9d8c0f85d` — `resubscribeChannel` promoted to `NettyStreamingService` base so any exchange can force a fresh snapshot on one channel; `getOrderBook` validates book seq continuity per instrument (delta must be exactly `lastSeq + 1`; duplicate/out-of-order delta dropped silently; gap or unknown state drops the book and resubscribes for a fresh snapshot); published books are defensive copies so later deltas cannot mutate already-emitted books; fills redelivered after reconnect are deduplicated by the provider's monotonic per-fill `seq`; dead-man was already present on Futures REST (`cancelallordersafter`, opt-in) and covered by task 7/5 evidence; module pom gains junit-jupiter/mockito/assertj test deps. `KrakenFuturesStreamingSequenceTest` (4 tests): sequential application, gap→resubscribe+rebuild, duplicate drop without resubscribe, fills dedup.
 
 ### Phase 6: legacy migration and validation
 
