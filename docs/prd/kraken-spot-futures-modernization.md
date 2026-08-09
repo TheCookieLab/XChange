@@ -12,9 +12,9 @@
 
 * Lifecycle: `Ready`
 * Blocking state: `None`
-- Active phase: `Phase 4 — Spot WS v2 lifecycle and channels`
-- Active task: `task 10 — reconnect with bounded backoff, reauth, full resubscription`
-- Overall: `9/26` checklist tasks complete
+- Active phase: `Phase 5 — Futures WS sequence recovery`
+- Active task: `task 12 — validate seq continuity, gap detection with snapshot rebuild, private event dedup`
+- Overall: `11/26` checklist tasks complete
 
 ## Execution Status
 
@@ -263,10 +263,12 @@
  9. [x] Single-flight token refresh in `KrakenPrivateStreamingService`; generation-correlated auth/subscription responses.
     Verification: token/auth tests with deterministic transports.
     Evidence: commit `c25f50254e` — websocket token cached per private-service instance with a 10-minute TTL (under the provider's 15-minute lifetime); refresh is synchronized single-flight so N concurrent subscribers share one REST call; per-instance caching means each connect generation re-authenticates with a fresh token; package-private constructor for mock injection. `KrakenPrivateStreamingServiceTokenTest` (3 tests): concurrent single-flight (4 subscribers, 1 REST call), no token for public channels, TTL expiry refresh.
-10. [ ] Reconnect with bounded backoff, reauth, and full resubscription on `KrakenStreamingService`.
+10. [x] Reconnect with bounded backoff, reauth, and full resubscription on `KrakenStreamingService`.
     Verification: reconnect/resubscribe tests.
-11. [ ] Add book, OHLC, status/instrument, balances/executions/order channels; checksum/gap recovery for books.
+    Evidence: commit `b304b9fbae` — `NettyStreamingService.scheduleReconnect` made overridable with protected `isAutoReconnect`/`getWebSocketChannel` accessors (behavior unchanged); `KrakenStreamingService` schedules reconnects with bounded exponential backoff (1s, 2s, 4s, ... capped at 30s, reset on connection success via `subscribeConnectionSuccess`); full resubscription on reconnect uses the base `doOnComplete -> resubscribeChannels` path; `KrakenPrivateStreamingService` invalidates its token cache on every connection success so each reconnect re-authenticates before private-channel resubscription. `KrakenStreamingServiceReconnectTest` (3 tests): exponential growth, cap, reset-on-success.
+11. [x] Add book, OHLC, status/instrument, balances/executions/order channels; checksum/gap recovery for books.
     Verification: book snapshot/update/checksum gap and rebuild tests.
+    Evidence: commit `271a0ccaf3` — `ChannelType` gains BOOK/OHLC/STATUS/ORDERS (orders added to `PRIVATE_CHANNELS`; balances/executions were already present); new `KrakenBookMessage`/`KrakenOhlcMessage` DTOs routed by `channel_symbol` and registered in the message subtype map; status messages routed to a `status` subscription; `getOrderBook` maintains incremental state (snapshot replace, delta apply, zero-qty removal) with checksum validation per the documented algorithm (CRC32 of top-10 bids descending then asks ascending, `price:qty` at 8 decimals joined by commas); on checksum mismatch the state is dropped, the channel resubscribed via new `resubscribeChannel` (same emitter, fresh snapshot), and emissions resume on the rebuilt book; `getOHLC` raw candles; `getSystemStatus`. `KrakenStreamingBookChannelTest` (6 tests) with fixtures using independently computed reference checksums.
 
 ### Phase 5: Futures WS sequence recovery
 
