@@ -13,20 +13,20 @@ DTO through the high-level service; `Fixtures` = deterministic JSON fixtures in
 
 | Capability | Endpoint | Raw method | Generic | Pagination | Fixtures | Sandbox | Smoke | Notes |
 |---|---|---|---|---|---|---|---|---|
-| List accounts | `GET accounts` | `CoinbaseAccountServiceRaw#getCoinbaseAccounts` | `CoinbaseAccountService#getAccountInfo` | cursor loop, limit 250 | example-accounts-response.json | yes | yes | loop lacks repeated-cursor guard (Gap) |
+| List accounts | `GET accounts` | `CoinbaseAccountServiceRaw#getCoinbaseAccounts` | `CoinbaseAccountService#getAccountInfo` | cursor loop, limit 250, repeated-cursor guard, retry on 429/5xx | example-accounts-response.json | yes | yes | |
 | Account by id | `GET accounts/{account_id}` | `#getCoinbaseAccount` | — | — | — | yes | yes | |
-| Create order | `POST orders` | `CoinbaseTradeServiceRaw#createOrder` | `placeLimitOrder`/`placeMarketOrder`/`placeStopOrder` | — | order fixtures | yes | yes | `client_order_id` from `Order.userReference`; ambiguous transport not classified (Gap) |
+| Create order | `POST orders` | `CoinbaseTradeServiceRaw#createOrder` | `placeLimitOrder`/`placeMarketOrder`/`placeStopOrder` | — | order fixtures | yes | yes | `client_order_id` from `Order.userReference`; transport failure surfaces `CoinbaseUnknownOutcomeException` (never blind-replayed) |
 | Edit order | `POST orders/edit` | `#editOrder` | — | — | order-config fixtures | yes | yes | |
 | Preview order | `POST orders/preview` | `#previewOrder` | `verifyOrder`-style | — | — | yes | yes | |
 | Preview edit | `POST orders/edit_preview` | `#previewEditOrder` | — | — | — | yes | yes | |
 | Batch cancel | `POST orders/batch_cancel` | `#cancelOrders`/`#cancelOrderById` | `cancelOrder` | — | — | yes | yes | request body built from ids |
-| Order history | `GET orders/historical/batch` | `#listOrders` | — | single page only (Gap) | example-list-orders | yes | yes | no high-level iteration (Gap) |
-| Fills | `GET orders/historical/fills` | `#listFills` | `getTradeHistory` | cursor loop, limit-aware | example-fills-response.json | yes | yes | loop lacks repeated-cursor guard (Gap) |
+| Order history | `GET orders/historical/batch` | `#listOrders` | — | `#listOrdersBounded` cursor loop, repeated-cursor guard | example-list-orders | yes | yes | |
+| Fills | `GET orders/historical/fills` | `#listFills` | `getTradeHistory` | cursor loop, limit-aware, repeated-cursor guard, retry on 429/5xx | example-fills-response.json | yes | yes | |
 | Order detail | `GET orders/historical/{order_id}` | `#getOrder` | `getOrder` | — | example-order-detail | yes | yes | |
 | Close position | `POST orders/close_position` | `#closePosition` | — | — | futures request fixtures | yes | yes | |
 | Best bid/ask | `GET best_bid_ask` | `CoinbaseMarketDataServiceRaw#getBestBidAsk` | — | — | example-best-bid-asks-response.json | yes | yes | public fallback requires product id |
 | Product book | `GET product_book` | `#getProductBook` | `getOrderBook` | — | pricebook fixtures | yes | yes | |
-| List products | `GET products` | `#listProducts` | — | single page only (Gap) | example-product-response.json | yes | yes | identity catalog source (CF-447) |
+| List products | `GET products` | `#listProducts` | — | paged via `listProducts(page,size)` bounded by identity discovery | example-product-response.json | yes | yes | identity catalog source (CF-447) |
 | Product detail | `GET products/{product_id}` | `#getProduct` | — | — | example-product-response.json | yes | yes | |
 | Candles | `GET products/{product_id}/candles` | `#getProductCandles` | `getCandleStickData` | limit ≤ 350 | example-candles-response.json | yes | yes | |
 | Market trades / ticker | `GET products/{product_id}/ticker` | `#getMarketTrades` | `getTrades` | — | — | yes | yes | |
@@ -77,11 +77,11 @@ DTO through the high-level service; `Fixtures` = deterministic JSON fixtures in
 
 ## Cross-cutting gaps (tracked by PRD CF-447)
 
-1. No checked-in matrix before this document; drift between interface annotations and implementation is unverified by CI.
-2. Global `PARAM_PRODUCT_ID_OVERRIDE` replaces product identity for the whole exchange instance; futures/perpetual ids are lossy through `CoinbaseProductIds` / `CoinbaseStreamingAdapters#toCurrencyPair` (2-token split).
-3. Single resolved WebSocket endpoint per exchange instance; `USER_ORDER_DATA_WS_URI` unused in production; no dual-socket lifecycle.
-4. Reflective WS-JWT helper fallback (`Class.forName` on `CoinbaseWebsocketAuthentication`); REST `ParamsDigest` and WS `Supplier<String>` are separate untyped contracts.
-5. No request correlation, connection-generation tracking, redaction, or replay classification in the spot stream; INFO logging emits full subscribe payloads incl. JWTs.
-6. Cursor pagination loops (`getCoinbaseAccounts`, `getTradeHistory`) lack repeated-cursor/no-progress guards; `listOrders` and `listProducts` are single-page.
-7. `CoinbaseException` carries HTTP status only; no provider code/type, correlation id, or retry classification.
-8. Sandbox coverage is partial and treats 4xx as reachable (`CoinbaseSandboxEndpointMatrixIntegration` with synthetic ids); no WebSocket sandbox exists.
+1. ~~No checked-in matrix before this document~~ CLOSED: matrix is checked in and reviewed against interface annotations; gaps are implement-or-record-unsupported.
+2. ~~Global `PARAM_PRODUCT_ID_OVERRIDE` / lossy 2-token identity~~ CLOSED: `CoinbaseProductIdentity` catalog (spot/futures/perpetual, ambiguous mapping rejected); override retained one release as a deprecated escape hatch.
+3. Single resolved WebSocket endpoint per exchange instance; `USER_ORDER_DATA_WS_URI` unused in production; no dual-socket lifecycle. OPEN (PRD Phase 5).
+4. ~~Reflective WS-JWT helper fallback / split REST+WS auth contracts~~ CLOSED: `CoinbaseV3Authentication` typed component; reflection deleted.
+5. Spot stream hardening: redaction and log hygiene CLOSED; request correlation, connection-generation tracking, and replay classification OPEN (PRD Phase 5).
+6. ~~Cursor loops without guards; single-page listOrders/listProducts~~ CLOSED: repeated-cursor and page-count guards on accounts/fills/orders; `listOrdersBounded(limit)`; paged `listProducts`.
+7. ~~`CoinbaseException` status only~~ CLOSED: provider error id/message, HTTP status, retry classification; `CoinbaseUnknownOutcomeException` for ambiguous placement; bounded jittered backoff for replay-safe reads. Provider supplies no correlation id.
+8. Sandbox coverage is partial and treats 4xx as reachable (`CoinbaseSandboxEndpointMatrixIntegration` with synthetic ids); no WebSocket sandbox exists. OPEN (documented limitation).

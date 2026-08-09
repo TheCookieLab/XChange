@@ -18,6 +18,8 @@ import si.mazi.rescu.HttpStatusExceptionSupport;
  */
 public class CoinbaseException extends HttpStatusExceptionSupport {
 
+  private final RetryClassification retryClassification;
+
   /**
    * Constructs a new CoinbaseException from the API error response.
    *
@@ -27,7 +29,46 @@ public class CoinbaseException extends HttpStatusExceptionSupport {
    * @param errors List of error objects from the Coinbase API response. May be null or empty.
    */
   public CoinbaseException(@JsonProperty("errors") List<CoinbaseError> errors) {
+    this(errors, null);
+  }
+
+  /**
+   * Constructs a new CoinbaseException from the API error response with an explicit retry
+   * classification.
+   *
+   * @param errors List of error objects from the Coinbase API response. May be null or empty.
+   * @param retryClassification explicit classification; null derives from the HTTP status code
+   */
+  public CoinbaseException(
+      @JsonProperty("errors") List<CoinbaseError> errors,
+      @JsonProperty("retry_classification") RetryClassification retryClassification) {
     super(errors != null && !errors.isEmpty() ? errors.get(0).message : "Unknown Coinbase error");
+    this.retryClassification = retryClassification;
+  }
+
+  /**
+   * Returns the retry classification, deriving it from the HTTP status code when not explicitly
+   * provided: 401/403 authenticate, 429 rate credits, 5xx transient, everything else permanent.
+   */
+  public RetryClassification getRetryClassification() {
+    if (retryClassification != null) {
+      return retryClassification;
+    }
+    return classify(getHttpStatusCode());
+  }
+
+  /** Derives a default retry classification from an HTTP status code. */
+  public static RetryClassification classify(int httpStatusCode) {
+    if (httpStatusCode == 401 || httpStatusCode == 403) {
+      return RetryClassification.AUTHENTICATION;
+    }
+    if (httpStatusCode == 429) {
+      return RetryClassification.RATE_CREDIT;
+    }
+    if (httpStatusCode >= 500 && httpStatusCode < 600) {
+      return RetryClassification.TRANSIENT;
+    }
+    return RetryClassification.PERMANENT;
   }
 
   /**

@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseCommitConvertTradeRequest;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteRequest;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteResponse;
@@ -174,9 +175,10 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     int page = 0;
     String cursor = null;
     do {
-      CoinbaseListOrdersResponse response = listOrders(
+      final String requestCursor = cursor;
+      CoinbaseListOrdersResponse response = CoinbaseRetry.readWithBackoff(() -> listOrders(
           null, null, null, null, null, null, null, null, null, null, null, null, null, limit,
-          cursor, null, null, null);
+          requestCursor, null, null, null));
       cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "orders");
       page++;
       if (response.getOrders() != null) {
@@ -191,14 +193,22 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    * Caller is responsible for constructing the correct request per Coinbase Advanced Trade.
    */
   public CoinbaseCreateOrderResponse createOrder(CoinbaseOrderRequest request) throws IOException {
-    return coinbaseAdvancedTrade.createOrder(authTokenCreator, request);
+    try {
+      return coinbaseAdvancedTrade.createOrder(authTokenCreator, request);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException("createOrder", request.getClientOrderId(), transportFailure);
+    }
   }
 
   /**
    * Edit an existing order natively via Advanced Trade.
    */
   public CoinbaseOrdersResponse editOrder(CoinbaseEditOrderRequest request) throws IOException {
-    return coinbaseAdvancedTrade.editOrder(authTokenCreator, request);
+    try {
+      return coinbaseAdvancedTrade.editOrder(authTokenCreator, request);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException("editOrder", request.getOrderId(), transportFailure);
+    }
   }
 
   /**
@@ -295,7 +305,11 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseConvertTradeResponse commitConvertTrade(String tradeId,
       CoinbaseCommitConvertTradeRequest request) throws IOException {
-    return coinbaseAdvancedTrade.commitConvertTrade(authTokenCreator, tradeId, request);
+    try {
+      return coinbaseAdvancedTrade.commitConvertTrade(authTokenCreator, tradeId, request);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException("commitConvertTrade", tradeId, transportFailure);
+    }
   }
 
   /**

@@ -29,6 +29,7 @@ import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateral
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPortfolioSummaryResponse;
+import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbaseMovePortfolioFundsRequest;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioRequest;
@@ -91,8 +92,9 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
     Set<String> seenCursors = new HashSet<>();
     int page = 0;
     do {
-      CoinbaseAccountsResponse response = coinbaseAdvancedTrade.listAccounts(authTokenCreator, 250,
-          cursor);
+      final String requestCursor = cursor;
+      CoinbaseAccountsResponse response = CoinbaseRetry.readWithBackoff(() ->
+          coinbaseAdvancedTrade.listAccounts(authTokenCreator, 250, requestCursor));
       cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "accounts");
       page++;
       hasNext = response.getHasNext();
@@ -420,7 +422,11 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseAllocatePortfolioResponse allocatePortfolio(CoinbaseAllocatePortfolioRequest request)
       throws IOException {
-    return coinbaseAdvancedTrade.allocatePortfolio(authTokenCreator, request);
+    try {
+      return coinbaseAdvancedTrade.allocatePortfolio(authTokenCreator, request);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException("allocatePortfolio", request.getPortfolioUuid(), transportFailure);
+    }
   }
 
 }

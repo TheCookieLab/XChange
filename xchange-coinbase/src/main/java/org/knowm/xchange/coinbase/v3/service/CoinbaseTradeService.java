@@ -154,8 +154,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     int page = 0;
     String cursor;
     do {
-      CoinbaseOrdersResponse response = listFills(
-          v3Params);
+      CoinbaseOrdersResponse response = CoinbaseRetry.readWithBackoff(() -> listFills(v3Params));
       cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "fills");
       page++;
       for (CoinbaseFill fill : response.getFills()) {
