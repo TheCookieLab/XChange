@@ -1,0 +1,16 @@
+{
+  "channel": "ohlc",
+  "type": "update",
+  "data": [
+    {
+      "symbol": "BTC/USD",
+      "interval": "1m",
+      "open": "66500.1",
+      "high": "66550.0",
+      "low": "66480.2",
+      "close": "66520.7",
+      "volume": "12.345",
+      "timestamp": "2025-09-09T21:31:50.716Z"
+    }
+  ]
+}

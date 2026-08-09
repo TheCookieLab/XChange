@@ -14,8 +14,8 @@ public class KrakenStatusMessage extends KrakenDataMessage<Payload> {
 
   @Override
   public String getChannelId() {
-    // no subscription for status channel
-    return null;
+    // system status messages are broadcast; route them to the status subscription
+    return "status";
   }
 
   @Data

@@ -2,17 +2,28 @@ package org.knowm.xchange.kraken.service;
 
 import static org.knowm.xchange.service.trade.params.orders.PlaceOrderKnownParams.CLIENT_ORDER_ID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.kraken.KrakenUtils;
 import org.knowm.xchange.kraken.dto.account.KrakenTradeVolume;
 import org.knowm.xchange.kraken.dto.account.results.KrakenTradeVolumeResult;
+import org.knowm.xchange.kraken.dto.trade.KrakenAddOrderBatchResponse;
+import org.knowm.xchange.kraken.dto.trade.KrakenAmendOrderResponse;
+import org.knowm.xchange.kraken.dto.trade.KrakenCancelAllOrdersAfterResponse;
 import org.knowm.xchange.kraken.dto.trade.KrakenOpenPosition;
 import org.knowm.xchange.kraken.dto.trade.KrakenOrder;
 import org.knowm.xchange.kraken.dto.trade.KrakenOrderResponse;
@@ -21,6 +32,9 @@ import org.knowm.xchange.kraken.dto.trade.KrakenStandardOrder.KrakenOrderBuilder
 import org.knowm.xchange.kraken.dto.trade.KrakenTrade;
 import org.knowm.xchange.kraken.dto.trade.KrakenType;
 import org.knowm.xchange.kraken.dto.trade.TimeInForce;
+import org.knowm.xchange.kraken.dto.trade.results.KrakenAddOrderBatchResult;
+import org.knowm.xchange.kraken.dto.trade.results.KrakenAmendOrderResult;
+import org.knowm.xchange.kraken.dto.trade.results.KrakenCancelAllOrdersAfterResult;
 import org.knowm.xchange.kraken.dto.trade.results.KrakenCancelOrderResult;
 import org.knowm.xchange.kraken.dto.trade.results.KrakenCancelOrderResult.KrakenCancelOrderResponse;
 import org.knowm.xchange.kraken.dto.trade.results.KrakenClosedOrdersResult;
@@ -34,6 +48,11 @@ import org.knowm.xchange.kraken.dto.trade.results.KrakenTradeHistoryResult.Krake
 import org.knowm.xchange.service.trade.params.orders.PlaceOrderParams;
 
 public class KrakenTradeServiceRaw extends KrakenBaseService {
+
+  /** Ceiling for full-fetch pagination loops, protecting against runaway cursor pagination. */
+  private static final int MAX_TRADE_HISTORY_PAGES = 1000;
+
+  private static final ObjectMapper BATCH_MAPPER = new ObjectMapper();
 
   /**
    * Constructor
@@ -136,6 +155,31 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
       String type, boolean includeTrades, String start, String end, Long offset)
       throws IOException {
 
+    return getKrakenTradeHistory(type, includeTrades, start, end, offset, null);
+  }
+
+  /**
+   * Fetches trade history with support for the {@code consolidate_trades} flag.
+   *
+   * @param type type of trade to query, one of {@code all}, {@code any position}, {@code closed
+   *     position}, {@code closing position}, {@code no position}, or {@code null} for all
+   * @param includeTrades whether to include orders in the response
+   * @param start start Unix timestamp or order txid, or {@code null}
+   * @param end end Unix timestamp or order txid, or {@code null}
+   * @param offset offset into the result set ({@code ofs}), or {@code null}
+   * @param consolidateTrades whether to consolidate trades by individual txids into single trades,
+   *     or {@code null} for the provider default
+   * @return typed trade history
+   */
+  public KrakenTradeHistory getKrakenTradeHistory(
+      String type,
+      boolean includeTrades,
+      String start,
+      String end,
+      Long offset,
+      Boolean consolidateTrades)
+      throws IOException {
+
     KrakenTradeHistoryResult result =
         kraken.tradeHistory(
             type,
@@ -143,11 +187,70 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
             start,
             end,
             offset,
+            consolidateTrades,
             exchange.getExchangeSpecification().getApiKey(),
             signatureCreator,
             exchange.getNonceFactory());
 
     return checkResult(result);
+  }
+
+  /**
+   * Fetches the full trade history for the given filter, paging through the {@code ofs} cursor
+   * until the provider-reported count is reached, an empty page is returned, or the page ceiling is
+   * exceeded.
+   *
+   * <p>Pagination is bounded: at most {@value #MAX_TRADE_HISTORY_PAGES} pages are fetched, and a
+   * repeated page without progress (more than one entry repeated verbatim) raises {@link
+   * ExchangeException} instead of looping forever. The provider's {@code count} is authoritative
+   * when it matches the collected entries; otherwise an empty page ends the fetch.
+   *
+   * @param type type of trade to query, or {@code null} for all
+   * @param includeTrades whether to include orders in the response
+   * @param start start Unix timestamp or order txid, or {@code null}
+   * @param end end Unix timestamp or order txid, or {@code null}
+   * @param consolidateTrades whether to consolidate trades by individual txids into single trades,
+   *     or {@code null} for the provider default
+   * @return typed trade history with all collected trades
+   */
+  public KrakenTradeHistory getKrakenTradeHistoryAll(
+      String type, boolean includeTrades, String start, String end, Boolean consolidateTrades)
+      throws IOException {
+
+    Map<String, KrakenTrade> allTrades = new ConcurrentHashMap<>();
+    long offset = 0;
+    int totalCount = -1;
+    Set<String> previousPageKeys = null;
+    for (int page = 0; page < MAX_TRADE_HISTORY_PAGES; page++) {
+      KrakenTradeHistory pageResult =
+          getKrakenTradeHistory(type, includeTrades, start, end, offset, consolidateTrades);
+      Map<String, KrakenTrade> pageTrades = pageResult.getTrades();
+      totalCount = pageResult.getCount();
+      if (pageTrades.isEmpty()) {
+        break;
+      }
+      Set<String> pageKeys = pageTrades.keySet();
+      if (pageKeys.equals(previousPageKeys)) {
+        if (pageTrades.size() > 1) {
+          throw new ExchangeException(
+              "Kraken trade history pagination made no progress after " + page + " pages");
+        }
+        // a single repeated entry is a benign end-of-stream marker
+        break;
+      }
+      previousPageKeys = pageKeys;
+      int previousSize = allTrades.size();
+      allTrades.putAll(pageTrades);
+      if (allTrades.size() == previousSize) {
+        // every entry on this page was already collected; stop to avoid looping
+        break;
+      }
+      if (totalCount > 0 && allTrades.size() >= totalCount) {
+        break;
+      }
+      offset += pageTrades.size();
+    }
+    return new KrakenTradeHistory(allTrades, totalCount);
   }
 
   public Map<String, KrakenTrade> queryKrakenTrades(String... transactionIds) throws IOException {
@@ -239,7 +342,7 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
     return placeKrakenOrder(krakenOrderBuilder.buildOrder());
   }
 
-  private Optional<String> getClientOrderId(Order order) {
+  protected Optional<String> getClientOrderId(Order order) {
     if (order instanceof PlaceOrderParams) {
       return Optional.ofNullable(
           ((PlaceOrderParams) order).getOrderParam(CLIENT_ORDER_ID, String.class));
@@ -304,6 +407,145 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
     }
 
     return checkResult(result);
+  }
+
+  /**
+   * Atomically amends a live order via the AmendOrder endpoint.
+   *
+   * <p>Exactly one of {@code orderId} and {@code clientOrderId} must be provided. The order is
+   * modified in place, preserving the Kraken and client identifiers where possible. An ambiguous
+   * transport outcome is never replayed: the caller reconciles by the returned order identifiers or
+   * by {@code clientOrderId}.
+   *
+   * @param orderId Kraken order id (txid) of the order to amend, or {@code null}
+   * @param clientOrderId client order id ({@code cl_ord_id}) of the order to amend, or {@code null}
+   * @param orderQty new order quantity in base asset, or {@code null} to keep the current volume
+   * @param limitPrice new limit price (relative values supported by the provider), or {@code null}
+   * @param triggerPrice new trigger price for triggered order types, or {@code null}
+   * @param postOnly cancel the order if it would take liquidity on arrival, or {@code null}
+   * @param validate validate only without submitting, or {@code null}
+   * @return typed amend result with amend id and order identities
+   */
+  public KrakenAmendOrderResponse amendKrakenOrder(
+      String orderId,
+      String clientOrderId,
+      BigDecimal orderQty,
+      String limitPrice,
+      String triggerPrice,
+      Boolean postOnly,
+      Boolean validate)
+      throws IOException {
+
+    if (orderId == null && clientOrderId == null) {
+      throw new ExchangeException("AmendOrder requires either order_id or cl_ord_id");
+    }
+    KrakenAmendOrderResult result =
+        kraken.amendOrder(
+            orderId,
+            clientOrderId,
+            orderQty,
+            limitPrice,
+            triggerPrice,
+            postOnly,
+            validate,
+            exchange.getExchangeSpecification().getApiKey(),
+            signatureCreator,
+            exchange.getNonceFactory());
+    return checkResult(result, "amendKrakenOrder");
+  }
+
+  /**
+   * Places multiple orders in one AddOrderBatch request.
+   *
+   * <p>The provider returns one entry per submitted order in request order. Partial failures are
+   * surfaced through the provider error array; reconcile per order by the returned transaction ids
+   * rather than replaying the batch blindly.
+   *
+   * @param orders orders to place, at least one
+   * @return typed batch result with per-order transaction ids and descriptions
+   */
+  public KrakenAddOrderBatchResponse placeKrakenOrdersBatch(List<KrakenStandardOrder> orders)
+      throws IOException {
+
+    if (orders == null || orders.isEmpty()) {
+      throw new ExchangeException("AddOrderBatch requires at least one order");
+    }
+    List<Map<String, String>> orderPayloads = new ArrayList<>();
+    for (KrakenStandardOrder order : orders) {
+      orderPayloads.add(batchOrderPayload(order));
+    }
+    String ordersJson;
+    try {
+      ordersJson = BATCH_MAPPER.writeValueAsString(orderPayloads);
+    } catch (JsonProcessingException e) {
+      throw new ExchangeException("Could not serialize AddOrderBatch payload", e);
+    }
+    KrakenAddOrderBatchResult result =
+        kraken.addOrderBatch(
+            ordersJson,
+            exchange.getExchangeSpecification().getApiKey(),
+            signatureCreator,
+            exchange.getNonceFactory());
+    return checkResult(result, "placeKrakenOrdersBatch");
+  }
+
+  /**
+   * Arms or disarms the cancel-all-after (dead-man) timer.
+   *
+   * <p>All open orders are cancelled when the timer expires unless it is re-armed with a new
+   * request. A timeout of zero disables the timer. This endpoint can cancel all open orders; enable
+   * it deliberately.
+   *
+   * @param timeoutSeconds timer length in seconds ({@code 0} disables, max 86400)
+   * @return typed result with the current and trigger times
+   */
+  public KrakenCancelAllOrdersAfterResponse cancelAllKrakenOrdersAfter(long timeoutSeconds)
+      throws IOException {
+
+    KrakenCancelAllOrdersAfterResult result =
+        kraken.cancelAllOrdersAfter(
+            timeoutSeconds,
+            exchange.getExchangeSpecification().getApiKey(),
+            signatureCreator,
+            exchange.getNonceFactory());
+    return checkResult(result, "cancelAllKrakenOrdersAfter");
+  }
+
+  private Map<String, String> batchOrderPayload(KrakenStandardOrder order) {
+    Map<String, String> payload = new ConcurrentHashMap<>();
+    payload.put("pair", KrakenUtils.createKrakenCurrencyPair(order.getAssetPair()));
+    payload.put("type", order.getType().toString());
+    payload.put("ordertype", order.getOrderType().toApiFormat());
+    if (order.getPrice() != null) {
+      payload.put("price", order.getPrice());
+    }
+    if (order.getSecondaryPrice() != null) {
+      payload.put("price2", order.getSecondaryPrice());
+    }
+    payload.put("volume", order.getVolume().toPlainString());
+    if (order.getLeverage() != null) {
+      payload.put("leverage", order.getLeverage());
+    }
+    if (order.getUserRefId() != null) {
+      payload.put("userref", order.getUserRefId());
+    }
+    if (order.getStartTime() != null) {
+      payload.put("starttm", order.getStartTime());
+    }
+    if (order.getExpireTime() != null) {
+      payload.put("expiretm", order.getExpireTime());
+    }
+    if (order.getClientOrderId() != null) {
+      payload.put("cl_ord_id", order.getClientOrderId());
+    }
+    String flags = delimitSet(order.getOrderFlags());
+    if (flags != null) {
+      payload.put("oflags", flags);
+    }
+    if (order.getTimeInForce() != null) {
+      payload.put("timeinforce", order.getTimeInForce().toString());
+    }
+    return payload;
   }
 
   public KrakenCancelOrderResponse cancelKrakenOrder(String orderId) throws IOException {

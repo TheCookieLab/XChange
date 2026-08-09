@@ -294,7 +294,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
             });
   }
 
-  private void scheduleReconnect() {
+  protected void scheduleReconnect() {
     if (autoReconnect) {
       LOG.info("Scheduling reconnection");
 
@@ -613,5 +613,38 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
 
   public void setAutoReconnect(boolean autoReconnect) {
     this.autoReconnect = autoReconnect;
+  }
+
+  /**
+   * Re-sends the subscribe message for an already-registered subscription.
+   *
+   * <p>Used for gap recovery: the provider answers with a fresh snapshot on the same channel, so
+   * the existing emitter keeps receiving the rebuilt state.
+   */
+  public void resubscribeChannel(String channelName, Object... args) {
+    String subscriptionUniqueId = getSubscriptionUniqueId(channelName, args);
+    if (!channels.containsKey(subscriptionUniqueId)) {
+      LOG.warn("Cannot resubscribe unknown channel {}", subscriptionUniqueId);
+      return;
+    }
+    try {
+      sendMessage(getSubscribeMessage(channelName, args));
+    } catch (IOException e) {
+      LOG.error("Failed to resubscribe channel {}", subscriptionUniqueId, e);
+    }
+  }
+
+  /**
+   * @return whether automatic reconnection is enabled; subclasses may override the scheduler
+   */
+  protected boolean isAutoReconnect() {
+    return autoReconnect;
+  }
+
+  /**
+   * @return the current websocket channel, or {@code null} before the first connection
+   */
+  protected Channel getWebSocketChannel() {
+    return webSocketChannel;
   }
 }

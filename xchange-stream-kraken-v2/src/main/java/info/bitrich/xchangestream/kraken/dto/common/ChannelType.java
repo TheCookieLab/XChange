@@ -9,9 +9,13 @@ import lombok.Getter;
 public enum ChannelType {
   TICKER("ticker"),
   TRADE("trade"),
+  BOOK("book"),
+  OHLC("ohlc"),
+  STATUS("status"),
 
   BALANCES("balances"),
-  USER_TRADES("executions");
+  USER_TRADES("executions"),
+  ORDERS("orders");
 
   @JsonValue private final String value;
 

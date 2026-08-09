@@ -10,7 +10,19 @@ import org.knowm.xchange.utils.nonce.CurrentTimeIncrementalNonceFactory;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 
+/**
+ * Authenticated Kraken Spot WebSocket v2 service.
+ *
+ * <p>Private channels require a REST-issued websocket token (lifetime 15 minutes). Tokens are
+ * fetched single-flight: concurrent subscribers share one in-flight refresh instead of issuing
+ * parallel REST calls, and the cached token is reused until it is close to expiring. Because the
+ * token is cached per service instance and a new private service instance is created for each
+ * exchange connect generation, a reconnect naturally re-authenticates with a fresh token.
+ */
 public class KrakenPrivateStreamingService extends KrakenStreamingService {
+
+  /** Refresh well before the provider's 15-minute token lifetime. */
+  static final long TOKEN_TTL_MILLIS = TimeUnit.MINUTES.toMillis(10);
 
   protected KrakenStreamingExchange krakenStreamingExchange;
   protected KrakenAuthenticated krakenAuthenticated;
@@ -18,6 +30,21 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
 
   private final SynchronizedValueFactory<Long> nonceFactory =
       new CurrentTimeIncrementalNonceFactory(TimeUnit.MILLISECONDS);
+
+  private final java.util.concurrent.atomic.AtomicReference<String> cachedToken =
+      new java.util.concurrent.atomic.AtomicReference<>();
+  private volatile long tokenFetchedAtMillis;
+
+  /** Test seam: rewinds the token fetch time to force a refresh on the next subscribe. */
+  void setTokenFetchedAtMillis(long tokenFetchedAtMillis) {
+    this.tokenFetchedAtMillis = tokenFetchedAtMillis;
+  }
+
+  /** Drops the cached token so the next private-channel subscribe re-authenticates. */
+  void invalidateToken() {
+    cachedToken.set(null);
+    tokenFetchedAtMillis = 0;
+  }
 
   public KrakenPrivateStreamingService(String apiUri, KrakenStreamingExchange exchange) {
     super(apiUri);
@@ -30,6 +57,20 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
         KrakenDigest.createInstance(exchange.getExchangeSpecification().getSecretKey());
 
     krakenStreamingExchange = exchange;
+
+    // every (re)connection gets a fresh websocket token: reauth is tied to the socket generation
+    subscribeConnectionSuccess().subscribe(e -> invalidateToken());
+  }
+
+  KrakenPrivateStreamingService(
+      String apiUri,
+      KrakenStreamingExchange exchange,
+      KrakenAuthenticated krakenAuthenticated,
+      ParamsDigest signatureCreator) {
+    super(apiUri);
+    this.krakenStreamingExchange = exchange;
+    this.krakenAuthenticated = krakenAuthenticated;
+    this.signatureCreator = signatureCreator;
   }
 
   /**
@@ -42,13 +83,7 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
 
     // get token for private channels
     if (Config.PRIVATE_CHANNELS.contains(channelName)) {
-      var tokenResult =
-          krakenAuthenticated.getWebsocketToken(
-              krakenStreamingExchange.getExchangeSpecification().getApiKey(),
-              signatureCreator,
-              nonceFactory);
-
-      message.getParams().setToken(tokenResult.getResult().getToken());
+      message.getParams().setToken(getWebsocketToken());
     }
     return objectMapper.writeValueAsString(message);
   }
@@ -63,14 +98,33 @@ public class KrakenPrivateStreamingService extends KrakenStreamingService {
 
     // get token for private channels
     if (Config.PRIVATE_CHANNELS.contains(message.getParams().getChannel())) {
+      message.getParams().setToken(getWebsocketToken());
+    }
+    return objectMapper.writeValueAsString(message);
+  }
+
+  /**
+   * Returns a fresh-enough websocket token, fetching it from REST at most once per TTL window.
+   *
+   * <p>Single-flight: concurrent callers wait on the monitor and reuse the token fetched by the
+   * first caller, so N simultaneous subscribes never trigger more than one REST call.
+   */
+  private String getWebsocketToken() throws IOException {
+    synchronized (this) {
+      long now = System.currentTimeMillis();
+      String token = cachedToken.get();
+      if (token != null && now - tokenFetchedAtMillis < TOKEN_TTL_MILLIS) {
+        return token;
+      }
       var tokenResult =
           krakenAuthenticated.getWebsocketToken(
               krakenStreamingExchange.getExchangeSpecification().getApiKey(),
               signatureCreator,
               nonceFactory);
-
-      message.getParams().setToken(tokenResult.getResult().getToken());
+      token = tokenResult.getResult().getToken();
+      cachedToken.set(token);
+      tokenFetchedAtMillis = now;
+      return token;
     }
-    return objectMapper.writeValueAsString(message);
   }
 }

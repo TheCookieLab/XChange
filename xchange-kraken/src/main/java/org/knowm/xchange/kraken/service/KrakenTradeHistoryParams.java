@@ -29,4 +29,10 @@ public class KrakenTradeHistoryParams
   private Date startTime;
 
   private CurrencyPair currencyPair;
+
+  /** Whether to include orders in the trade history response. */
+  private Boolean includeTrades;
+
+  /** Whether to consolidate trades by individual txids into single trades. */
+  private Boolean consolidateTrades;
 }

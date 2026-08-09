@@ -19,8 +19,15 @@ import org.knowm.xchange.kraken.dto.account.KrakenWebsocketToken;
 import org.knowm.xchange.kraken.service.KrakenAccountServiceRaw;
 
 /**
+ * Legacy Kraken Spot WebSocket v1 streaming exchange.
+ *
+ * @deprecated Use {@code info.bitrich.xchangestream.kraken.KrakenStreamingExchange} from {@code
+ *     xchange-stream-kraken-v2} (WebSocket v2) for all new integrations. This v1 adapter is kept
+ *     for the repository compatibility grace period and will be removed in a later scoped change.
+ *     See the Kraken family guide migration section.
  * @author makarid
  */
+@Deprecated
 public class KrakenStreamingExchange extends KrakenExchange implements StreamingExchange {
 
   private static final String USE_BETA = "Use_Beta";

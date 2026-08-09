@@ -25,7 +25,10 @@ import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.dto.meta.CurrencyMetaData;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.FeeTier;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
@@ -37,6 +40,8 @@ import org.knowm.xchange.kraken.dto.account.KrakenTradeVolume;
 import org.knowm.xchange.kraken.dto.account.LedgerType;
 import org.knowm.xchange.kraken.dto.account.results.KrakenLedgerResult;
 import org.knowm.xchange.kraken.dto.account.results.KrakenTradeVolumeResult;
+import org.knowm.xchange.kraken.dto.marketdata.KrakenAsset;
+import org.knowm.xchange.kraken.dto.marketdata.KrakenAssetPair;
 import org.knowm.xchange.kraken.dto.marketdata.KrakenDepth;
 import org.knowm.xchange.kraken.dto.marketdata.KrakenFee;
 import org.knowm.xchange.kraken.dto.marketdata.results.KrakenAssetPairsResult;
@@ -378,6 +383,141 @@ public class KrakenAdaptersTest {
         .isEqualByComparingTo(new BigDecimal(0.5).movePointLeft(2));
     assertThat(adaptedFeeTiers[2].fee.getTakerFee())
         .isEqualByComparingTo(new BigDecimal(0.75).movePointLeft(2));
+  }
+
+  @Test
+  public void testAdaptToExchangeMetaData_AccurateFeesAndDecimals() throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    KrakenAssetsResult krakenAssets =
+        mapper.readValue(
+            KrakenAdaptersTest.class.getResourceAsStream(
+                "/org/knowm/xchange/kraken/dto/marketdata/example-assets-data.json"),
+            KrakenAssetsResult.class);
+    KrakenAssetPairsResult krakenAssetPairs =
+        mapper.readValue(
+            KrakenAdaptersTest.class.getResourceAsStream(
+                "/org/knowm/xchange/kraken/dto/marketdata/example-assetpairs-data.json"),
+            KrakenAssetPairsResult.class);
+
+    ExchangeMetaData metaData =
+        KrakenAdapters.adaptToExchangeMetaData(
+            null, krakenAssetPairs.getResult(), krakenAssets.getResult());
+
+    InstrumentMetaData xbtUsd = metaData.getInstruments().get(CurrencyPair.BTC_USD);
+    assertThat(xbtUsd).isNotNull();
+    // First taker tier 0.26% -> 0.0026, first maker tier 0.16% -> 0.0016
+    assertThat(xbtUsd.getTradingFee()).isEqualByComparingTo("0.0026");
+    assertThat(xbtUsd.getFeeTiers()).hasSize(9);
+    assertThat(xbtUsd.getFeeTiers()[0].beginQuantity).isEqualByComparingTo("0");
+    assertThat(xbtUsd.getFeeTiers()[0].fee.getMakerFee()).isEqualByComparingTo("0.0016");
+    assertThat(xbtUsd.getFeeTiers()[0].fee.getTakerFee()).isEqualByComparingTo("0.0026");
+    assertThat(xbtUsd.getFeeTiers()[8].beginQuantity).isEqualByComparingTo("10000000");
+    assertThat(xbtUsd.getFeeTiers()[8].fee.getMakerFee()).isEqualByComparingTo("0.0000");
+    assertThat(xbtUsd.getFeeTiers()[8].fee.getTakerFee()).isEqualByComparingTo("0.0010");
+    // Decimals, steps, and order minimums in exact units
+    assertThat(xbtUsd.getPriceScale()).isEqualTo(1);
+    assertThat(xbtUsd.getVolumeScale()).isEqualTo(8);
+    assertThat(xbtUsd.getMinimumAmount()).isEqualByComparingTo("0.002");
+    assertThat(xbtUsd.getCounterMinimumAmount()).isEqualByComparingTo("0.5");
+    assertThat(xbtUsd.getTradingFeeCurrency()).isEqualTo(Currency.USD);
+
+    // Asset scale is preserved as currency metadata
+    KrakenAsset adaAsset = krakenAssets.getResult().get("ADA");
+    assertThat(adaAsset).isNotNull();
+    CurrencyMetaData adaMeta = metaData.getCurrencies().get(Currency.ADA);
+    assertThat(adaMeta).isNotNull();
+    assertThat(adaMeta.getScale()).isEqualTo(adaAsset.getScale());
+  }
+
+  @Test
+  public void testAdaptToExchangeMetaData_SkipsDarkMarkets() {
+    KrakenAssetPair regular =
+        KrakenAssetPair.builder()
+            .altName("XBTUSD")
+            .base("XXBT")
+            .quote("ZUSD")
+            .pairScale(1)
+            .volumeLotScale(8)
+            .volumeMultiplier(BigDecimal.ONE)
+            .tickSize(new BigDecimal("0.1"))
+            .orderMin(new BigDecimal("0.002"))
+            .costMin(new BigDecimal("0.5"))
+            .feeVolumeCurrency("ZUSD")
+            .fees(List.of(new KrakenFee(BigDecimal.ZERO, new BigDecimal("0.26"))))
+            .fees_maker(List.of(new KrakenFee(BigDecimal.ZERO, new BigDecimal("0.16"))))
+            .build();
+    KrakenAssetPair dark =
+        KrakenAssetPair.builder()
+            .altName("XBTUSD.d")
+            .base("XXBT")
+            .quote("ZUSD")
+            .pairScale(1)
+            .volumeLotScale(8)
+            .volumeMultiplier(BigDecimal.ONE)
+            .tickSize(new BigDecimal("0.1"))
+            .orderMin(new BigDecimal("0.002"))
+            .costMin(new BigDecimal("0.5"))
+            .feeVolumeCurrency("ZUSD")
+            .fees(List.of(new KrakenFee(BigDecimal.ZERO, new BigDecimal("0.26"))))
+            .fees_maker(List.of(new KrakenFee(BigDecimal.ZERO, new BigDecimal("0.16"))))
+            .build();
+    KrakenAsset asset = new KrakenAsset("XXBT", "currency", 8, 6);
+
+    ExchangeMetaData metaData =
+        KrakenAdapters.adaptToExchangeMetaData(
+            null, Map.of("XXBTZUSD", regular, "XXBTZUSD.d", dark), Map.of("XXBT", asset));
+
+    assertThat(metaData.getInstruments().keySet()).containsExactly(CurrencyPair.BTC_USD);
+  }
+
+  @Test
+  public void testAdaptPair_NoMisleadingFeeWhenUnavailable() {
+    KrakenAsset asset = new KrakenAsset("XXBT", "currency", 8, 6);
+
+    // No fee data at all: tradingFee must stay null instead of a misleading zero
+    KrakenAssetPair noFees =
+        KrakenAssetPair.builder()
+            .altName("XBTUSD")
+            .base("XXBT")
+            .quote("ZUSD")
+            .pairScale(1)
+            .volumeLotScale(8)
+            .volumeMultiplier(BigDecimal.ONE)
+            .tickSize(new BigDecimal("0.1"))
+            .orderMin(new BigDecimal("0.002"))
+            .costMin(new BigDecimal("0.5"))
+            .feeVolumeCurrency("ZUSD")
+            .fees(List.of())
+            .fees_maker(List.of())
+            .build();
+    ExchangeMetaData noFeeMeta =
+        KrakenAdapters.adaptToExchangeMetaData(
+            null, Map.of("XXBTZUSD", noFees), Map.of("XXBT", asset));
+    assertThat(noFeeMeta.getInstruments().get(CurrencyPair.BTC_USD).getTradingFee()).isNull();
+    assertThat(noFeeMeta.getInstruments().get(CurrencyPair.BTC_USD).getFeeTiers()).isEmpty();
+
+    // Maker-only fee data falls back to the first maker tier
+    KrakenAssetPair makerOnly =
+        KrakenAssetPair.builder()
+            .altName("XBTUSD")
+            .base("XXBT")
+            .quote("ZUSD")
+            .pairScale(1)
+            .volumeLotScale(8)
+            .volumeMultiplier(BigDecimal.ONE)
+            .tickSize(new BigDecimal("0.1"))
+            .orderMin(new BigDecimal("0.002"))
+            .costMin(new BigDecimal("0.5"))
+            .feeVolumeCurrency("ZUSD")
+            .fees(List.of())
+            .fees_maker(List.of(new KrakenFee(BigDecimal.ZERO, new BigDecimal("0.1"))))
+            .build();
+    ExchangeMetaData makerMeta =
+        KrakenAdapters.adaptToExchangeMetaData(
+            null, Map.of("XXBTZUSD", makerOnly), Map.of("XXBT", asset));
+    assertThat(makerMeta.getInstruments().get(CurrencyPair.BTC_USD).getTradingFee())
+        .isEqualByComparingTo("0.001");
+    assertThat(makerMeta.getInstruments().get(CurrencyPair.BTC_USD).getFeeTiers()).isEmpty();
   }
 
   @Test

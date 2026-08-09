@@ -8,7 +8,6 @@ import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.StopOrder;
-import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.krakenfutures.KrakenFuturesAdapters;
 import org.knowm.xchange.krakenfutures.dto.marketData.KrakenFuturesOrder;
@@ -57,11 +56,14 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (ord.isSuccess() && ord.getOrderStatus().getStatus().equals("placed")) {
       return ord;
-    } else {
-      String errorMessage =
-          (ord.getError() == null) ? ord.getOrderStatus().getStatus() : ord.getError();
-      throw new ExchangeException("Error sending CF limit order: " + errorMessage);
     }
+    String errorMessage =
+        (ord.getError() == null) ? ord.getOrderStatus().getStatus() : ord.getError();
+    throw new KrakenFuturesException(
+        "futures",
+        "placeKrakenFuturesLimitOrder",
+        KrakenFuturesException.classify(errorMessage),
+        new String[] {errorMessage});
   }
 
   public KrakenFuturesOrder placeKrakenFuturesMarketOrder(MarketOrder order) throws IOException {
@@ -85,11 +87,14 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (ord.isSuccess() && ord.getOrderStatus().getStatus().equals("placed")) {
       return ord;
-    } else {
-      String errorMessage =
-          (ord.getError() == null) ? ord.getOrderStatus().getStatus() : ord.getError();
-      throw new ExchangeException("Error sending CF limit order: " + errorMessage);
     }
+    String errorMessage =
+        (ord.getError() == null) ? ord.getOrderStatus().getStatus() : ord.getError();
+    throw new KrakenFuturesException(
+        "futures",
+        "placeKrakenFuturesMarketOrder",
+        KrakenFuturesException.classify(errorMessage),
+        new String[] {errorMessage});
   }
 
   public KrakenFuturesOrder placeKrakenFuturesStopOrder(StopOrder order) throws IOException {
@@ -115,11 +120,14 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (ord.isSuccess() && ord.getOrderStatus().getStatus().equals("placed")) {
       return ord;
-    } else {
-      String errorMessage =
-          (ord.getError() == null) ? ord.getOrderStatus().getStatus() : ord.getError();
-      throw new ExchangeException("Error sending CF limit order: " + errorMessage);
     }
+    String errorMessage =
+        (ord.getError() == null) ? ord.getOrderStatus().getStatus() : ord.getError();
+    throw new KrakenFuturesException(
+        "futures",
+        "placeKrakenFuturesStopOrder",
+        KrakenFuturesException.classify(errorMessage),
+        new String[] {errorMessage});
   }
 
   public String changeKrakenFuturesOrder(LimitOrder limitOrder) throws IOException {
@@ -137,9 +145,12 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (ord.isSuccess()) {
       return ord.getEditStatus().getOrderId();
-    } else {
-      throw new ExchangeException("Error sending CF limit order: " + ord.getError());
     }
+    throw new KrakenFuturesException(
+        "futures",
+        "changeKrakenFuturesOrder",
+        KrakenFuturesException.classify(ord.getError()),
+        new String[] {ord.getError()});
   }
 
   public BatchOrderResult sendKrakenFuturesBatchOrder(List<OrderCommand> commands)
@@ -153,9 +164,12 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (ord.isSuccess()) {
       return ord;
-    } else {
-      throw new ExchangeException("Error sending CF batch order: " + ord.getError());
     }
+    throw new KrakenFuturesException(
+        "futures",
+        "sendKrakenFuturesBatchOrder",
+        KrakenFuturesException.classify(ord.getError()),
+        new String[] {ord.getError()});
   }
 
   public KrakenFuturesCancel cancelKrakenFuturesOrder(String uid) throws IOException {
@@ -168,9 +182,12 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (res.isSuccess()) {
       return res;
-    } else {
-      throw new ExchangeException("Error cancelling CF order: " + res.getError());
     }
+    throw new KrakenFuturesException(
+        "futures",
+        "cancelKrakenFuturesOrder",
+        KrakenFuturesException.classify(res.getError()),
+        new String[] {res.getError()});
   }
 
   public KrakenFuturesOpenOrders getKrakenFuturesOpenOrders() throws IOException {
@@ -182,9 +199,12 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (openOrders.isSuccess()) {
       return openOrders;
-    } else {
-      throw new ExchangeException("Error getting CF open orders: " + openOrders.getError());
     }
+    throw new KrakenFuturesException(
+        "futures",
+        "getKrakenFuturesOpenOrders",
+        KrakenFuturesException.classify(openOrders.getError()),
+        new String[] {openOrders.getError()});
   }
 
   public KrakenFuturesFills getKrakenFuturesFills() throws IOException {
@@ -201,9 +221,12 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (fills.isSuccess()) {
       return fills;
-    } else {
-      throw new ExchangeException("Error getting CF fills: " + fills.getError());
     }
+    throw new KrakenFuturesException(
+        "futures",
+        "getKrakenFuturesFills",
+        KrakenFuturesException.classify(fills.getError()),
+        new String[] {fills.getError()});
   }
 
   public KrakenFuturesCancelAllOrdersAfter cancelAllOrdersAfter(long timeoutSeconds)
@@ -217,10 +240,12 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (cancelallordersafter.isSuccess()) {
       return cancelallordersafter;
-    } else {
-      throw new ExchangeException(
-          "Error cancelling all CF orders after: " + cancelallordersafter.getError());
     }
+    throw new KrakenFuturesException(
+        "futures",
+        "cancelAllOrdersAfter",
+        KrakenFuturesException.classify(cancelallordersafter.getError()),
+        new String[] {cancelallordersafter.getError()});
   }
 
   public KrakenFuturesCancelAllOrders cancelAllOrdersByInstrument(Instrument instrument)
@@ -234,10 +259,12 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (cancelAllOrdersByInstrument.isSuccess()) {
       return cancelAllOrdersByInstrument;
-    } else {
-      throw new ExchangeException(
-          "Error cancelling all CF orders after: " + cancelAllOrdersByInstrument.getError());
     }
+    throw new KrakenFuturesException(
+        "futures",
+        "cancelAllOrdersByInstrument",
+        KrakenFuturesException.classify(cancelAllOrdersByInstrument.getError()),
+        new String[] {cancelAllOrdersByInstrument.getError()});
   }
 
   public KrakenFuturesOrdersStatusesResponse getKrakenFuturesOrdersStatuses(String... orderIds)
@@ -251,9 +278,11 @@ public class KrakenFuturesTradeServiceRaw extends KrakenFuturesBaseService {
 
     if (cancelAllOrdersByInstrument.isSuccess()) {
       return cancelAllOrdersByInstrument;
-    } else {
-      throw new ExchangeException(
-          "Error cancelling all CF orders after: " + cancelAllOrdersByInstrument.getError());
     }
+    throw new KrakenFuturesException(
+        "futures",
+        "getKrakenFuturesOrdersStatuses",
+        KrakenFuturesException.classify(cancelAllOrdersByInstrument.getError()),
+        new String[] {cancelAllOrdersByInstrument.getError()});
   }
 }

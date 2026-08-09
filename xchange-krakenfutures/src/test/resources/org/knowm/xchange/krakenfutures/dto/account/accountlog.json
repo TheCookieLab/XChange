@@ -1,0 +1,28 @@
+{
+  "result": "success",
+  "serverTime": "2022-12-25T09:30:59.123456Z",
+  "accountLog": [
+    {
+      "id": "e74f1a1a-1b2b-4a5e-9f6d-000000000001",
+      "time": "2022-12-25T09:30:59.123456Z",
+      "type": "deposit",
+      "amount": 1000,
+      "account": "trade",
+      "instrument": null,
+      "wallet": "flexible",
+      "balance": 1500,
+      "change": 1000
+    },
+    {
+      "id": "e74f1a1a-1b2b-4a5e-9f6d-000000000002",
+      "time": "2022-12-25T09:35:00.000000Z",
+      "type": "funding",
+      "amount": 0.00015,
+      "account": "trade",
+      "instrument": "PI_XBTUSD",
+      "wallet": "futures",
+      "balance": 1499.99985,
+      "change": -0.00015
+    }
+  ]
+}

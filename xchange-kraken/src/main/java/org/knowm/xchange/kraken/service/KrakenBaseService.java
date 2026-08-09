@@ -68,11 +68,17 @@ public class KrakenBaseService extends BaseExchangeService implements BaseServic
   }
 
   /**
-   * For more info on each error codes
+   * Checks the result of a call to the Kraken API and throws the appropriate exception if it is
+   * unsuccessful.
+   *
+   * <p>For more info on each error codes
    *
    * <p>https://support.kraken.com/hc/en-us/articles/360001491786-API-Error-Codes
+   *
+   * @param krakenResult the result of the call
+   * @param operation the operation that failed, used in the structured failure details
    */
-  public <R> R checkResult(KrakenResult<R> krakenResult) {
+  public <R> R checkResult(KrakenResult<R> krakenResult, String operation) {
 
     if (!krakenResult.isSuccess()) {
       String[] errors = krakenResult.getError();
@@ -82,22 +88,34 @@ public class KrakenBaseService extends BaseExchangeService implements BaseServic
       String error = errors[0];
       switch (error) {
         case "EAPI:Invalid nonce":
-          throw new NonceException(error);
+          throw new NonceException(KrakenRedactor.sanitize(error));
         case "EGeneral:Temporary lockout":
-          throw new FrequencyLimitExceededException(error);
+          throw new FrequencyLimitExceededException(KrakenRedactor.sanitize(error));
         case "EOrder:Insufficient funds":
-          throw new FundsExceededException(error);
+          throw new FundsExceededException(KrakenRedactor.sanitize(error));
         case "EGeneral:Too many requests":
         case "EAPI:Rate limit exceeded":
         case "EOrder:Rate limit exceeded":
-          throw new RateLimitExceededException(error);
+          throw new RateLimitExceededException(KrakenRedactor.sanitize(error));
         case "EService:Unavailable":
         case "EService:Busy":
-          throw new ExchangeUnavailableException(error);
+          throw new ExchangeUnavailableException(KrakenRedactor.sanitize(error));
       }
-      throw new ExchangeException(Arrays.toString(errors));
+      throw new KrakenException("spot", operation, KrakenException.classify(error), errors);
     }
     return krakenResult.getResult();
+  }
+
+  /**
+   * Checks the result of a call to the Kraken API and throws the appropriate exception if it is
+   * unsuccessful.
+   *
+   * <p>For more info on each error codes
+   *
+   * <p>https://support.kraken.com/hc/en-us/articles/360001491786-API-Error-Codes
+   */
+  public <R> R checkResult(KrakenResult<R> krakenResult) {
+    return checkResult(krakenResult, "unknown");
   }
 
   protected String createDelimitedString(String[] items) {

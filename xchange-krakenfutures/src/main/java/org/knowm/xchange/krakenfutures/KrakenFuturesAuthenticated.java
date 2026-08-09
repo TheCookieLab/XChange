@@ -10,7 +10,9 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.math.BigDecimal;
+import org.knowm.xchange.krakenfutures.dto.account.KrakenFuturesAccountLog;
 import org.knowm.xchange.krakenfutures.dto.account.KrakenFuturesAccounts;
+import org.knowm.xchange.krakenfutures.dto.account.KrakenFuturesFundingHistory;
 import org.knowm.xchange.krakenfutures.dto.marketData.KrakenFuturesOrder;
 import org.knowm.xchange.krakenfutures.dto.trade.*;
 import si.mazi.rescu.ParamsDigest;
@@ -26,6 +28,27 @@ public interface KrakenFuturesAuthenticated extends KrakenFutures {
   @GET
   @Path("accounts")
   KrakenFuturesAccounts accounts(
+      @HeaderParam("APIKey") String apiKey,
+      @HeaderParam("Authent") ParamsDigest signer,
+      @HeaderParam("Nonce") SynchronizedValueFactory<Long> nonce)
+      throws IOException;
+
+  @POST
+  @Path("accountlog")
+  KrakenFuturesAccountLog accountLog(
+      @QueryParam("since") String since,
+      @QueryParam("max_count") Integer maxCount,
+      @QueryParam("before") String before,
+      @QueryParam("after") String after,
+      @HeaderParam("APIKey") String apiKey,
+      @HeaderParam("Authent") ParamsDigest signer,
+      @HeaderParam("Nonce") SynchronizedValueFactory<Long> nonce)
+      throws IOException;
+
+  @POST
+  @Path("fundinghistory")
+  KrakenFuturesFundingHistory fundingHistory(
+      @QueryParam("lastFundingTime") String lastFundingTime,
       @HeaderParam("APIKey") String apiKey,
       @HeaderParam("Authent") ParamsDigest signer,
       @HeaderParam("Nonce") SynchronizedValueFactory<Long> nonce)
