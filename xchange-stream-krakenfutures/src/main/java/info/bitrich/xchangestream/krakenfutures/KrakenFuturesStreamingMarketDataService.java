@@ -19,9 +19,14 @@ import org.knowm.xchange.krakenfutures.KrakenFuturesAdapters;
 
 public class KrakenFuturesStreamingMarketDataService implements StreamingMarketDataService {
 
+  static final String ORDERBOOK_CHANNEL = "book";
+  static final String TICKER_CHANNEL = "ticker";
+  static final String TRADES_CHANNEL = "trade";
+
   private final ObjectMapper objectMapper = StreamingObjectMapperHelper.getObjectMapper();
   private final KrakenFuturesStreamingService service;
   private final Map<Instrument, OrderBook> orderBookMap = new HashMap<>();
+  private final Map<Instrument, Long> lastSeqMap = new HashMap<>();
 
   public KrakenFuturesStreamingMarketDataService(KrakenFuturesStreamingService service) {
     this.service = service;
@@ -30,23 +35,36 @@ public class KrakenFuturesStreamingMarketDataService implements StreamingMarketD
   @Override
   public Observable<OrderBook> getOrderBook(Instrument instrument, Object... args) {
     String channelName =
-        service.ORDERBOOK + KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument);
+        ORDERBOOK_CHANNEL + KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument);
     return service
         .subscribeChannel(channelName)
         .filter(message -> message.has("feed"))
-        .map(
+        .concatMap(
             message -> {
               try {
                 if (message.get("feed").asText().contains("book_snapshot")) {
+                  KrakenFuturesStreamingOrderBookSnapshotResponse snapshot =
+                      objectMapper.treeToValue(
+                          message, KrakenFuturesStreamingOrderBookSnapshotResponse.class);
                   orderBookMap.put(
                       instrument,
-                      KrakenFuturesStreamingAdapters.adaptKrakenFuturesSnapshot(
-                          objectMapper.treeToValue(
-                              message, KrakenFuturesStreamingOrderBookSnapshotResponse.class)));
-                } else if (message.get("feed").asText().equals(service.ORDERBOOK)) {
+                      KrakenFuturesStreamingAdapters.adaptKrakenFuturesSnapshot(snapshot));
+                  lastSeqMap.put(instrument, snapshot.getSeq());
+                } else if (message.get("feed").asText().equals(ORDERBOOK_CHANNEL)) {
                   KrakenFuturesStreamingOrderBookDeltaResponse delta =
                       objectMapper.treeToValue(
                           message, KrakenFuturesStreamingOrderBookDeltaResponse.class);
+                  Long lastSeq = lastSeqMap.get(instrument);
+                  if (lastSeq == null || delta.getSeq() == null || delta.getSeq() > lastSeq + 1) {
+                    // gap: state unknown or sequence skipped — rebuild from a fresh snapshot
+                    orderBookMap.remove(instrument);
+                    service.resubscribeChannel(channelName);
+                    return Observable.empty();
+                  }
+                  if (delta.getSeq() <= lastSeq) {
+                    // duplicate redelivery: drop silently, the book state is already current
+                    return Observable.empty();
+                  }
                   orderBookMap
                       .get(instrument)
                       .update(
@@ -63,6 +81,7 @@ public class KrakenFuturesStreamingMarketDataService implements StreamingMarketD
                               .originalAmount(delta.getQty())
                               .timestamp(delta.getTimestamp())
                               .build());
+                  lastSeqMap.put(instrument, delta.getSeq());
                 }
                 if (orderBookMap
                         .get(instrument)
@@ -73,17 +92,26 @@ public class KrakenFuturesStreamingMarketDataService implements StreamingMarketD
                     > 0) {
                   throw new IOException("OrderBook crossed!!!");
                 }
-                return orderBookMap.get(instrument);
+                return Observable.just(copyBook(instrument));
               } catch (Exception e) {
                 throw new IOException(e);
               }
             });
   }
 
+  /** Emits a defensive copy so later deltas cannot mutate already-published books. */
+  private OrderBook copyBook(Instrument instrument) {
+    OrderBook current = orderBookMap.get(instrument);
+    return new OrderBook(
+        current.getTimeStamp(),
+        new java.util.ArrayList<>(current.getAsks()),
+        new java.util.ArrayList<>(current.getBids()));
+  }
+
   @Override
   public Observable<Ticker> getTicker(Instrument instrument, Object... args) {
     String channelName =
-        service.TICKER + KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument);
+        TICKER_CHANNEL + KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument);
 
     return service
         .subscribeChannel(channelName)
@@ -103,7 +131,7 @@ public class KrakenFuturesStreamingMarketDataService implements StreamingMarketD
   @Override
   public Observable<Trade> getTrades(Instrument instrument, Object... args) {
     String channelName =
-        service.TRADES + KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument);
+        TRADES_CHANNEL + KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument);
 
     return service
         .subscribeChannel(channelName)
@@ -118,7 +146,7 @@ public class KrakenFuturesStreamingMarketDataService implements StreamingMarketD
   @Override
   public Observable<FundingRate> getFundingRate(Instrument instrument, Object... args) {
     String channelName =
-        service.TICKER + KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument);
+        TICKER_CHANNEL + KrakenFuturesAdapters.adaptKrakenFuturesSymbol(instrument);
 
     return service
         .subscribeChannel(channelName)
