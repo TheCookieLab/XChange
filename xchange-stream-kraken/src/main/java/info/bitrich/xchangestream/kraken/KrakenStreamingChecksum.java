@@ -11,6 +11,7 @@ import java.util.zip.CRC32;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.dto.trade.LimitOrder;
 
+@Deprecated
 public class KrakenStreamingChecksum {
   private static final int CHECKSUM_ORDERBOOK_DEPTH = 10;
 

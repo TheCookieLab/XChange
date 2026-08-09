@@ -26,6 +26,7 @@ import org.knowm.xchange.kraken.dto.trade.KrakenOrderFlags;
 import org.knowm.xchange.kraken.dto.trade.KrakenOrderStatus;
 import org.knowm.xchange.kraken.dto.trade.KrakenType;
 
+@Deprecated
 public class KrakenStreamingTradeService implements StreamingTradeService {
   private final KrakenStreamingService streamingService;
 

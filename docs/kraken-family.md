@@ -83,17 +83,34 @@ Every protocol/domain follows the same layered shape:
 
 ## Legacy Spot WS v1 migration (xchange-stream-kraken → v2)
 
-1. Inventory v1-only capabilities: legacy v1 exposes order book, ticker, and trades with
-   checksum support; v2 exposes ticker, trade, balances, executions.
-2. Map each v1 channel to its v2 equivalent; channels not yet in v2 are documented as
-   deferred (book/OHLC/status) instead of silently dropped.
-3. Swap the artifact and service classes:
+1. Swap the artifact and service classes:
    `KrakenStreamingExchange` (v1) → `KrakenStreamingExchange` (v2, package
    `info.bitrich.xchangestream.kraken`), `KrakenStreamingMarketDataService` (v1) →
    `KrakenStreamingMarketDataService` (v2).
-4. v2 authentication uses the WebSocket token from the Spot REST account service; configure
-   apiKey/secret for private channels.
-5. Keep v1 through the compatibility grace period; the v1 compatibility suite runs in CI.
+2. v2 authentication uses the WebSocket token from the Spot REST account service; configure
+   apiKey/secret for private channels. Without credentials the v2 private socket is not
+   connected and the trade/account streaming services are unavailable.
+3. Keep v1 through the compatibility grace period; the v1 compatibility suite (`KrakenStreamingChecksumTest`,
+   `KrakenStreamingAdaptersTest`) runs in CI. All v1 public entry points carry `@Deprecated`.
+
+### Channel parity v1 → v2
+
+| Capability | v1 (`xchange-stream-kraken`) | v2 (`xchange-stream-kraken-v2`) |
+|---|---|---|
+| Ticker | `getTicker` | `getTicker` (ticker channel) |
+| Trades | `getTrades` | `getTrades` (trade channel) |
+| Order book | `getOrderBook` (checksum) | `getOrderBook` (book channel, checksum + gap recovery) |
+| OHLC candles | `getOHLC` (`KrakenStreamingOhlc`) | `getOHLC` (ohlc channel) |
+| System status | — | `getSystemStatus` (status channel) |
+| Order changes | `getOrderChanges` (openOrders channel, private) | `orders` channel registered (token auth) |
+| Executions | `getUserTrades` (ownTrades channel, private) | `getUserTrades` (executions channel, token auth) |
+| Balances | — | `getBalances` (balances channel, token auth) |
+| Reconnect | fixed retry | bounded exponential backoff (1s→30s) + reauth + resubscribe |
+| Book consistency | checksum validation | checksum validation + snapshot gap recovery |
+| Private event dedup | — | fills/seq-based dedup (Futures WS) |
+
+Channels present in v1 but not consumed by v2 services are still registered on the protocol
+level (`book`/`ohlc`/`status`/`orders`); nothing is silently dropped.
 
 ## Dead-man / cancel-on-disconnect safety
 

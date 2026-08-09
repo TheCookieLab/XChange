@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @author makarid, pchertalev
  */
+@Deprecated
 public class KrakenStreamingMarketDataService implements StreamingMarketDataService {
 
   private static final Logger LOG = LoggerFactory.getLogger(KrakenStreamingMarketDataService.class);
