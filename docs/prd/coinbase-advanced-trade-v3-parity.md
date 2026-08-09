@@ -253,7 +253,7 @@ Not needed for this feature. The product-identity mapper is a catalog/registry w
 
 ### Phase 8: validation and rollout gates
 
-22. [ ] Full regression: `mvn -B -pl xchange-coinbase,xchange-stream-coinbase,xchange-coinbase-derivatives,xchange-stream-coinbase-derivatives -am test`; targeted PMD; repository-root `mvn -B clean install`; derivatives non-regression suite. Verification: green builds; classification of sandbox vs production smoke per repo CI conventions.
+22. [x] Full regression: `mvn -B -pl xchange-coinbase,xchange-stream-coinbase,xchange-coinbase-derivatives,xchange-stream-coinbase-derivatives -am test`; targeted PMD; repository-root `mvn -B clean install`; derivatives non-regression suite. Verification: green builds; classification of sandbox vs production smoke per repo CI conventions.
 
 ## 10) Risks, dependencies, and edge cases
 

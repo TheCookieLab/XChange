@@ -465,32 +465,6 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     return CoinbaseProductIds.productId(currencyPair);
   }
 
-  /**
-   * Resolves the native Coinbase product id for any instrument through the configured identity
-   * catalog. Ambiguous or unknown instruments are rejected instead of silently mapped.
-   *
-   * @throws CoinbaseProductIdentity.AmbiguousMappingException when no identity catalog is
-   *     configured or the instrument cannot be resolved losslessly
-   */
-  private String resolveProductId(Instrument instrument) {
-    if (productIdentity == null) {
-      if (instrument instanceof CurrencyPair) {
-        return resolveProductId((CurrencyPair) instrument);
-      }
-      throw new CoinbaseProductIdentity.AmbiguousMappingException(
-          "no Coinbase product identity catalog configured; cannot resolve instrument '"
-              + instrument
-              + "'");
-    }
-    if (instrument instanceof CurrencyPair) {
-      String productId = productIdentity.productId(instrument);
-      if (productId != null) {
-        return productId;
-      }
-      return resolveProductId((CurrencyPair) instrument);
-    }
-    return productIdentity.requireProductId(instrument);
-  }
 
   private static CoinbaseProductIdentity resolveProductIdentity(ExchangeSpecification spec) {
     if (spec == null) {

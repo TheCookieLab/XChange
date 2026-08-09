@@ -166,7 +166,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
     }
     try {
       return jwtSupplier.get() != null;
-    } catch (Exception unusable) {
+    } catch (IllegalStateException unusable) {
       LOG.debug("Coinbase websocket credentials unusable: {}", unusable.getMessage());
       return false;
     }
