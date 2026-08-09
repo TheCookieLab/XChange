@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Collections;
 import java.util.List;
 import si.mazi.rescu.HttpStatusExceptionSupport;
 
@@ -18,6 +19,7 @@ import si.mazi.rescu.HttpStatusExceptionSupport;
  */
 public class CoinbaseException extends HttpStatusExceptionSupport {
 
+  private final List<CoinbaseError> errors;
   private final RetryClassification retryClassification;
 
   /**
@@ -39,11 +41,18 @@ public class CoinbaseException extends HttpStatusExceptionSupport {
    * @param errors List of error objects from the Coinbase API response. May be null or empty.
    * @param retryClassification explicit classification; null derives from the HTTP status code
    */
+  @com.fasterxml.jackson.annotation.JsonCreator
   public CoinbaseException(
       @JsonProperty("errors") List<CoinbaseError> errors,
       @JsonProperty("retry_classification") RetryClassification retryClassification) {
     super(errors != null && !errors.isEmpty() ? errors.get(0).message : "Unknown Coinbase error");
+    this.errors = errors == null ? Collections.emptyList() : Collections.unmodifiableList(errors);
     this.retryClassification = retryClassification;
+  }
+
+  /** The provider error objects from the API response, in wire order. */
+  public List<CoinbaseError> getErrors() {
+    return errors;
   }
 
   /**

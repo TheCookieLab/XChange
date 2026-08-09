@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
+import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
 import java.util.concurrent.ThreadLocalRandom;
 import org.knowm.xchange.coinbase.v3.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.RetryClassification;
@@ -32,9 +33,10 @@ public final class CoinbaseRetry {
   }
 
   /**
-   * Invokes the read call, retrying rate-credit and transient failures with jittered backoff up to
-   * {@link #MAX_ATTEMPTS}. Deterministic failures (authentication, permanent, ambiguous) are
-   * rethrown without retry.
+   * Invokes the read call, retrying rate-credit, transient, and transport failures with jittered
+   * backoff up to {@link #MAX_ATTEMPTS}. Deterministic failures (authentication, permanent) and
+   * ambiguous outcomes ({@link CoinbaseUnknownOutcomeException}) are rethrown without retry: an
+   * ambiguous placement must never be blind-replayed.
    *
    * @param call the read operation
    * @return the first successful result
@@ -53,6 +55,15 @@ public final class CoinbaseRetry {
         }
         if (attempt == MAX_ATTEMPTS) {
           throw failure;
+        }
+        sleep(attempt);
+      } catch (CoinbaseUnknownOutcomeException ambiguous) {
+        // The provider outcome is unknown; reads are replay-safe by contract, but an ambiguous
+        // result must never be retried blindly.
+        throw ambiguous;
+      } catch (IOException transportFailure) {
+        if (attempt == MAX_ATTEMPTS) {
+          throw transportFailure;
         }
         sleep(attempt);
       }

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.Collections;
 import org.junit.Test;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.CoinbaseException.CoinbaseError;
@@ -53,6 +54,35 @@ public class CoinbaseRetryTest {
     assertEquals(429, exception.getHttpStatusCode());
     verify(authenticated, times(CoinbaseRetry.MAX_ATTEMPTS))
         .listAccounts(any(ParamsDigest.class), eq(250), any());
+  }
+
+  @Test
+  public void transientTransportFailureIsRetriedThenSucceeds() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    CoinbaseAccountsResponse success =
+        new CoinbaseAccountsResponse(Collections.emptyList(), false, null, null);
+    when(authenticated.listAccounts(any(ParamsDigest.class), eq(250), any()))
+        .thenThrow(new IOException("connection reset"))
+        .thenReturn(success);
+
+    CoinbaseAccountServiceRaw service =
+        new CoinbaseAccountServiceRaw(coinbaseExchange(), authenticated, mock(ParamsDigest.class));
+
+    assertEquals(0, service.getCoinbaseAccounts().size());
+    verify(authenticated, times(2)).listAccounts(any(ParamsDigest.class), eq(250), any());
+  }
+
+  @Test
+  public void ambiguousOutcomeIsNeverRetried() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    when(authenticated.listAccounts(any(ParamsDigest.class), eq(250), any()))
+        .thenThrow(new CoinbaseUnknownOutcomeException("listAccounts", null, new IOException("boom")));
+
+    CoinbaseAccountServiceRaw service =
+        new CoinbaseAccountServiceRaw(coinbaseExchange(), authenticated, mock(ParamsDigest.class));
+
+    assertThrows(CoinbaseUnknownOutcomeException.class, service::getCoinbaseAccounts);
+    verify(authenticated, times(1)).listAccounts(any(ParamsDigest.class), eq(250), any());
   }
 
   @Test

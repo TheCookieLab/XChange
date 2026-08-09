@@ -33,6 +33,19 @@ public class CoinbaseErrorContractTest {
   }
 
   @Test
+  public void errorShapeDeserializesWithProviderCodeAndClassifiesByStatus() throws Exception {
+    org.knowm.xchange.coinbase.v3.dto.CoinbaseException failure =
+        new com.fasterxml.jackson.databind.ObjectMapper()
+            .readValue(
+                "{\"errors\":[{\"id\":\"RATE_LIMIT_REACHED\",\"message\":\"slow down\"}]}",
+                org.knowm.xchange.coinbase.v3.dto.CoinbaseException.class);
+    failure.setHttpStatusCode(429);
+    assertEquals("RATE_LIMIT_REACHED", failure.getErrors().get(0).id);
+    assertEquals("slow down", failure.getErrors().get(0).message);
+    assertEquals(RetryClassification.RATE_CREDIT, failure.getRetryClassification());
+  }
+
+  @Test
   public void createOrderTransportFailureIsAmbiguousAndNeverReplayed() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     when(authenticated.createOrder(any(ParamsDigest.class), any()))
