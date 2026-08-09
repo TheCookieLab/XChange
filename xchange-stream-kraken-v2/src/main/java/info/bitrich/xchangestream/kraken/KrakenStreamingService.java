@@ -86,6 +86,25 @@ public class KrakenStreamingService extends NettyStreamingService<KrakenMessage>
     reconnectAttempts.set(0);
   }
 
+  /**
+   * Re-sends the subscribe message for an already-registered subscription.
+   *
+   * <p>Used for gap recovery: the provider answers with a fresh snapshot on the same channel, so
+   * the existing emitter keeps receiving the rebuilt state.
+   */
+  public void resubscribeChannel(String channelName, Object... args) {
+    String subscriptionUniqueId = getSubscriptionUniqueId(channelName, args);
+    if (!channels.containsKey(subscriptionUniqueId)) {
+      log.warn("Cannot resubscribe unknown channel {}", subscriptionUniqueId);
+      return;
+    }
+    try {
+      sendMessage(getSubscribeMessage(channelName, args));
+    } catch (IOException e) {
+      log.error("Failed to resubscribe channel {}", subscriptionUniqueId, e);
+    }
+  }
+
   @Override
   protected String getChannelNameFromMessage(KrakenMessage message) throws IOException {
     return message.getChannelId();

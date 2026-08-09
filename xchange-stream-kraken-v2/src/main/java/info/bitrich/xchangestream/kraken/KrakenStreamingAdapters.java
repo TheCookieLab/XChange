@@ -7,10 +7,17 @@ import info.bitrich.xchangestream.kraken.dto.response.KrakenBalancesMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenExecutionsMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenTickerMessage;
 import info.bitrich.xchangestream.kraken.dto.response.KrakenTradeMessage;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.zip.CRC32;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
@@ -55,6 +62,41 @@ public class KrakenStreamingAdapters {
         .timestamp(toDate(payload.getCreatedAt()))
         .id(payload.getId())
         .build();
+  }
+
+  /**
+   * Computes the Kraken v2 order book checksum: CRC32 over the top 10 bid levels (best first)
+   * followed by the top 10 ask levels (best first), each level formatted as {@code price:qty}
+   * with 8 decimal places and levels joined by commas.
+   *
+   * @param bids bid levels by price (any order)
+   * @param asks ask levels by price (any order)
+   * @return CRC32 checksum
+   */
+  public static long checksum(
+      Map<BigDecimal, BigDecimal> bids, Map<BigDecimal, BigDecimal> asks) {
+    List<String> levels = new ArrayList<>();
+    appendLevels(levels, bids, true); // best bid first
+    appendLevels(levels, asks, false); // best ask first
+    CRC32 crc32 = new CRC32();
+    crc32.update(String.join(",", levels).getBytes(StandardCharsets.UTF_8));
+    return crc32.getValue();
+  }
+
+  private static void appendLevels(
+      List<String> levels, Map<BigDecimal, BigDecimal> levelsByPrice, boolean descending) {
+    levelsByPrice.entrySet().stream()
+        .sorted(
+            descending
+                ? Map.Entry.<BigDecimal, BigDecimal>comparingByKey().reversed()
+                : Map.Entry.<BigDecimal, BigDecimal>comparingByKey())
+        .limit(10)
+        .forEach(
+            entry ->
+                levels.add(
+                    entry.getKey().setScale(8, RoundingMode.HALF_UP).toPlainString()
+                        + ':'
+                        + entry.getValue().setScale(8, RoundingMode.HALF_UP).toPlainString()));
   }
 
   /** Returns unique subscription id. Can be used as key for subscriptions caching */

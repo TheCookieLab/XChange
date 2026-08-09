@@ -17,8 +17,10 @@ import lombok.experimental.SuperBuilder;
     defaultImpl = KrakenControlMessage.class)
 @JsonSubTypes({
   @Type(value = KrakenBalancesMessage.class, name = "balances"),
+  @Type(value = KrakenBookMessage.class, name = "book"),
   @Type(value = KrakenExecutionsMessage.class, name = "executions"),
   @Type(value = KrakenHeartbeatMessage.class, name = "heartbeat"),
+  @Type(value = KrakenOhlcMessage.class, name = "ohlc"),
   @Type(value = KrakenStatusMessage.class, name = "status"),
   @Type(value = KrakenTickerMessage.class, name = "ticker"),
   @Type(value = KrakenTradeMessage.class, name = "trade"),
