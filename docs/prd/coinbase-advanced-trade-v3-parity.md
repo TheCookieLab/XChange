@@ -10,11 +10,10 @@
 
 ## Status
 
-* Lifecycle: `Ready`
+* Lifecycle: `Delivered`
 * Blocking state: `None`
-* Active phase: `Phase 0 — implementation queue`
-* Active task: none (awaiting `prd:ready` delivery)
-* Overall: `0/22` checklist tasks complete
+* Delivery: PR https://github.com/TheCookieLab/XChange/pull/16, merge commit `2c45c6077164a4a1f897502bce7c75ca9a7b1106` (2026-08-09)
+* Overall: `22/22` checklist tasks complete
 
 ## Execution Status
 
