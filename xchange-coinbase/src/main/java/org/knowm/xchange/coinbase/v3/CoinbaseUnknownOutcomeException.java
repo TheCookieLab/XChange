@@ -28,8 +28,10 @@ public class CoinbaseUnknownOutcomeException extends IOException {
             + operation
             + (clientOrderId == null ? "" : " (client_order_id=" + clientOrderId + ")")
             + " outcome is unknown after a transport failure; do not replay blindly, reconcile "
-            + "before retrying: "
-            + transportFailure.getMessage(),
+            + "before retrying"
+            + (transportFailure == null || transportFailure.getMessage() == null
+                ? ""
+                : ": " + transportFailure.getMessage()),
         transportFailure);
     this.operation = operation;
     this.clientOrderId = clientOrderId;

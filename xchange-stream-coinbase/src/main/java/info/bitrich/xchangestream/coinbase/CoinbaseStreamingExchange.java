@@ -70,6 +70,12 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
    */
   public static final String PARAM_WEBSOCKET_AUTHENTICATION =
       "Coinbase_Websocket_Authentication";
+  /**
+   * Optional override for the private (user) WebSocket endpoint. Defaults to
+   * {@link #USER_ORDER_DATA_WS_URI}; only relevant for authenticated usage, which is the only
+   * usage that opens this socket.
+   */
+  public static final String PARAM_USER_WS_URI = "Coinbase_User_WS_URI";
 
   // WebSocket endpoints for Coinbase Advanced Trade
   // Note: There is no sandbox environment for WebSocket connections
@@ -80,10 +86,12 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   public static final String PROD_WS_URI = MARKET_DATA_WS_URI;
 
   private final AtomicReference<Disposable> reconnectSubscription = new AtomicReference<>();
+  private final AtomicReference<Disposable> userReconnectSubscription = new AtomicReference<>();
   private final List<Disposable> productSubscriptions = new CopyOnWriteArrayList<>();
 
   // Protected for testing - allows subclasses to inject mock services
   protected CoinbaseStreamingService streamingService;
+  protected CoinbaseStreamingService userStreamingService;
   protected CoinbaseStreamingMarketDataService streamingMarketDataService;
   protected CoinbaseStreamingTradeService tradeService;
 
@@ -101,15 +109,22 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
       streamingService = createStreamingService(exchangeSpecification);
     }
     
+    if (userStreamingService == null && hasUsableCredentials(exchangeSpecification)) {
+      userStreamingService = createUserStreamingService(exchangeSpecification);
+    }
+    
     if (streamingMarketDataService == null) {
       streamingMarketDataService = createStreamingMarketDataService(exchangeSpecification);
     }
     
-    if (tradeService == null) {
+    if (tradeService == null && userStreamingService != null) {
       tradeService = createStreamingTradeService(exchangeSpecification);
     }
 
     Completable connectCompletable = streamingService.connect();
+    if (userStreamingService != null) {
+      connectCompletable = connectCompletable.andThen(userStreamingService.connect());
+    }
 
     reconnectSubscription.updateAndGet(
         previous -> {
@@ -122,9 +137,39 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
               .subscribe();
         });
 
+    if (userStreamingService != null) {
+      userReconnectSubscription.updateAndGet(
+          previous -> {
+            if (previous != null && !previous.isDisposed()) {
+              previous.dispose();
+            }
+            return userStreamingService
+                .subscribeConnectionSuccess()
+                .doOnNext(o -> tradeService.resubscribe())
+                .subscribe();
+          });
+    }
+
     return connectCompletable
         .doOnComplete(this::autoSubscribeHeartbeatsIfConfigured)
         .doOnComplete(() -> processProductSubscriptions(args));
+  }
+
+  /**
+   * Whether the specification carries credentials usable for the private user socket. The user
+   * socket is only opened for authenticated usage; public-only usage never creates it.
+   */
+  private boolean hasUsableCredentials(ExchangeSpecification specification) {
+    Supplier<String> jwtSupplier = resolveJwtSupplier(specification);
+    if (jwtSupplier == null) {
+      return false;
+    }
+    try {
+      return jwtSupplier.get() != null;
+    } catch (Exception unusable) {
+      LOG.debug("Coinbase websocket credentials unusable: {}", unusable.getMessage());
+      return false;
+    }
   }
 
   /**
@@ -166,6 +211,50 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   }
 
   /**
+   * Factory method to create the private user streaming service. Can be overridden in tests to
+   * inject mocks.
+   *
+   * @param exchangeSpecification The exchange specification
+   * @return The user streaming service instance
+   */
+  protected CoinbaseStreamingService createUserStreamingService(
+      ExchangeSpecification exchangeSpecification) {
+    String websocketUrl = resolveUserWebsocketUrl(exchangeSpecification);
+    LOG.info("Creating Coinbase user streaming service with WebSocket endpoint: {}", websocketUrl);
+
+    int publicRateLimit =
+        Optional.ofNullable(
+                exchangeSpecification.getExchangeSpecificParametersItem(PARAM_PUBLIC_RATE_LIMIT))
+            .map(Object::toString)
+            .map(Integer::parseInt)
+            .orElse(8);
+
+    int privateRateLimit =
+        Optional.ofNullable(
+                exchangeSpecification.getExchangeSpecificParametersItem(PARAM_PRIVATE_RATE_LIMIT))
+            .map(Object::toString)
+            .map(Integer::parseInt)
+            .orElse(750);
+
+    CoinbaseStreamingService service =
+        new CoinbaseUserStreamingService(
+            websocketUrl,
+            resolveJwtSupplier(exchangeSpecification),
+            publicRateLimit,
+            privateRateLimit);
+    applyStreamingSpecification(exchangeSpecification, service);
+    return service;
+  }
+
+  static String resolveUserWebsocketUrl(ExchangeSpecification specification) {
+    Object param = specification.getExchangeSpecificParametersItem(PARAM_USER_WS_URI);
+    if (param != null) {
+      return param.toString();
+    }
+    return USER_ORDER_DATA_WS_URI;
+  }
+
+  /**
    * Factory method to create the streaming market data service. Can be overridden in tests to
    * inject mocks.
    *
@@ -201,12 +290,15 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
    * Factory method to create the streaming trade service. Can be overridden in tests to inject
    * mocks.
    *
+   * <p>The trade service rides the private user socket; it is only created for authenticated
+   * usage.
+   *
    * @param exchangeSpecification The exchange specification
    * @return The streaming trade service instance
    */
   protected CoinbaseStreamingTradeService createStreamingTradeService(
       ExchangeSpecification exchangeSpecification) {
-    return new CoinbaseStreamingTradeService(streamingService, exchangeSpecification);
+    return new CoinbaseStreamingTradeService(userStreamingService, exchangeSpecification);
   }
 
   private void autoSubscribeHeartbeatsIfConfigured() {
@@ -227,14 +319,18 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   public Completable disconnect() {
     Optional.ofNullable(reconnectSubscription.getAndSet(null))
         .ifPresent(Disposable::dispose);
+    Optional.ofNullable(userReconnectSubscription.getAndSet(null))
+        .ifPresent(Disposable::dispose);
     productSubscriptions.forEach(Disposable::dispose);
     productSubscriptions.clear();
     if (streamingService == null) {
       return Completable.complete();
     }
     CoinbaseStreamingService service = streamingService;
+    CoinbaseStreamingService userService = userStreamingService;
     resetServices();
-    return service.disconnect();
+    Completable disconnect = service.disconnect();
+    return userService == null ? disconnect : disconnect.andThen(userService.disconnect());
   }
 
   /**
@@ -242,6 +338,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
    */
   void resetServices() {
     streamingService = null;
+    userStreamingService = null;
     streamingMarketDataService = null;
     tradeService = null;
   }

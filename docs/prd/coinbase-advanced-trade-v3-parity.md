@@ -234,10 +234,10 @@ Not needed for this feature. The product-identity mapper is a catalog/registry w
 
 ### Phase 5: dual WebSocket lifecycle
 
-12. [ ] `CoinbaseStreamingExchange` opens market-data and user transports (constants `MARKET_DATA_WS_URI`/`USER_ORDER_DATA_WS_URI`); channel routing per endpoint; public-only usage opens no user socket. Verification: `CoinbaseStreamingExchangeTest` dual-service wiring; connectivity integration.
-13. [ ] Port generation tracking, correlated requests, stale-generation rejection, and protocol-error subject from `CoinbaseDerivativesStreamingService` into `CoinbaseStreamingService`. Verification: `CoinbaseStreamingServiceTest` generation/stale-response cases.
-14. [ ] Reconnect → reauth (user transport) → resubscribe all active channels; heartbeat auto-subscribe preserved (`ensureHeartbeatsSubscription`, `PARAM_MANUAL_HEARTBEAT`). Verification: lifecycle tests with recorded reconnect sequences.
-15. [ ] WS-triggered trading operations carry the same replay classification as REST; pending user-channel requests fail on generation change. Verification: trade-service tests with disconnect mid-request.
+12. [x] `CoinbaseStreamingExchange` opens market-data and user transports (constants `MARKET_DATA_WS_URI`/`USER_ORDER_DATA_WS_URI`); channel routing per endpoint; public-only usage opens no user socket. Verification: `CoinbaseStreamingExchangeTest` dual-service wiring; connectivity integration.
+13. [x] Port generation tracking, correlated requests, stale-generation rejection, and protocol-error subject from `CoinbaseDerivativesStreamingService` into `CoinbaseStreamingService`. Verification: `CoinbaseStreamingServiceTest` generation/stale-response cases.
+14. [x] Reconnect → reauth (user transport) → resubscribe all active channels; heartbeat auto-subscribe preserved (`ensureHeartbeatsSubscription`, `PARAM_MANUAL_HEARTBEAT`). Verification: lifecycle tests with recorded reconnect sequences.
+15. [x] WS-triggered trading operations carry the same replay classification as REST; pending user-channel requests fail on generation change. Verification: trade-service tests with disconnect mid-request.
 
 ### Phase 6: order-book recovery, deduplication, lifecycle hardening
 

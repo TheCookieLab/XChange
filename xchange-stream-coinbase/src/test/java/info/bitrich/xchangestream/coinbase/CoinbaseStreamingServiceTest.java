@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.observers.TestObserver;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -23,7 +24,12 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
+import org.knowm.xchange.coinbase.v3.dto.CoinbaseException;
+import org.knowm.xchange.coinbase.v3.dto.RetryClassification;
 
 class CoinbaseStreamingServiceTest {
 
@@ -282,7 +288,7 @@ class CoinbaseStreamingServiceTest {
     return field.get(service);
   }
 
-  private static final class CapturingCoinbaseStreamingService extends CoinbaseStreamingService {
+  private static class CapturingCoinbaseStreamingService extends CoinbaseStreamingService {
     private Map<String, Object> lastPayload = Collections.emptyMap();
 
     private CapturingCoinbaseStreamingService(ScheduledExecutorService scheduler) {
@@ -299,6 +305,11 @@ class CoinbaseStreamingServiceTest {
           scheduler);
     }
 
+    private CapturingCoinbaseStreamingService(
+        int unauthenticatedPerSecond, int authenticatedPerSecond) {
+      super("wss://example.com", () -> "jwt-token", unauthenticatedPerSecond, authenticatedPerSecond);
+    }
+
     @Override
     protected void sendObjectMessage(Object message) {
       if (message instanceof Map<?, ?>) {
@@ -313,6 +324,137 @@ class CoinbaseStreamingServiceTest {
     Map<String, Object> getLastPayload() {
       return lastPayload;
     }
+  }
+
+  private static final class CountingCapturingService extends CapturingCoinbaseStreamingService {
+    private int sentCommands;
+
+    private CountingCapturingService(ScheduledExecutorService scheduler) {
+      super(scheduler);
+    }
+
+    /** One permit per second per limiter so throttling is observable in tests. */
+    private CountingCapturingService() {
+      super(1, 1);
+    }
+
+    @Override
+    protected void sendObjectMessage(Object message) {
+      sentCommands++;
+      super.sendObjectMessage(message);
+    }
+  }
+
+  @Test
+  void protocolErrorMessagesAreClassifiedAndPublished() {
+    CoinbaseStreamingService service =
+        new CoinbaseStreamingService(
+            "wss://example.com",
+            () -> "jwt-token",
+            Duration.ofSeconds(5),
+            Duration.ofSeconds(5),
+            10,
+            1024,
+            8,
+            750);
+
+    TestObserver<Throwable> observer = service.protocolErrors().test();
+
+    service.messageHandler("{\"type\":\"error\",\"message\":\"Authentication failed\"}");
+    service.messageHandler("{\"type\":\"error\",\"message\":\"Invalid channel\"}");
+    service.messageHandler("{\"type\":\"subscriptions\",\"channel\":\"user\"}");
+
+    observer.awaitCount(2);
+    observer.assertNoErrors();
+    assertEquals(
+        RetryClassification.AUTHENTICATION,
+        ((CoinbaseException) observer.values().get(0)).getRetryClassification());
+    assertEquals(
+        RetryClassification.PERMANENT,
+        ((CoinbaseException) observer.values().get(1)).getRetryClassification());
+    // Non-error messages must not be published as protocol errors.
+    assertEquals(2, observer.values().size());
+  }
+
+  @Test
+  void disconnectIncrementsConnectionGeneration() {
+    CountingCapturingService service = new CountingCapturingService(new RecordingScheduler());
+    long before = service.currentGeneration();
+    service.disconnect().blockingAwait();
+    assertEquals(before + 1, service.currentGeneration());
+  }
+
+  @Test
+  void staleCommandsAreDroppedWhenGenerationChangesDuringThrottling() throws Exception {
+    // 1 permit per second: the first command consumes it, the second blocks in the limiter.
+    CountingCapturingService service = new CountingCapturingService();
+
+    service.subscribeChannel(
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.TICKER, Collections.singletonList("BTC-USD"), Collections.emptyMap()));
+    assertEquals(1, service.sentCommands);
+
+    AtomicReference<Object> secondResult = new AtomicReference<>();
+    Thread second =
+        new Thread(
+            () ->
+                secondResult.set(
+                    service.subscribeChannel(
+                        new CoinbaseSubscriptionRequest(
+                            CoinbaseChannel.TICKER,
+                            Collections.singletonList("ETH-USD"),
+                            Collections.emptyMap()))));
+    second.start();
+    Thread.sleep(100);
+    // Connection drops while the second command is throttled: bump the generation.
+    bumpGeneration(service);
+    second.join(5000);
+    assertFalse(second.isAlive());
+
+    // The stale command must not be sent on the new generation.
+    assertEquals(1, service.sentCommands);
+  }
+
+  @Test
+  void pendingUserSubscriptionFailsWhenCommandDroppedAsStale() throws Exception {
+    CountingCapturingService service = new CountingCapturingService();
+
+    service.subscribeChannel(
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.USER, Collections.singletonList("BTC-USD"), Collections.emptyMap()));
+    assertEquals(1, service.sentCommands);
+
+    AtomicReference<io.reactivex.rxjava3.core.Observable<JsonNode>> second =
+        new AtomicReference<>();
+    Thread thread =
+        new Thread(
+            () ->
+                second.set(
+                    service.subscribeChannel(
+                        new CoinbaseSubscriptionRequest(
+                            CoinbaseChannel.USER,
+                            Collections.singletonList("BTC-USD"),
+                            Collections.emptyMap()))));
+    thread.start();
+    Thread.sleep(100);
+    bumpGeneration(service);
+    thread.join(5000);
+    assertFalse(thread.isAlive());
+
+    TestObserver<JsonNode> observer = second.get().test();
+    observer.awaitDone(2, TimeUnit.SECONDS);
+    observer.assertError(
+        error ->
+            error instanceof CoinbaseUnknownOutcomeException
+                && ((CoinbaseUnknownOutcomeException) error).getRetryClassification()
+                    == RetryClassification.AMBIGUOUS);
+    assertEquals(1, service.sentCommands);
+  }
+
+  private static void bumpGeneration(CoinbaseStreamingService service) throws Exception {
+    Field field = CoinbaseStreamingService.class.getDeclaredField("connectionGeneration");
+    field.setAccessible(true);
+    ((AtomicLong) field.get(service)).incrementAndGet();
   }
 
   private static final class RecordingScheduler extends AbstractExecutorService
