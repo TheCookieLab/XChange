@@ -13,8 +13,8 @@
 * Lifecycle: `Ready`
 * Blocking state: `None`
 - Active phase: `Phase 2 — Spot order and post-trade capabilities`
-- Active task: `task 5 — atomic amend, batch, dead-man, client-ID consistency`
-- Overall: `4/26` checklist tasks complete
+- Active task: `task 6 — modern post-trade/history endpoints with bounded pagination`
+- Overall: `5/26` checklist tasks complete
 
 ## Execution Status
 
@@ -242,8 +242,9 @@
 
 ### Phase 2: Spot order and post-trade capabilities
 
-5. [ ] Add atomic amend, batch, cancel-all-after/dead-man, and client-ID consistency to `xchange-kraken` (REST bindings in `KrakenAuthenticated`, raw/high-level services, DTOs).
+5. [x] Add atomic amend, batch, cancel-all-after/dead-man, and client-ID consistency to `xchange-kraken` (REST bindings in `KrakenAuthenticated`, raw/high-level services, DTOs).
    Verification: order workflow tests incl. typed raw results and no-blind-replay reconciliation tests.
+   Evidence: commit `13938bd990` — `AmendOrder` binding + `KrakenAmendOrderResponse` (amendid, order_id, cl_ord_id, new_order_id, new_cl_ord_id, status, reject_reason, event_errors); raw `amendKrakenOrder` requires exactly one of `order_id`/`cl_ord_id`; `KrakenTradeService.changeOrder` overrides the cancel+re-place default with an atomic amend and returns the amended id; `AddOrderBatch` binding with manually serialized per-order payloads (userref/ordertype/type/pair/price/price2/volume/leverage/oflags/timeinforce/starttm/expiretm/cl_ord_id) and typed per-order txid/description results; `CancelAllOrdersAfter` binding + typed currentTime/triggerTime result, high-level convenience documented as deliberately opt-in dead-man; placement client-ID consistency (`PlaceOrderParams.CLIENT_ORDER_ID` → `cl_ord_id`, `userReference` → `userref`); no blind replay — failed placement surfaces typed exception with exactly one HTTP request. New `KrakenOrderWorkflowsTest` (10 wiremock tests) + 5 fixtures.
 6. [ ] Add modern post-trade/history endpoints with bounded pagination.
    Verification: post-trade tests with cursor boundaries.
 

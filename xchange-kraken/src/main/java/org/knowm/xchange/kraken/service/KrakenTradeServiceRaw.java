@@ -8,9 +8,11 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -47,6 +49,9 @@ import org.knowm.xchange.kraken.dto.trade.results.KrakenTradeHistoryResult.Krake
 import org.knowm.xchange.service.trade.params.orders.PlaceOrderParams;
 
 public class KrakenTradeServiceRaw extends KrakenBaseService {
+
+  /** Ceiling for full-fetch pagination loops, protecting against runaway cursor pagination. */
+  private static final int MAX_TRADE_HISTORY_PAGES = 1000;
 
   private static final ObjectMapper BATCH_MAPPER = new ObjectMapper();
 
@@ -151,6 +156,31 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
       String type, boolean includeTrades, String start, String end, Long offset)
       throws IOException {
 
+    return getKrakenTradeHistory(type, includeTrades, start, end, offset, null);
+  }
+
+  /**
+   * Fetches trade history with support for the {@code consolidate_trades} flag.
+   *
+   * @param type type of trade to query, one of {@code all}, {@code any position}, {@code closed
+   *     position}, {@code closing position}, {@code no position}, or {@code null} for all
+   * @param includeTrades whether to include orders in the response
+   * @param start start Unix timestamp or order txid, or {@code null}
+   * @param end end Unix timestamp or order txid, or {@code null}
+   * @param offset offset into the result set ({@code ofs}), or {@code null}
+   * @param consolidateTrades whether to consolidate trades by individual txids into single trades,
+   *     or {@code null} for the provider default
+   * @return typed trade history
+   */
+  public KrakenTradeHistory getKrakenTradeHistory(
+      String type,
+      boolean includeTrades,
+      String start,
+      String end,
+      Long offset,
+      Boolean consolidateTrades)
+      throws IOException {
+
     KrakenTradeHistoryResult result =
         kraken.tradeHistory(
             type,
@@ -158,11 +188,70 @@ public class KrakenTradeServiceRaw extends KrakenBaseService {
             start,
             end,
             offset,
+            consolidateTrades,
             exchange.getExchangeSpecification().getApiKey(),
             signatureCreator,
             exchange.getNonceFactory());
 
     return checkResult(result);
+  }
+
+  /**
+   * Fetches the full trade history for the given filter, paging through the {@code ofs} cursor
+   * until the provider-reported count is reached, an empty page is returned, or the page ceiling
+   * is exceeded.
+   *
+   * <p>Pagination is bounded: at most {@value #MAX_TRADE_HISTORY_PAGES} pages are fetched, and a
+   * repeated page without progress (more than one entry repeated verbatim) raises {@link
+   * ExchangeException} instead of looping forever. The provider's {@code count} is authoritative
+   * when it matches the collected entries; otherwise an empty page ends the fetch.
+   *
+   * @param type type of trade to query, or {@code null} for all
+   * @param includeTrades whether to include orders in the response
+   * @param start start Unix timestamp or order txid, or {@code null}
+   * @param end end Unix timestamp or order txid, or {@code null}
+   * @param consolidateTrades whether to consolidate trades by individual txids into single trades,
+   *     or {@code null} for the provider default
+   * @return typed trade history with all collected trades
+   */
+  public KrakenTradeHistory getKrakenTradeHistoryAll(
+      String type, boolean includeTrades, String start, String end, Boolean consolidateTrades)
+      throws IOException {
+
+    Map<String, KrakenTrade> allTrades = new LinkedHashMap<>();
+    long offset = 0;
+    int totalCount = -1;
+    Set<String> previousPageKeys = null;
+    for (int page = 0; page < MAX_TRADE_HISTORY_PAGES; page++) {
+      KrakenTradeHistory pageResult =
+          getKrakenTradeHistory(type, includeTrades, start, end, offset, consolidateTrades);
+      Map<String, KrakenTrade> pageTrades = pageResult.getTrades();
+      totalCount = pageResult.getCount();
+      if (pageTrades.isEmpty()) {
+        break;
+      }
+      Set<String> pageKeys = pageTrades.keySet();
+      if (pageKeys.equals(previousPageKeys)) {
+        if (pageTrades.size() > 1) {
+          throw new ExchangeException(
+              "Kraken trade history pagination made no progress after " + page + " pages");
+        }
+        // a single repeated entry is a benign end-of-stream marker
+        break;
+      }
+      previousPageKeys = pageKeys;
+      int previousSize = allTrades.size();
+      allTrades.putAll(pageTrades);
+      if (allTrades.size() == previousSize) {
+        // every entry on this page was already collected; stop to avoid looping
+        break;
+      }
+      if (totalCount > 0 && allTrades.size() >= totalCount) {
+        break;
+      }
+      offset += pageTrades.size();
+    }
+    return new KrakenTradeHistory(allTrades, totalCount);
   }
 
   public Map<String, KrakenTrade> queryKrakenTrades(String... transactionIds) throws IOException {

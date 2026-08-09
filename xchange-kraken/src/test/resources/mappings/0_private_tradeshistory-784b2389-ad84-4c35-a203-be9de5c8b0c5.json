@@ -6,7 +6,7 @@
     "method": "POST",
     "bodyPatterns": [
       {
-        "matches": "trades=false&nonce=.*",
+        "matches": ".*trades=false.*nonce=.*",
         "caseInsensitive": false
       }
     ]

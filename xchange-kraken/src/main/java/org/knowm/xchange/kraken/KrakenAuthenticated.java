@@ -271,6 +271,7 @@ public interface KrakenAuthenticated extends Kraken {
       @FormParam("start") String start,
       @FormParam("end") String end,
       @FormParam("ofs") Long offset,
+      @FormParam("consolidate_trades") Boolean consolidateTrades,
       @HeaderParam("API-Key") String apiKey,
       @HeaderParam("API-Sign") ParamsDigest signer,
       @FormParam("nonce") SynchronizedValueFactory<Long> nonce)

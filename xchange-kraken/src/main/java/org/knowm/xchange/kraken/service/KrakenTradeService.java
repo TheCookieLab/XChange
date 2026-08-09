@@ -202,8 +202,23 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
       end = DateUtils.toUnixTimeOptional(timeSpan.getEndTime()).map(Object::toString).orElse(end);
     }
 
-    Map<String, KrakenTrade> krakenTradeHistory =
-        getKrakenTradeHistory(null, false, start, end, offset).getTrades();
+    Map<String, KrakenTrade> krakenTradeHistory;
+    boolean includeTrades = false;
+    Boolean consolidateTrades = null;
+    if (params instanceof KrakenTradeHistoryParams) {
+      KrakenTradeHistoryParams krakenParams = (KrakenTradeHistoryParams) params;
+      includeTrades = Boolean.TRUE.equals(krakenParams.getIncludeTrades());
+      consolidateTrades = krakenParams.getConsolidateTrades();
+    }
+    if (offset == null) {
+      // no explicit cursor: fetch the full history with bounded pagination
+      krakenTradeHistory =
+          getKrakenTradeHistoryAll(null, includeTrades, start, end, consolidateTrades).getTrades();
+    } else {
+      krakenTradeHistory =
+          getKrakenTradeHistory(null, includeTrades, start, end, offset, consolidateTrades)
+              .getTrades();
+    }
 
     if (params instanceof TradeHistoryParamCurrencyPair
         && ((TradeHistoryParamCurrencyPair) params).getCurrencyPair() != null) {
