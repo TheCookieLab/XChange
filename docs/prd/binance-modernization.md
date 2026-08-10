@@ -283,7 +283,8 @@ Each slice must remain independently reviewable and keep the reactor green.
 - [ ] **S6 — Options and Portfolio Margin coverage** — PARTIAL: Portfolio Margin owned (`BinancePortfolioMarginApi`); Options family enum present, selection fails fast (not implemented).
 - [ ] **S7 — Public market-stream recovery** — PARTIAL: snapshot+delta recovery exists and is now documented (spot + futures state machines, resync on sequence breaks, rate-limit surfaced); stream README covers reconnect/resubscribe/order-book recovery.
 - [ ] **S8 — Private/trading WebSocket lifecycle and replay safety** — PARTIAL: fixed `isAlive()` NPE for every credential/product combination; connection-state observables null-safe (regression test `BinanceStreamingExchangeLifecycleTest`); WS API trading service: monotonic request ids (no wall-clock ids), persistent re-login listener so `authorized` re-arms after reconnect, connection-generation counter, login disposed on manual disconnect; listen-key lifecycle already rotates + reconnects; `BinanceUserDataChannel` migrated to family clients.
-- [ ] **S9 — Compatibility facade, examples, documentation, full validation** — PARTIAL: facades + README/capability matrix done; migration examples + AGENTS.md + full validation pending.
+- [ ] **S9 — Compatibility facade, examples, documentation, full validation** — PARTIAL: facades + README capability matrix + migration examples + `xchange-binance/AGENTS.md` maintainer guide done; stream README lifecycle/recovery docs done; root-repo `clean install` final gate deferred to qa-and-ship.
+  - PMD: `xchange-binance` clean; `xchange-stream-binance` has 41 pre-existing violations (all in files untouched by this PRD; fixing them is a separate warning-cleanup pass).
 
 ### Verification ledger
 

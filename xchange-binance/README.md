@@ -102,6 +102,49 @@ spec.setExchangeSpecificParametersItem(BinanceConfiguration.TIMESTAMP_UNIT, Bina
   SHA256withRSA, Base64-encoded.
 * **Ed25519** — `secretKey` holds the PKCS#8 Ed25519 private key as Base64.
 
+## Migration examples
+
+Legacy configuration (still honored during the grace period):
+
+```java
+ExchangeSpecification spec = new ExchangeSpecification(BinanceExchange.class);
+spec.setExchangeSpecificParametersItem(BinanceExchange.EXCHANGE_TYPE, ExchangeType.FUTURES);
+spec.setExchangeSpecificParametersItem("ed25519", true);
+```
+
+Modern equivalent configurations:
+
+```java
+// Spot-only, HMAC
+spec.setExchangeSpecificParametersItem(
+    BinanceConfiguration.PRODUCT_FAMILY, BinanceProductFamily.SPOT);
+spec.setExchangeSpecificParametersItem(
+    BinanceConfiguration.KEY_ALGORITHM, BinanceKeyAlgorithm.HMAC_SHA_256);
+
+// USDⓈ-M Futures, RSA, microsecond timestamps
+spec.setExchangeSpecificParametersItem(
+    BinanceConfiguration.PRODUCT_FAMILY, BinanceProductFamily.USDM);
+spec.setExchangeSpecificParametersItem(
+    BinanceConfiguration.KEY_ALGORITHM, BinanceKeyAlgorithm.RSA);
+spec.setExchangeSpecificParametersItem(
+    BinanceConfiguration.TIMESTAMP_UNIT, BinanceTimestampUnit.MICROSECONDS);
+
+// COIN-M Futures, Ed25519
+spec.setExchangeSpecificParametersItem(
+    BinanceConfiguration.PRODUCT_FAMILY, BinanceProductFamily.COINM);
+spec.setExchangeSpecificParametersItem(
+    BinanceConfiguration.KEY_ALGORITHM, BinanceKeyAlgorithm.ED25519);
+
+// Portfolio Margin, HMAC
+spec.setExchangeSpecificParametersItem(
+    BinanceConfiguration.PRODUCT_FAMILY, BinanceProductFamily.PORTFOLIO_MARGIN);
+```
+
+Behavioral changes to expect: typed family selection fails fast for unimplemented families
+(Options), invalid receive windows are rejected during specification application, and raw
+services address their product family through narrow clients — the deprecated wide wire
+interfaces remain available but should not be used by new code.
+
 ## Order placement and replay safety
 
 Order placement is **non-replayable** after an ambiguous transport result (timeout or 5xx).

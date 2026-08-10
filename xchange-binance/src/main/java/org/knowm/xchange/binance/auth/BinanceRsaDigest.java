@@ -1,6 +1,7 @@
 package org.knowm.xchange.binance.auth;
 
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -48,8 +49,8 @@ public class BinanceRsaDigest implements ParamsDigest {
       signer.initSign(privateKey);
       signer.update(payload);
       return Base64.getEncoder().encodeToString(signer.sign());
-    } catch (Exception e) {
-      // SignatureException, InvalidKeyException, NoSuchAlgorithmException
+    } catch (GeneralSecurityException e) {
+      // SignatureException, NoSuchAlgorithmException, InvalidKeyException
       throw new ExchangeException("Failed to sign Binance request with RSA key", e);
     }
   }
