@@ -34,24 +34,24 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
   }
 
   public void ping() throws IOException {
-    decorateApiCall(binance::ping).withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER)).call();
+    decorateApiCall(binanceSpot::ping).withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER)).call();
   }
 
   public BinanceTime binanceTime() throws IOException {
-    return decorateApiCall(binance::time)
+    return decorateApiCall(binanceSpot::time)
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
   public BinanceExchangeInfo getExchangeInfo() throws IOException {
-    return decorateApiCall(binance::exchangeInfo)
+    return decorateApiCall(binanceSpot::exchangeInfo)
         .withRetry(retry("exchangeInfo"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
   public BinanceExchangeInfo getFutureExchangeInfo() throws IOException {
-    return decorateApiCall(binanceFutures::exchangeInfo)
+    return decorateApiCall(binanceUsdm::exchangeInfo)
         .withRetry(retry("exchangeInfo"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
@@ -63,8 +63,8 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
     return decorateApiCall(
             () ->
                 isFutures
-                    ? binanceFutures.depth(BinanceAdapters.toSymbol(pair), limit)
-                    : binance.depth(BinanceAdapters.toSymbol(pair), limit))
+                    ? binanceUsdm.depth(BinanceAdapters.toSymbol(pair), limit)
+                    : binanceSpot.depth(BinanceAdapters.toSymbol(pair), limit))
         .withRetry(retry("depth"))
         .withRateLimiter(
             rateLimiter(REQUEST_WEIGHT_RATE_LIMITER),
@@ -78,7 +78,7 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
     if (pair instanceof FuturesContract) {
       return decorateApiCall(
               () ->
-                  binanceFutures.aggTrades(
+                  binanceUsdm.aggTrades(
                       BinanceAdapters.toSymbol(pair), fromId, startTime, endTime, limit))
           .withRetry(retry("aggTrades"))
           .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 20)
@@ -86,7 +86,7 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
     } else {
       return decorateApiCall(
               () ->
-                  binance.aggTrades(
+                  binanceSpot.aggTrades(
                       BinanceAdapters.toSymbol(pair), fromId, startTime, endTime, limit))
           .withRetry(retry("aggTrades"))
           .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 4)
@@ -110,13 +110,13 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
         decorateApiCall(
                 () ->
                     isFutures
-                        ? binanceFutures.klines(
+                        ? binanceUsdm.klines(
                             BinanceAdapters.toSymbol(pair),
                             interval.code(),
                             limit,
                             startTime,
                             endTime)
-                        : binance.klines(
+                        : binanceSpot.klines(
                             BinanceAdapters.toSymbol(pair),
                             interval.code(),
                             limit,
@@ -134,12 +134,12 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
 
   public List<BinanceTicker24h> ticker24hAllProducts(boolean isFutures) throws IOException {
     if (isFutures) {
-      return decorateApiCall(binanceFutures::ticker24h)
+      return decorateApiCall(binanceUsdm::ticker24h)
           .withRetry(retry("ticker24h"))
           .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 40)
           .call();
     } else {
-      return decorateApiCall(binance::ticker24h)
+      return decorateApiCall(binanceSpot::ticker24h)
           .withRetry(retry("ticker24h"))
           .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 80)
           .call();
@@ -151,8 +151,8 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
         decorateApiCall(
                 () ->
                     (pair instanceof FuturesContract)
-                        ? binanceFutures.ticker24h(BinanceAdapters.toSymbol(pair))
-                        : binance.ticker24h(BinanceAdapters.toSymbol(pair)))
+                        ? binanceUsdm.ticker24h(BinanceAdapters.toSymbol(pair))
+                        : binanceSpot.ticker24h(BinanceAdapters.toSymbol(pair)))
             .withRetry(retry("ticker24h"))
             .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
             .call();
@@ -160,21 +160,21 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
   }
 
   public List<BinanceFundingRate> getBinanceFundingRates() throws IOException {
-    return decorateApiCall(binanceFutures::fundingRates)
+    return decorateApiCall(binanceUsdm::fundingRates)
         .withRetry(retry("fundingRate"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
   public BinanceFundingRate getBinanceFundingRate(Instrument instrument) throws IOException {
-    return decorateApiCall(() -> binanceFutures.fundingRate(BinanceAdapters.toSymbol(instrument)))
+    return decorateApiCall(() -> binanceUsdm.fundingRate(BinanceAdapters.toSymbol(instrument)))
         .withRetry(retry("fundingRate"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
   public List<BinanceFundingRateInfo> getBinanceFundingRateInfo() throws IOException {
-    return decorateApiCall(() -> binanceFutures.fundingRateInfo())
+    return decorateApiCall(() -> binanceUsdm.fundingRateInfo())
         .withRateLimiter(rateLimiter(FUNDING_RATE_AND_INFO_RATE_LIMITER))
         .withRetry(retry("fundingRate"))
         .call();
@@ -187,14 +187,14 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
   }
 
   public List<BinancePrice> tickerAllPrices() throws IOException {
-    return decorateApiCall(binance::tickerAllPrices)
+    return decorateApiCall(binanceSpot::tickerAllPrices)
         .withRetry(retry("tickerAllPrices"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
   public List<BinancePriceQuantity> tickerAllBookTickers() throws IOException {
-    return decorateApiCall(binance::tickerAllBookTickers)
+    return decorateApiCall(binanceSpot::tickerAllBookTickers)
         .withRetry(retry("tickerAllBookTickers"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
@@ -204,7 +204,7 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
       Instrument instrument, Long startTime, Long endTime, Integer limit) throws IOException {
     return decorateApiCall(
             () ->
-                binanceFutures.fundingRateHistory(
+                binanceUsdm.fundingRateHistory(
                     BinanceAdapters.toSymbol(instrument), startTime, endTime, limit))
         .withRetry(retry("fundingRateHistory"))
         .withRateLimiter(rateLimiter(FUNDING_RATE_AND_INFO_RATE_LIMITER))

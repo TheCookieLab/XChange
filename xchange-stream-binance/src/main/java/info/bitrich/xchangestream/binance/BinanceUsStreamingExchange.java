@@ -16,9 +16,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.binance.BinanceAuthenticated;
 import org.knowm.xchange.binance.BinanceUsExchange;
 import org.knowm.xchange.binance.service.BinanceMarketDataService;
+import org.knowm.xchange.binance.spot.BinanceSpotAuthApi;
+import org.knowm.xchange.binance.usdm.BinanceUsdmAuthApi;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.instrument.Instrument;
@@ -137,14 +138,18 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
       }
 
       LOG.info("Connecting to authenticated web socket");
-      BinanceAuthenticated binance =
+      BinanceSpotAuthApi spotAuth =
           ExchangeRestProxyBuilder.forInterface(
-                  BinanceAuthenticated.class, getExchangeSpecification())
+                  BinanceSpotAuthApi.class, getExchangeSpecification())
+              .build();
+      BinanceUsdmAuthApi usdmAuth =
+          ExchangeRestProxyBuilder.forInterface(
+                  BinanceUsdmAuthApi.class, getExchangeSpecification())
               .build();
       if (isFuturesEnabled()) {
         userDataChannel =
             new BinanceUserDataChannel(
-                binance, exchangeSpecification.getApiKey(), onApiCall, isFuturesEnabled());
+                spotAuth, usdmAuth, exchangeSpecification.getApiKey(), onApiCall, isFuturesEnabled());
         try {
           completables.add(createAndConnectUserDataFutureService(userDataChannel.getListenKey()));
         } catch (NoActiveChannelException e) {

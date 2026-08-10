@@ -7,7 +7,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.binance.config.BinanceTimestampUnit;
 import org.knowm.xchange.binance.dto.meta.BinanceTime;
+import org.knowm.xchange.binance.time.BinanceTimePolicy;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.client.ResilienceUtils;
 import org.slf4j.Logger;
@@ -19,21 +21,32 @@ public class BinanceTimestampFactory implements SynchronizedValueFactory<Long> {
   private static final Logger LOG = LoggerFactory.getLogger(BinanceTimestampFactory.class);
   private final ExchangeSpecification.ResilienceSpecification resilienceSpecification;
   private final ResilienceRegistries resilienceRegistries;
+  private final BinanceTimestampUnit timestampUnit;
 
   private Long deltaServerTimeExpire;
   private Long deltaServerTime;
 
+  /** @deprecated Use the constructor accepting a {@link BinanceTimestampUnit}. */
+  @Deprecated
   public BinanceTimestampFactory(
       ExchangeSpecification.ResilienceSpecification resilienceSpecification,
       ResilienceRegistries resilienceRegistries) {
+    this(resilienceSpecification, resilienceRegistries, BinanceTimestampUnit.MILLISECONDS);
+  }
+
+  public BinanceTimestampFactory(
+      ExchangeSpecification.ResilienceSpecification resilienceSpecification,
+      ResilienceRegistries resilienceRegistries,
+      BinanceTimestampUnit timestampUnit) {
     this.resilienceSpecification = resilienceSpecification;
     this.resilienceRegistries = resilienceRegistries;
+    this.timestampUnit = timestampUnit;
   }
 
   @Override
   public Long createValue() {
-
-    return System.currentTimeMillis();
+    return BinanceTimePolicy.applyUnit(
+        BinanceTimePolicy.currentTimestampMillis(), timestampUnit);
   }
 
   public void clearDeltaServerTime() {

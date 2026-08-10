@@ -50,7 +50,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
 
   public BinanceAccountInformation account() throws BinanceException, IOException {
     return decorateApiCall(
-            () -> binance.account(getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
+            () -> binanceSpotAuth.account(getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("account"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
         .call();
@@ -59,7 +59,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
   public List<BinanceCurrencyInfo> currencyInfos() throws BinanceException, IOException {
     return decorateApiCall(
             () ->
-                binance.getCurrencyInfos(
+                binanceWallet.getCurrencyInfos(
                     getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("currencyInfo"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
@@ -75,9 +75,9 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
     return decorateApiCall(
             () ->
                 useV3
-                    ? binanceFutures.futuresV3Account(
+                    ? binanceUsdmAuth.futuresV3Account(
                         getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator)
-                    : binanceFutures.futuresAccount(
+                    : binanceUsdmAuth.futuresAccount(
                         getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("futures-account"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
@@ -109,7 +109,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       throws IOException, BinanceException {
     return decorateApiCall(
             () ->
-                binance.withdraw(
+                binanceWallet.withdraw(
                     coin,
                     address,
                     addressTag,
@@ -133,7 +133,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       throws IOException {
     return decorateApiCall(
             () ->
-                binance.depositAddress(
+                binanceWallet.depositAddress(
                     BinanceAdapters.toSymbol(currency),
                     network,
                     getRecvWindow(),
@@ -148,7 +148,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
   public Map<String, AssetDetail> requestAssetDetail() throws IOException {
     return decorateApiCall(
             () ->
-                binance.assetDetail(
+                binanceWallet.assetDetail(
                     getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("assetDetail"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
@@ -159,7 +159,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       throws BinanceException, IOException {
     return decorateApiCall(
             () ->
-                binance.depositHistory(
+                binanceWallet.depositHistory(
                     asset,
                     startTime,
                     endTime,
@@ -176,7 +176,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       throws BinanceException, IOException {
     return decorateApiCall(
             () ->
-                binance.withdrawHistory(
+                binanceWallet.withdrawHistory(
                     asset,
                     startTime,
                     endTime,
@@ -198,7 +198,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       String asset, Long startTime, Long endTime) throws BinanceException, IOException {
     return decorateApiCall(
             () ->
-                binance.assetDividend(
+                binanceWallet.assetDividend(
                     asset,
                     startTime,
                     endTime,
@@ -217,7 +217,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       throws BinanceException, IOException {
     return decorateApiCall(
             () ->
-                binance.transferHistory(
+                binanceWallet.transferHistory(
                     fromEmail,
                     startTime,
                     endTime,
@@ -237,7 +237,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       throws BinanceException, IOException {
     return decorateApiCall(
             () ->
-                binance.transferSubUserHistory(
+                binanceWallet.transferSubUserHistory(
                     asset,
                     type,
                     startTime,
@@ -258,7 +258,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
     BinanceFiatOrdersResponse response =
         decorateApiCall(
                 () ->
-                    binance.fiatOrders(
+                    binanceWallet.fiatOrders(
                         transactionType,
                         beginTime,
                         endTime,
@@ -297,7 +297,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
   protected List<BinanceTradeFee> getTradeFee() throws IOException {
     return decorateApiCall(
             () ->
-                binance.getTradeFee(
+                binanceWallet.getTradeFee(
                     null,
                     getRecvWindow(),
                     getTimestampFactory(),
@@ -311,7 +311,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
   protected BinanceFutureCommissionRate getCommissionRate(String symbol) throws IOException {
     return decorateApiCall(
             () ->
-                binanceFutures.getFutureCommissionRate(
+                binanceUsdmAuth.getFutureCommissionRate(
                     symbol,
                     getRecvWindow(),
                     getTimestampFactory(),
@@ -326,7 +326,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       throws IOException {
     return decorateApiCall(
             () ->
-                binanceFutures.setMarginType(
+                binanceUsdmAuth.setMarginType(
                     BinanceAdapters.toSymbol(instrument, false),
                     marginType,
                     getRecvWindow(),
@@ -341,7 +341,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
   public BinanceChangeStatus setDualSidePosition(boolean dualSidePosition) throws IOException {
     return decorateApiCall(
             () ->
-                binanceFutures.setDualSidePosition(
+                binanceUsdmAuth.setDualSidePosition(
                     dualSidePosition,
                     getRecvWindow(),
                     getTimestampFactory(),
@@ -355,7 +355,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
   public BinanceSetLeverage setLeverageRaw(Instrument instrument, int leverage) throws IOException {
     return decorateApiCall(
             () ->
-                binanceFutures.setLeverage(
+                binanceUsdmAuth.setLeverage(
                     BinanceAdapters.toSymbol(instrument, false),
                     leverage,
                     getRecvWindow(),
@@ -370,7 +370,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
   public BinanceSimpleAccount getSimpleAccount() throws BinanceException, IOException {
     return decorateApiCall(
             () ->
-                binance.simpleAccount(
+                binanceWallet.simpleAccount(
                     getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("simpleAccount"))
         .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 150)
@@ -382,7 +382,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       throws BinanceException, IOException {
     return decorateApiCall(
             () ->
-                binance.flexiblePosition(
+                binanceWallet.flexiblePosition(
                     asset,
                     productId,
                     current,
@@ -401,7 +401,7 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
       throws BinanceException, IOException {
     return decorateApiCall(
             () ->
-                binance.lockedPosition(
+                binanceWallet.lockedPosition(
                     asset,
                     positionId,
                     projectId,
