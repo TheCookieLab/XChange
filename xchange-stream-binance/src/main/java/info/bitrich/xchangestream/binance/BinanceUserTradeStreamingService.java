@@ -65,6 +65,9 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   /** Incremented on every (re)connect so callers can scope state to a socket generation. */
   @Getter private final AtomicLong connectionGeneration = new AtomicLong();
 
+  /** Fixed login channel id: reconnect re-sends the login on this channel, never a new one. */
+  private volatile String loginChannelId;
+
   private Disposable loginDisposable;
 
   public BinanceUserTradeStreamingService(
@@ -117,10 +120,18 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   }
 
   public void login() {
+    // Idempotent: the listener survives reconnects (the base service re-sends the login message
+    // on the same channel when the socket reopens) and is only re-armed after a manual
+    // disconnect disposed it.
+    if (loginDisposable != null && !loginDisposable.isDisposed()) {
+      return;
+    }
     ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
-    long requestId = requestIdCounter.incrementAndGet();
+    if (loginChannelId == null) {
+      loginChannelId = String.valueOf(requestIdCounter.incrementAndGet());
+    }
     Observable<Boolean> observable =
-        this.subscribeChannel(String.valueOf(requestId), "session.logon")
+        this.subscribeChannel(loginChannelId, "session.logon")
             .flatMap(
                 node -> {
                   TypeReference<BinanceWebsocketOrderResponse<BinanceWebsocketLoginResponse>>

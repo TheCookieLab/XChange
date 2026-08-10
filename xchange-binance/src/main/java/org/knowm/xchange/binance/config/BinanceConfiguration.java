@@ -81,7 +81,7 @@ public final class BinanceConfiguration {
     Objects.requireNonNull(specification, "specification");
     Builder builder = new Builder();
 
-    builder.productFamily = typedOrDefault(specification, PRODUCT_FAMILY, BinanceProductFamily.SPOT);
+    builder.productFamily = readProductFamily(specification);
     if (!builder.productFamily.isImplemented()) {
       throw new IllegalArgumentException(
           "Binance product family "
@@ -179,6 +179,47 @@ public final class BinanceConfiguration {
     return orderBookUpdateCadenceMs;
   }
 
+  private static BinanceProductFamily readProductFamily(ExchangeSpecification specification) {
+    Object typed = specification.getExchangeSpecificParametersItem(PRODUCT_FAMILY);
+    if (typed != null) {
+      if (!(typed instanceof BinanceProductFamily)) {
+        throw new IllegalArgumentException(
+            "Binance exchange-specific parameter \""
+                + PRODUCT_FAMILY
+                + "\" must be a BinanceProductFamily, got "
+                + typed.getClass().getSimpleName()
+                + " ("
+                + typed
+                + ").");
+      }
+      return (BinanceProductFamily) typed;
+    }
+    // Legacy "Exchange_Type" parameter honored during the grace period.
+    return legacyProductFamily(specification);
+  }
+
+  /**
+   * Maps the legacy {@code Exchange_Type} parameter to a product family.
+   *
+   * @deprecated Legacy selection honored during the grace period; use {@link #PRODUCT_FAMILY}.
+   */
+  private static BinanceProductFamily legacyProductFamily(ExchangeSpecification specification) {
+    Object legacy = specification.getExchangeSpecificParametersItem("Exchange_Type");
+    if (legacy instanceof org.knowm.xchange.binance.dto.ExchangeType) {
+      switch ((org.knowm.xchange.binance.dto.ExchangeType) legacy) {
+        case FUTURES:
+          return BinanceProductFamily.USDM;
+        case INVERSE:
+          return BinanceProductFamily.COINM;
+        case PORTFOLIO_MARGIN:
+          return BinanceProductFamily.PORTFOLIO_MARGIN;
+        default:
+          return BinanceProductFamily.SPOT;
+      }
+    }
+    return BinanceProductFamily.SPOT;
+  }
+
   @SuppressWarnings("unchecked")
   private static <T> T typedOrDefault(
       ExchangeSpecification specification, String key, T defaultValue) {
@@ -186,7 +227,7 @@ public final class BinanceConfiguration {
     if (value == null) {
       return defaultValue;
     }
-    if (!defaultValue.getClass().isInstance(value)) {
+    if (defaultValue != null && !defaultValue.getClass().isInstance(value)) {
       throw new IllegalArgumentException(
           "Binance exchange-specific parameter \""
               + key

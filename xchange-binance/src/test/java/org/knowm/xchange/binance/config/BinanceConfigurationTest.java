@@ -75,6 +75,28 @@ public class BinanceConfigurationTest {
   }
 
   @Test
+  public void testLegacyExchangeTypeStillHonored() {
+    ExchangeSpecification specification = spec();
+    specification.setExchangeSpecificParametersItem(
+        BinanceExchange.EXCHANGE_TYPE, org.knowm.xchange.binance.dto.ExchangeType.FUTURES);
+
+    BinanceConfiguration config = BinanceConfiguration.from(specification);
+
+    assertThat(config.getProductFamily()).isEqualTo(BinanceProductFamily.USDM);
+    assertThat(config.getRestBaseUrl()).isEqualTo("https://fapi.binance.com");
+  }
+
+  @Test
+  public void testLegacyInverseExchangeTypeStillHonored() {
+    ExchangeSpecification specification = spec();
+    specification.setExchangeSpecificParametersItem(
+        BinanceExchange.EXCHANGE_TYPE, org.knowm.xchange.binance.dto.ExchangeType.INVERSE);
+
+    assertThat(BinanceConfiguration.from(specification).getProductFamily())
+        .isEqualTo(BinanceProductFamily.COINM);
+  }
+
+  @Test
   public void testInvalidRecvWindowRejected() {
     ExchangeSpecification specification = spec();
     specification.setExchangeSpecificParametersItem(BinanceConfiguration.RECV_WINDOW, 60_001L);
