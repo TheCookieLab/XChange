@@ -6,6 +6,7 @@ import info.bitrich.xchangestream.binance.BinanceUserDataChannel.NoActiveChannel
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
+import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import info.bitrich.xchangestream.util.Events;
 import io.reactivex.rxjava3.core.Completable;
@@ -18,9 +19,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
-import org.knowm.xchange.binance.BinanceAuthenticated;
 import org.knowm.xchange.binance.BinanceExchange;
 import org.knowm.xchange.binance.service.BinanceMarketDataService;
+import org.knowm.xchange.binance.spot.BinanceSpotAuthApi;
+import org.knowm.xchange.binance.usdm.BinanceUsdmAuthApi;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.instrument.Instrument;
@@ -124,14 +126,18 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
       }
 
       LOG.info("Connecting to authenticated web socket");
-      BinanceAuthenticated binance =
+      BinanceSpotAuthApi spotAuth =
           ExchangeRestProxyBuilder.forInterface(
-                  BinanceAuthenticated.class, getExchangeSpecification())
+                  BinanceSpotAuthApi.class, getExchangeSpecification())
+              .build();
+      BinanceUsdmAuthApi usdmAuth =
+          ExchangeRestProxyBuilder.forInterface(
+                  BinanceUsdmAuthApi.class, getExchangeSpecification())
               .build();
       if (isFuturesEnabled()) {
         userDataChannel =
             new BinanceUserDataChannel(
-                binance, exchangeSpecification.getApiKey(), onApiCall, isFuturesEnabled());
+                spotAuth, usdmAuth, exchangeSpecification.getApiKey(), onApiCall, isFuturesEnabled());
         try {
           completables.add(createAndConnectUserDataFutureService(userDataChannel.getListenKey()));
         } catch (NoActiveChannelException e) {
@@ -246,22 +252,28 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
 
   @Override
   public boolean isAlive() {
-    if (exchangeSpecification.getApiKey() != null) {
-      if (isFuturesEnabled()) {
-        return streamingService.isSocketOpen()
-            && userDataFutureStreamingService.isSocketOpen()
-            && userTradeStreamingService.isSocketOpen()
-            && userTradeStreamingService.isAuthorized();
-      } else {
-        return streamingService.isSocketOpen()
-            && userDataSpotStreamingService.isSocketOpen()
-            && userDataSpotStreamingService.isAuthorized()
-            && userTradeStreamingService.isSocketOpen()
-            && userTradeStreamingService.isAuthorized();
-      }
-    } else {
+    // Liveness is null-safe: a service that was never created for the current credential/product
+    // combination (for example the WS API trading service with HMAC keys, or the spot user-data
+    // service in futures mode) does not count against liveness.
+    if (exchangeSpecification.getApiKey() == null) {
       return streamingService != null && streamingService.isSocketOpen();
     }
+    if (streamingService == null || !streamingService.isSocketOpen()) {
+      return false;
+    }
+    if (isFuturesEnabled()) {
+      return isServiceAlive(userDataFutureStreamingService)
+          && isServiceAlive(userTradeStreamingService)
+          && (userTradeStreamingService == null || userTradeStreamingService.isAuthorized());
+    }
+    return isServiceAlive(userDataSpotStreamingService)
+        && isServiceAlive(userTradeStreamingService)
+        && (userDataSpotStreamingService == null || userDataSpotStreamingService.isAuthorized())
+        && (userTradeStreamingService == null || userTradeStreamingService.isAuthorized());
+  }
+
+  private static boolean isServiceAlive(NettyStreamingService<?> service) {
+    return service == null || service.isSocketOpen();
   }
 
   @Override
@@ -280,15 +292,23 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
   }
 
   public Observable<State> connectionStateObservableUserData() {
+    // Null-safe: returns an empty observable when no user-data service exists for the current
+    // credential/product combination.
     if (isFuturesEnabled()) {
-      return userDataFutureStreamingService.subscribeConnectionState();
+      return userDataFutureStreamingService == null
+          ? Observable.empty()
+          : userDataFutureStreamingService.subscribeConnectionState();
     } else {
-      return userDataSpotStreamingService.subscribeConnectionState();
+      return userDataSpotStreamingService == null
+          ? Observable.empty()
+          : userDataSpotStreamingService.subscribeConnectionState();
     }
   }
 
   public Observable<State> connectionStateObservableUserTrade() {
-    return userTradeStreamingService.subscribeConnectionState();
+    return userTradeStreamingService == null
+        ? Observable.empty()
+        : userTradeStreamingService.subscribeConnectionState();
   }
 
   @Override

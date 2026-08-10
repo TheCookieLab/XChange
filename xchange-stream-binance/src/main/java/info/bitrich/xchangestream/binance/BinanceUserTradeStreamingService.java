@@ -30,6 +30,7 @@ import java.security.Security;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.Getter;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.crypto.Signer;
@@ -57,6 +58,13 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   Charset charSet = StandardCharsets.UTF_8;
   @Getter private boolean authorized = false;
   private String signature = "";
+
+  /** Monotonic request-id source; response correlation uses these ids, never wall-clock time. */
+  private final AtomicLong requestIdCounter = new AtomicLong();
+
+  /** Incremented on every (re)connect so callers can scope state to a socket generation. */
+  @Getter private final AtomicLong connectionGeneration = new AtomicLong();
+
   private Disposable loginDisposable;
 
   public BinanceUserTradeStreamingService(
@@ -80,6 +88,10 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
     return conn.andThen(
         (CompletableSource)
             (completable) -> {
+              long generation = connectionGeneration.incrementAndGet();
+              LOG.info(
+                  "Connecting BinanceUserTradeStreamingService (connection generation {})",
+                  generation);
               login();
               Disposable disposable =
                   subscribeDisconnect()
@@ -106,8 +118,9 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
 
   public void login() {
     ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
+    long requestId = requestIdCounter.incrementAndGet();
     Observable<Boolean> observable =
-        this.subscribeChannel(String.valueOf(System.currentTimeMillis()), "session.logon")
+        this.subscribeChannel(String.valueOf(requestId), "session.logon")
             .flatMap(
                 node -> {
                   TypeReference<BinanceWebsocketOrderResponse<BinanceWebsocketLoginResponse>>
@@ -122,15 +135,24 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
                             response.getError().getCode(), response.getError().getMsg()));
                   }
                 });
+    // Persistent listener: after an unexpected reconnect the base service re-sends the login
+    // message and the response arrives on this channel again, so `authorized` tracks the current
+    // session instead of only the first login. The subscription is disposed only on manual
+    // disconnect.
     loginDisposable =
-        observable
-            .firstElement()
-            .doOnError(error -> LOG.error("Login error", error))
-            .subscribe(
-                loginResult -> {
-                  LOG.info("Successfully authorized to BinanceUserTradeStreamingService");
-                  authorized = true;
-                });
+        observable.subscribe(
+            loginResult -> {
+              LOG.info(
+                  "Successfully authorized to BinanceUserTradeStreamingService (connection "
+                      + "generation {})",
+                  connectionGeneration.get());
+              authorized = true;
+            },
+            error -> {
+              LOG.error("Login error", error);
+              authorized = false;
+            });
+    compositeDisposable.add(loginDisposable);
   }
 
   public String signPayload(String payload) throws Exception {

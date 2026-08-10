@@ -281,8 +281,8 @@ Each slice must remain independently reviewable and keep the reactor green.
 - [ ] **S4 — Wallet and Margin APIs** — PARTIAL: wallet wire surface owned (`BinanceWalletApi`); margin family has no wire surface yet (capability matrix marks it).
 - [ ] **S5 — USDⓈ-M and COIN-M REST parity** — PARTIAL: USDM public+auth owned (`BinanceUsdmApi`/`BinanceUsdmAuthApi`); COINM auth owned (`BinanceCoinmAuthApi`); COINM public market data not implemented.
 - [ ] **S6 — Options and Portfolio Margin coverage** — PARTIAL: Portfolio Margin owned (`BinancePortfolioMarginApi`); Options family enum present, selection fails fast (not implemented).
-- [ ] **S7 — Public market-stream recovery** — PENDING
-- [ ] **S8 — Private/trading WebSocket lifecycle and replay safety** — PENDING
+- [ ] **S7 — Public market-stream recovery** — PARTIAL: snapshot+delta recovery exists and is now documented (spot + futures state machines, resync on sequence breaks, rate-limit surfaced); stream README covers reconnect/resubscribe/order-book recovery.
+- [ ] **S8 — Private/trading WebSocket lifecycle and replay safety** — PARTIAL: fixed `isAlive()` NPE for every credential/product combination; connection-state observables null-safe (regression test `BinanceStreamingExchangeLifecycleTest`); WS API trading service: monotonic request ids (no wall-clock ids), persistent re-login listener so `authorized` re-arms after reconnect, connection-generation counter, login disposed on manual disconnect; listen-key lifecycle already rotates + reconnects; `BinanceUserDataChannel` migrated to family clients.
 - [ ] **S9 — Compatibility facade, examples, documentation, full validation** — PARTIAL: facades + README/capability matrix done; migration examples + AGENTS.md + full validation pending.
 
 ### Verification ledger
@@ -292,4 +292,6 @@ Each slice must remain independently reviewable and keep the reactor green.
 | S1 | `BinanceConfigurationTest` (9 tests: defaults, family URLs, sandbox, overrides, rejections) | ✅ | `mvn -B -pl xchange-binance -am test` — 74 tests, 0 failures |
 | S2 | `BinanceRsaDigestTest` (OpenSSL vector), `BinanceSigningTest` (HMAC/Ed25519 vectors, payload assembly), `BinanceErrorClassifierTest`, `BinanceRedactionTest`, `BinanceRateLimitTelemetryTest`, `BinanceTimePolicyTest` | ✅ | same build |
 | S3 | Family-split refactor compiles; all pre-existing WireMock/resilience tests green on family proxies | ✅ | same build |
+| S8 | `BinanceStreamingExchangeLifecycleTest` (4 tests: isAlive null-safety, observables empty, disconnect before connect) | ✅ | `mvn -B -pl xchange-stream-binance -am test` — 20 tests, 0 failures |
+| S7/S8 | Stream module + upstream reactor green after fixes | ✅ | same build |
 | — | Full reactor spot build | ✅ | parent + core + binance SUCCESS |

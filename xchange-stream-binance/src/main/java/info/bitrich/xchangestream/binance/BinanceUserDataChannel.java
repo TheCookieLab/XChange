@@ -7,7 +7,8 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import org.knowm.xchange.binance.BinanceAuthenticated;
+import org.knowm.xchange.binance.spot.BinanceSpotAuthApi;
+import org.knowm.xchange.binance.usdm.BinanceUsdmAuthApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +27,8 @@ class BinanceUserDataChannel implements AutoCloseable {
 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceUserDataChannel.class);
 
-  private final BinanceAuthenticated binance;
+  private final BinanceSpotAuthApi spotAuth;
+  private final BinanceUsdmAuthApi usdmAuth;
   private final boolean isFuturesEnabled;
   private final String apiKey;
   private final Runnable onApiCall;
@@ -39,14 +41,20 @@ class BinanceUserDataChannel implements AutoCloseable {
    * Creates the channel, establishing a listen key (immediately available from {@link
    * #getListenKey()}) and starting timers to ensure the channel is kept alive.
    *
-   * @param binance Access to binance services.
+   * @param spotAuth Access to authenticated Spot user-data-stream endpoints.
+   * @param usdmAuth Access to authenticated USDⓈ-M futures user-data-stream endpoints.
    * @param apiKey The API key.
    * @param onApiCall A callback to perform prior to any service calls.
    * @param isFuturesEnabled Another userDataStream initialization path for futures.
    */
   BinanceUserDataChannel(
-      BinanceAuthenticated binance, String apiKey, Runnable onApiCall, boolean isFuturesEnabled) {
-    this.binance = binance;
+      BinanceSpotAuthApi spotAuth,
+      BinanceUsdmAuthApi usdmAuth,
+      String apiKey,
+      Runnable onApiCall,
+      boolean isFuturesEnabled) {
+    this.spotAuth = spotAuth;
+    this.usdmAuth = usdmAuth;
     this.isFuturesEnabled = isFuturesEnabled;
     this.apiKey = apiKey;
     this.onApiCall = onApiCall;
@@ -72,8 +80,8 @@ class BinanceUserDataChannel implements AutoCloseable {
       LOG.debug("Keeping user data channel alive");
       onApiCall.run();
       if (isFuturesEnabled) {
-        binance.keepAliveFutureUserDataStream(apiKey, listenKey);
-      } else binance.keepAliveUserDataStream(apiKey, listenKey);
+        usdmAuth.keepAliveFutureUserDataStream(apiKey, listenKey);
+      } else spotAuth.keepAliveUserDataStream(apiKey, listenKey);
       LOG.debug("User data channel keepalive sent successfully");
     } catch (Exception e) {
       LOG.error("User data channel keepalive failed.", e);
@@ -99,9 +107,9 @@ class BinanceUserDataChannel implements AutoCloseable {
       LOG.debug("Opening new user data channel");
       onApiCall.run();
       if (isFuturesEnabled) {
-        this.listenKey = binance.startFutureUserDataStream(apiKey).getListenKey();
+        this.listenKey = usdmAuth.startFutureUserDataStream(apiKey).getListenKey();
       } else {
-        this.listenKey = binance.startUserDataStream(apiKey).getListenKey();
+        this.listenKey = spotAuth.startUserDataStream(apiKey).getListenKey();
       }
       LOG.debug("Opened new user data channel");
     } catch (IOException e) {
