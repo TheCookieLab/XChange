@@ -27,7 +27,9 @@ public class BinanceUsExchange extends BinanceExchange {
   protected void initServices() {
     this.timestampFactory =
         new BinanceTimestampFactory(
-            getExchangeSpecification().getResilience(), getResilienceRegistries());
+            getExchangeSpecification().getResilience(),
+            getResilienceRegistries(),
+            configuration.getTimestampUnit());
     this.marketDataService = new BinanceMarketDataService(this, getResilienceRegistries());
     this.tradeService = new BinanceTradeService(this, getResilienceRegistries());
     this.accountService = new BinanceUsAccountService(this, getResilienceRegistries());

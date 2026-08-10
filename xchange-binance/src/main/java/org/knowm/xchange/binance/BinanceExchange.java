@@ -1,13 +1,12 @@
 package org.knowm.xchange.binance;
 
-import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
-
 import java.io.IOException;
 import java.util.Map;
-import org.apache.commons.lang3.ObjectUtils;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.binance.config.BinanceConfiguration;
+import org.knowm.xchange.binance.config.BinanceProductFamily;
 import org.knowm.xchange.binance.dto.ExchangeType;
 import org.knowm.xchange.binance.dto.account.AssetDetail;
 import org.knowm.xchange.binance.dto.meta.exchangeinfo.BinanceExchangeInfo;
@@ -23,7 +22,14 @@ import si.mazi.rescu.SynchronizedValueFactory;
 
 public class BinanceExchange extends BaseExchange implements Exchange {
 
-  public static String EXCHANGE_TYPE = "Exchange_Type";
+  /**
+   * Legacy exchange-type parameter selecting Spot, Futures, Inverse, or Portfolio Margin mode.
+   *
+   * @deprecated Use the typed {@link org.knowm.xchange.binance.config.BinanceConfiguration#PRODUCT_FAMILY}
+   *     parameter with a {@link org.knowm.xchange.binance.config.BinanceProductFamily} value
+   *     instead. The legacy parameter remains honored during the documented grace period.
+   */
+  @Deprecated public static String EXCHANGE_TYPE = "Exchange_Type";
   private static final String SPOT_URL = "https://api.binance.com";
   public static final String FUTURES_URL = "https://fapi.binance.com";
   public static final String INVERSE_FUTURES_URL = "https://dapi.binance.com";
@@ -35,15 +41,23 @@ public class BinanceExchange extends BaseExchange implements Exchange {
 
   protected ResilienceRegistries RESILIENCE_REGISTRIES;
   protected SynchronizedValueFactory<Long> timestampFactory;
+  protected BinanceConfiguration configuration;
 
   @Override
   protected void initServices() {
     this.timestampFactory =
         new BinanceTimestampFactory(
-            getExchangeSpecification().getResilience(), getResilienceRegistries());
+            getExchangeSpecification().getResilience(),
+            getResilienceRegistries(),
+            configuration.getTimestampUnit());
     this.marketDataService = new BinanceMarketDataService(this, getResilienceRegistries());
     this.tradeService = new BinanceTradeService(this, getResilienceRegistries());
     this.accountService = new BinanceAccountService(this, getResilienceRegistries());
+  }
+
+  /** Typed configuration derived from the applied exchange specification. */
+  public BinanceConfiguration getConfiguration() {
+    return configuration;
   }
 
   public SynchronizedValueFactory<Long> getTimestampFactory() {
@@ -76,7 +90,7 @@ public class BinanceExchange extends BaseExchange implements Exchange {
     spec.setPort(80);
     spec.setExchangeName("Binance");
     spec.setExchangeDescription("Binance Exchange.");
-    spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, SPOT);
+    spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, ExchangeType.SPOT);
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, false);
     AuthUtils.setApiAndSecretKey(spec, "binance");
     return spec;
@@ -84,27 +98,66 @@ public class BinanceExchange extends BaseExchange implements Exchange {
 
   @Override
   public void applySpecification(ExchangeSpecification exchangeSpecification) {
+    this.configuration = BinanceConfiguration.from(exchangeSpecification);
     concludeHostParams(exchangeSpecification);
     super.applySpecification(exchangeSpecification);
   }
 
+  /**
+   * @deprecated Use {@link #getConfiguration()}{@code .getProductFamily() ==
+   *     BinanceProductFamily.FUTURES} instead.
+   */
+  @Deprecated
   public boolean isFuturesEnabled() {
-    return ExchangeType.FUTURES.equals(
-        exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE));
+    return getProductFamily().equals(BinanceProductFamily.USDM);
   }
 
+  /**
+   * @deprecated Use {@link #getConfiguration()}{@code .getProductFamily() ==
+   *     BinanceProductFamily.SPOT} instead.
+   */
+  @Deprecated
   public boolean isSpotEnabled() {
-    return ExchangeType.SPOT.equals(
-        exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE));
+    return getProductFamily().equals(BinanceProductFamily.SPOT);
   }
 
+  /**
+   * @deprecated Use {@link #getConfiguration()}{@code .getProductFamily() ==
+   *     BinanceProductFamily.PORTFOLIO_MARGIN} instead.
+   */
+  @Deprecated
   public boolean isPortfolioMarginEnabled() {
-    return ExchangeType.PORTFOLIO_MARGIN.equals(
-        exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE));
+    return getProductFamily().equals(BinanceProductFamily.PORTFOLIO_MARGIN);
+  }
+
+  /** The configured Binance product family (defaults to {@link BinanceProductFamily#SPOT}). */
+  public BinanceProductFamily getProductFamily() {
+    return configuration != null
+        ? configuration.getProductFamily()
+        : legacyExchangeTypeOrDefault();
   }
 
   public boolean usingSandbox() {
-    return enabledSandbox(exchangeSpecification);
+    return configuration != null
+        ? configuration.isSandboxEnabled()
+        : enabledSandbox(exchangeSpecification);
+  }
+
+  private BinanceProductFamily legacyExchangeTypeOrDefault() {
+    Object legacy = exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE);
+    if (legacy instanceof ExchangeType) {
+      switch ((ExchangeType) legacy) {
+        case FUTURES:
+          return BinanceProductFamily.USDM;
+        case INVERSE:
+          return BinanceProductFamily.COINM;
+        case PORTFOLIO_MARGIN:
+          return BinanceProductFamily.PORTFOLIO_MARGIN;
+        default:
+          break;
+      }
+    }
+    return BinanceProductFamily.SPOT;
   }
 
   @Override
@@ -115,14 +168,11 @@ public class BinanceExchange extends BaseExchange implements Exchange {
       BinanceAccountService accountService = (BinanceAccountService) getAccountService();
 
       BinanceExchangeInfo exchangeInfo;
-      // get exchange type or SPOT as default
-      ExchangeType exchangeType =
-          (ExchangeType)
-              ObjectUtils.defaultIfNull(
-                  exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE), SPOT);
+      BinanceProductFamily productFamily = getProductFamily();
 
-      switch (exchangeType) {
-        case FUTURES:
+      switch (productFamily) {
+        case USDM:
+        case COINM:
           exchangeInfo = marketDataServiceRaw.getFutureExchangeInfo();
           BinanceAdapters.adaptFutureExchangeMetaData(exchangeMetaData, exchangeInfo);
           break;
@@ -139,8 +189,9 @@ public class BinanceExchange extends BaseExchange implements Exchange {
       exchangeInfo.getSymbols().stream()
           .filter(
               symbol ->
-                  ObjectUtils.allNotNull(
-                      symbol.getBaseAsset(), symbol.getQuoteAsset(), symbol.getSymbol()))
+                  symbol.getBaseAsset() != null
+                      && symbol.getQuoteAsset() != null
+                      && symbol.getSymbol() != null)
           .forEach(
               symbol ->
                   BinanceAdapters.putSymbolMapping(
@@ -153,7 +204,8 @@ public class BinanceExchange extends BaseExchange implements Exchange {
   }
 
   private ResilienceRegistries createResilienceRegistries() {
-    return isFuturesEnabled()
+    BinanceProductFamily family = getProductFamily();
+    return family == BinanceProductFamily.USDM || family == BinanceProductFamily.COINM
         ? BinanceResilience.createRegistriesFuture()
         : BinanceResilience.createRegistries();
   }
@@ -166,6 +218,45 @@ public class BinanceExchange extends BaseExchange implements Exchange {
 
   /** Adjust host parameters depending on exchange specific parameters */
   protected void concludeHostParams(ExchangeSpecification exchangeSpecification) {
+    BinanceConfiguration config = configuration;
+    if (config == null) {
+      concludeHostParamsLegacy(exchangeSpecification);
+      return;
+    }
+    switch (config.getProductFamily()) {
+      case USDM:
+        exchangeSpecification.setSslUri(
+            config.isSandboxEnabled() ? SANDBOX_FUTURES_URL : FUTURES_URL);
+        break;
+      case COINM:
+        exchangeSpecification.setSslUri(
+            config.isSandboxEnabled() ? SANDBOX_INVERSE_FUTURES_URL : INVERSE_FUTURES_URL);
+        break;
+      case PORTFOLIO_MARGIN:
+        exchangeSpecification.setSslUri(PORTFOLIO_MARGIN_URL);
+        break;
+      case SPOT:
+      case WALLET_SAPI:
+      case MARGIN:
+        // Production URL stays as configured (Binance US keeps its own host); only the sandbox
+        // URL is applied here.
+        if (config.isSandboxEnabled()) {
+          exchangeSpecification.setSslUri(SANDBOX_SPOT_URL);
+        }
+        break;
+      default:
+        throw new IllegalStateException(
+            "Unsupported Binance product family: " + config.getProductFamily());
+    }
+    if (exchangeSpecification.getExchangeSpecificParametersItem(
+            BinanceConfiguration.REST_BASE_URL)
+        != null) {
+      exchangeSpecification.setSslUri(config.getRestBaseUrl());
+    }
+  }
+
+  /** Legacy mode selection preserved during the grace period. */
+  private void concludeHostParamsLegacy(ExchangeSpecification exchangeSpecification) {
     if (exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE) != null) {
       switch ((ExchangeType)
           exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE)) {
