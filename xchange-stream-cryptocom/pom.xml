@@ -14,19 +14,6 @@
     <description>XChange implementation for the Crypto.com Exchange Stream</description>
 
     <dependencies>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>${version.junit}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>${version.junit}</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>com.github.thecookielab.xchange</groupId>
             <artifactId>xchange-cryptocom</artifactId>
@@ -41,6 +28,19 @@
             <groupId>com.github.thecookielab.xchange</groupId>
             <artifactId>xchange-stream-service-netty</artifactId>
             <version>${project.parent.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>
