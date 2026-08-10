@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.function.Supplier;
@@ -468,6 +470,24 @@ class CoinbaseStreamingExchangeTest {
   }
 
   @Test
+  void publicConnectionSuccessDoesNotResubscribeMissingTradeService() {
+    testStreamingService = new TestStreamingService();
+    exchange.setTestStreamingService(testStreamingService);
+    exchange.tradeService = null;
+    AtomicReference<Throwable> reconnectError = new AtomicReference<>();
+    RxJavaPlugins.setErrorHandler(reconnectError::set);
+
+    try {
+      exchange.connect().blockingAwait();
+
+      assertNull(reconnectError.get());
+      assertNull(exchange.getStreamingTradeService());
+    } finally {
+      RxJavaPlugins.reset();
+    }
+  }
+
+  @Test
   void disconnectIsIdempotentAndLivenessIsNullSafe() {
     testStreamingService = new TestStreamingService();
     exchange.setTestStreamingService(testStreamingService);
@@ -629,4 +649,3 @@ class CoinbaseStreamingExchangeTest {
     }
   }
 }
-
