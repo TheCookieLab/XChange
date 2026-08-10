@@ -68,6 +68,7 @@
         <module>xchange-coinone</module>
         <module>xchange-coinsph</module>
         <module>xchange-core</module>
+        <module>xchange-cryptocom</module>
         <module>xchange-dase</module>
         <module>xchange-deribit</module>
         <module>xchange-dvchain</module>
@@ -114,6 +115,7 @@
         <module>xchange-stream-coinmate</module>
         <module>xchange-stream-coinsph</module>
         <module>xchange-stream-core</module>
+        <module>xchange-stream-cryptocom</module>
         <module>xchange-stream-deribit</module>
         <module>xchange-stream-dydx</module>
         <module>xchange-stream-gateio</module>
@@ -185,7 +187,7 @@
         <version.java-jwt>4.5.2</version.java-jwt>
         <version.json-path-assert>3.0.0</version.json-path-assert>
         <version.junit>5.12.2</version.junit>
-        <version.knowm.xchart>4.0.1</version.knowm.xchart>
+        <version.knowm.xchart>4.0.2</version.knowm.xchart>
         <version.kotlin-stdlib>2.1.0</version.kotlin-stdlib>
         <version.kotlin-stdlib-jdk8>1.9.10</version.kotlin-stdlib-jdk8>
         <version.lombok>1.18.46</version.lombok>
@@ -201,7 +203,7 @@
         <version.mockito>5.23.0</version.mockito>
         <version.netty>4.2.14.Final</version.netty>
         <version.pubnub>4.31.3</version.pubnub>
-        <version.qos.logback>1.5.32</version.qos.logback>
+        <version.qos.logback>1.5.37</version.qos.logback>
         <version.reflections>0.10.2</version.reflections>
         <version.resilience4j>2.4.0</version.resilience4j>
         <version.rxjava3>3.1.12</version.rxjava3>
