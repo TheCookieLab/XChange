@@ -1,5 +1,7 @@
 package org.knowm.xchange.kucoin.uta;
 
+import static org.knowm.xchange.kucoin.uta.UtaResilience.UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER;
+
 import com.google.common.base.Strings;
 import java.io.IOException;
 import java.util.Objects;
@@ -14,6 +16,7 @@ import org.knowm.xchange.service.BaseResilientExchangeService;
 import org.knowm.xchange.kucoin.uta.service.UtaCommonAPI;
 import org.knowm.xchange.kucoin.uta.service.UtaEndpointPolicy;
 import org.knowm.xchange.kucoin.uta.service.UtaConstants;
+import org.knowm.xchange.kucoin.uta.dto.UtaWsToken;
 import org.knowm.xchange.kucoin.uta.service.UtaDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
 
@@ -77,6 +80,32 @@ public abstract class UtaBaseService extends BaseResilientExchangeService<Kucoin
         null,
         null,
         RetryClassification.NON_RETRYABLE);
+  }
+
+  /**
+   * Fetches a fresh private WebSocket token (valid 24 hours) for the UTA private push endpoint.
+   *
+   * <p>Tokens are reacquired on every private reconnect so an expired token never strands the
+   * connection; the raw token must never be logged (see {@link UtaRedaction}).
+   */
+  public UtaWsToken getPrivateWsToken() throws IOException {
+    checkAuthenticated();
+    UtaCommonAPI common = service(UtaCommonAPI.class);
+    return UtaExceptionClassifier.classifyingExceptions(
+        () ->
+            decorateApiCall(
+                    () ->
+                        common.getPrivateWsToken(
+                            apiKey,
+                            digest,
+                            nonceFactory,
+                            encryptedPassphrase,
+                            UtaConstants.KEY_VERSION))
+                .withRetry(retry("utaPrivateWsToken"))
+                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call(),
+        UtaDomains.COMMON,
+        "POST /api/v2/bullet-private");
   }
 
   /**
