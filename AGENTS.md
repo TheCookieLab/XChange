@@ -89,14 +89,17 @@ worker path and branch names, for example
   property names for fields whose name has an uppercase letter in the first two
   characters (e.g. `T`, `O`, `oT`, `qU`, `bT`, `fC`). Lombok generates
   `getT()`/`getOT()`-style accessors, and Jackson's default legacy bean mangling
-  lowercases the leading uppercase run, so the JSON key (the field name) never
-  matches the derived property (`T` → `t`, `oT` → `ot`). The field is silently
+  lowercases the leading uppercase run, so the derived property (`T` → `t`,
+  `oT` → `ot`) never matches the exchange's wire key. The field is silently
   dropped during deserialization — a runtime-only failure with no compile error.
-  Always put an explicit `@JsonProperty("<exact field name>")` on such fields
-  (constructor-param `@JsonProperty` for `@Value`/final-field DTOs). Never
-  declare two fields that differ only by case (e.g. `T` and `t`): Lombok
-  silently generates one `getT()`/`setT()` pair and the other field is never
-  bound.
+  Always put an explicit `@JsonProperty` naming the exact wire/JSON key — the
+  exchange's key, not the Java field name (case matters: field `bT` has wire key
+  `BT`) — on the field and on the generated accessors via `@Getter(onMethod_ =
+  @JsonProperty(...))` / `@Setter(onMethod_ = @JsonProperty(...))`, so the
+  field, getter, and setter merge into a single property (constructor-param
+  `@JsonProperty` for `@Value`/final-field DTOs). Never declare two fields that
+  differ only by case (e.g. `T` and `t`): Lombok silently generates one
+  `getT()`/`setT()` pair and the other field is never bound.
 - The root project is `xchange-parent`.
 - A single-module worker must not change the parent POM. Record parent-POM needs
   as unresolved for the manager or a follow-up pass.
