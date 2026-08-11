@@ -23,8 +23,12 @@ public class BybitTrade {
   private final String tradeId;
   // boolean	Whether it is a block trade order or not
   @JsonProperty("BT")
-  @Getter(onMethod_ = @JsonProperty("BT"))
   private final boolean bT;
+
+  @JsonProperty("BT")
+  public boolean isBT() {
+    return bT;
+  }
 
   public BybitTrade(
       @JsonProperty("T") Date timestamp,

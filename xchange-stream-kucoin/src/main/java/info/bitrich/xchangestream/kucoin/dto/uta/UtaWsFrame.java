@@ -1,13 +1,12 @@
 package info.bitrich.xchangestream.kucoin.dto.uta;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * UTA WebSocket frame: {@code {T, P, t?, dp?, d?}}.
@@ -71,18 +70,17 @@ public class UtaWsFrame {
   /** Order book payload: {@code {O, C, M, s, b: [[price,size]...], a: [[price,size]...]}}. */
   @Data
   @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(
+      fieldVisibility = JsonAutoDetect.Visibility.ANY,
+      getterVisibility = JsonAutoDetect.Visibility.NONE,
+      isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+      setterVisibility = JsonAutoDetect.Visibility.NONE)
   public static class OrderBookData {
     @JsonProperty("O")
-    @Getter(onMethod_ = @JsonProperty("O"))
-    @Setter(onMethod_ = @JsonProperty("O"))
     private Long O;
     @JsonProperty("C")
-    @Getter(onMethod_ = @JsonProperty("C"))
-    @Setter(onMethod_ = @JsonProperty("C"))
     private Long C;
     @JsonProperty("M")
-    @Getter(onMethod_ = @JsonProperty("M"))
-    @Setter(onMethod_ = @JsonProperty("M"))
     private Long M;
     private String s;
     private List<List<BigDecimal>> b;
