@@ -11,7 +11,7 @@
 * **Lifecycle:** Ready for implementation
 * **Blocking state:** None
 * **Active phase:** Phase 1 — compatibility boundary and capability contract
-* **Overall checklist progress:** 4/8 phases complete (1-5 checked; 6-8 in progress)
+* **Overall checklist progress:** 7/8 phases complete (1-7 checked; 8 in progress)
 
 ## Summary
 
@@ -105,8 +105,8 @@ Inventory existing public classes, examples, service interfaces, exchange parame
 3. [x] **Phase 3 — metadata and public market data.** Touchpoints: UTA market raw service, metadata adapters, `remoteInit`/mode-specific initializer. Implement complete Spot/Futures product discovery and stable market APIs. Verification: multi-page catalog fixtures, exact numeric/filter mapping, no-private-credentials public init.
 4. [x] **Phase 4 — unified account and trading.** Touchpoints: UTA account/position/margin/asset/trade raw services and high-level adapters. Implement balances/liabilities/collateral, positions/risk, transfers, orders/amends/cancels, fills/history, typed continuation. Verification: DTO/adaptor fixtures, pagination no-progress tests, partial-batch tests.
 5. [x] **Phase 5 — placement safety.** Touchpoints: trade adapter, structured exception/reconciliation types. Validate client IDs and enforce unknown-outcome reconciliation with no blind replay. Verification: found/absent/inconclusive post-transmission scenarios.
-6. [ ] **Phase 6 — streaming transport modernization.** Touchpoints: `xchange-stream-kucoin` connection/auth/subscription lifecycle. Add mode-specific endpoints, generation IDs, heartbeat/token lifecycle, aggregate liveness, bounded reconnect, and full resubscription. Verification: stale-generation, reconnect, token refresh, idempotent disconnect fixtures.
-7. [ ] **Phase 7 — sequence-safe streams and WebSocket trading.** Touchpoints: depth assembler, private event adapters, WS trading request correlation. Add snapshot/delta continuity, gap rebuild, private dedupe, and disconnect replay classification. Verification: deterministic gap/duplicate/reconnect and pending-placement tests.
+6. [x] **Phase 6 — streaming transport modernization.** Touchpoints: `xchange-stream-kucoin` connection/auth/subscription lifecycle. Add mode-specific endpoints, generation IDs, heartbeat/token lifecycle, aggregate liveness, bounded reconnect, and full resubscription. Verification: stale-generation, reconnect, token refresh, idempotent disconnect fixtures.
+7. [x] **Phase 7 — sequence-safe streams and WebSocket trading.** Touchpoints: depth assembler, private event adapters, WS trading request correlation. Add snapshot/delta continuity, gap rebuild, private dedupe, and disconnect replay classification. Verification: deterministic gap/duplicate/reconnect and pending-placement tests.
 8. [ ] **Phase 8 — migration and release validation.** Touchpoints: module READMEs/examples/Javadocs and compatibility tests. Verification: `mvn -B -pl xchange-kucoin,xchange-stream-kucoin -am test`, formatting/PMD gates, repository-root build, public read-only smoke; private/trading canary remains explicit opt-in.
 
 ## 10 Risks, dependencies, and edge cases

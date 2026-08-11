@@ -161,7 +161,8 @@ public class KucoinExchange extends BaseExchange implements Exchange {
     exchangeMetaData.setInstruments(instruments);
   }
 
-  private final Map<Instrument, String> utaProviderSymbols = new java.util.concurrent.ConcurrentHashMap<>();
+  private final java.util.concurrent.ConcurrentHashMap<Instrument, String> utaProviderSymbols =
+      new java.util.concurrent.ConcurrentHashMap<>();
 
   /**
    * @return the provider symbol registered for the instrument during UTA {@link #remoteInit()},
