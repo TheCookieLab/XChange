@@ -1,6 +1,5 @@
 package org.knowm.xchange.bybit.dto.trade;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -15,9 +14,6 @@ import org.knowm.xchange.instrument.Instrument;
 @Setter
 public class BybitOrder extends Order {
 
-  @JsonProperty("sLTriggerPrice")
-  @Getter(onMethod_ = @JsonProperty("sLTriggerPrice"))
-  @Setter(onMethod_ = @JsonProperty("sLTriggerPrice"))
   private BigDecimal sLTriggerPrice;
   private SlTriggerBy slTriggerBy;
   private BigDecimal slLimitPrice;
