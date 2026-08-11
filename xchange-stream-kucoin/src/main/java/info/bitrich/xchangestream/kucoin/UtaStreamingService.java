@@ -190,10 +190,13 @@ public class UtaStreamingService extends JsonNettyStreamingService {
     node.put("id", refCount.incrementAndGet());
     node.put("action", action);
     node.put("channel", channelName);
-    if (args != null) {
-      if (args.length > 0 && args[0] != null) {
+    if (args != null && args.length > 0 && args[0] != null) {
+      if ("balance".equals(channelName)) {
+        node.put("accountType", args[0].toString());
+      } else {
         node.put("tradeType", args[0].toString());
       }
+    }
       if (args.length > 1 && args[1] != null) {
         node.put("symbol", args[1].toString());
       }

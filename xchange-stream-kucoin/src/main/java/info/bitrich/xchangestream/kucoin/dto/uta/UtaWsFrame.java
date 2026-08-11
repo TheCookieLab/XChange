@@ -1,6 +1,7 @@
 package info.bitrich.xchangestream.kucoin.dto.uta;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,40 +21,49 @@ import lombok.Data;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class UtaWsFrame {
 
-  private String T;
-  private Long P;
-  private String t;
-  private String dp;
-  private JsonNode d;
+  @JsonProperty("T")
+  private String topic;
 
-  /** @return the channel portion of {@code T} (before the dot), or {@code null} */
+  @JsonProperty("P")
+  private Long timestamp;
+
+  @JsonProperty("t")
+  private String type;
+
+  @JsonProperty("dp")
+  private String depth;
+
+  @JsonProperty("d")
+  private JsonNode data;
+
+  /** @return the channel portion of the topic (before the dot), or {@code null} */
   public String channel() {
-    if (T == null) {
+    if (topic == null) {
       return null;
     }
-    int dot = T.indexOf('.');
-    return dot < 0 ? T : T.substring(0, dot);
+    int dot = topic.indexOf('.');
+    return dot < 0 ? topic : topic.substring(0, dot);
   }
 
-  /** @return the tradeType portion of {@code T} (after the dot), or {@code null} */
+  /** @return the tradeType portion of the topic (after the dot), or {@code null} */
   public String tradeType() {
-    if (T == null) {
+    if (topic == null) {
       return null;
     }
-    int dot = T.indexOf('.');
-    return dot < 0 ? null : T.substring(dot + 1);
+    int dot = topic.indexOf('.');
+    return dot < 0 ? null : topic.substring(dot + 1);
   }
 
   public String symbol() {
-    return d == null ? null : d.path("s").asText(null);
+    return data == null ? null : data.path("s").asText(null);
   }
 
   public boolean isSnapshot() {
-    return "snapshot".equals(t);
+    return "snapshot".equals(type);
   }
 
   public boolean isDelta() {
-    return "delta".equals(t);
+    return "delta".equals(type);
   }
 
   /** Order book payload: {@code {O, C, M, s, b: [[price,size]...], a: [[price,size]...]}}. */
@@ -72,12 +82,25 @@ public class UtaWsFrame {
   @Data
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class TickerData {
-    private BigDecimal a;
-    private BigDecimal A;
-    private BigDecimal b;
-    private BigDecimal B;
-    private BigDecimal l;
-    private BigDecimal q;
-    private String s;
+    @JsonProperty("a")
+    private BigDecimal ask;
+
+    @JsonProperty("A")
+    private BigDecimal askSize;
+
+    @JsonProperty("b")
+    private BigDecimal bid;
+
+    @JsonProperty("B")
+    private BigDecimal bidSize;
+
+    @JsonProperty("l")
+    private BigDecimal last;
+
+    @JsonProperty("q")
+    private BigDecimal lastSize;
+
+    @JsonProperty("s")
+    private String symbol;
   }
 }

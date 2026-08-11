@@ -65,15 +65,15 @@ public class UtaStreamingMarketDataService implements StreamingMarketDataService
         .map(node -> mapper.treeToValue(node, UtaWsFrame.class))
         .map(
             frame -> {
-              UtaWsFrame.TickerData d = mapper.treeToValue(frame.getD(), UtaWsFrame.TickerData.class);
+              UtaWsFrame.TickerData d = mapper.treeToValue(frame.getData(), UtaWsFrame.TickerData.class);
               return new Ticker.Builder()
                   .instrument(instrument)
-                  .bid(d.getB())
-                  .bidSize(d.getB())
-                  .ask(d.getA())
-                  .askSize(d.getA())
-                  .last(d.getL())
-                  .timestamp(new Date(nanosToMillis(frame.getP())))
+                  .bid(d.getBid())
+                  .bidSize(d.getBidSize())
+                  .ask(d.getAsk())
+                  .askSize(d.getAskSize())
+                  .last(d.getLast())
+                  .timestamp(new Date(nanosToMillis(frame.getTimestamp())))
                   .build();
             });
   }
@@ -106,7 +106,7 @@ public class UtaStreamingMarketDataService implements StreamingMarketDataService
         .map(node -> mapper.treeToValue(node, UtaWsFrame.class))
         .map(
             frame -> {
-              JsonNode d = frame.getD();
+              JsonNode d = frame.getData();
               BigDecimal price = d.path("price").isNumber() || d.path("price").isTextual()
                   ? d.path("price").decimalValue() : null;
               BigDecimal size = d.path("size").isNumber() || d.path("size").isTextual()
@@ -154,7 +154,7 @@ public class UtaStreamingMarketDataService implements StreamingMarketDataService
                   node -> {
                     UtaWsFrame frame = mapper.treeToValue(node, UtaWsFrame.class);
                     UtaWsFrame.OrderBookData d =
-                        mapper.treeToValue(frame.getD(), UtaWsFrame.OrderBookData.class);
+                        mapper.treeToValue(frame.getData(), UtaWsFrame.OrderBookData.class);
                     UtaOrderBookAssembler.Result result =
                         assembler.onUpdate(
                             frame.isSnapshot(),
@@ -172,7 +172,7 @@ public class UtaStreamingMarketDataService implements StreamingMarketDataService
                         return null;
                       case APPLIED:
                         return assembler.toOrderBook(
-                            instrument, new Date(nanosToMillis(frame.getP())));
+                            instrument, new Date(nanosToMillis(frame.getTimestamp())));
                       case STALE_DROPPED:
                       case AWAITING_SNAPSHOT:
                       default:
