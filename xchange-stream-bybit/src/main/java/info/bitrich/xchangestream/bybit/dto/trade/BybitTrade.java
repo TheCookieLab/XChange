@@ -22,6 +22,7 @@ public class BybitTrade {
   private final String direction;
   private final String tradeId;
   // boolean	Whether it is a block trade order or not
+  @JsonProperty("BT")
   private final boolean bT;
 
   public BybitTrade(

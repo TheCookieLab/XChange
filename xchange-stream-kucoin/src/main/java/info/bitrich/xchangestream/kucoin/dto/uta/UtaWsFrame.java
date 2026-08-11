@@ -70,8 +70,11 @@ public class UtaWsFrame {
   @Data
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class OrderBookData {
+    @JsonProperty("O")
     private Long O;
+    @JsonProperty("C")
     private Long C;
+    @JsonProperty("M")
     private Long M;
     private String s;
     private List<List<BigDecimal>> b;

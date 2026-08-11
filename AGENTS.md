@@ -85,6 +85,18 @@ worker path and branch names, for example
 ## Repo Conventions
 
 - The canonical module list is the root `pom.xml` `<modules>` section.
+- Lombok `@Data`/`@Getter`/`@Setter`/`@Value` DTOs: never rely on accessor-derived
+  property names for fields whose name has an uppercase letter in the first two
+  characters (e.g. `T`, `O`, `oT`, `qU`, `bT`, `fC`). Lombok generates
+  `getT()`/`getOT()`-style accessors, and Jackson's default legacy bean mangling
+  lowercases the leading uppercase run, so the JSON key (the field name) never
+  matches the derived property (`T` → `t`, `oT` → `ot`). The field is silently
+  dropped during deserialization — a runtime-only failure with no compile error.
+  Always put an explicit `@JsonProperty("<exact field name>")` on such fields
+  (constructor-param `@JsonProperty` for `@Value`/final-field DTOs). Never
+  declare two fields that differ only by case (e.g. `T` and `t`): Lombok
+  silently generates one `getT()`/`setT()` pair and the other field is never
+  bound.
 - The root project is `xchange-parent`.
 - A single-module worker must not change the parent POM. Record parent-POM needs
   as unresolved for the manager or a follow-up pass.
