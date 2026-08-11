@@ -70,9 +70,45 @@ public class UtaWsFrame {
   @Data
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class OrderBookData {
+    @JsonProperty("O")
     private Long O;
+
+    @JsonProperty("O")
+    public Long getO() {
+      return O;
+    }
+
+    @JsonProperty("O")
+    public void setO(Long O) {
+      this.O = O;
+    }
+
+    @JsonProperty("C")
     private Long C;
+
+    @JsonProperty("C")
+    public Long getC() {
+      return C;
+    }
+
+    @JsonProperty("C")
+    public void setC(Long C) {
+      this.C = C;
+    }
+
+    @JsonProperty("M")
     private Long M;
+
+    @JsonProperty("M")
+    public Long getM() {
+      return M;
+    }
+
+    @JsonProperty("M")
+    public void setM(Long M) {
+      this.M = M;
+    }
+
     private String s;
     private List<List<BigDecimal>> b;
     private List<List<BigDecimal>> a;
