@@ -170,6 +170,36 @@ class UtaTradeServicePlacementTest extends AbstractUtaResilienceTest {
   }
 
   @Test
+  void transportFailureWithInconclusiveReconcileStaysUnknownOutcome() throws Exception {
+    wireMockRule.stubFor(
+        WireMock.post(WireMock.urlPathEqualTo(PLACE_PATH))
+            .willReturn(
+                WireMock.aResponse()
+                    .withStatus(500)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"code\":\"500\",\"msg\":\"internal\"}")));
+    // Reconciliation itself fails with a transport error: the placement outcome stays unproven.
+    wireMockRule.stubFor(
+        WireMock.get(WireMock.urlPathEqualTo(DETAIL_PATH))
+            .willReturn(
+                WireMock.aResponse()
+                    .withStatus(500)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"code\":\"500\",\"msg\":\"reconcile failed\"}")));
+
+    UtaApiException e =
+        assertThrows(
+            UtaApiException.class,
+            () ->
+                createUtaExchange()
+                    .getUtaTradeService()
+                    .placeOrderSafe(request(), CurrencyPair.BTC_USDT));
+
+    assertEquals(RetryClassification.UNKNOWN_OUTCOME, e.getRetryClassification());
+    wireMockRule.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo(PLACE_PATH)));
+  }
+
+  @Test
   void placementBodyCarriesClientOidAndProviderSymbol() throws Exception {
     wireMockRule.stubFor(
         WireMock.post(WireMock.urlPathEqualTo(PLACE_PATH))

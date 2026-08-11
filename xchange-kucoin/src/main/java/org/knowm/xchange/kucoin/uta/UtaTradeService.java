@@ -127,7 +127,22 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
       }
       // Reconcile by client order id; never resubmit.
       String symbol = exchange.getUtaProviderSymbol(instrument);
-      UtaOrder existing = reconcileByClientOid(request.getTradeType(), symbol, request.getClientOid());
+      UtaOrder existing;
+      try {
+        existing =
+            reconcileByClientOid(request.getTradeType(), symbol, request.getClientOid());
+      } catch (UtaApiException reconcileFailure) {
+        // Reconciliation itself was inconclusive (e.g. transport failure): the placement outcome
+        // remains unproven, so the failure stays unknown-outcome — never retryable.
+        throw new UtaApiException(
+            "Placement outcome unknown and reconciliation failed: "
+                + reconcileFailure.getMessage(),
+            reconcileFailure,
+            org.knowm.xchange.kucoin.KucoinApiMode.UTA,
+            UtaDomains.TRADE,
+            "GET /api/ua/v1/unified/order/detail",
+            RetryClassification.UNKNOWN_OUTCOME);
+      }
       if (existing != null && existing.getOrderId() != null) {
         UtaOrderResult reconciled = new UtaOrderResult();
         reconciled.setTradeType(request.getTradeType());

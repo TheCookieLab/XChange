@@ -13,8 +13,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
-import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -43,8 +41,6 @@ public class UtaStreamingService extends JsonNettyStreamingService {
   private final String baseEndpoint;
   private final Supplier<String> tokenSupplier;
 
-  private volatile boolean welcomed;
-  private final Queue<String> pendingSubscriptions = new ArrayDeque<>();
   private Disposable pingSubscription;
 
   /**
@@ -110,7 +106,6 @@ public class UtaStreamingService extends JsonNettyStreamingService {
   }
 
   private void onWelcome(JsonNode welcome) {
-    welcomed = true;
     int pingInterval = welcome.path("pingInterval").asInt(30000);
     if (pingSubscription != null && !pingSubscription.isDisposed()) {
       pingSubscription.dispose();
@@ -125,13 +120,6 @@ public class UtaStreamingService extends JsonNettyStreamingService {
                   }
                 },
                 e -> LOG.warn("UTA ping loop failed", e));
-    flushPendingSubscriptions();
-  }
-
-  private void flushPendingSubscriptions() {
-    while (!pendingSubscriptions.isEmpty()) {
-      sendMessage(pendingSubscriptions.poll());
-    }
   }
 
   @Override
@@ -206,11 +194,7 @@ public class UtaStreamingService extends JsonNettyStreamingService {
     if (args != null && args.length > 3 && args[3] != null) {
       node.put("interval", args[3].toString());
     }
-    String message = objectMapper.writeValueAsString(node);
-    if (!welcomed) {
-      pendingSubscriptions.add(message);
-    }
-    return message;
+    return objectMapper.writeValueAsString(node);
   }
 
   @Override
@@ -227,7 +211,6 @@ public class UtaStreamingService extends JsonNettyStreamingService {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-      welcomed = false;
       if (pingSubscription != null && !pingSubscription.isDisposed()) {
         pingSubscription.dispose();
       }
