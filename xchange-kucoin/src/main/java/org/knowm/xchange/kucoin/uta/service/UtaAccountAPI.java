@@ -13,6 +13,9 @@ import org.knowm.xchange.kucoin.uta.dto.UtaAccountBalance;
 import org.knowm.xchange.kucoin.uta.dto.UtaAccountModeResponse;
 import org.knowm.xchange.kucoin.uta.dto.UtaAccountOverview;
 import org.knowm.xchange.kucoin.uta.dto.UtaFeeRates;
+import org.knowm.xchange.kucoin.uta.dto.UtaLedgerEntry;
+import org.knowm.xchange.kucoin.uta.dto.UtaModifyLeverageRequest;
+import org.knowm.xchange.kucoin.uta.dto.UtaModifyLeverageResult;
 import org.knowm.xchange.kucoin.uta.dto.UtaTransferQuota;
 import org.knowm.xchange.kucoin.uta.dto.UtaTransferRequest;
 import org.knowm.xchange.kucoin.uta.dto.UtaTransferResult;
@@ -95,5 +98,37 @@ public interface UtaAccountAPI {
       @HeaderParam(UtaConstants.API_HEADER_KEY_VERSION) String keyVersion,
       @QueryParam("tradeType") String tradeType,
       @QueryParam("symbol") String symbol)
+      throws IOException;
+
+  /** Modifies the futures leverage of a symbol. */
+  @POST
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Path("unified/account/modify-leverage")
+  UtaResponse<UtaModifyLeverageResult> modifyLeverage(
+      @HeaderParam(UtaConstants.API_HEADER_KEY) String apiKey,
+      @HeaderParam(UtaConstants.API_HEADER_SIGN) ParamsDigest signature,
+      @HeaderParam(UtaConstants.API_HEADER_TIMESTAMP) SynchronizedValueFactory<Long> nonce,
+      @HeaderParam(UtaConstants.API_HEADER_PASSPHRASE) String apiPassphrase,
+      @HeaderParam(UtaConstants.API_HEADER_KEY_VERSION) String keyVersion,
+      UtaModifyLeverageRequest request)
+      throws IOException;
+
+  /** Account ledger records; the response {@code data} is a bare array. */
+  @GET
+  @Path("account/ledger")
+  UtaResponse<java.util.List<UtaLedgerEntry>> getLedger(
+      @HeaderParam(UtaConstants.API_HEADER_KEY) String apiKey,
+      @HeaderParam(UtaConstants.API_HEADER_SIGN) ParamsDigest signature,
+      @HeaderParam(UtaConstants.API_HEADER_TIMESTAMP) SynchronizedValueFactory<Long> nonce,
+      @HeaderParam(UtaConstants.API_HEADER_PASSPHRASE) String apiPassphrase,
+      @HeaderParam(UtaConstants.API_HEADER_KEY_VERSION) String keyVersion,
+      @QueryParam("accountType") String accountType,
+      @QueryParam("currency") String currency,
+      @QueryParam("direction") String direction,
+      @QueryParam("businessType") String businessType,
+      @QueryParam("lastId") Long lastId,
+      @QueryParam("startAt") Long startAt,
+      @QueryParam("endAt") Long endAt,
+      @QueryParam("pageSize") Integer pageSize)
       throws IOException;
 }

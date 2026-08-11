@@ -16,6 +16,9 @@ import org.knowm.xchange.kucoin.uta.dto.UtaAccountBalance;
 import org.knowm.xchange.kucoin.uta.dto.UtaAccountModeResponse;
 import org.knowm.xchange.kucoin.uta.dto.UtaAccountOverview;
 import org.knowm.xchange.kucoin.uta.dto.UtaFeeRates;
+import org.knowm.xchange.kucoin.uta.dto.UtaLedgerEntry;
+import org.knowm.xchange.kucoin.uta.dto.UtaModifyLeverageRequest;
+import org.knowm.xchange.kucoin.uta.dto.UtaModifyLeverageResult;
 import org.knowm.xchange.kucoin.uta.dto.UtaTransferQuota;
 import org.knowm.xchange.kucoin.uta.dto.UtaTransferRequest;
 import org.knowm.xchange.kucoin.uta.dto.UtaTransferResult;
@@ -170,6 +173,65 @@ public class UtaAccountService extends UtaBaseService implements AccountService 
                 .call(),
         UtaDomains.FEE,
         "GET /api/ua/v1/user/fee-rate");
+  }
+
+  /** Modifies the futures leverage of a symbol. */
+  public UtaModifyLeverageResult modifyLeverage(UtaModifyLeverageRequest request)
+      throws IOException {
+    checkAuthenticated();
+    return callOrThrow(
+        () ->
+            decorateApiCall(
+                    () ->
+                        accountApi.modifyLeverage(
+                            apiKey,
+                            digest,
+                            nonceFactory,
+                            encryptedPassphrase,
+                            KEY_VERSION,
+                            request))
+                .withRetry(retry("utaModifyLeverage"))
+                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call(),
+        UtaDomains.POSITION,
+        "POST /api/ua/v1/unified/account/modify-leverage");
+  }
+
+  /** Account ledger records (transfers and balance changes) with cursor pagination. */
+  public java.util.List<UtaLedgerEntry> getLedger(
+      String accountType,
+      String currency,
+      String direction,
+      String businessType,
+      Long lastId,
+      Long startAt,
+      Long endAt,
+      Integer pageSize)
+      throws IOException {
+    checkAuthenticated();
+    return callOrThrow(
+        () ->
+            decorateApiCall(
+                    () ->
+                        accountApi.getLedger(
+                            apiKey,
+                            digest,
+                            nonceFactory,
+                            encryptedPassphrase,
+                            KEY_VERSION,
+                            accountType,
+                            currency,
+                            direction,
+                            businessType,
+                            lastId,
+                            startAt,
+                            endAt,
+                            pageSize))
+                .withRetry(retry("utaLedger"))
+                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call(),
+        UtaDomains.ACCOUNT,
+        "GET /api/ua/v1/account/ledger");
   }
 
   // ---- high-level XChange API ------------------------------------------------

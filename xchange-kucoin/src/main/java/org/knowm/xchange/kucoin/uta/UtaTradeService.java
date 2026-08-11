@@ -20,6 +20,9 @@ import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kucoin.KucoinExchange;
+import org.knowm.xchange.kucoin.uta.dto.UtaAmendOrderRequest;
+import org.knowm.xchange.kucoin.uta.dto.UtaBatchCancelRequest;
+import org.knowm.xchange.kucoin.uta.dto.UtaBatchCancelResult;
 import org.knowm.xchange.kucoin.uta.dto.UtaExecution;
 import org.knowm.xchange.kucoin.uta.dto.UtaExecutionHistory;
 import org.knowm.xchange.kucoin.uta.dto.UtaOrder;
@@ -27,7 +30,9 @@ import org.knowm.xchange.kucoin.uta.dto.UtaOrderCancelRequest;
 import org.knowm.xchange.kucoin.uta.dto.UtaOrderHistory;
 import org.knowm.xchange.kucoin.uta.dto.UtaOrderPlaceRequest;
 import org.knowm.xchange.kucoin.uta.dto.UtaOrderResult;
+import org.knowm.xchange.kucoin.uta.dto.UtaMarginMode;
 import org.knowm.xchange.kucoin.uta.dto.UtaPosition;
+import org.knowm.xchange.kucoin.uta.dto.UtaPositionHistory;
 import org.knowm.xchange.kucoin.uta.dto.UtaTradeType;
 import org.knowm.xchange.kucoin.uta.service.UtaApiException;
 import org.knowm.xchange.kucoin.uta.service.UtaExceptionClassifier;
@@ -352,6 +357,101 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                 .call(),
         UtaDomains.POSITION,
         "GET /api/ua/v1/unified/position/open-list");
+  }
+
+  /** Current futures margin mode (CROSS/ISOLATED) for one or all symbols. */
+  public UtaMarginMode getUtaMarginMode(String symbol) throws IOException {
+    checkAuthenticated();
+    return callOrThrow(
+        () ->
+            decorateApiCall(
+                    () ->
+                        positionApi.getMarginMode(
+                            apiKey,
+                            digest,
+                            nonceFactory,
+                            encryptedPassphrase,
+                            KEY_VERSION,
+                            symbol))
+                .withRetry(retry("utaMarginMode"))
+                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call(),
+        UtaDomains.POSITION,
+        "GET /api/ua/v1/unified/position/margin-mode");
+  }
+
+  /** Closed-position history; cursor paginated, each query bounded to 7x24 hours. */
+  public UtaPositionHistory getPositionHistory(
+      String symbol, Long startAt, Long endAt, Long lastId, Integer pageSize)
+      throws IOException {
+    checkAuthenticated();
+    return callOrThrow(
+        () ->
+            decorateApiCall(
+                    () ->
+                        positionApi.getPositionHistory(
+                            apiKey,
+                            digest,
+                            nonceFactory,
+                            encryptedPassphrase,
+                            KEY_VERSION,
+                            symbol,
+                            startAt,
+                            endAt,
+                            lastId,
+                            pageSize))
+                .withRetry(retry("utaPositionHistory"))
+                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call(),
+        UtaDomains.POSITION,
+        "GET /api/ua/v1/position/history");
+  }
+
+  /**
+   * Batch cancellation with per-item outcomes; partial failures are preserved in the returned
+   * items and never flattened into a single error.
+   */
+  public UtaBatchCancelResult batchCancel(UtaBatchCancelRequest request) throws IOException {
+    checkAuthenticated();
+    return UtaExceptionClassifier.classifyingExceptions(
+        () ->
+            decorateApiCall(
+                    () ->
+                        tradeApi.batchCancelOrders(
+                            apiKey,
+                            digest,
+                            nonceFactory,
+                            encryptedPassphrase,
+                            KEY_VERSION,
+                            request))
+                .withRetry(retry("utaBatchCancel"))
+                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call(),
+        UtaDomains.TRADE,
+        "POST /api/ua/v1/unified/order/cancel-batch");
+  }
+
+  /** Amends an existing order (currently futures only). */
+  public UtaOrderResult amendOrder(UtaAmendOrderRequest request) throws IOException {
+    checkAuthenticated();
+    return UtaExceptionClassifier.classifyingExceptions(
+        () ->
+            decorateApiCall(
+                    () ->
+                        tradeApi.amendOrder(
+                            apiKey,
+                            digest,
+                            nonceFactory,
+                            encryptedPassphrase,
+                            KEY_VERSION,
+                            request))
+                .withRetry(retry("utaAmendOrder"))
+                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
+                .call(),
+        UtaDomains.TRADE,
+        "POST /api/ua/v1/unified/order/amend",
+        request.getClientOid(),
+        request.getOrderId());
   }
 
   // ---- high-level XChange API ------------------------------------------------

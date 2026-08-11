@@ -11,7 +11,7 @@
 * **Lifecycle:** Ready for implementation
 * **Blocking state:** None
 * **Active phase:** Phase 1 — compatibility boundary and capability contract
-* **Overall checklist progress:** 3/8 phases complete (1, 2, 3, 5 checked; 4 and 6-8 in progress)
+* **Overall checklist progress:** 4/8 phases complete (1-5 checked; 6-8 in progress)
 
 ## Summary
 
@@ -103,7 +103,7 @@ Inventory existing public classes, examples, service interfaces, exchange parame
 1. [x] **Phase 1 — compatibility contract.** Touchpoints: `KucoinExchange`, existing exchange-specific parameters, public classic service interfaces, module docs. Define API-mode ownership, compatibility default, capability matrix, package boundary, and migration policy. Verification: compile/runtime classic compatibility fixture plus mode-mismatch tests.
 2. [x] **Phase 2 — UTA transport/auth foundation.** Touchpoints: new UTA common/auth/endpoint-policy packages in `xchange-kucoin`. Add deterministic signatures, endpoint overrides, time-drift diagnostics, redaction, structured errors, and retry classes. Verification: deterministic wire/error/auth fixtures.
 3. [x] **Phase 3 — metadata and public market data.** Touchpoints: UTA market raw service, metadata adapters, `remoteInit`/mode-specific initializer. Implement complete Spot/Futures product discovery and stable market APIs. Verification: multi-page catalog fixtures, exact numeric/filter mapping, no-private-credentials public init.
-4. [ ] **Phase 4 — unified account and trading.** Touchpoints: UTA account/position/margin/asset/trade raw services and high-level adapters. Implement balances/liabilities/collateral, positions/risk, transfers, orders/amends/cancels, fills/history, typed continuation. Verification: DTO/adaptor fixtures, pagination no-progress tests, partial-batch tests.
+4. [x] **Phase 4 — unified account and trading.** Touchpoints: UTA account/position/margin/asset/trade raw services and high-level adapters. Implement balances/liabilities/collateral, positions/risk, transfers, orders/amends/cancels, fills/history, typed continuation. Verification: DTO/adaptor fixtures, pagination no-progress tests, partial-batch tests.
 5. [x] **Phase 5 — placement safety.** Touchpoints: trade adapter, structured exception/reconciliation types. Validate client IDs and enforce unknown-outcome reconciliation with no blind replay. Verification: found/absent/inconclusive post-transmission scenarios.
 6. [ ] **Phase 6 — streaming transport modernization.** Touchpoints: `xchange-stream-kucoin` connection/auth/subscription lifecycle. Add mode-specific endpoints, generation IDs, heartbeat/token lifecycle, aggregate liveness, bounded reconnect, and full resubscription. Verification: stale-generation, reconnect, token refresh, idempotent disconnect fixtures.
 7. [ ] **Phase 7 — sequence-safe streams and WebSocket trading.** Touchpoints: depth assembler, private event adapters, WS trading request correlation. Add snapshot/delta continuity, gap rebuild, private dedupe, and disconnect replay classification. Verification: deterministic gap/duplicate/reconnect and pending-placement tests.

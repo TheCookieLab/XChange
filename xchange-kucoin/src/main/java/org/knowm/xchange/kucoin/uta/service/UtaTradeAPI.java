@@ -9,6 +9,9 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
+import org.knowm.xchange.kucoin.uta.dto.UtaAmendOrderRequest;
+import org.knowm.xchange.kucoin.uta.dto.UtaBatchCancelRequest;
+import org.knowm.xchange.kucoin.uta.dto.UtaBatchCancelResult;
 import org.knowm.xchange.kucoin.uta.dto.UtaExecutionHistory;
 import org.knowm.xchange.kucoin.uta.dto.UtaOrder;
 import org.knowm.xchange.kucoin.uta.dto.UtaOrderCancelRequest;
@@ -78,6 +81,30 @@ public interface UtaTradeAPI {
       @QueryParam("endAt") Long endAt,
       @QueryParam("lastId") Long lastId,
       @QueryParam("pageSize") Integer pageSize)
+      throws IOException;
+
+  @POST
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Path("unified/order/cancel-batch")
+  UtaResponse<UtaBatchCancelResult> batchCancelOrders(
+      @HeaderParam(UtaConstants.API_HEADER_KEY) String apiKey,
+      @HeaderParam(UtaConstants.API_HEADER_SIGN) ParamsDigest signature,
+      @HeaderParam(UtaConstants.API_HEADER_TIMESTAMP) SynchronizedValueFactory<Long> nonce,
+      @HeaderParam(UtaConstants.API_HEADER_PASSPHRASE) String apiPassphrase,
+      @HeaderParam(UtaConstants.API_HEADER_KEY_VERSION) String keyVersion,
+      UtaBatchCancelRequest request)
+      throws IOException;
+
+  @POST
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Path("unified/order/amend")
+  UtaResponse<UtaOrderResult> amendOrder(
+      @HeaderParam(UtaConstants.API_HEADER_KEY) String apiKey,
+      @HeaderParam(UtaConstants.API_HEADER_SIGN) ParamsDigest signature,
+      @HeaderParam(UtaConstants.API_HEADER_TIMESTAMP) SynchronizedValueFactory<Long> nonce,
+      @HeaderParam(UtaConstants.API_HEADER_PASSPHRASE) String apiPassphrase,
+      @HeaderParam(UtaConstants.API_HEADER_KEY_VERSION) String keyVersion,
+      UtaAmendOrderRequest request)
       throws IOException;
 
   @GET
