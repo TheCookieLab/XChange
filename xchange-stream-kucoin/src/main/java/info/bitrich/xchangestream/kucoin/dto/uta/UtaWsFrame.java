@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * UTA WebSocket frame: {@code {T, P, t?, dp?, d?}}.
@@ -71,10 +73,16 @@ public class UtaWsFrame {
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class OrderBookData {
     @JsonProperty("O")
+    @Getter(onMethod_ = @JsonProperty("O"))
+    @Setter(onMethod_ = @JsonProperty("O"))
     private Long O;
     @JsonProperty("C")
+    @Getter(onMethod_ = @JsonProperty("C"))
+    @Setter(onMethod_ = @JsonProperty("C"))
     private Long C;
     @JsonProperty("M")
+    @Getter(onMethod_ = @JsonProperty("M"))
+    @Setter(onMethod_ = @JsonProperty("M"))
     private Long M;
     private String s;
     private List<List<BigDecimal>> b;

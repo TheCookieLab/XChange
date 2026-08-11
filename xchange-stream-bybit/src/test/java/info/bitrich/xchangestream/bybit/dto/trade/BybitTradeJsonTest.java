@@ -49,5 +49,7 @@ public class BybitTradeJsonTest {
     String json = MAPPER.writeValueAsString(trade);
 
     assertThat(json).contains("\"BT\":true");
+    // the implicit isBT() property must merge into "BT", not surface as "bt"
+    assertThat(json).doesNotContain("\"bt\":");
   }
 }

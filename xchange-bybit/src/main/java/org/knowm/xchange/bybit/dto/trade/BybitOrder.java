@@ -16,6 +16,8 @@ import org.knowm.xchange.instrument.Instrument;
 public class BybitOrder extends Order {
 
   @JsonProperty("sLTriggerPrice")
+  @Getter(onMethod_ = @JsonProperty("sLTriggerPrice"))
+  @Setter(onMethod_ = @JsonProperty("sLTriggerPrice"))
   private BigDecimal sLTriggerPrice;
   private SlTriggerBy slTriggerBy;
   private BigDecimal slLimitPrice;

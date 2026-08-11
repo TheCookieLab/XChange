@@ -1,6 +1,8 @@
 package info.bitrich.xchangestream.kucoin.dto.uta;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
@@ -48,6 +50,61 @@ class UtaOrderDataParsingTest {
     assertEquals(new BigDecimal("90000"), order.getP());
     assertEquals(new BigDecimal("0.05"), order.getF());
     assertEquals("BUY", order.getT());
+  }
+
+  @Test
+  void serializesWithExactCaseKeys() throws Exception {
+    UtaOrderData order = new UtaOrderData();
+    order.setO(1L);
+    order.setU(2L);
+    order.setOT("x");
+    order.setQU("90");
+    order.setAP(new BigDecimal("1"));
+    order.setFS(new BigDecimal("0.1"));
+    order.setFC("USDT");
+    order.setRS(new BigDecimal("0.2"));
+    order.setCR("r");
+    order.setTIF("GTC");
+    order.setPO(true);
+    order.setRO(false);
+    order.setMM("m");
+    order.setPS("p");
+    order.setLR("l");
+
+    String json = MAPPER.writeValueAsString(order);
+
+    assertTrue(json.contains("\"O\":1"), json);
+    assertTrue(json.contains("\"U\":2"), json);
+    assertTrue(json.contains("\"oT\":\"x\""), json);
+    assertTrue(json.contains("\"qU\":\"90\""), json);
+    assertTrue(json.contains("\"aP\":1"), json);
+    assertTrue(json.contains("\"fS\":0.1"), json);
+    assertTrue(json.contains("\"fC\":\"USDT\""), json);
+    assertTrue(json.contains("\"rS\":0.2"), json);
+    assertTrue(json.contains("\"cR\":\"r\""), json);
+    assertTrue(json.contains("\"tIF\":\"GTC\""), json);
+    assertTrue(json.contains("\"pO\":true"), json);
+    assertTrue(json.contains("\"rO\":false"), json);
+    assertTrue(json.contains("\"mM\":\"m\""), json);
+    assertTrue(json.contains("\"pS\":\"p\""), json);
+    assertTrue(json.contains("\"lR\":\"l\""), json);
+    // implicit accessor properties (legacy-mangled keys) must merge into the
+    // explicit @JsonProperty names instead of being emitted alongside them
+    assertFalse(json.contains("\"o\":"), json);
+    assertFalse(json.contains("\"u\":"), json);
+    assertFalse(json.contains("\"ot\":"), json);
+    assertFalse(json.contains("\"qu\":"), json);
+    assertFalse(json.contains("\"ap\":"), json);
+    assertFalse(json.contains("\"fs\":"), json);
+    assertFalse(json.contains("\"fc\":"), json);
+    assertFalse(json.contains("\"rs\":"), json);
+    assertFalse(json.contains("\"cr\":"), json);
+    assertFalse(json.contains("\"tif\":"), json);
+    assertFalse(json.contains("\"po\":"), json);
+    assertFalse(json.contains("\"ro\":"), json);
+    assertFalse(json.contains("\"mm\":"), json);
+    assertFalse(json.contains("\"ps\":"), json);
+    assertFalse(json.contains("\"lr\":"), json);
   }
 
   @Test
