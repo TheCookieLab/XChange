@@ -197,18 +197,14 @@ public class UtaStreamingService extends JsonNettyStreamingService {
         node.put("tradeType", args[0].toString());
       }
     }
-      if (args.length > 1 && args[1] != null) {
-        node.put("symbol", args[1].toString());
-      }
-      if (args.length > 2 && args[2] != null) {
-        node.put("depth", args[2].toString());
-      }
-      if (args.length > 3 && args[3] != null) {
-        node.put("interval", args[3].toString());
-      }
-      if (args.length > 4 && args[4] != null) {
-        node.put("accountType", args[4].toString());
-      }
+    if (args != null && args.length > 1 && args[1] != null) {
+      node.put("symbol", args[1].toString());
+    }
+    if (args != null && args.length > 2 && args[2] != null) {
+      node.put("depth", args[2].toString());
+    }
+    if (args != null && args.length > 3 && args[3] != null) {
+      node.put("interval", args[3].toString());
     }
     String message = objectMapper.writeValueAsString(node);
     if (!welcomed) {
