@@ -110,7 +110,10 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
   private Observable<OrderBook> processOrderBookPush(
       BitgetUtaV3WsNotification notification, Instrument instrument, BitgetUtaV3Channel channel) {
     String subscriptionId = channel.toSubscriptionId();
-    BitgetUtaV3OrderBookAssembler assembler = assemblers.get(subscriptionId);
+    // recreate lazily: the shared channel evicts the assembler when the last subscriber leaves, so
+    // a later resubscription of the same observable must not hit a null assembler (PRD CF-451)
+    BitgetUtaV3OrderBookAssembler assembler =
+        assemblers.computeIfAbsent(subscriptionId, id -> new BitgetUtaV3OrderBookAssembler());
     List<OrderBook> books = new ArrayList<>();
     for (JsonNode item : notification.getPayloadItems()) {
       BitgetUtaV3OrderBookData data;

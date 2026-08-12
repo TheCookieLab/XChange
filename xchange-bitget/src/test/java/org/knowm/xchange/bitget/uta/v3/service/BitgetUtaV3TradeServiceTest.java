@@ -190,6 +190,123 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   }
 
   /**
+   * The fills endpoint filters by category only (no symbol parameter), so a request scoped to one
+   * instrument must not return fills of other instruments in the same category. PRD CF-451 requires
+   * that trade-history accounting data matches the requested symbol.
+   */
+  @Test
+  void trade_history_filters_fills_by_requested_instrument() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e1\",\"orderId\":\"42\","
+                            + "\"clientOid\":\"c42\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"},"
+                            + "{\"execId\":\"e2\",\"orderId\":\"77\",\"clientOid\":\"c77\","
+                            + "\"category\":\"spot\",\"symbol\":\"ETHUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"3500\","
+                            + "\"execQty\":\"1\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"\"}}")));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    assertThat(trades.getUserTrades()).hasSize(1);
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e1");
+    assertThat(trades.getUserTrades().get(0).getInstrument())
+        .isEqualTo(CurrencyPair.BTC_USDT);
+  }
+
+  /**
+   * When the requested limit exceeds the provider page size, the aggregate must be trimmed to the
+   * limit instead of returning the overshoot from the final page, so callers can rely on {@code
+   * TradeHistoryParamLimit}.
+   */
+  @Test
+  void trade_history_truncates_to_requested_limit() throws Exception {
+    StringBuilder page1 = new StringBuilder();
+    for (int i = 1; i <= 100; i++) {
+      page1
+          .append("{\"execId\":\"e")
+          .append(i)
+          .append("\",\"orderId\":\"")
+          .append(i)
+          .append("\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\",")
+          .append("\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\",")
+          .append("\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"},");
+    }
+    page1.setLength(page1.length() - 1); // drop trailing comma
+    StringBuilder page2 = new StringBuilder();
+    for (int i = 101; i <= 200; i++) {
+      page2
+          .append("{\"execId\":\"e")
+          .append(i)
+          .append("\",\"orderId\":\"")
+          .append(i)
+          .append("\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\",")
+          .append("\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\",")
+          .append("\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"},");
+    }
+    page2.setLength(page2.length() - 1);
+    // newest page first: the cursor-absent call returns page 1 and hands back cursor C1,
+    // exactly like the provider (see trade_history_follows_cursor_pages)
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":["
+                            + page1
+                            + "],\"cursor\":\"C1\"}}")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.equalTo("C1"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":["
+                            + page2
+                            + "],\"cursor\":\"\"}}")));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setLimit(150);
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    assertThat(trades.getUserTrades()).hasSize(150);
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e1");
+    assertThat(
+            trades.getUserTrades().stream()
+                .map(t -> t.getId())
+                .collect(java.util.stream.Collectors.toList()))
+        .isEqualTo(
+            java.util.stream.IntStream.rangeClosed(1, 150)
+                .mapToObj(i -> "e" + i)
+                .collect(java.util.stream.Collectors.toList()));
+  }
+
+  /**
    * Same contract for open orders: unfilled-orders paginates by cursor, so a single 100-row page
    * silently drops older open orders. All pages must be aggregated.
    */

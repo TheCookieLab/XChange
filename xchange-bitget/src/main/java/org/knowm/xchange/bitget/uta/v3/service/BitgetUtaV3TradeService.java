@@ -136,6 +136,10 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
             : String.valueOf(historyParams.getEndTime().getTime());
     Integer limit = historyParams.getLimit();
     final String requestCategory = category == null ? null : category.getWireName();
+    final String requestSymbol =
+        historyParams.getInstrument() == null
+            ? null
+            : BitgetUtaV3Adapters.toString(historyParams.getInstrument());
     final String requestStartTime = startTime;
     final String requestEndTime = endTime;
     final int pageSize = limit == null ? 100 : Math.min(limit, 100);
@@ -144,7 +148,13 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
             (cursor) ->
                 getFills(requestCategory, null, requestStartTime, requestEndTime, pageSize, cursor),
             limit);
-    List<UserTrade> trades = rows.stream().map(this::toUserTrade).collect(Collectors.toList());
+    List<UserTrade> trades =
+        rows.stream()
+            // the fills endpoint filters by category only, so client-side symbol filtering is
+            // required to honor TradeHistoryParamInstrument (PRD CF-451)
+            .filter(row -> requestSymbol == null || requestSymbol.equals(row.getSymbol()))
+            .map(this::toUserTrade)
+            .collect(Collectors.toList());
     return new UserTrades(trades, TradeSortType.SortByID);
   }
 
@@ -188,7 +198,9 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
         rows.addAll(page.getList());
       }
       if (maxRows != null && rows.size() >= maxRows) {
-        return rows;
+        // the provider returns full pages, so the final page can overshoot the requested limit;
+        // trim the aggregate so callers can rely on TradeHistoryParamLimit (PRD CF-451)
+        return new java.util.ArrayList<>(rows.subList(0, maxRows));
       }
       String nextCursor = page == null ? null : page.getCursor();
       if (nextCursor == null || nextCursor.isEmpty()) {
