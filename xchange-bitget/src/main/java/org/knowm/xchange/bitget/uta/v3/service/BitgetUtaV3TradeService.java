@@ -80,12 +80,11 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
         symbol = BitgetUtaV3Adapters.toString(instrument);
       }
     }
-    // unfilled-orders returns both spot and futures; use one page (newest 100) without
-    // a symbol filter when none was requested
-    BitgetUtaV3CursorPage<BitgetUtaV3Order> page =
-        getUnfilledOrders(null, symbol, null, null, 100, null);
+    // unfilled-orders returns both spot and futures; paginate through every page so that
+    // nothing beyond the first 100 rows is silently dropped
+    final String requestSymbol = symbol;
     List<BitgetUtaV3Order> rows =
-        page == null || page.getList() == null ? List.of() : page.getList();
+        fetchAllPages((cursor) -> getUnfilledOrders(null, requestSymbol, null, null, 100, cursor));
     List<LimitOrder> orders =
         rows.stream()
             .map(this::toOrder)
@@ -136,16 +135,21 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
             ? null
             : String.valueOf(historyParams.getEndTime().getTime());
     Integer limit = historyParams.getLimit();
-    BitgetUtaV3CursorPage<BitgetUtaV3Fill> page =
-        getFills(
-            category == null ? null : category.getWireName(),
-            null,
-            startTime,
-            endTime,
-            limit,
-            null);
+    final String requestCategory = category == null ? null : category.getWireName();
+    final String requestStartTime = startTime;
+    final String requestEndTime = endTime;
+    final int pageSize = limit == null ? 100 : Math.min(limit, 100);
     List<BitgetUtaV3Fill> rows =
-        page == null || page.getList() == null ? List.of() : page.getList();
+        fetchAllPages(
+            (cursor) ->
+                getFills(
+                    requestCategory,
+                    null,
+                    requestStartTime,
+                    requestEndTime,
+                    pageSize,
+                    cursor),
+            limit);
     List<UserTrade> trades = rows.stream().map(this::toUserTrade).collect(Collectors.toList());
     return new UserTrades(trades, TradeSortType.SortByID);
   }
@@ -167,6 +171,47 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
             .filter(java.util.Objects::nonNull)
             .collect(Collectors.toList());
     return new OpenPositions(open);
+  }
+
+  /**
+   * Fetches every cursor page, oldest included, until the provider returns an empty cursor.
+   *
+   * <p>Guards: aggregation is bounded by {@code maxRows} when non-null, and a provider that repeats
+   * its cursor (no progress) raises {@link org.knowm.xchange.exceptions.ExchangeException} instead
+   * of looping forever or returning silently-truncated data.
+   */
+  private <T> List<T> fetchAllPages(PageFetcher<T> fetcher) throws IOException {
+    return fetchAllPages(fetcher, null);
+  }
+
+  private <T> List<T> fetchAllPages(PageFetcher<T> fetcher, Integer maxRows) throws IOException {
+    List<T> rows = new java.util.ArrayList<>();
+    String cursor = null;
+    String previousCursor = null;
+    while (true) {
+      BitgetUtaV3CursorPage<T> page = fetcher.fetch(cursor);
+      if (page != null && page.getList() != null) {
+        rows.addAll(page.getList());
+      }
+      if (maxRows != null && rows.size() >= maxRows) {
+        return rows;
+      }
+      String nextCursor = page == null ? null : page.getCursor();
+      if (nextCursor == null || nextCursor.isEmpty()) {
+        return rows;
+      }
+      if (nextCursor.equals(previousCursor)) {
+        throw new org.knowm.xchange.exceptions.ExchangeException(
+            "Provider cursor did not advance between pages: " + nextCursor);
+      }
+      previousCursor = cursor;
+      cursor = nextCursor;
+    }
+  }
+
+  @FunctionalInterface
+  private interface PageFetcher<T> {
+    BitgetUtaV3CursorPage<T> fetch(String cursor) throws IOException;
   }
 
   private Order toOrder(BitgetUtaV3Order dto) {
