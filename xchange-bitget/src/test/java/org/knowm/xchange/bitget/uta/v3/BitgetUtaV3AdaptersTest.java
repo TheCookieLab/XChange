@@ -475,6 +475,21 @@ class BitgetUtaV3AdaptersTest {
   }
 
   @Test
+  void swap_and_perpetual_prompts_are_perpetuals_when_formatting_symbols() {
+    // the core FuturesContract.isPerpetual() predicate recognizes every perpetual prompt; an
+    // exact-match check would append the prompt and target a nonexistent dated symbol
+    assertThat(BitgetUtaV3Adapters.toString(new FuturesContract(CurrencyPair.BTC_USDT, "SWAP")))
+        .isEqualTo("BTCUSDT");
+    assertThat(
+            BitgetUtaV3Adapters.toString(new FuturesContract(CurrencyPair.BTC_USDT, "PERPETUAL")))
+        .isEqualTo("BTCUSDT");
+    assertThat(BitgetUtaV3Adapters.toString(new FuturesContract(CurrencyPair.BTC_USDT, "perp")))
+        .isEqualTo("BTCUSDT");
+    assertThat(BitgetUtaV3Adapters.toString(new FuturesContract(CurrencyPair.BTC_USDT, "1226")))
+        .isEqualTo("BTCUSDT1226");
+  }
+
+  @Test
   void dated_and_perp_rows_on_the_same_pair_do_not_collapse() {
     BitgetUtaV3Instrument delivery =
         BitgetUtaV3Instrument.builder()

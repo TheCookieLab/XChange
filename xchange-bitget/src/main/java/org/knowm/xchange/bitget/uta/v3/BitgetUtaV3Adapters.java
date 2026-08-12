@@ -62,7 +62,10 @@ public class BitgetUtaV3Adapters {
       String symbol =
           contract.getCurrencyPair().getBase().getCurrencyCode()
               + contract.getCurrencyPair().getCounter().getCurrencyCode();
-      if (!"PERP".equals(contract.getPrompt())) {
+      // the core predicate recognizes every perpetual prompt (PERP, SWAP, PERPETUAL, any casing);
+      // a narrower exact comparison would append the prompt to the provider symbol and target a
+      // nonexistent dated contract (e.g. BTCUSDTSWAP)
+      if (!contract.isPerpetual()) {
         symbol += contract.getPrompt();
       }
       return symbol;

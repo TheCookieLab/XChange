@@ -133,6 +133,24 @@ class BitgetUtaV3StreamingNotConnectedTest {
   }
 
   @Test
+  void composingMarketDataObservablesWithoutSubscribingRetainsNothing() throws Exception {
+    TestableStreamingService service = new TestableStreamingService();
+    BitgetUtaV3StreamingMarketDataService marketData =
+        new BitgetUtaV3StreamingMarketDataService(service);
+    service.open();
+
+    // composing observable feeds without subscribing (e.g. optional combinations) must not
+    // materialize cache entries, assemblers, or channel registrations for the service lifetime
+    marketData.getTicker(CurrencyPair.BTC_USDT);
+    marketData.getTicker(CurrencyPair.ETH_USDT);
+    marketData.getOrderBook(CurrencyPair.BTC_USDT);
+
+    assertThat(marketDataSharedChannels(marketData)).isEmpty();
+    assertThat(service.containsChannel(BTC_TICKER.toSubscriptionId())).isFalse();
+    assertThat(service.frames()).isEmpty();
+  }
+
+  @Test
   void sharedChannelEvictsTerminatedStreamSoRetryRebuilds() throws Exception {
     TestableStreamingService service = new TestableStreamingService();
 

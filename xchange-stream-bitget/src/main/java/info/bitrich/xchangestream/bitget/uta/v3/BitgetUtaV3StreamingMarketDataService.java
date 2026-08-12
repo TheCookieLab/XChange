@@ -80,6 +80,11 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
     Observable<BitgetUtaV3WsNotification> shared =
         service
             .subscribeChannel(null, channel)
+            // cache entries are materialized only for live subscriptions: composing observables
+            // for symbols or intervals that are never subscribed to (e.g. optional feed
+            // combinations) must not retain shared observables or assemblers for the service
+            // lifetime
+            .doOnSubscribe(ignored -> sharedChannels.putIfAbsent(subscriptionId, ref.get()))
             .doOnError(t -> sharedChannels.remove(subscriptionId, ref.get()))
             .doFinally(
                 () -> {
@@ -92,7 +97,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
                 })
             .share();
     ref.set(shared);
-    return sharedChannels.computeIfAbsent(subscriptionId, id -> ref.get());
+    return shared;
   }
 
   /** Test seam (same package): the cached shared observables keyed by subscription id. */
@@ -124,8 +129,10 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
             .topic(topic)
             .symbol(BitgetUtaV3StreamingAdapters.toString(instrument))
             .build();
-    String subscriptionId = channel.toSubscriptionId();
-    assemblers.computeIfAbsent(subscriptionId, id -> new BitgetUtaV3OrderBookAssembler());
+    // no eager assembler here: the assembler is created lazily on the first real push, and the
+    // shared channel evicts it when the last subscriber leaves, so composing order-book
+    // observables for symbols never subscribed to cannot retain assemblers for the service
+    // lifetime
 
     return sharedChannel(channel)
         .flatMap(notification -> processOrderBookPush(notification, instrument, channel))
