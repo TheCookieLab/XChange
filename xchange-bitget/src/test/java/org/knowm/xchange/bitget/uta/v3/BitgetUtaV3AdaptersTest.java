@@ -1,0 +1,66 @@
+package org.knowm.xchange.bitget.uta.v3;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import org.junit.jupiter.api.Test;
+import org.knowm.xchange.bitget.config.BitgetJacksonObjectMapperFactory;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.trade.MarketOrder;
+
+/**
+ * Wire-contract tests for {@link BitgetUtaV3Adapters#toPlaceOrderRequest(MarketOrder)}.
+ *
+ * <p>The UTA v3 place-order endpoint ({@code POST /api/v3/trade/place-order}) accepts exactly one
+ * size parameter: {@code qty} (required). There is no {@code amount} parameter; per the official
+ * docs {@code qty} is the base-coin quantity for limit and market-sell orders and the quote-coin
+ * spend for market-buy orders on spot/margin categories.
+ */
+class BitgetUtaV3AdaptersTest {
+
+  private static final ObjectMapper MAPPER = mapper();
+
+  private static ObjectMapper mapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    new BitgetJacksonObjectMapperFactory().configureObjectMapper(mapper);
+    return mapper;
+  }
+
+  @Test
+  void spot_market_buy_uses_qty_not_amount() {
+    MarketOrder buy =
+        new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("100"))
+            .userReference("buy-1")
+            .build();
+
+    JsonNode json = MAPPER.valueToTree(BitgetUtaV3Adapters.toPlaceOrderRequest(buy));
+
+    assertThat(json.get("category").asText()).isEqualTo("spot");
+    assertThat(json.get("orderType").asText()).isEqualTo("market");
+    assertThat(json.has("qty")).as("spot market order must carry the required qty field").isTrue();
+    assertThat(json.get("qty").asText()).isEqualTo("100");
+    assertThat(json.has("amount"))
+        .as("v3 place-order has no amount parameter; amount must not be sent")
+        .isFalse();
+  }
+
+  @Test
+  void spot_market_sell_uses_qty_not_amount() {
+    MarketOrder sell =
+        new MarketOrder.Builder(OrderType.ASK, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.5"))
+            .userReference("sell-1")
+            .build();
+
+    JsonNode json = MAPPER.valueToTree(BitgetUtaV3Adapters.toPlaceOrderRequest(sell));
+
+    assertThat(json.get("category").asText()).isEqualTo("spot");
+    assertThat(json.has("qty")).isTrue();
+    assertThat(json.get("qty").asText()).isEqualTo("0.5");
+    assertThat(json.has("amount")).isFalse();
+  }
+}
