@@ -1,6 +1,5 @@
 package org.knowm.xchange.bitget.config;
 
-import java.util.Objects;
 import org.knowm.xchange.ExchangeSpecification;
 
 /**
@@ -32,12 +31,14 @@ public final class BitgetConfiguration {
    * Builds a configuration from an exchange specification, validating typed parameters and applying
    * the documented defaults when they are absent.
    *
+   * <p>{@code null} mirrors {@link
+   * org.knowm.xchange.BaseExchange#applySpecification(org.knowm.xchange.ExchangeSpecification)},
+   * which treats a null specification as "use the defaults".
+   *
    * @throws IllegalArgumentException when a parameter value is invalid, with an actionable message.
    */
   public static BitgetConfiguration from(ExchangeSpecification specification) {
-    Objects.requireNonNull(specification, "specification");
-    BitgetApiMode apiMode = readApiMode(specification);
-    return new BitgetConfiguration(apiMode);
+    return new BitgetConfiguration(readApiMode(specification));
   }
 
   /** The API/account mode this exchange instance is configured for. */
@@ -46,6 +47,9 @@ public final class BitgetConfiguration {
   }
 
   private static BitgetApiMode readApiMode(ExchangeSpecification specification) {
+    if (specification == null) {
+      return DEFAULT_API_MODE;
+    }
     Object value = specification.getExchangeSpecificParametersItem(API_MODE);
     if (value == null) {
       return DEFAULT_API_MODE;
