@@ -8,8 +8,6 @@ import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3Adapters;
 import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Category;
 import org.knowm.xchange.bitget.uta.v3.market.BitgetUtaV3Instrument;
 import org.knowm.xchange.instrument.Instrument;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Lazily resolves provider {@code (category, symbol)} pairs to XChange {@link Instrument}s by
@@ -17,10 +15,10 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Used when converting order/fill/position DTOs, whose identity is provider-native, back to
  * XChange instruments. The cache is per-service-instance and is not tied to {@code remoteInit()}.
+ * Instrument-catalog failures propagate so a transient public-endpoint failure can never silently
+ * pair private order/fill/position data with a {@code null} instrument.
  */
 class BitgetUtaV3InstrumentRegistry {
-
-  private static final Logger LOG = LoggerFactory.getLogger(BitgetUtaV3InstrumentRegistry.class);
 
   private final BitgetUtaV3MarketDataServiceRaw marketData;
   private final Map<BitgetUtaV3Category, Map<String, Instrument>> byCategory =
@@ -31,11 +29,15 @@ class BitgetUtaV3InstrumentRegistry {
   }
 
   /** Resolves an instrument, or {@code null} when the category/symbol is unknown. */
-  Instrument resolve(BitgetUtaV3Category category, String symbol) {
+  Instrument resolve(BitgetUtaV3Category category, String symbol) throws IOException {
     if (symbol == null) {
       return null;
     }
-    Map<String, Instrument> mapping = byCategory.computeIfAbsent(category, this::loadCategory);
+    Map<String, Instrument> mapping = byCategory.get(category);
+    if (mapping == null) {
+      mapping = loadCategory(category);
+      byCategory.put(category, mapping);
+    }
     Instrument instrument = mapping.get(symbol);
     if (instrument == null) {
       // symbol not in cache (e.g. delisted): try a fresh fetch once
@@ -46,18 +48,13 @@ class BitgetUtaV3InstrumentRegistry {
     return instrument;
   }
 
-  private Map<String, Instrument> loadCategory(BitgetUtaV3Category category) {
+  private Map<String, Instrument> loadCategory(BitgetUtaV3Category category) throws IOException {
     Map<String, Instrument> mapping = new ConcurrentHashMap<>();
-    try {
-      List<BitgetUtaV3Instrument> rows = marketData.getInstruments(category, null);
-      if (rows != null) {
-        for (BitgetUtaV3Instrument row : rows) {
-          mapping.put(row.getSymbol(), BitgetUtaV3Adapters.toInstrument(row));
-        }
+    List<BitgetUtaV3Instrument> rows = marketData.getInstruments(category, null);
+    if (rows != null) {
+      for (BitgetUtaV3Instrument row : rows) {
+        mapping.put(row.getSymbol(), BitgetUtaV3Adapters.toInstrument(row));
       }
-    } catch (IOException e) {
-      // leave the mapping empty; callers fall back to symbol-based identity
-      LOG.warn("Failed to load {} instruments; falling back to symbol-based identity", category, e);
     }
     return mapping;
   }

@@ -205,7 +205,12 @@ public class BitgetUtaV3Adapters {
             .timeInForce("gtc")
             .clientOid(limitOrder.getUserReference());
     if (category.isDerivative()) {
-      builder.marginMode("crossed").holdMode("one_way_mode");
+      builder.marginMode(
+              limitOrder.hasFlag(BitgetUtaV3OrderFlags.ISOLATED_MARGIN) ? "isolated" : "crossed")
+          .holdMode(
+              limitOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)
+                  ? "two_way_mode"
+                  : "one_way_mode");
     }
     return builder.build();
   }
@@ -229,7 +234,12 @@ public class BitgetUtaV3Adapters {
             .qty(marketOrder.getOriginalAmount())
             .clientOid(marketOrder.getUserReference());
     if (category.isDerivative()) {
-      builder.marginMode("crossed").holdMode("one_way_mode");
+      builder.marginMode(
+              marketOrder.hasFlag(BitgetUtaV3OrderFlags.ISOLATED_MARGIN) ? "isolated" : "crossed")
+          .holdMode(
+              marketOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)
+                  ? "two_way_mode"
+                  : "one_way_mode");
     }
     return builder.build();
   }

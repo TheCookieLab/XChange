@@ -82,6 +82,12 @@ public class BitgetUtaV3TradeServiceRaw extends BitgetUtaV3BaseService {
           .getData();
     } catch (BitgetUtaV3Exception e) {
       throw BitgetUtaV3ErrorAdapter.adapt(e);
+    } catch (IOException e) {
+      // Transport failure (read timeout, connection reset): the provider may still have accepted
+      // the strategy order. Same unknown-outcome contract as placeOrder — never replay blindly.
+      // clientOid is only echoed for tpsl orders (trigger orders do not support it), so the
+      // exception carries it only when the DTO did.
+      throw new BitgetUtaV3UnknownOutcomeException(e, request.getClientOid());
     }
   }
 

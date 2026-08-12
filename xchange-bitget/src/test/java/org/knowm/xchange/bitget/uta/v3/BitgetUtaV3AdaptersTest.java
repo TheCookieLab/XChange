@@ -8,7 +8,9 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitget.config.BitgetJacksonObjectMapperFactory;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 
 /**
@@ -64,5 +66,54 @@ class BitgetUtaV3AdaptersTest {
     assertThat(json.has("qty")).isTrue();
     assertThat(json.get("qty").asText()).isEqualTo("0.5");
     assertThat(json.has("amount")).isFalse();
+  }
+
+  @Test
+  void futures_limit_order_defaults_to_cross_one_way() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("category").asText()).isEqualTo("usdt-futures");
+    assertThat(json.get("marginMode").asText()).isEqualTo("crossed");
+    assertThat(json.get("holdMode").asText()).isEqualTo("one_way_mode");
+  }
+
+  @Test
+  void futures_limit_order_flags_select_isolated_hedge_mode() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .flag(BitgetUtaV3OrderFlags.ISOLATED_MARGIN)
+            .flag(BitgetUtaV3OrderFlags.HEDGE_MODE)
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("marginMode").asText()).isEqualTo("isolated");
+    assertThat(json.get("holdMode").asText()).isEqualTo("two_way_mode");
+  }
+
+  @Test
+  void futures_market_order_flags_select_isolated_hedge_mode() throws Exception {
+    MarketOrder order =
+        new MarketOrder.Builder(OrderType.ASK, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.5"))
+            .flag(BitgetUtaV3OrderFlags.ISOLATED_MARGIN)
+            .flag(BitgetUtaV3OrderFlags.HEDGE_MODE)
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("marginMode").asText()).isEqualTo("isolated");
+    assertThat(json.get("holdMode").asText()).isEqualTo("two_way_mode");
   }
 }

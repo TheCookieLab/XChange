@@ -11,6 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3ExchangeWiremock;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3UnknownOutcomeException;
+import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3StrategyOrderRequest;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.OpenPosition;
@@ -19,6 +20,7 @@ import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamCurrencyPair;
+import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
 
@@ -668,5 +670,148 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     assertThat(position.getPrice()).isEqualByComparingTo("60000");
     assertThat(position.getLiquidationPrice()).isEqualByComparingTo("45000");
     assertThat(position.getUnRealisedPnl()).isEqualByComparingTo("100");
+  }
+
+  /**
+   * Standard core {@code TradeHistoryParamInstrument} implementations must be honored, not
+   * discarded by an exact-type gate: the requested instrument filters fills even when the caller
+   * never touches the exchange-specific params class.
+   */
+  @Test
+  void generic_trade_history_params_honor_requested_instrument() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e1\",\"orderId\":\"42\","
+                            + "\"clientOid\":\"c42\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"},"
+                            + "{\"execId\":\"e2\",\"orderId\":\"77\",\"clientOid\":\"c77\","
+                            + "\"category\":\"spot\",\"symbol\":\"ETHUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"3500\","
+                            + "\"execQty\":\"1\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"\"}}")));
+
+    DefaultTradeHistoryParamInstrument params = new DefaultTradeHistoryParamInstrument();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    assertThat(trades.getUserTrades()).hasSize(1);
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e1");
+    assertThat(trades.getUserTrades().get(0).getInstrument())
+        .isEqualTo(CurrencyPair.BTC_USDT);
+  }
+
+  /** Same for the currency-pair flavor of the generic core params. */
+  @Test
+  void generic_currency_pair_params_honor_requested_instrument() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e1\",\"orderId\":\"42\","
+                            + "\"clientOid\":\"c42\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"},"
+                            + "{\"execId\":\"e2\",\"orderId\":\"77\",\"clientOid\":\"c77\","
+                            + "\"category\":\"spot\",\"symbol\":\"ETHUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"3500\","
+                            + "\"execQty\":\"1\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"\"}}")));
+
+    DefaultTradeHistoryParamCurrencyPair params = new DefaultTradeHistoryParamCurrencyPair();
+    params.setCurrencyPair(CurrencyPair.BTC_USDT);
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    assertThat(trades.getUserTrades()).hasSize(1);
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e1");
+  }
+
+  /**
+   * A transport failure on a strategy placement (trigger/TP-SL) must not leak as a plain {@code
+   * IOException}: the provider may still have accepted the order, so the outcome is unknown and
+   * callers must not replay blindly — same contract as {@code placeOrder}. {@code clientOid} is
+   * echoed when the DTO carried one (tpsl orders).
+   */
+  @Test
+  void strategy_placement_transport_failure_surfaces_unknown_outcome() throws Exception {
+    wireMockServer.stubFor(
+        com.github.tomakehurst.wiremock.client.WireMock.post(
+                urlPathEqualTo("/api/v3/trade/place-strategy-order"))
+            .willReturn(
+                aResponse()
+                    .withFault(
+                        com.github.tomakehurst.wiremock.http.Fault.CONNECTION_RESET_BY_PEER)));
+
+    BitgetUtaV3StrategyOrderRequest request =
+        BitgetUtaV3StrategyOrderRequest.builder()
+            .category("spot")
+            .symbol("BTCUSDT")
+            .type("tpsl")
+            .side("buy")
+            .qty(new BigDecimal("0.1"))
+            .clientOid("strat-oid")
+            .build();
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () ->
+                ((BitgetUtaV3TradeServiceRaw) tradeService)
+                    .placeStrategyOrder(request, "api-code"))
+        .isInstanceOf(BitgetUtaV3UnknownOutcomeException.class)
+        .satisfies(
+            t -> {
+              BitgetUtaV3UnknownOutcomeException e = (BitgetUtaV3UnknownOutcomeException) t;
+              assertThat(e.getProviderCode()).isNull();
+              assertThat(e.getClientOid()).isEqualTo("strat-oid");
+              assertThat(e.getCause()).isInstanceOf(java.io.IOException.class);
+            });
+
+    wireMockServer.verify(
+        com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
+            urlPathEqualTo("/api/v3/trade/place-strategy-order")));
+  }
+
+  /**
+   * A transient public-endpoint failure must not silently pair private order data with a {@code
+   * null} instrument: the catalog lookup failure propagates as {@code IOException} instead of
+   * emitting orders with a null instrument (or filtering requested orders out).
+   */
+  @Test
+  void instrument_catalog_failure_propagates_instead_of_null_instrument() throws Exception {
+    // any symbol outside the stubbed catalog forces a fresh catalog fetch; make that fetch fail
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/market/instruments"))
+            .atPriority(1)
+            .willReturn(
+                aResponse()
+                    .withFault(
+                        com.github.tomakehurst.wiremock.http.Fault.CONNECTION_RESET_BY_PEER)));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/unfilled-orders"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"orderId\":\"9\",\"clientOid\":\"c9\","
+                            + "\"category\":\"spot\",\"symbol\":\"ETHUSDT\",\"orderType\":\"limit\","
+                            + "\"side\":\"buy\",\"price\":\"3500\",\"qty\":\"1\","
+                            + "\"orderStatus\":\"new\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"\"}}")));
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> tradeService.getOpenOrders())
+        .isInstanceOf(java.io.IOException.class);
   }
 }

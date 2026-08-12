@@ -26,6 +26,7 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
+import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamInstrument;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamLimit;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
@@ -90,13 +91,13 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     final String requestSymbol = symbol;
     List<BitgetUtaV3Order> rows =
         fetchAllPages((cursor) -> getUnfilledOrders(null, requestSymbol, null, null, 100, cursor));
-    List<LimitOrder> orders =
-        rows.stream()
-            .map(this::toOrder)
-            .filter(order -> order instanceof LimitOrder)
-            .filter(order -> params.accept(order))
-            .map(order -> (LimitOrder) order)
-            .collect(Collectors.toList());
+    List<LimitOrder> orders = new java.util.ArrayList<>();
+    for (BitgetUtaV3Order row : rows) {
+      Order order = toOrder(row);
+      if (order instanceof LimitOrder && params.accept(order)) {
+        orders.add((LimitOrder) order);
+      }
+    }
     return new OpenOrders(orders);
   }
 
@@ -121,12 +122,24 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
 
   @Override
   public UserTrades getTradeHistory(TradeHistoryParams params) throws IOException {
-    // The TradeService contract allows null or generic params implementations; fall back to
-    // defaults rather than casting blindly (the classic BitgetTradeService behaves the same way).
-    BitgetUtaV3TradeHistoryParams historyParams =
-        params instanceof BitgetUtaV3TradeHistoryParams
-            ? (BitgetUtaV3TradeHistoryParams) params
-            : new BitgetUtaV3TradeHistoryParams();
+    // Read each supported TradeHistoryParam* interface independently, as the classic
+    // BitgetTradeService does, so standard core implementations (for example
+    // DefaultTradeHistoryParamInstrument) are honored instead of being replaced by empty
+    // defaults; null params yield account-wide defaults.
+    BitgetUtaV3TradeHistoryParams historyParams = new BitgetUtaV3TradeHistoryParams();
+    if (params instanceof TradeHistoryParamInstrument) {
+      historyParams.setInstrument(((TradeHistoryParamInstrument) params).getInstrument());
+    } else if (params instanceof TradeHistoryParamCurrencyPair) {
+      historyParams.setInstrument(((TradeHistoryParamCurrencyPair) params).getCurrencyPair());
+    }
+    if (params instanceof TradeHistoryParamsTimeSpan) {
+      TradeHistoryParamsTimeSpan span = (TradeHistoryParamsTimeSpan) params;
+      historyParams.setStartTime(span.getStartTime());
+      historyParams.setEndTime(span.getEndTime());
+    }
+    if (params instanceof TradeHistoryParamLimit) {
+      historyParams.setLimit(((TradeHistoryParamLimit) params).getLimit());
+    }
     BitgetUtaV3Category category = null;
     if (historyParams.getInstrument() != null) {
       category = BitgetUtaV3Adapters.toCategory(historyParams.getInstrument());
@@ -158,7 +171,10 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
             // required to honor TradeHistoryParamInstrument (PRD CF-451); the filter runs inside
             // the pagination loop so the requested limit counts only rows that survive it
             row -> requestSymbol == null || requestSymbol.equals(row.getSymbol()));
-    List<UserTrade> trades = rows.stream().map(this::toUserTrade).collect(Collectors.toList());
+    List<UserTrade> trades = new java.util.ArrayList<>();
+    for (BitgetUtaV3Fill row : rows) {
+      trades.add(toUserTrade(row));
+    }
     return new UserTrades(trades, TradeSortType.SortByID);
   }
 
@@ -170,14 +186,15 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
   @Override
   public OpenPositions getOpenPositions() throws IOException {
     List<BitgetUtaV3Position> positions = getCurrentPositions(null, null, null);
-    List<OpenPosition> open =
-        positions.stream()
-            .map(
-                position ->
-                    BitgetUtaV3Adapters.toOpenPosition(
-                        position, resolveInstrument(position.getCategory(), position.getSymbol())))
-            .filter(java.util.Objects::nonNull)
-            .collect(Collectors.toList());
+    List<OpenPosition> open = new java.util.ArrayList<>();
+    for (BitgetUtaV3Position position : positions) {
+      OpenPosition openPosition =
+          BitgetUtaV3Adapters.toOpenPosition(
+              position, resolveInstrument(position.getCategory(), position.getSymbol()));
+      if (openPosition != null) {
+        open.add(openPosition);
+      }
+    }
     return new OpenPositions(open);
   }
 
@@ -232,16 +249,16 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     BitgetUtaV3CursorPage<T> fetch(String cursor) throws IOException;
   }
 
-  private Order toOrder(BitgetUtaV3Order dto) {
+  private Order toOrder(BitgetUtaV3Order dto) throws IOException {
     return BitgetUtaV3Adapters.toOrder(dto, resolveInstrument(dto.getCategory(), dto.getSymbol()));
   }
 
-  private UserTrade toUserTrade(BitgetUtaV3Fill dto) {
+  private UserTrade toUserTrade(BitgetUtaV3Fill dto) throws IOException {
     return BitgetUtaV3Adapters.toUserTrade(
         dto, resolveInstrument(dto.getCategory(), dto.getSymbol()));
   }
 
-  private Instrument resolveInstrument(String category, String symbol) {
+  private Instrument resolveInstrument(String category, String symbol) throws IOException {
     if (category == null || symbol == null) {
       return null;
     }
