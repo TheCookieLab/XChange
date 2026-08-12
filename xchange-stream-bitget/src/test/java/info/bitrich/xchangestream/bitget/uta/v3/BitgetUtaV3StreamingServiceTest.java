@@ -85,7 +85,7 @@ class BitgetUtaV3StreamingServiceTest {
   }
 
   @Test
-  void intervalIsExcludedFromSubscriptionId() {
+  void subscriptionIdIncludesKlineInterval() {
     BitgetUtaV3StreamingService service = new BitgetUtaV3StreamingService("wss://localhost/public");
 
     BitgetUtaV3Channel kline =
@@ -95,7 +95,7 @@ class BitgetUtaV3StreamingServiceTest {
             .symbol("BTCUSDT")
             .interval("1m")
             .build();
-    assertThat(service.getSubscriptionUniqueId(null, kline)).isEqualTo("spot_kline_BTCUSDT");
+    assertThat(service.getSubscriptionUniqueId(null, kline)).isEqualTo("spot_kline_BTCUSDT_1m");
   }
 
   @Test

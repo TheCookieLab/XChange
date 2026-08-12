@@ -91,7 +91,7 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
     String expectedSymbol = BitgetUtaV3StreamingAdapters.toString(instrument);
     Map<String, Order> dedupe = boundedLru();
     return service
-        .subscribeChannel(null, channel)
+        .sharedChannel(channel)
         .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
         .map(
             item ->
@@ -124,7 +124,7 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
     String expectedSymbol = BitgetUtaV3StreamingAdapters.toString(instrument);
     Map<String, UserTrade> dedupe = boundedLru();
     return service
-        .subscribeChannel(null, channel)
+        .sharedChannel(channel)
         .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
         .map(
             item ->
@@ -148,7 +148,7 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
         BitgetUtaV3Channel.builder().instType(BitgetUtaV3InstType.UTA).topic("fill").build();
     Map<String, UserTrade> dedupe = boundedLru();
     return service
-        .subscribeChannel(null, channel)
+        .sharedChannel(channel)
         .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
         .map(
             item ->
@@ -174,7 +174,7 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
     String expectedSymbol = BitgetUtaV3StreamingAdapters.toString(instrument);
     Map<String, OpenPosition> dedupe = boundedLru();
     return service
-        .subscribeChannel(null, channel)
+        .sharedChannel(channel)
         .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
         .map(
             item ->

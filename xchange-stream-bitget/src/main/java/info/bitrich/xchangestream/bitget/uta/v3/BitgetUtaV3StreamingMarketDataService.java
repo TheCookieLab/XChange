@@ -88,7 +88,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
     assemblers.computeIfAbsent(subscriptionId, id -> new BitgetUtaV3OrderBookAssembler());
 
     return service
-        .subscribeChannel(null, channel)
+        .sharedChannel(channel)
         .flatMap(notification -> processOrderBookPush(notification, instrument, channel))
         .filter(book -> book != null);
   }
@@ -166,7 +166,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
             .symbol(BitgetUtaV3StreamingAdapters.toString(instrument))
             .build();
     return service
-        .subscribeChannel(null, channel)
+        .sharedChannel(channel)
         .flatMap(
             notification ->
                 Observable.fromIterable(notification.getPayloadItems())
@@ -196,7 +196,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
             .symbol(BitgetUtaV3StreamingAdapters.toString(instrument))
             .build();
     return service
-        .subscribeChannel(null, channel)
+        .sharedChannel(channel)
         .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
         .map(
             item ->
@@ -218,7 +218,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
             .interval(wireInterval)
             .build();
     return service
-        .subscribeChannel(null, channel)
+        .sharedChannel(channel)
         .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
         .map(
             item ->

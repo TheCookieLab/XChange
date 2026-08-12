@@ -35,16 +35,21 @@ public class BitgetUtaV3Channel {
   private String interval;
 
   /**
-   * Subscription identity: {@code instType_topic_symbol}.
+   * Subscription identity: {@code instType_topic_symbol}, plus {@code _interval} for klines.
    *
-   * <p>Deliberately excludes {@code interval}: the provider may or may not echo it in push {@code
-   * arg}s, so channel routing keys on the stable fields only. A second subscriber for the same
-   * symbol shares the first subscription.
+   * <p>The kline interval is part of the identity: the provider echoes the full channel argument
+   * (interval included) in every push {@code arg} and routing keys on this id, so excluding it
+   * would collapse every interval on one symbol onto a single subscription — only the first
+   * subscriber would receive pushes and any subscriber's dispose would tear the channel down for
+   * the others.
    */
   public String toSubscriptionId() {
     StringBuilder id = new StringBuilder(instType.getWireName()).append('_').append(topic);
     if (symbol != null && !symbol.isEmpty()) {
       id.append('_').append(symbol);
+    }
+    if (interval != null && !interval.isEmpty()) {
+      id.append('_').append(interval);
     }
     return id.toString();
   }

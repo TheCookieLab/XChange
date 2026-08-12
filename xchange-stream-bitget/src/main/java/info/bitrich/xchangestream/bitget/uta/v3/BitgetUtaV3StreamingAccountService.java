@@ -39,7 +39,7 @@ public class BitgetUtaV3StreamingAccountService implements StreamingAccountServi
     String expectedCoin = currency.getCurrencyCode();
     Map<String, Balance> dedupe = boundedLru();
     return service
-        .subscribeChannel(null, channel)
+        .sharedChannel(channel)
         .flatMap(
             notification ->
                 Observable.fromIterable(notification.getPayloadItems())

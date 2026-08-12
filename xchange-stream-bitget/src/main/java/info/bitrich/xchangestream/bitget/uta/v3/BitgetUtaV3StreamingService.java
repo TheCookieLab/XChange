@@ -11,7 +11,10 @@ import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3WsRequest;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,6 +41,10 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
   protected final ObjectMapper objectMapper = Config.getInstance().getObjectMapper();
 
   protected final AtomicLong connectionGeneration = new AtomicLong();
+
+  /** One shared channel stream per subscription id; see {@link #sharedChannel}. */
+  private final ConcurrentMap<String, Observable<BitgetUtaV3WsNotification>> sharedChannels =
+      new ConcurrentHashMap<>();
 
   public BitgetUtaV3StreamingService(String apiUri) {
     super(apiUri, Integer.MAX_VALUE);
@@ -75,6 +82,19 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
   @Override
   public String getSubscriptionUniqueId(String channelName, Object... args) {
     return toChannel(args).toSubscriptionId();
+  }
+
+  /**
+   * One underlying channel subscription per subscription id, shared by all concurrent callers.
+   *
+   * <p>{@link NettyStreamingService#subscribeChannel} registers a single emitter per id and
+   * discards later emitters for the same id; sharing the returned observable here lets every
+   * caller's pipeline receive pushes, and ref-counted teardown keeps one subscriber's dispose from
+   * unsubscribing a channel other subscribers still use.
+   */
+  protected Observable<BitgetUtaV3WsNotification> sharedChannel(BitgetUtaV3Channel channel) {
+    return sharedChannels.computeIfAbsent(
+        channel.toSubscriptionId(), id -> subscribeChannel(null, channel).share());
   }
 
   /**
