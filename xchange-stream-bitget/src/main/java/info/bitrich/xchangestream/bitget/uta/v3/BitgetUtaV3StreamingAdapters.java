@@ -147,9 +147,10 @@ public class BitgetUtaV3StreamingAdapters {
     if (bestCounter != null) {
       return new CurrencyPair(bestBase, bestCounter);
     }
-    // unknown base (e.g. 1000PEPE): longest registered suffix wins as the counter, the remainder
-    // is the base (1000PEPE+USDT for 1000PEPEUSDT)
-    for (int split = symbol.length() - 1; split > 0; split--) {
+    // unknown base (e.g. 1000PEPE): the LONGEST registered suffix wins as the counter (XEXTUSD
+    // is XEX/TUSD, never the coincidental XEX/USD), the remainder is the base (1000PEPE+USDT
+    // for 1000PEPEUSDT)
+    for (int split = 1; split < symbol.length(); split++) {
       Currency counter = Currency.getInstanceNoCreate(symbol.substring(split));
       if (counter != null) {
         return new CurrencyPair(Currency.getInstance(symbol.substring(0, split)), counter);

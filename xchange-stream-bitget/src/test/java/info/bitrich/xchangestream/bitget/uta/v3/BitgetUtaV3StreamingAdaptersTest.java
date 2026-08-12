@@ -78,6 +78,11 @@ class BitgetUtaV3StreamingAdaptersTest {
     // symbols whose base is not a registered currency parse via the longest-suffix fallback
     Instrument pepe = BitgetUtaV3StreamingAdapters.toInstrument("spot", "1000PEPEUSDT");
     assertThat(pepe).isEqualTo(new CurrencyPair(Currency.getInstance("1000PEPE"), Currency.USDT));
+
+    // the fallback prefers the LONGEST registered suffix: XEXTUSD is XEX/TUSD, not XEX/USD
+    // (USD and TUSD are both registered)
+    Instrument tusd = BitgetUtaV3StreamingAdapters.toInstrument("spot", "XEXTUSD");
+    assertThat(tusd).isEqualTo(new CurrencyPair(Currency.getInstance("XEX"), Currency.TUSD));
   }
 
   @Test

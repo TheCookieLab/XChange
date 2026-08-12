@@ -177,6 +177,22 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
         specification.getPassword());
   }
 
+  /**
+   * Creates the UTA V3 private transport for the configured credentials.
+   *
+   * <p>Protected so tests can substitute a transport whose connection outcome is deterministic
+   * (the UTA V3 path cancels the private transport when the aggregate connect fails, so its
+   * automatic reconnect cannot outlive the failed attempt and orphan the unopened public socket).
+   */
+  protected BitgetUtaV3PrivateStreamingService createUtaV3PrivateService(
+      ExchangeSpecification specification) {
+    return new BitgetUtaV3PrivateStreamingService(
+        Config.V3_PRIVATE_WS_URL,
+        specification.getApiKey(),
+        specification.getSecretKey(),
+        specification.getPassword());
+  }
+
   private Completable connectUtaV3() {
     // cold composition: the exchange holder must keep serving the live transports until the
     // connect subscription begins, so the standard reconnect idiom
@@ -196,11 +212,7 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
               exchangeSpecification.getSecretKey(),
               exchangeSpecification.getPassword())) {
             BitgetUtaV3PrivateStreamingService privateService =
-                new BitgetUtaV3PrivateStreamingService(
-                    Config.V3_PRIVATE_WS_URL,
-                    exchangeSpecification.getApiKey(),
-                    exchangeSpecification.getSecretKey(),
-                    exchangeSpecification.getPassword());
+                createUtaV3PrivateService(exchangeSpecification);
             // private channels must honor the same proxy/cert/connection-hook/auto-reconnect
             // settings as the public socket
             applyStreamingSpecification(exchangeSpecification, privateService);
@@ -212,8 +224,15 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
                     new BitgetUtaV3StreamingTradeService(
                         privateService, (BitgetUtaV3TradeService) getTradeService()),
                     new BitgetUtaV3StreamingAccountService(privateService)));
+            // a failing private connection must cancel the private transport's own automatic
+            // reconnect: if it were left to retry and later succeeded, the aggregate connect has
+            // already errored, the public socket was never opened, and the holder would carry a
+            // live private socket beside an unopened public one (isAlive() false, public streams
+            // unavailable) until the caller manually reconnects
             return privateService
                 .connect()
+                .onErrorResumeNext(
+                    error -> privateService.disconnect().andThen(Completable.error(error)))
                 .andThen(
                     publicService
                         .connect()

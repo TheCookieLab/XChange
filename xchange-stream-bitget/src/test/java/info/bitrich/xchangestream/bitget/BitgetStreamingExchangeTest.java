@@ -19,6 +19,7 @@ import io.reactivex.rxjava3.subjects.CompletableSubject;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
@@ -268,6 +269,58 @@ class BitgetStreamingExchangeTest {
     assertThat(exchange.getPrivateNettyStreamingService())
         .as("holder must be installed before awaiting the private connection")
         .isNotNull();
+  }
+
+  @Test
+  void utaV3PrivateConnectFailureCancelsThePrivateRetry() throws Exception {
+    AtomicInteger disconnectInvocations = new AtomicInteger();
+    BitgetStreamingExchange exchange =
+        new BitgetStreamingExchange() {
+          @Override
+          protected BitgetUtaV3PrivateStreamingService createUtaV3PrivateService(
+              ExchangeSpecification specification) {
+            return new BitgetUtaV3PrivateStreamingService(
+                Config.V3_PRIVATE_WS_URL,
+                specification.getApiKey(),
+                specification.getSecretKey(),
+                specification.getPassword()) {
+              @Override
+              public Completable connect() {
+                // deterministic stand-in for a DNS/TCP/TLS/handshake failure; NettyStreamingService
+                // would otherwise schedule an automatic reconnect that could later succeed
+                return Completable.error(new IOException("connection refused"));
+              }
+
+              @Override
+              public Completable disconnect() {
+                disconnectInvocations.incrementAndGet();
+                return Completable.complete();
+              }
+            };
+          }
+        };
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    // hermetic: without this, applySpecification triggers remoteInitUtaV3(), a live instrument
+    // fetch that pollutes the shared Currency registry and breaks later tests
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setApiKey("api-key");
+    specification.setSecretKey("api-secret");
+    specification.setPassword("api-passphrase");
+    specification.setExchangeSpecificParametersItem(
+        BitgetConfiguration.API_MODE, BitgetApiMode.UTA_V3);
+    exchange.applySpecification(specification);
+
+    Completable connect = exchange.connect();
+
+    assertThatThrownBy(connect::blockingAwait)
+        .as("the UTA V3 path must surface the failed private connection")
+        .isInstanceOf(Throwable.class);
+    assertThat(disconnectInvocations.get())
+        .as(
+            "a failed private connection must be disconnected so its automatic reconnect cannot "
+                + "later succeed beside a never-opened public socket (isAlive() false, public "
+                + "streams unavailable) until the caller reconnects")
+        .isEqualTo(1);
   }
 
   private static void setServices(
