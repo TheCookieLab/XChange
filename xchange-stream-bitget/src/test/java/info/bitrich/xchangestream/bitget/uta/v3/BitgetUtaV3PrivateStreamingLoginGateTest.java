@@ -8,10 +8,12 @@ import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3EventNotification
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3InstType;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3WsNotification;
 import info.bitrich.xchangestream.service.exception.NotConnectedException;
+import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import io.reactivex.rxjava3.core.Observable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +36,13 @@ class BitgetUtaV3PrivateStreamingLoginGateTest {
           .instType(BitgetUtaV3InstType.UTA)
           .topic("order")
           .symbol("BTCUSDT")
+          .build();
+
+  private static final BitgetUtaV3Channel ETH_TRADE =
+      BitgetUtaV3Channel.builder()
+          .instType(BitgetUtaV3InstType.UTA)
+          .topic("order")
+          .symbol("ETHUSDT")
           .build();
 
   /** Subclass recording outbound frames without a live socket. */
@@ -63,6 +72,11 @@ class BitgetUtaV3PrivateStreamingLoginGateTest {
     @Override
     public void sendMessage(String message) {
       frames.add(message);
+    }
+
+    /** Serializes a successful {@code login} acknowledgement the way the wire would deliver it. */
+    String loginAckJson() throws Exception {
+      return objectMapper.writeValueAsString(loginAck());
     }
   }
 
@@ -119,5 +133,40 @@ class BitgetUtaV3PrivateStreamingLoginGateTest {
     assertThat(outcome.error.get()).isInstanceOf(NotConnectedException.class);
     assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isFalse();
     assertThat(service.frames()).isEmpty();
+  }
+
+  @Test
+  void staleConnectionLoginAckIsDroppedByConnectionGate() throws Exception {
+    TestablePrivateStreamingService service = new TestablePrivateStreamingService(true);
+    subscribedStream(service.subscribeChannel(null, BTC_TRADE));
+    assertThat(service.frames()).isEmpty();
+
+    // Connection 1: resubscribe claims generation 1 and binds that connection's gate stamp.
+    service.resubscribeChannels();
+    AtomicLong stamp1 = new AtomicLong(service.getConnectionGeneration());
+    WebSocketClientHandler.WebSocketMessageHandler connection1 =
+        service.gateByConnectionGeneration(stamp1, service::messageHandler);
+
+    // Connection 2 (reconnect): generation 2.
+    service.resubscribeChannels();
+    AtomicLong stamp2 = new AtomicLong(service.getConnectionGeneration());
+    WebSocketClientHandler.WebSocketMessageHandler connection2 =
+        service.gateByConnectionGeneration(stamp2, service::messageHandler);
+
+    // Connection 1's login ack arrives after the reconnect: the per-connection gate drops it
+    // before the notification handler, so it can neither authenticate nor flush deferred frames.
+    int framesBeforeStaleAck = service.frames().size();
+    connection1.onMessage(service.loginAckJson());
+    assertThat(service.frames())
+        .as("a stale connection's login ack must not authenticate the current connection")
+        .hasSize(framesBeforeStaleAck);
+
+    // A subscription registered after the stale ack still waits for the current connection's ack.
+    subscribedStream(service.subscribeChannel(null, ETH_TRADE));
+    assertThat(service.frames()).hasSize(framesBeforeStaleAck);
+
+    // The current connection's own ack flushes every deferred frame.
+    connection2.onMessage(service.loginAckJson());
+    assertThat(service.frames()).hasSize(framesBeforeStaleAck + 2);
   }
 }

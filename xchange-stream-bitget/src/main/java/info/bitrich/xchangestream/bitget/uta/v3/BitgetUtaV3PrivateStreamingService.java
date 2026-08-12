@@ -12,7 +12,6 @@ import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicLong;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.exceptions.ExchangeException;
@@ -22,9 +21,11 @@ import org.knowm.xchange.exceptions.ExchangeException;
  * epochSeconds + "GET" + "/user/verify"}, byte-identical between v2 and v3) and defers channel
  * (re)subscription until the {@code login} acknowledgement arrives.
  *
- * <p>The login acknowledgement is correlated to the connection generation it was requested under; a
- * stale {@code login} ack from an earlier connection is dropped, which prevents an old connection's
- * channels from being resubscribed on the current one.
+ * <p>The per-connection message gate (see {@link
+ * BitgetUtaV3StreamingService#gateByConnectionGeneration}) stamps each connection with the
+ * generation it was resubscribed under; a stale {@code login} ack delivered late by a previous
+ * connection's callback is dropped before it can reach this handler, so an old connection's
+ * channels can never be resubscribed on the current one.
  *
  * @since 5.1.0
  */
@@ -34,8 +35,6 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
   private final String apiKey;
   private final String apiSecret;
   private final String apiPassword;
-
-  private final AtomicLong loginGeneration = new AtomicLong();
 
   /** Serializes login-ack processing against concurrent subscription registration. */
   private final Object loginLock = new Object();
@@ -57,6 +56,7 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
     synchronized (loginLock) {
       authenticated = false;
       connectionGeneration.incrementAndGet();
+      stampCurrentConnection();
       sendLoginMessage();
     }
   }
@@ -131,7 +131,6 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
   @SneakyThrows
   private void sendLoginMessage() {
     Instant timestamp = Instant.now(Config.getInstance().getClock());
-    loginGeneration.set(getConnectionGeneration());
     BitgetLoginRequest bitgetLoginRequest =
         BitgetLoginRequest.builder()
             .operation(Operation.LOGIN)
@@ -149,13 +148,6 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
   @Override
   protected void handleEventNotification(BitgetUtaV3EventNotification notification) {
     if (notification.getEvent() == BitgetUtaV3EventNotification.Event.LOGIN) {
-      if (!isCurrentGeneration(loginGeneration.get())) {
-        log.warn(
-            "Stale login acknowledgement from connection generation {} (current {}); ignoring",
-            loginGeneration.get(),
-            getConnectionGeneration());
-        return;
-      }
       if ("0".equals(notification.getCode())) {
         synchronized (loginLock) {
           authenticated = true;
