@@ -175,12 +175,11 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
               notification.getChannel());
       log.warn(failure);
       if (notification.getChannel() != null) {
-        Subscription subscription =
-            channels.get(notification.getChannel().toSubscriptionId());
+        String subscriptionId = notification.getChannel().toSubscriptionId();
+        Subscription subscription = channels.remove(subscriptionId);
         if (subscription != null) {
-          subscription
-              .getEmitter()
-              .tryOnError(new ExchangeException(failure));
+          sharedChannels.remove(subscriptionId);
+          subscription.getEmitter().tryOnError(new ExchangeException(failure));
         }
       }
       return;
@@ -200,6 +199,9 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
     for (Entry<String, Subscription> entry : channels.entrySet()) {
       entry.getValue().getEmitter().tryOnError(error);
     }
+    // drop the cached shared observables so a retry after reconnect builds fresh ones instead of
+    // reusing observables whose emitters were just terminated
+    sharedChannels.clear();
   }
 
   /** UTA v3 keeps the connection alive with the text frame {@code "ping"}. */

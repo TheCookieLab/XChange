@@ -90,28 +90,33 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
     BitgetUtaV3Channel channel =
         BitgetUtaV3Channel.builder().instType(BitgetUtaV3InstType.UTA).topic("order").build();
     String expectedSymbol = BitgetUtaV3StreamingAdapters.toString(instrument);
-    Map<String, Order> dedupe = boundedLru();
-    return service
-        .sharedChannel(channel)
-        .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
-        .map(
-            item ->
-                Config.getInstance().getObjectMapper().treeToValue(item, BitgetUtaV3Order.class))
-        .filter(dto -> expectedSymbol.equals(dto.getSymbol()))
-        .filter(dto -> matchesCategory(instrument, dto.getCategory()))
-        .filter(dto -> dto.getOrderId() != null)
-        .flatMap(
-            dto -> {
-              Order order = BitgetUtaV3Adapters.toOrder(dto, instrument);
-              Order previous = dedupe.put(dto.getOrderId(), order);
-              if (order.equals(previous)) {
-                return Observable.empty();
-              }
-              if (dto.getClientOid() != null) {
-                pendingClientOids.remove(dto.getClientOid());
-              }
-              return Observable.just(order);
-            });
+    return Observable.defer(
+        () -> {
+          Map<String, Order> dedupe = boundedLru();
+          return service
+              .sharedChannel(channel)
+              .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
+              .map(
+                  item ->
+                      Config.getInstance()
+                          .getObjectMapper()
+                          .treeToValue(item, BitgetUtaV3Order.class))
+              .filter(dto -> expectedSymbol.equals(dto.getSymbol()))
+              .filter(dto -> matchesCategory(instrument, dto.getCategory()))
+              .filter(dto -> dto.getOrderId() != null)
+              .flatMap(
+                  dto -> {
+                    Order order = BitgetUtaV3Adapters.toOrder(dto, instrument);
+                    Order previous = dedupe.put(dto.getOrderId(), order);
+                    if (order.equals(previous)) {
+                      return Observable.empty();
+                    }
+                    if (dto.getClientOid() != null) {
+                      pendingClientOids.remove(dto.getClientOid());
+                    }
+                    return Observable.just(order);
+                  });
+        });
   }
 
   @Override
@@ -124,50 +129,61 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
     BitgetUtaV3Channel channel =
         BitgetUtaV3Channel.builder().instType(BitgetUtaV3InstType.UTA).topic("fill").build();
     String expectedSymbol = BitgetUtaV3StreamingAdapters.toString(instrument);
-    Map<String, UserTrade> dedupe = boundedLru();
-    return service
-        .sharedChannel(channel)
-        .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
-        .map(
-            item ->
-                Config.getInstance().getObjectMapper().treeToValue(item, BitgetUtaV3FillData.class))
-        .filter(dto -> expectedSymbol.equals(dto.getSymbol()))
-        .filter(dto -> matchesCategory(instrument, dto.getCategory()))
-        .filter(dto -> dto.getExecId() != null)
-        .flatMap(
-            dto -> {
-              UserTrade trade = BitgetUtaV3StreamingAdapters.toUserTrade(dto, instrument);
-              UserTrade previous = dedupe.put(dto.getExecId(), trade);
-              if (trade.equals(previous)) {
-                return Observable.empty();
-              }
-              return Observable.just(trade);
-            });
+    return Observable.defer(
+        () -> {
+          Map<String, UserTrade> dedupe = boundedLru();
+          return service
+              .sharedChannel(channel)
+              .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
+              .map(
+                  item ->
+                      Config.getInstance()
+                          .getObjectMapper()
+                          .treeToValue(item, BitgetUtaV3FillData.class))
+              .filter(dto -> expectedSymbol.equals(dto.getSymbol()))
+              .filter(dto -> matchesCategory(instrument, dto.getCategory()))
+              .filter(dto -> dto.getExecId() != null)
+              .flatMap(
+                  dto -> {
+                    UserTrade trade = BitgetUtaV3StreamingAdapters.toUserTrade(dto, instrument);
+                    UserTrade previous = dedupe.put(dto.getExecId(), trade);
+                    if (trade.equals(previous)) {
+                      return Observable.empty();
+                    }
+                    return Observable.just(trade);
+                  });
+        });
   }
 
   @Override
   public Observable<UserTrade> getUserTrades() {
     BitgetUtaV3Channel channel =
         BitgetUtaV3Channel.builder().instType(BitgetUtaV3InstType.UTA).topic("fill").build();
-    Map<String, UserTrade> dedupe = boundedLru();
-    return service
-        .sharedChannel(channel)
-        .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
-        .map(
-            item ->
-                Config.getInstance().getObjectMapper().treeToValue(item, BitgetUtaV3FillData.class))
-        .filter(dto -> dto.getExecId() != null)
-        .flatMap(
-            dto -> {
-              Instrument instrument =
-                  BitgetUtaV3StreamingAdapters.toInstrument(dto.getCategory(), dto.getSymbol());
-              UserTrade trade = BitgetUtaV3StreamingAdapters.toUserTrade(dto, instrument);
-              UserTrade previous = dedupe.put(dto.getExecId(), trade);
-              if (trade.equals(previous)) {
-                return Observable.empty();
-              }
-              return Observable.just(trade);
-            });
+    return Observable.defer(
+        () -> {
+          Map<String, UserTrade> dedupe = boundedLru();
+          return service
+              .sharedChannel(channel)
+              .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
+              .map(
+                  item ->
+                      Config.getInstance()
+                          .getObjectMapper()
+                          .treeToValue(item, BitgetUtaV3FillData.class))
+              .filter(dto -> dto.getExecId() != null)
+              .flatMap(
+                  dto -> {
+                    Instrument instrument =
+                        BitgetUtaV3StreamingAdapters.toInstrument(
+                            dto.getCategory(), dto.getSymbol());
+                    UserTrade trade = BitgetUtaV3StreamingAdapters.toUserTrade(dto, instrument);
+                    UserTrade previous = dedupe.put(dto.getExecId(), trade);
+                    if (trade.equals(previous)) {
+                      return Observable.empty();
+                    }
+                    return Observable.just(trade);
+                  });
+        });
   }
 
   @Override
@@ -175,26 +191,30 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
     BitgetUtaV3Channel channel =
         BitgetUtaV3Channel.builder().instType(BitgetUtaV3InstType.UTA).topic("position").build();
     String expectedSymbol = BitgetUtaV3StreamingAdapters.toString(instrument);
-    Map<String, OpenPosition> dedupe = boundedLru();
-    return service
-        .sharedChannel(channel)
-        .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
-        .map(
-            item ->
-                Config.getInstance()
-                    .getObjectMapper()
-                    .treeToValue(item, BitgetUtaV3PositionData.class))
-        .filter(dto -> expectedSymbol.equals(dto.getSymbol()))
-        .flatMap(
-            dto -> {
-              OpenPosition position = BitgetUtaV3StreamingAdapters.toOpenPosition(dto, instrument);
-              String key = dto.getSymbol() + "_" + dto.getPosSide();
-              OpenPosition previous = dedupe.put(key, position);
-              if (position.equals(previous)) {
-                return Observable.empty();
-              }
-              return Observable.just(position);
-            });
+    return Observable.defer(
+        () -> {
+          Map<String, OpenPosition> dedupe = boundedLru();
+          return service
+              .sharedChannel(channel)
+              .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
+              .map(
+                  item ->
+                      Config.getInstance()
+                          .getObjectMapper()
+                          .treeToValue(item, BitgetUtaV3PositionData.class))
+              .filter(dto -> expectedSymbol.equals(dto.getSymbol()))
+              .flatMap(
+                  dto -> {
+                    OpenPosition position =
+                        BitgetUtaV3StreamingAdapters.toOpenPosition(dto, instrument);
+                    String key = dto.getSymbol() + "_" + dto.getPosSide();
+                    OpenPosition previous = dedupe.put(key, position);
+                    if (position.equals(previous)) {
+                      return Observable.empty();
+                    }
+                    return Observable.just(position);
+                  });
+        });
   }
 
   @Override

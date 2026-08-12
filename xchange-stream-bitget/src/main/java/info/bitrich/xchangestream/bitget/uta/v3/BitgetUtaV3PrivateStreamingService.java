@@ -6,6 +6,9 @@ import info.bitrich.xchangestream.bitget.dto.common.Operation;
 import info.bitrich.xchangestream.bitget.dto.request.BitgetLoginRequest;
 import info.bitrich.xchangestream.bitget.dto.request.BitgetLoginRequest.LoginPayload;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3EventNotification;
+import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3WsNotification;
+import info.bitrich.xchangestream.service.exception.NotConnectedException;
+import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map.Entry;
@@ -34,6 +37,12 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
 
   private final AtomicLong loginGeneration = new AtomicLong();
 
+  /** Serializes login-ack processing against concurrent subscription registration. */
+  private final Object loginLock = new Object();
+
+  /** Whether the current connection's {@code login} acknowledgement has been received. */
+  private volatile boolean authenticated;
+
   public BitgetUtaV3PrivateStreamingService(
       String apiUri, String apiKey, String apiSecret, String apiPassword) {
     super(apiUri);
@@ -45,8 +54,66 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
   /** Sends the login message right after connecting; channel resubscription waits for the ack. */
   @Override
   public void resubscribeChannels() {
-    connectionGeneration.incrementAndGet();
-    sendLoginMessage();
+    synchronized (loginLock) {
+      authenticated = false;
+      connectionGeneration.incrementAndGet();
+      sendLoginMessage();
+    }
+  }
+
+  /**
+   * Registers a channel subscription but defers its subscribe frame until the {@code login}
+   * acknowledgement for the current connection has been received.
+   *
+   * <p>The server rejects any channel frame sent before login completes, so a caller subscribing
+   * right after {@code connect()} (which completes on the socket handshake, before the login ack)
+   * would otherwise get an error acknowledgement that kills the stream before login even lands.
+   * Registration happens unconditionally under {@link #loginLock} and the frame is sent either
+   * immediately (login already acked, checked under the same lock) or by {@link
+   * #resubscribeChannelsAfterLogin()} when the ack flushes the registered channels; the lock
+   * serializes the two so a registration can never fall through both paths.
+   */
+  @Override
+  public Observable<BitgetUtaV3WsNotification> subscribeChannel(
+      String channelName, Object... args) {
+    final String subscriptionUniqueId = getSubscriptionUniqueId(channelName, args);
+    log.info("Subscribing to subscriptionUniqueId={}, args={}", subscriptionUniqueId, args);
+
+    return Observable.<BitgetUtaV3WsNotification>create(
+            e -> {
+              synchronized (loginLock) {
+                if (!isSocketOpen()) {
+                  e.onError(new NotConnectedException());
+                  return;
+                }
+                boolean[] newlyCreated = {false};
+                channels.computeIfAbsent(
+                    subscriptionUniqueId,
+                    cid -> {
+                      newlyCreated[0] = true;
+                      return new Subscription(e, channelName, args);
+                    });
+                if (newlyCreated[0] && authenticated) {
+                  try {
+                    sendMessage(getSubscribeMessage(channelName, args));
+                  } catch (IOException throwable) {
+                    e.onError(throwable);
+                  }
+                }
+              }
+            })
+        .doOnDispose(
+            () -> {
+              if (channels.remove(subscriptionUniqueId) != null) {
+                try {
+                  sendMessage(getUnsubscribeMessage(subscriptionUniqueId, args));
+                } catch (IOException e) {
+                  log.debug(
+                      "Failed to unsubscribe channel: {} {}", subscriptionUniqueId, e.toString());
+                }
+              }
+            })
+        .share();
   }
 
   /** Re-sends every subscribed channel after a successful login. */
@@ -90,7 +157,10 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
         return;
       }
       if ("0".equals(notification.getCode())) {
-        resubscribeChannelsAfterLogin();
+        synchronized (loginLock) {
+          authenticated = true;
+          resubscribeChannelsAfterLogin();
+        }
       } else {
         String failure =
             String.format(

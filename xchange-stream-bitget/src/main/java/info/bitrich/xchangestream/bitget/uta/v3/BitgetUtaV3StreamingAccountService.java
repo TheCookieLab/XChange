@@ -37,28 +37,31 @@ public class BitgetUtaV3StreamingAccountService implements StreamingAccountServi
     BitgetUtaV3Channel channel =
         BitgetUtaV3Channel.builder().instType(BitgetUtaV3InstType.UTA).topic("account").build();
     String expectedCoin = currency.getCurrencyCode();
-    Map<String, Balance> dedupe = boundedLru();
-    return service
-        .sharedChannel(channel)
-        .flatMap(
-            notification ->
-                Observable.fromIterable(notification.getPayloadItems())
-                    .map(
-                        item ->
-                            Config.getInstance()
-                                .getObjectMapper()
-                                .treeToValue(item, BitgetUtaV3AccountData.class))
-                    .flatMapIterable(BitgetUtaV3AccountData::getCoins))
-        .filter(dto -> expectedCoin.equals(dto.getCoin()))
-        .flatMap(
-            dto -> {
-              Balance balance = BitgetUtaV3StreamingAdapters.toBalance(dto, currency);
-              Balance previous = dedupe.put(expectedCoin, balance);
-              if (balance.equals(previous)) {
-                return Observable.empty();
-              }
-              return Observable.just(balance);
-            });
+    return Observable.defer(
+        () -> {
+          Map<String, Balance> dedupe = boundedLru();
+          return service
+              .sharedChannel(channel)
+              .flatMap(
+                  notification ->
+                      Observable.fromIterable(notification.getPayloadItems())
+                          .map(
+                              item ->
+                                  Config.getInstance()
+                                      .getObjectMapper()
+                                      .treeToValue(item, BitgetUtaV3AccountData.class))
+                          .flatMapIterable(BitgetUtaV3AccountData::getCoins))
+              .filter(dto -> expectedCoin.equals(dto.getCoin()))
+              .flatMap(
+                  dto -> {
+                    Balance balance = BitgetUtaV3StreamingAdapters.toBalance(dto, currency);
+                    Balance previous = dedupe.put(expectedCoin, balance);
+                    if (balance.equals(previous)) {
+                      return Observable.empty();
+                    }
+                    return Observable.just(balance);
+                  });
+        });
   }
 
   private static Map<String, Balance> boundedLru() {
