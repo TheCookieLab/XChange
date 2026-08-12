@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.Validate;
@@ -66,13 +67,22 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
    * Shared per-subscription-id channel stream with order-book assembler lifecycle: when the last
    * subscriber disposes, the underlying channel is unsubscribed and the assembler for that
    * subscription id is evicted, so a stream of short-lived book subscriptions cannot grow the
-   * {@link #assemblers} map without bound.
+   * {@link #assemblers} map without bound. A stream that terminates (e.g. a not-connected
+   * subscription rejected by the service before {@code connect()} completes) is evicted from the
+   * cache, so a post-connect retry of the same ticker, book, trade, or kline channel builds a
+   * fresh shared observable instead of reusing the dead one.
    */
   private Observable<BitgetUtaV3WsNotification> sharedChannel(BitgetUtaV3Channel channel) {
-    return sharedChannels.computeIfAbsent(
-        channel.toSubscriptionId(),
-        id ->
-            service.subscribeChannel(null, channel).doFinally(() -> assemblers.remove(id)).share());
+    String subscriptionId = channel.toSubscriptionId();
+    AtomicReference<Observable<BitgetUtaV3WsNotification>> ref = new AtomicReference<>();
+    Observable<BitgetUtaV3WsNotification> shared =
+        service
+            .subscribeChannel(null, channel)
+            .doOnError(t -> sharedChannels.remove(subscriptionId, ref.get()))
+            .doFinally(() -> assemblers.remove(subscriptionId))
+            .share();
+    ref.set(shared);
+    return sharedChannels.computeIfAbsent(subscriptionId, id -> ref.get());
   }
 
   @Override

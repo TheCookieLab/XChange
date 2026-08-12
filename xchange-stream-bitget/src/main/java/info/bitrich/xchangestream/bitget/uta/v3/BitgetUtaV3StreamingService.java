@@ -8,6 +8,7 @@ import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3Channel;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3EventNotification;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3WsNotification;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3WsRequest;
+import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -20,6 +21,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.exceptions.ExchangeException;
 
@@ -108,16 +110,75 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
   }
 
   /**
+   * Registers a public channel subscription, never storing a terminated emitter.
+   *
+   * <p>The inherited {@link NettyStreamingService#subscribeChannel} signals {@link
+   * NotConnectedException} when the socket is not open but then continues into the channel
+   * registry, storing the already-terminated emitter; a post-connect retry of the same ticker,
+   * book, trade, or kline channel would find that dead entry, register no replacement emitter,
+   * and silently lose every push. This override mirrors the inherited registration (check at
+   * subscribe time, single emitter per id, ref-counted teardown) but returns after the error, so
+   * a not-connected subscription is rejected without polluting the registry and a later retry
+   * registers normally.
+   */
+  @Override
+  public Observable<BitgetUtaV3WsNotification> subscribeChannel(
+      String channelName, Object... args) {
+    final String subscriptionUniqueId = getSubscriptionUniqueId(channelName, args);
+    log.info("Subscribing to subscriptionUniqueId={}, args={}", subscriptionUniqueId, args);
+
+    return Observable.<BitgetUtaV3WsNotification>create(
+            e -> {
+              if (!isSocketOpen()) {
+                e.onError(new NotConnectedException());
+                return;
+              }
+              channels.computeIfAbsent(
+                  subscriptionUniqueId,
+                  cid -> {
+                    Subscription newSubscription = new Subscription(e, channelName, args);
+                    try {
+                      sendMessage(getSubscribeMessage(channelName, args));
+                    } catch (IOException throwable) {
+                      // if getSubscribeMessage throws, report the problem to the caller
+                      e.onError(throwable);
+                    }
+                    return newSubscription;
+                  });
+            })
+        .doOnDispose(
+            () -> {
+              if (channels.remove(subscriptionUniqueId) != null) {
+                try {
+                  sendMessage(getUnsubscribeMessage(subscriptionUniqueId, args));
+                } catch (IOException e) {
+                  log.debug(
+                      "Failed to unsubscribe channel: {} {}", subscriptionUniqueId, e.toString());
+                }
+              }
+            })
+        .share();
+  }
+
+  /**
    * One underlying channel subscription per subscription id, shared by all concurrent callers.
    *
-   * <p>{@link NettyStreamingService#subscribeChannel} registers a single emitter per id and
-   * discards later emitters for the same id; sharing the returned observable here lets every
-   * caller's pipeline receive pushes, and ref-counted teardown keeps one subscriber's dispose from
-   * unsubscribing a channel other subscribers still use.
+   * <p>{@link #subscribeChannel} registers a single emitter per id and discards later emitters
+   * for the same id; sharing the returned observable here lets every caller's pipeline receive
+   * pushes, and ref-counted teardown keeps one subscriber's dispose from unsubscribing a channel
+   * other subscribers still use. A terminated stream (e.g. a not-connected subscription rejected
+   * by {@link #subscribeChannel}) is evicted from the cache so a later retry builds a fresh
+   * shared observable instead of reusing the dead one.
    */
   protected Observable<BitgetUtaV3WsNotification> sharedChannel(BitgetUtaV3Channel channel) {
-    return sharedChannels.computeIfAbsent(
-        channel.toSubscriptionId(), id -> subscribeChannel(null, channel).share());
+    String subscriptionId = channel.toSubscriptionId();
+    AtomicReference<Observable<BitgetUtaV3WsNotification>> ref = new AtomicReference<>();
+    Observable<BitgetUtaV3WsNotification> shared =
+        subscribeChannel(null, channel)
+            .doOnError(t -> sharedChannels.remove(subscriptionId, ref.get()))
+            .share();
+    ref.set(shared);
+    return sharedChannels.computeIfAbsent(subscriptionId, id -> ref.get());
   }
 
   /**
