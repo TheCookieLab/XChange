@@ -70,7 +70,8 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
    * {@link #assemblers} map without bound. A stream that terminates (e.g. a not-connected
    * subscription rejected by the service before {@code connect()} completes) is evicted from the
    * cache, so a post-connect retry of the same ticker, book, trade, or kline channel builds a
-   * fresh shared observable instead of reusing the dead one.
+   * fresh shared observable instead of reusing the dead one; a normally disposed shared stream
+   * (final subscriber left) is evicted as well, so the cache cannot grow without bound either.
    */
   private Observable<BitgetUtaV3WsNotification> sharedChannel(BitgetUtaV3Channel channel) {
     String subscriptionId = channel.toSubscriptionId();
@@ -79,7 +80,15 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
         service
             .subscribeChannel(null, channel)
             .doOnError(t -> sharedChannels.remove(subscriptionId, ref.get()))
-            .doFinally(() -> assemblers.remove(subscriptionId))
+            .doFinally(
+                () -> {
+                  assemblers.remove(subscriptionId);
+                  // a normally disposed shared stream (final subscriber left) also drops the
+                  // cached observable, so short-lived book/ticker/trade/kline subscriptions
+                  // cannot grow the sharedChannels map without bound; remove(key, value) never
+                  // clobbers a concurrently replaced entry
+                  sharedChannels.remove(subscriptionId, ref.get());
+                })
             .share();
     ref.set(shared);
     return sharedChannels.computeIfAbsent(subscriptionId, id -> ref.get());

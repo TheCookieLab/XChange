@@ -43,6 +43,13 @@ class BitgetUtaV3StreamingNotConnectedTest {
           .symbol("BTCUSDT")
           .build();
 
+  private static final BitgetUtaV3Channel BTC_TICKER =
+      BitgetUtaV3Channel.builder()
+          .instType(BitgetUtaV3InstType.SPOT)
+          .topic("ticker")
+          .symbol("BTCUSDT")
+          .build();
+
   /** Subclass recording outbound frames and exposing registry state without a live socket. */
   private static class TestableStreamingService extends BitgetUtaV3StreamingService {
 
@@ -166,5 +173,53 @@ class BitgetUtaV3StreamingNotConnectedTest {
     retry.assertNoErrors();
     assertThat(service.frames()).anyMatch(frame -> frame.contains("\"subscribe\""));
     retry.dispose();
+  }
+
+  @Test
+  void sharedChannelEvictsDisposedStreamSoResubscribeRebuilds() throws Exception {
+    TestableStreamingService service = new TestableStreamingService();
+    service.open();
+
+    TestObserver<BitgetUtaV3WsNotification> first = service.sharedChannel(BTC_TRADE).test();
+    assertThat(service.sharedChannels()).containsKey(BTC_TRADE.toSubscriptionId());
+    assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isTrue();
+
+    // a normally disposed shared stream (final subscriber left) must drop its cached observable
+    // and its channel registry entry, so dynamic subscriptions cannot grow the caches without
+    // bound
+    first.dispose();
+    assertThat(service.sharedChannels()).doesNotContainKey(BTC_TRADE.toSubscriptionId());
+    assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isFalse();
+
+    // and a later subscription rebuilds a working stream from scratch
+    TestObserver<BitgetUtaV3WsNotification> second = service.sharedChannel(BTC_TRADE).test();
+    second.assertNoErrors();
+    assertThat(service.sharedChannels()).containsKey(BTC_TRADE.toSubscriptionId());
+    assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isTrue();
+    assertThat(service.frames()).anyMatch(frame -> frame.contains("\"subscribe\""));
+    second.dispose();
+  }
+
+  @Test
+  void marketDataSharedChannelEvictsDisposedStreamSoResubscribeRebuilds() throws Exception {
+    TestableStreamingService service = new TestableStreamingService();
+    BitgetUtaV3StreamingMarketDataService marketData =
+        new BitgetUtaV3StreamingMarketDataService(service);
+    service.open();
+
+    TestObserver<Ticker> first = marketData.getTicker(CurrencyPair.BTC_USDT).test();
+    assertThat(marketDataSharedChannels(marketData))
+        .containsKey(BTC_TICKER.toSubscriptionId());
+    assertThat(service.containsChannel(BTC_TICKER.toSubscriptionId())).isTrue();
+
+    first.dispose();
+    assertThat(marketDataSharedChannels(marketData))
+        .doesNotContainKey(BTC_TICKER.toSubscriptionId());
+    assertThat(service.containsChannel(BTC_TICKER.toSubscriptionId())).isFalse();
+
+    TestObserver<Ticker> second = marketData.getTicker(CurrencyPair.BTC_USDT).test();
+    second.assertNoErrors();
+    assertThat(service.frames()).anyMatch(frame -> frame.contains("\"subscribe\""));
+    second.dispose();
   }
 }

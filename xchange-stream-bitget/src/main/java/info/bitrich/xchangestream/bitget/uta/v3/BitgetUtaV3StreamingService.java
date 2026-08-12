@@ -69,10 +69,27 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
    * a previous connection's handler can never pass the gate: its stamp predates the new
    * generation even in the window between the new socket opening and its {@code resubscribe}.
    */
+  /**
+   * Claims a fresh connection generation when a (re)connect attempt is actually subscribed, before
+   * the new socket opens.
+   *
+   * <p>{@link ConnectableService#connect()} composes {@link #openConnection()} into a cold {@link
+   * Completable}; claiming the generation eagerly at composition time would make a still-live
+   * connection's stamped handler stale — and drop every frame it delivers — before the deferred
+   * reconnect has even started. {@link Completable#defer} moves the claim to subscription, which
+   * still happens before {@code super.openConnection()} opens the replacement socket, so combined
+   * with the per-connection message gate ({@link
+   * #gateByConnectionGeneration(AtomicLong, WebSocketMessageHandler)}) a frame dispatched late by a
+   * previous connection's handler can never pass: its stamp predates the generation claimed when
+   * the replacement connection is subscribed.
+   */
   @Override
   protected Completable openConnection() {
-    connectionGeneration.incrementAndGet();
-    return super.openConnection();
+    return Completable.defer(
+        () -> {
+          connectionGeneration.incrementAndGet();
+          return super.openConnection();
+        });
   }
 
   @Override
@@ -163,12 +180,14 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
   /**
    * One underlying channel subscription per subscription id, shared by all concurrent callers.
    *
-   * <p>{@link #subscribeChannel} registers a single emitter per id and discards later emitters
+   * {@link #subscribeChannel} registers a single emitter per id and discards later emitters
    * for the same id; sharing the returned observable here lets every caller's pipeline receive
    * pushes, and ref-counted teardown keeps one subscriber's dispose from unsubscribing a channel
    * other subscribers still use. A terminated stream (e.g. a not-connected subscription rejected
    * by {@link #subscribeChannel}) is evicted from the cache so a later retry builds a fresh
-   * shared observable instead of reusing the dead one.
+   * shared observable instead of reusing the dead one, and a normally disposed shared stream
+   * (final subscriber left) is evicted too, so dynamic account/order subscriptions cannot grow
+   * the cache without bound.
    */
   protected Observable<BitgetUtaV3WsNotification> sharedChannel(BitgetUtaV3Channel channel) {
     String subscriptionId = channel.toSubscriptionId();
@@ -176,6 +195,7 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
     Observable<BitgetUtaV3WsNotification> shared =
         subscribeChannel(null, channel)
             .doOnError(t -> sharedChannels.remove(subscriptionId, ref.get()))
+            .doFinally(() -> sharedChannels.remove(subscriptionId, ref.get()))
             .share();
     ref.set(shared);
     return sharedChannels.computeIfAbsent(subscriptionId, id -> ref.get());

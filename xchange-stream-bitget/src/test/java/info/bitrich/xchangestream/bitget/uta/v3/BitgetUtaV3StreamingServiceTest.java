@@ -8,6 +8,8 @@ import info.bitrich.xchangestream.bitget.BitgetStreamingAuthHelper;
 import info.bitrich.xchangestream.bitget.config.Config;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3Channel;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3InstType;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.observers.TestObserver;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -110,6 +112,24 @@ class BitgetUtaV3StreamingServiceTest {
     assertThat(service.getConnectionGeneration()).isEqualTo(initial + 1);
     assertThat(service.isCurrentGeneration(initial)).isFalse();
     assertThat(service.isCurrentGeneration(initial + 1)).isTrue();
+  }
+
+  @Test
+  void connectionGenerationNotClaimedUntilConnectIsSubscribed() {
+    BitgetUtaV3StreamingService service = new BitgetUtaV3StreamingService("wss://localhost/public");
+
+    long initial = service.getConnectionGeneration();
+
+    // composing the reconnect must not claim a fresh generation: a still-live connection's
+    // stamped handler stays current until the deferred reconnect is actually subscribed
+    Completable connect = service.connect();
+    assertThat(service.getConnectionGeneration()).isEqualTo(initial);
+
+    // subscribing claims the generation before the socket opens; the attempt to
+    // wss://localhost/public fails asynchronously, so only the claim is asserted here
+    TestObserver<Void> observer = connect.test();
+    assertThat(service.getConnectionGeneration()).isEqualTo(initial + 1);
+    observer.dispose();
   }
 
   @Test

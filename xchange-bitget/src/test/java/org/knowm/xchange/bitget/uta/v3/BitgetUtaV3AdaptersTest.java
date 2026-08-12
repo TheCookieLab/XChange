@@ -209,6 +209,69 @@ class BitgetUtaV3AdaptersTest {
   }
 
   @Test
+  void futures_limit_order_with_reduce_only_flag_serializes_yes() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.ASK, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .flag(BitgetUtaV3OrderFlags.REDUCE_ONLY)
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("reduceOnly").asText()).isEqualTo("yes");
+  }
+
+  @Test
+  void futures_market_order_with_reduce_only_flag_serializes_yes() throws Exception {
+    MarketOrder order =
+        new MarketOrder.Builder(OrderType.ASK, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.5"))
+            .flag(BitgetUtaV3OrderFlags.REDUCE_ONLY)
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("reduceOnly").asText()).isEqualTo("yes");
+  }
+
+  @Test
+  void futures_order_without_reduce_only_flag_omits_the_key() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.has("reduceOnly"))
+        .as("the provider default (no) applies when the flag is absent")
+        .isFalse();
+  }
+
+  @Test
+  void spot_order_ignores_reduce_only_flag() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .flag(BitgetUtaV3OrderFlags.REDUCE_ONLY)
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("category").asText()).isEqualTo("spot");
+    assertThat(json.has("reduceOnly"))
+        .as("reduceOnly is a derivatives-only wire parameter")
+        .isFalse();
+  }
+
+  @Test
   void fill_fees_in_one_currency_are_summed() throws Exception {
     BitgetUtaV3Fill fill =
         BitgetUtaV3Fill.builder()

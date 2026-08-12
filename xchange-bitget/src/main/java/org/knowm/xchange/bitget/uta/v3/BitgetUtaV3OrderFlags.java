@@ -31,5 +31,12 @@ public enum BitgetUtaV3OrderFlags implements Order.IOrderFlags {
    * default to {@code category=spot}; this flag lifts them to the margin category. Ignored for
    * futures instruments, which keep their derivative category.
    */
-  MARGIN
+  MARGIN,
+  /**
+   * Reduce-only futures order (wire {@code reduceOnly=yes}): the order can only decrease an
+   * existing position and never opens exposure on the opposite side. A one-way futures caller
+   * closing a position with a quantity larger than the remaining position is otherwise free to
+   * flip exposure. Ignored outside derivative instruments.
+   */
+  REDUCE_ONLY
 }

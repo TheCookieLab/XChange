@@ -299,6 +299,9 @@ public class BitgetUtaV3Adapters {
       if (limitOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)) {
         builder.posSide(toPosSide(limitOrder));
       }
+      if (limitOrder.hasFlag(BitgetUtaV3OrderFlags.REDUCE_ONLY)) {
+        builder.reduceOnly("yes");
+      }
     }
     return builder.build();
   }
@@ -331,6 +334,9 @@ public class BitgetUtaV3Adapters {
                   : "one_way_mode");
       if (marketOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)) {
         builder.posSide(toPosSide(marketOrder));
+      }
+      if (marketOrder.hasFlag(BitgetUtaV3OrderFlags.REDUCE_ONLY)) {
+        builder.reduceOnly("yes");
       }
     }
     return builder.build();
