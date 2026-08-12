@@ -197,9 +197,22 @@ public class BitgetUtaV3Adapters {
     return new OrderBook(toDate(dto.getTs()), asks, bids);
   }
 
-  /** XChange order for a v3 order DTO; instrument must be resolved by the caller. */
+  /**
+   * XChange order for a v3 order DTO; instrument must be resolved by the caller.
+   *
+   * <p>The provider's {@code qty} is the quote-coin spend for spot/margin market buys, so {@link
+   * Order#getOriginalAmount()} (always base-denominated in XChange) is taken from the
+   * base-denominated executed quantity {@code cumExecQty} for those orders instead — the only base
+   * figure the provider returns, zero while the order is live. Every other order shape maps {@code
+   * qty} unchanged.
+   */
   public Order toOrder(BitgetUtaV3Order dto, Instrument instrument) {
     OrderType orderType = toOrderType(dto.getSide());
+    boolean quoteDenominatedMarketBuy =
+        "market".equals(dto.getOrderType())
+            && orderType == OrderType.BID
+            && ("spot".equalsIgnoreCase(dto.getCategory())
+                || "margin".equalsIgnoreCase(dto.getCategory()));
     Order.Builder builder;
     if ("market".equals(dto.getOrderType())) {
       builder = new MarketOrder.Builder(orderType, instrument);
@@ -209,7 +222,7 @@ public class BitgetUtaV3Adapters {
     return builder
         .id(dto.getOrderId())
         .userReference(dto.getClientOid())
-        .originalAmount(dto.getQty())
+        .originalAmount(quoteDenominatedMarketBuy ? dto.getCumExecQty() : dto.getQty())
         .cumulativeAmount(dto.getCumExecQty())
         .averagePrice(dto.getAvgPrice())
         .timestamp(toDate(dto.getCreatedTime()))
@@ -313,10 +326,29 @@ public class BitgetUtaV3Adapters {
    * the required {@code qty}; there is no {@code amount} parameter. Per the official docs {@code
    * qty} is the base-coin quantity for limit and market-sell orders and the quote-coin spend for
    * market-buy orders on spot/margin categories.
+   *
+   * <p>Because XChange's {@link MarketOrder#getOriginalAmount()} is always base-denominated, a
+   * spot/margin market buy must not be sent as-is: Bitget would spend {@code originalAmount} quote
+   * coins (a 0.1-BTC order becomes a 0.1-USDT spend). Callers must set {@link
+   * BitgetUtaV3OrderFlags#MARKET_BUY_QUOTE_AMOUNT} to declare that the amount is the quote-coin
+   * spend; without it the order fails here, before any request is sent. Market sells and futures
+   * market orders keep the standard base semantics.
+   *
+   * @throws ExchangeException for a spot/margin market buy without {@link
+   *     BitgetUtaV3OrderFlags#MARKET_BUY_QUOTE_AMOUNT}
    */
   public BitgetUtaV3PlaceOrderRequest toPlaceOrderRequest(MarketOrder marketOrder) {
     BitgetUtaV3Category category =
         toPlaceOrderCategory(marketOrder.getInstrument(), marketOrder);
+    if (!category.isDerivative()
+        && marketOrder.getType() == OrderType.BID
+        && !marketOrder.hasFlag(BitgetUtaV3OrderFlags.MARKET_BUY_QUOTE_AMOUNT)) {
+      throw new ExchangeException(
+          "Bitget v3 market-buy orders spend the quote coin (the required qty parameter is the "
+              + "quote-amount), while XChange MarketOrder.originalAmount is base-denominated; set "
+              + "BitgetUtaV3OrderFlags.MARKET_BUY_QUOTE_AMOUNT to place a spot/margin market buy "
+              + "whose originalAmount is the quote-coin spend, or use a limit order");
+    }
     BitgetUtaV3PlaceOrderRequest.BitgetUtaV3PlaceOrderRequestBuilder builder =
         BitgetUtaV3PlaceOrderRequest.builder()
             .category(category.getWireName())

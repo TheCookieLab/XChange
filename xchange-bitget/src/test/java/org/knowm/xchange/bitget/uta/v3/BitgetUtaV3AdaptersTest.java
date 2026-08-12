@@ -14,6 +14,7 @@ import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Order;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
@@ -27,7 +28,10 @@ import org.knowm.xchange.instrument.Instrument;
  * <p>The UTA v3 place-order endpoint ({@code POST /api/v3/trade/place-order}) accepts exactly one
  * size parameter: {@code qty} (required). There is no {@code amount} parameter; per the official
  * docs {@code qty} is the base-coin quantity for limit and market-sell orders and the quote-coin
- * spend for market-buy orders on spot/margin categories.
+ * spend for market-buy orders on spot/margin categories. Because XChange's {@code originalAmount}
+ * is always base-denominated, spot/margin market buys require {@link
+ * BitgetUtaV3OrderFlags#MARKET_BUY_QUOTE_AMOUNT}; without it the adapter rejects the order instead
+ * of silently reinterpreting the base amount as quote spend.
  */
 class BitgetUtaV3AdaptersTest {
 
@@ -40,11 +44,25 @@ class BitgetUtaV3AdaptersTest {
   }
 
   @Test
-  void spot_market_buy_uses_qty_not_amount() throws Exception {
+  void spot_market_buy_without_quote_amount_flag_fails_before_placement() {
     MarketOrder buy =
         new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
             .originalAmount(new BigDecimal("100"))
             .userReference("buy-1")
+            .build();
+
+    assertThatThrownBy(() -> BitgetUtaV3Adapters.toPlaceOrderRequest(buy))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("MARKET_BUY_QUOTE_AMOUNT");
+  }
+
+  @Test
+  void spot_market_buy_with_quote_amount_flag_sends_quote_spend_as_qty() throws Exception {
+    MarketOrder buy =
+        new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("100"))
+            .userReference("buy-1")
+            .flag(BitgetUtaV3OrderFlags.MARKET_BUY_QUOTE_AMOUNT)
             .build();
 
     JsonNode json =
@@ -53,10 +71,95 @@ class BitgetUtaV3AdaptersTest {
     assertThat(json.get("category").asText()).isEqualTo("spot");
     assertThat(json.get("orderType").asText()).isEqualTo("market");
     assertThat(json.has("qty")).as("spot market order must carry the required qty field").isTrue();
-    assertThat(json.get("qty").asText()).isEqualTo("100");
+    assertThat(json.get("qty").asText())
+        .as("with the quote-amount flag, originalAmount is the quote-coin spend")
+        .isEqualTo("100");
     assertThat(json.has("amount"))
         .as("v3 place-order has no amount parameter; amount must not be sent")
         .isFalse();
+  }
+
+  @Test
+  void margin_market_buy_requires_quote_amount_flag() throws Exception {
+    MarketOrder buy =
+        new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("100"))
+            .flag(BitgetUtaV3OrderFlags.MARGIN)
+            .build();
+
+    assertThatThrownBy(() -> BitgetUtaV3Adapters.toPlaceOrderRequest(buy))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("MARKET_BUY_QUOTE_AMOUNT");
+
+    JsonNode json =
+        MAPPER.readTree(
+            MAPPER.writeValueAsString(
+                BitgetUtaV3Adapters.toPlaceOrderRequest(
+                    new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+                        .originalAmount(new BigDecimal("100"))
+                        .flag(BitgetUtaV3OrderFlags.MARGIN)
+                        .flag(BitgetUtaV3OrderFlags.MARKET_BUY_QUOTE_AMOUNT)
+                        .build())));
+    assertThat(json.get("category").asText()).isEqualTo("margin");
+    assertThat(json.get("qty").asText()).isEqualTo("100");
+  }
+
+  @Test
+  void futures_market_buy_keeps_base_quantity_without_quote_flag() throws Exception {
+    MarketOrder buy =
+        new MarketOrder.Builder(OrderType.BID, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.5"))
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(buy)));
+
+    assertThat(json.get("category").asText()).isEqualTo("usdt-futures");
+    assertThat(json.get("qty").asText())
+        .as("futures market buys keep the base contract count; the quote-amount gate is spot-only")
+        .isEqualTo("0.5");
+  }
+
+  @Test
+  void market_buy_order_maps_base_executed_amount_not_quote_spend() {
+    BitgetUtaV3Order dto =
+        BitgetUtaV3Order.builder()
+            .orderId("42")
+            .category("spot")
+            .side("buy")
+            .orderType("market")
+            .qty(new BigDecimal("100"))
+            .cumExecQty(new BigDecimal("0.5"))
+            .orderStatus("filled")
+            .build();
+
+    Order order = BitgetUtaV3Adapters.toOrder(dto, CurrencyPair.BTC_USDT);
+
+    assertThat(order).isInstanceOf(MarketOrder.class);
+    assertThat(order.getOriginalAmount())
+        .as("the provider's qty is the quote spend; originalAmount must stay base-denominated")
+        .isEqualByComparingTo("0.5");
+    assertThat(order.getCumulativeAmount()).isEqualByComparingTo("0.5");
+  }
+
+  @Test
+  void market_sell_order_keeps_qty_as_original_amount() {
+    BitgetUtaV3Order dto =
+        BitgetUtaV3Order.builder()
+            .orderId("42")
+            .category("spot")
+            .side("sell")
+            .orderType("market")
+            .qty(new BigDecimal("0.5"))
+            .cumExecQty(new BigDecimal("0.5"))
+            .orderStatus("filled")
+            .build();
+
+    Order order = BitgetUtaV3Adapters.toOrder(dto, CurrencyPair.BTC_USDT);
+
+    assertThat(order.getOriginalAmount())
+        .as("market sells and limit orders carry base qty unchanged")
+        .isEqualByComparingTo("0.5");
   }
 
   @Test

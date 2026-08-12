@@ -145,44 +145,54 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
   }
 
   private Completable connectUtaV3() {
-    BitgetUtaV3StreamingService publicService = new BitgetUtaV3StreamingService(Config.V3_PUBLIC_WS_URL);
-    applyStreamingSpecification(exchangeSpecification, publicService);
-    StreamingMarketDataService marketDataService =
-        new BitgetUtaV3StreamingMarketDataService(publicService);
-    if (StringUtils.isNoneBlank(
-        exchangeSpecification.getApiKey(),
-        exchangeSpecification.getSecretKey(),
-        exchangeSpecification.getPassword())) {
-      BitgetUtaV3PrivateStreamingService privateService =
-          new BitgetUtaV3PrivateStreamingService(
-              Config.V3_PRIVATE_WS_URL,
+    // cold composition: the exchange holder must keep serving the live transports until the
+    // connect subscription begins, so the standard reconnect idiom
+    // disconnect().andThen(connect()) shuts down the OLD sockets and only then wires the new
+    // ones. Eagerly constructing and assigning services here would replace the holder while the
+    // disconnect() Completable is still unsubscribed, and disconnect() would then shut down the
+    // freshly created unopened transports instead of the live sockets, orphaning them.
+    return Completable.defer(
+        () -> {
+          BitgetUtaV3StreamingService publicService =
+              new BitgetUtaV3StreamingService(Config.V3_PUBLIC_WS_URL);
+          applyStreamingSpecification(exchangeSpecification, publicService);
+          StreamingMarketDataService marketDataService =
+              new BitgetUtaV3StreamingMarketDataService(publicService);
+          if (StringUtils.isNoneBlank(
               exchangeSpecification.getApiKey(),
               exchangeSpecification.getSecretKey(),
-              exchangeSpecification.getPassword());
-      // private channels must honor the same proxy/cert/connection-hook/auto-reconnect
-      // settings as the public socket
-      applyStreamingSpecification(exchangeSpecification, privateService);
-      services =
-          new StreamingServices(
-              publicService,
-              privateService,
-              marketDataService,
-              new BitgetUtaV3StreamingTradeService(
-                  privateService, (BitgetUtaV3TradeService) getTradeService()),
-              new BitgetUtaV3StreamingAccountService(privateService));
-      return privateService
-          .connect()
-          .andThen(
-              publicService
-                  .connect()
-                  .onErrorResumeNext(
-                      error ->
-                          privateService
-                              .disconnect()
-                              .andThen(Completable.error(error))));
-    }
-    services = new StreamingServices(publicService, null, marketDataService, null, null);
-    return publicService.connect();
+              exchangeSpecification.getPassword())) {
+            BitgetUtaV3PrivateStreamingService privateService =
+                new BitgetUtaV3PrivateStreamingService(
+                    Config.V3_PRIVATE_WS_URL,
+                    exchangeSpecification.getApiKey(),
+                    exchangeSpecification.getSecretKey(),
+                    exchangeSpecification.getPassword());
+            // private channels must honor the same proxy/cert/connection-hook/auto-reconnect
+            // settings as the public socket
+            applyStreamingSpecification(exchangeSpecification, privateService);
+            services =
+                new StreamingServices(
+                    publicService,
+                    privateService,
+                    marketDataService,
+                    new BitgetUtaV3StreamingTradeService(
+                        privateService, (BitgetUtaV3TradeService) getTradeService()),
+                    new BitgetUtaV3StreamingAccountService(privateService));
+            return privateService
+                .connect()
+                .andThen(
+                    publicService
+                        .connect()
+                        .onErrorResumeNext(
+                            error ->
+                                privateService
+                                    .disconnect()
+                                    .andThen(Completable.error(error))));
+          }
+          services = new StreamingServices(publicService, null, marketDataService, null, null);
+          return publicService.connect();
+        });
   }
 
   @Override

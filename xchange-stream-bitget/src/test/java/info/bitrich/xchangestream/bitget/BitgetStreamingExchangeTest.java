@@ -16,6 +16,9 @@ import io.reactivex.rxjava3.core.Completable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.bitget.config.BitgetApiMode;
+import org.knowm.xchange.bitget.config.BitgetConfiguration;
 
 /** Lifecycle behaviour of {@link BitgetStreamingExchange}. */
 class BitgetStreamingExchangeTest {
@@ -82,6 +85,38 @@ class BitgetStreamingExchangeTest {
 
     assertThat(exchange.getPublicNettyStreamingService()).isNull();
     assertThat(exchange.getPrivateNettyStreamingService()).isNull();
+  }
+
+  @Test
+  void utaV3ReconnectCompositionDefersServiceReplacementUntilSubscription() throws Exception {
+    BitgetStreamingExchange exchange = new BitgetStreamingExchange();
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    // hermetic: without this, applySpecification triggers remoteInitUtaV3(), a live instrument
+    // fetch that pollutes the shared Currency registry and breaks later tests
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setExchangeSpecificParametersItem(
+        BitgetConfiguration.API_MODE, BitgetApiMode.UTA_V3);
+    exchange.applySpecification(specification);
+
+    BitgetUtaV3StreamingService oldPublic =
+        new BitgetUtaV3StreamingService(Config.V3_PUBLIC_WS_URL);
+    setServices(
+        exchange,
+        oldPublic,
+        null,
+        new BitgetUtaV3StreamingMarketDataService(oldPublic),
+        null,
+        null);
+
+    // the standard reconnect idiom: composing it must not touch the live holder
+    exchange.disconnect().andThen(exchange.connect());
+
+    assertThat(exchange.getPublicNettyStreamingService())
+        .as(
+            "disconnect().andThen(connect()) must resolve the OLD transports at subscription; an "
+                + "eager connect would replace the holder while the disconnect Completable is still "
+                + "unsubscribed and shut down the fresh unopened sockets instead of the live ones")
+        .isSameAs(oldPublic);
   }
 
   @Test

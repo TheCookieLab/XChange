@@ -38,5 +38,19 @@ public enum BitgetUtaV3OrderFlags implements Order.IOrderFlags {
    * closing a position with a quantity larger than the remaining position is otherwise free to
    * flip exposure. Ignored outside derivative instruments.
    */
-  REDUCE_ONLY
+  REDUCE_ONLY,
+  /**
+   * Spot/margin market-buy order whose {@link MarketOrder#getOriginalAmount()} is the quote-coin
+   * spend, not the base-coin quantity.
+   *
+   * <p>The v3 place-order endpoint accepts exactly one size parameter, the required {@code qty};
+   * per the official docs {@code qty} is the base-coin quantity for limit and market-sell orders
+   * and the quote-coin spend for market-buy orders on spot/margin categories. XChange's {@link
+   * MarketOrder#getOriginalAmount()} is always base-denominated, so a spot/margin market buy
+   * without this flag is rejected at adaptation — sending the base amount as quote spend would
+   * place an order roughly a price-factor too small. Set this flag to declare that {@code
+   * originalAmount} carries the quote-coin spend. Futures market orders are unaffected (their
+   * {@code qty} is always the base contract count).
+   */
+  MARKET_BUY_QUOTE_AMOUNT
 }
