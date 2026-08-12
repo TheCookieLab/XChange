@@ -205,6 +205,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   void trade_history_filters_fills_by_requested_instrument() throws Exception {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .willReturn(
                 aResponse()
                     .withStatus(200)
@@ -220,6 +221,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                             + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"3500\","
                             + "\"execQty\":\"1\",\"createdTime\":\"1725040472073\"}],"
                             + "\"cursor\":\"\"}}")));
+    stubEmptyMarginFills();
 
     BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
         (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
@@ -232,6 +234,75 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e1");
     assertThat(trades.getUserTrades().get(0).getInstrument())
         .isEqualTo(CurrencyPair.BTC_USDT);
+    // both the spot and the margin leg of the shared CurrencyPair identity must be queried
+    wireMockServer.verify(
+        2,
+        com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
+            urlPathEqualTo("/api/v3/trade/fills")));
+  }
+
+  /**
+   * Spot and margin fills share the {@link CurrencyPair} identity (margin placements use the same
+   * pair, and streaming accepts both categories), so an instrument-scoped history must query both
+   * categories; querying only spot would silently drop every margin execution (review wave 15e).
+   */
+  @Test
+  void trade_history_includes_margin_fills_for_spot_instrument() throws Exception {
+    // margin fills resolve back to instruments through the catalog: category=margin must be stubbed
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/market/instruments"))
+            .withQueryParam("category", equalTo("margin"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":[{\"symbol\":\"BTCUSDT\",\"baseCoin\":\"BTC\","
+                            + "\"quoteCoin\":\"USDT\",\"minTradeNum\":\"0.0001\","
+                            + "\"maxTradeNum\":\"10\",\"pricePrecision\":\"2\","
+                            + "\"quantityPrecision\":\"4\",\"status\":\"online\","
+                            + "\"isReality\":\"no\",\"category\":\"margin\"}]}")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e-spot\",\"orderId\":\"42\","
+                            + "\"clientOid\":\"c42\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472070\"}],"
+                            + "\"cursor\":\"\"}}")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("margin"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e-margin\",\"orderId\":\"43\","
+                            + "\"clientOid\":\"c43\",\"category\":\"margin\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"\"}}")));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+    params.setLimit(1);
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    // the limit is honored across categories by fill time: the newer margin fill wins
+    assertThat(trades.getUserTrades()).hasSize(1);
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e-margin");
   }
 
   /**
@@ -359,6 +430,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
             .atPriority(1)
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
             .willReturn(
                 aResponse()
@@ -372,6 +444,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
             .atPriority(1)
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.equalTo("C1"))
             .willReturn(
                 aResponse()
@@ -382,6 +455,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                             + "\"data\":{\"list\":["
                             + page2
                             + "],\"cursor\":\"\"}}")));
+    stubEmptyMarginFills();
 
     BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
         (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
@@ -406,8 +480,9 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                     java.util.stream.IntStream.rangeClosed(1, 5).mapToObj(i -> "e" + i),
                     java.util.stream.IntStream.rangeClosed(101, 145).mapToObj(i -> "e" + i))
                 .collect(java.util.stream.Collectors.toList()));
+    // two spot pages plus the single empty margin leg
     wireMockServer.verify(
-        2,
+        3,
         com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
             urlPathEqualTo("/api/v3/trade/fills")));
   }
@@ -722,6 +797,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
 
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(windowBoundary)))
             .withQueryParam("endTime", equalTo(String.valueOf(end)))
             .willReturn(
@@ -733,6 +809,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     // never requested twice
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(start)))
             .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary - 1)))
             .willReturn(
@@ -743,9 +820,11 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     // an unsplit full-span query must never reach the wire
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(start)))
             .withQueryParam("endTime", equalTo(String.valueOf(end)))
             .willReturn(aResponse().withStatus(500)));
+    stubEmptyMarginFills();
 
     BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
         (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
@@ -772,6 +851,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
 
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(windowBoundary)))
             .withQueryParam("endTime", equalTo(String.valueOf(end)))
             .willReturn(
@@ -782,9 +862,11 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     // the older window must not be fetched once the limit is satisfied
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(start)))
             .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary - 1)))
             .willReturn(aResponse().withStatus(500)));
+    stubEmptyMarginFills();
 
     BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
         (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
@@ -811,6 +893,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     // the newest window keeps the fill whose createdTime sits exactly on the boundary...
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(windowBoundary)))
             .withQueryParam("endTime", equalTo(String.valueOf(end)))
             .willReturn(
@@ -822,6 +905,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     // inclusive endTime must never reach the wire
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(start)))
             .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary - 1)))
             .willReturn(
@@ -831,9 +915,11 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                     .withBody(fillsPage("e2", String.valueOf(start), ""))));
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(start)))
             .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary)))
             .willReturn(aResponse().withStatus(500)));
+    stubEmptyMarginFills();
 
     BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
         (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
@@ -869,6 +955,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
 
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(start + 1)))
             .withQueryParam("endTime", equalTo(String.valueOf(end)))
             .willReturn(
@@ -878,6 +965,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                     .withBody(fillsPage("e1", String.valueOf(start + 1), ""))));
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(start)))
             .withQueryParam("endTime", equalTo(String.valueOf(start)))
             .willReturn(
@@ -888,9 +976,11 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     // an unsplit full-span query must never reach the wire
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .withQueryParam("startTime", equalTo(String.valueOf(start)))
             .withQueryParam("endTime", equalTo(String.valueOf(end)))
             .willReturn(aResponse().withStatus(500)));
+    stubEmptyMarginFills();
 
     BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
         (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
@@ -918,6 +1008,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                     com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
                             com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo(
                                 "/api/v3/trade/fills"))
+                        .withQueryParam("category", equalTo("spot"))
                         .withQueryParam("startTime", equalTo(String.valueOf(start)))
                         .withQueryParam("endTime", equalTo(String.valueOf(start)))))
         .as("the final single-millisecond window [start, start] must be queried")
@@ -1002,6 +1093,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   void generic_trade_history_params_honor_requested_instrument() throws Exception {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .willReturn(
                 aResponse()
                     .withStatus(200)
@@ -1017,6 +1109,8 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                             + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"3500\","
                             + "\"execQty\":\"1\",\"createdTime\":\"1725040472073\"}],"
                             + "\"cursor\":\"\"}}")));
+
+    stubEmptyMarginFills();
 
     DefaultTradeHistoryParamInstrument params = new DefaultTradeHistoryParamInstrument();
     params.setInstrument(CurrencyPair.BTC_USDT);
@@ -1034,6 +1128,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   void generic_currency_pair_params_honor_requested_instrument() throws Exception {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
             .willReturn(
                 aResponse()
                     .withStatus(200)
@@ -1049,6 +1144,8 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                             + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"3500\","
                             + "\"execQty\":\"1\",\"createdTime\":\"1725040472073\"}],"
                             + "\"cursor\":\"\"}}")));
+
+    stubEmptyMarginFills();
 
     DefaultTradeHistoryParamCurrencyPair params = new DefaultTradeHistoryParamCurrencyPair();
     params.setCurrencyPair(CurrencyPair.BTC_USDT);
@@ -1382,6 +1479,23 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     assertThat(elapsedMillis)
         .as("unfilled-orders page fetches must be spaced at the endpoint policy's 20/s rate")
         .isGreaterThanOrEqualTo(45);
+  }
+
+  /**
+   * Instrument-scoped history queries both spot and margin (they share the {@link CurrencyPair}
+   * identity), so every such test must answer the margin leg; this stub returns no margin fills.
+   */
+  private static void stubEmptyMarginFills() {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("margin"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[],\"cursor\":\"\"}}")));
   }
 
   private static String fillsPage(String execIdsCsv, String createdTime, String cursor) {

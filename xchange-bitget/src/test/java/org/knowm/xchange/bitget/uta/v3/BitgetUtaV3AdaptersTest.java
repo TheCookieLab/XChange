@@ -516,4 +516,30 @@ class BitgetUtaV3AdaptersTest {
     assertThat(BitgetUtaV3Adapters.toInstrument(row))
         .isEqualTo(new FuturesContract(new CurrencyPair(Currency.BTC, Currency.USD), "1226"));
   }
+
+  /**
+   * Spot and margin fills share the plain {@link CurrencyPair} identity, so an instrument-scoped
+   * history must query both categories; futures and account-wide history keep a single category.
+   */
+  @Test
+  void to_history_categories_covers_spot_and_margin_for_currency_pairs() {
+    assertThat(BitgetUtaV3Adapters.toHistoryCategories(CurrencyPair.BTC_USDT))
+        .containsExactly(
+            org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Category.SPOT,
+            org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Category.MARGIN);
+    assertThat(
+            BitgetUtaV3Adapters.toHistoryCategories(
+                new FuturesContract(new CurrencyPair(Currency.BTC, Currency.USD), "1226")))
+        .hasSize(1)
+        .allMatch(
+            category ->
+                category != null
+                    && category.isDerivative()
+                    && category
+                        == org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Category
+                            .COIN_FUTURES);
+    assertThat(BitgetUtaV3Adapters.toHistoryCategories(null))
+        .containsExactly(
+            new org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Category[] {null});
+  }
 }

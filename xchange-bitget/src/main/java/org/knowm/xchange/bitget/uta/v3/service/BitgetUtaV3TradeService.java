@@ -163,18 +163,17 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     if (params instanceof TradeHistoryParamLimit) {
       historyParams.setLimit(((TradeHistoryParamLimit) params).getLimit());
     }
-    BitgetUtaV3Category category = null;
-    if (historyParams.getInstrument() != null) {
-      category = BitgetUtaV3Adapters.toCategory(historyParams.getInstrument());
-    }
     Long startMillis =
         historyParams.getStartTime() == null ? null : historyParams.getStartTime().getTime();
     Long endMillis =
         historyParams.getEndTime() == null ? null : historyParams.getEndTime().getTime();
-    final String startTime = startMillis == null ? null : String.valueOf(startMillis);
-    final String endTime = endMillis == null ? null : String.valueOf(endMillis);
     Integer limit = historyParams.getLimit();
-    final String requestCategory = category == null ? null : category.getWireName();
+    // spot and margin fills share the CurrencyPair identity, so an instrument-scoped history must
+    // query both categories or every margin execution is silently dropped; the per-category
+    // budget is the full requested limit and the merged aggregate is trimmed to the limit by fill
+    // time so the most recent fills win across categories
+    final List<BitgetUtaV3Category> requestCategories =
+        BitgetUtaV3Adapters.toHistoryCategories(historyParams.getInstrument());
     final String requestSymbol =
         historyParams.getInstrument() == null
             ? null
@@ -185,6 +184,55 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     // limit is consumed by the most recent fills (PRD CF-451)
     final long windowMillis = 30L * 24 * 60 * 60 * 1000;
     List<BitgetUtaV3Fill> rows = new java.util.ArrayList<>();
+    for (BitgetUtaV3Category requestCategory : requestCategories) {
+      rows.addAll(
+          fetchFills(
+              requestCategory == null ? null : requestCategory.getWireName(),
+              startMillis,
+              endMillis,
+              limit,
+              requestSymbol,
+              pageSize,
+              windowMillis));
+    }
+    if (limit != null && rows.size() > limit) {
+      // newest first across categories (stable: equal fill times keep per-category provider
+      // order), so the limit selects the most recent executions regardless of category
+      rows.sort(
+          java.util.Comparator.comparingLong((BitgetUtaV3Fill row) -> fillTimeMillis(row))
+              .reversed());
+      rows = new java.util.ArrayList<>(rows.subList(0, limit));
+    }
+    List<UserTrade> trades = new java.util.ArrayList<>();
+    for (BitgetUtaV3Fill row : rows) {
+      trades.add(toUserTrade(row));
+    }
+    return new UserTrades(trades, TradeSortType.SortByID);
+  }
+
+  /**
+   * Fetches every fill in one category over the requested span, splitting spans beyond the
+   * provider's 30-day window into compliant windows, newest first. {@code limit} bounds the rows
+   * returned for this category (counting only rows that survive the symbol filter); the symbol
+   * filter runs inside the pagination loop so the limit counts only matching rows (PRD CF-451).
+   */
+  private List<BitgetUtaV3Fill> fetchFills(
+      String requestCategory,
+      Long startMillis,
+      Long endMillis,
+      Integer limit,
+      String requestSymbol,
+      int pageSize,
+      long windowMillis)
+      throws IOException {
+    final String startTime = startMillis == null ? null : String.valueOf(startMillis);
+    final String endTime = endMillis == null ? null : String.valueOf(endMillis);
+    List<BitgetUtaV3Fill> rows = new java.util.ArrayList<>();
+    // the fills endpoint filters by category only, so client-side symbol filtering is required to
+    // honor TradeHistoryParamInstrument (PRD CF-451); the filter runs inside the pagination loop
+    // so the requested limit counts only rows that survive it
+    java.util.function.Predicate<BitgetUtaV3Fill> symbolFilter =
+        row -> requestSymbol == null || requestSymbol.equals(row.getSymbol());
     if (startMillis != null && endMillis != null && endMillis - startMillis > windowMillis) {
       long windowEnd = endMillis;
       while (windowEnd >= startMillis) {
@@ -204,11 +252,7 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
                         pageSize,
                         cursor),
                 remaining,
-                // the fills endpoint filters by category only, so client-side symbol filtering is
-                // required to honor TradeHistoryParamInstrument (PRD CF-451); the filter runs
-                // inside the pagination loop so the requested limit counts only rows that survive
-                // it
-                row -> requestSymbol == null || requestSymbol.equals(row.getSymbol())));
+                symbolFilter));
         if (remaining != null && rows.size() >= limit) {
           break;
         }
@@ -223,20 +267,24 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
       rows.addAll(
           fetchAllPages(
               FILLS_ENDPOINT,
-              (cursor) ->
-                  getFills(
-                      requestCategory, null, startTime, endTime, pageSize, cursor),
+              (cursor) -> getFills(requestCategory, null, startTime, endTime, pageSize, cursor),
               limit,
-              // the fills endpoint filters by category only, so client-side symbol filtering is
-              // required to honor TradeHistoryParamInstrument (PRD CF-451); the filter runs inside
-              // the pagination loop so the requested limit counts only rows that survive it
-              row -> requestSymbol == null || requestSymbol.equals(row.getSymbol())));
+              symbolFilter));
     }
-    List<UserTrade> trades = new java.util.ArrayList<>();
-    for (BitgetUtaV3Fill row : rows) {
-      trades.add(toUserTrade(row));
+    return rows;
+  }
+
+  /** Provider fill timestamp in epoch millis, {@code 0} when absent, for cross-category merge. */
+  private static long fillTimeMillis(BitgetUtaV3Fill row) {
+    String createdTime = row.getCreatedTime();
+    if (createdTime == null) {
+      return 0L;
     }
-    return new UserTrades(trades, TradeSortType.SortByID);
+    try {
+      return Long.parseLong(createdTime);
+    } catch (NumberFormatException e) {
+      return 0L;
+    }
   }
 
   @Override

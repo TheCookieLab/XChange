@@ -104,6 +104,24 @@ public class BitgetUtaV3Adapters {
   }
 
   /**
+   * Categories to query for a history request. Spot and margin fills share the instrument's plain
+   * {@link CurrencyPair} identity (margin placements use the same pair, and streaming accepts both
+   * categories), so an instrument-scoped history must query both; a single {@link #toCategory}
+   * would resolve to {@code SPOT} and silently drop every margin execution. Futures keep their
+   * single derivative category. A {@code null} instrument means account-wide history and yields a
+   * single {@code null} entry so the endpoint is called without a category filter.
+   */
+  public List<BitgetUtaV3Category> toHistoryCategories(Instrument instrument) {
+    if (instrument == null) {
+      return java.util.Collections.singletonList(null);
+    }
+    if (instrument instanceof FuturesContract) {
+      return java.util.Collections.singletonList(toCategory(instrument));
+    }
+    return java.util.Arrays.asList(BitgetUtaV3Category.SPOT, BitgetUtaV3Category.MARGIN);
+  }
+
+  /**
    * XChange instrument for a v3 instrument row. Derivative rows become {@link FuturesContract} —
    * prompt {@code PERP} for perpetuals, the provider's expiry suffix (e.g. {@code 1226} for
    * {@code BTCUSD1226}) for dated delivery contracts, so a delivery contract and a perpetual on
