@@ -108,40 +108,49 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
   }
 
   private Completable connectClassicV2() {
-    BitgetStreamingService publicService = new BitgetStreamingService(Config.V2_PUBLIC_WS_URL);
-    BitgetPrivateStreamingService privateService = null;
-    StreamingTradeService tradeService = null;
-    if (StringUtils.isNoneBlank(
-        exchangeSpecification.getApiKey(),
-        exchangeSpecification.getSecretKey(),
-        exchangeSpecification.getPassword())) {
-      privateService =
-          new BitgetPrivateStreamingService(
-              Config.V2_PRIVATE_WS_URL,
+    // cold composition, same rationale as connectUtaV3(): the exchange holder must keep serving
+    // the live transports until the connect subscription begins, so the standard reconnect idiom
+    // disconnect().andThen(connect()) shuts down the OLD sockets and only then wires the new
+    // ones. Eagerly constructing and assigning services here would replace the holder while the
+    // disconnect() Completable is still unsubscribed, and disconnect() would then shut down the
+    // freshly created unopened transports instead of the live sockets, orphaning them.
+    return Completable.defer(
+        () -> {
+          BitgetStreamingService publicService = new BitgetStreamingService(Config.V2_PUBLIC_WS_URL);
+          BitgetPrivateStreamingService privateService = null;
+          StreamingTradeService tradeService = null;
+          if (StringUtils.isNoneBlank(
               exchangeSpecification.getApiKey(),
               exchangeSpecification.getSecretKey(),
-              exchangeSpecification.getPassword());
-      tradeService = new BitgetStreamingTradeService(privateService);
-      privateService.connect().blockingAwait();
-    }
-    applyStreamingSpecification(exchangeSpecification, publicService);
-    services =
-        new StreamingServices(
-            publicService,
-            privateService,
-            new BitgetStreamingMarketDataService(publicService),
-            tradeService,
-            null);
+              exchangeSpecification.getPassword())) {
+            privateService =
+                new BitgetPrivateStreamingService(
+                    Config.V2_PRIVATE_WS_URL,
+                    exchangeSpecification.getApiKey(),
+                    exchangeSpecification.getSecretKey(),
+                    exchangeSpecification.getPassword());
+            tradeService = new BitgetStreamingTradeService(privateService);
+            privateService.connect().blockingAwait();
+          }
+          applyStreamingSpecification(exchangeSpecification, publicService);
+          services =
+              new StreamingServices(
+                  publicService,
+                  privateService,
+                  new BitgetStreamingMarketDataService(publicService),
+                  tradeService,
+                  null);
 
-    if (privateService == null) {
-      return publicService.connect();
-    }
-    BitgetPrivateStreamingService connectedPrivateService = privateService;
-    return publicService
-        .connect()
-        .onErrorResumeNext(
-            error ->
-                connectedPrivateService.disconnect().andThen(Completable.error(error)));
+          if (privateService == null) {
+            return publicService.connect();
+          }
+          BitgetPrivateStreamingService connectedPrivateService = privateService;
+          return publicService
+              .connect()
+              .onErrorResumeNext(
+                  error ->
+                      connectedPrivateService.disconnect().andThen(Completable.error(error)));
+        });
   }
 
   private Completable connectUtaV3() {

@@ -17,6 +17,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -358,14 +359,23 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
   /**
    * Terminates every registered channel stream with {@code error}; used when the connection fails
    * as a whole (e.g. a rejected private login) so subscribers never hang on it.
+   *
+   * <p>The channels are removed from the registries BEFORE the emitters are signaled: {@code
+   * tryOnError} notifies subscribers synchronously, and an error callback that immediately retries
+   * the same channel must see it absent so the retry emitter is wired by {@link
+   * #subscribeChannel}'s {@code computeIfAbsent} instead of being discarded — the later disconnect
+   * would then clear the old entry without ever wiring the new stream (same contract as the
+   * single-channel failure path).
    */
   protected void failAllChannels(Throwable error) {
-    for (Entry<String, Subscription> entry : channels.entrySet()) {
-      entry.getValue().getEmitter().tryOnError(error);
-    }
+    Map<String, Subscription> failed = new ConcurrentHashMap<>(channels);
+    channels.clear();
     // drop the cached shared observables so a retry after reconnect builds fresh ones instead of
     // reusing observables whose emitters were just terminated
     sharedChannels.clear();
+    for (Entry<String, Subscription> entry : failed.entrySet()) {
+      entry.getValue().getEmitter().tryOnError(error);
+    }
   }
 
   /** UTA v3 keeps the connection alive with the text frame {@code "ping"}. */

@@ -154,4 +154,29 @@ class BitgetUtaV3StreamingDeadChannelRetryTest {
 
     assertThat(service.sharedChannels()).isEmpty();
   }
+
+  @Test
+  void failAllChannelsDeregistersChannelsBeforeSignalingSoErrorCallbacksRetriesAreWired()
+      throws Exception {
+    TestableStreamingService service = new TestableStreamingService();
+    Observable<BitgetUtaV3WsNotification> shared = service.sharedChannel(BTC_TRADE);
+    TestObserver<BitgetUtaV3WsNotification> first = shared.test();
+    assertThat(service.frames()).hasSize(1);
+
+    // a subscriber whose error callback immediately retries the same channel: the retry must see
+    // the dead entry already deregistered, otherwise computeIfAbsent discards its emitter, no
+    // subscribe frame is sent, and the retried stream hangs on a channel that can never push
+    TestObserver<BitgetUtaV3WsNotification> retried = new TestObserver<>();
+    shared.doOnError(t -> service.sharedChannel(BTC_TRADE).subscribe(retried)).subscribe();
+
+    service.failAllChannels(new ExchangeException("connection failed"));
+
+    first.assertError(ExchangeException.class);
+    assertThat(service.frames())
+        .as("the error-callback retry must be wired with a fresh subscribe frame")
+        .hasSize(2);
+    assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isTrue();
+    retried.assertNoErrors();
+    retried.assertNotComplete();
+  }
 }

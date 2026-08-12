@@ -120,6 +120,36 @@ class BitgetStreamingExchangeTest {
   }
 
   @Test
+  void classicReconnectCompositionDefersServiceReplacementUntilSubscription() throws Exception {
+    BitgetStreamingExchange exchange = new BitgetStreamingExchange();
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    // hermetic: without this, applySpecification triggers remoteInit, a live catalog fetch
+    specification.setShouldLoadRemoteMetaData(false);
+    // no API_MODE parameter: the default is CLASSIC_V2
+    exchange.applySpecification(specification);
+
+    BitgetStreamingService oldPublic = new BitgetStreamingService(Config.V2_PUBLIC_WS_URL);
+    setServices(
+        exchange,
+        oldPublic,
+        null,
+        new BitgetStreamingMarketDataService(oldPublic),
+        null,
+        null);
+
+    // the standard reconnect idiom: composing it must not touch the live holder, exactly like the
+    // UTA V3 path — an eager classic connect would replace services during composition and the
+    // cold disconnect would then shut down the fresh unopened sockets instead of the live ones
+    exchange.disconnect().andThen(exchange.connect());
+
+    assertThat(exchange.getPublicNettyStreamingService())
+        .as(
+            "classic-mode disconnect().andThen(connect()) must defer service replacement until "
+                + "subscription")
+        .isSameAs(oldPublic);
+  }
+
+  @Test
   void classicModeGetterDescriptorsExposeConcreteServices() throws Exception {
     BitgetStreamingExchange exchange = new BitgetStreamingExchange();
     BitgetStreamingService publicService = new BitgetStreamingService(Config.V2_PUBLIC_WS_URL);
