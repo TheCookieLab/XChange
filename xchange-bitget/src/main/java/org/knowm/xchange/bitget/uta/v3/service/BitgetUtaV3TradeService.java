@@ -72,6 +72,11 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
   }
 
   @Override
+  public OpenOrders getOpenOrders() throws IOException {
+    return getOpenOrders(createOpenOrdersParams());
+  }
+
+  @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
     String symbol = null;
     if (params instanceof DefaultOpenOrdersParamInstrument) {
@@ -186,10 +191,6 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
    */
   private <T> List<T> fetchAllPages(PageFetcher<T> fetcher) throws IOException {
     return fetchAllPages(fetcher, null, null);
-  }
-
-  private <T> List<T> fetchAllPages(PageFetcher<T> fetcher, Integer maxRows) throws IOException {
-    return fetchAllPages(fetcher, maxRows, null);
   }
 
   private <T> List<T> fetchAllPages(

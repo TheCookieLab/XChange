@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3Adapters;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3UnknownOutcomeException;
+import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Category;
 import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Exception;
 import org.knowm.xchange.bitget.uta.v3.service.BitgetUtaV3TradeService;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Order;
@@ -97,6 +98,7 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
             item ->
                 Config.getInstance().getObjectMapper().treeToValue(item, BitgetUtaV3Order.class))
         .filter(dto -> expectedSymbol.equals(dto.getSymbol()))
+        .filter(dto -> matchesCategory(instrument, dto.getCategory()))
         .filter(dto -> dto.getOrderId() != null)
         .flatMap(
             dto -> {
@@ -130,6 +132,7 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
             item ->
                 Config.getInstance().getObjectMapper().treeToValue(item, BitgetUtaV3FillData.class))
         .filter(dto -> expectedSymbol.equals(dto.getSymbol()))
+        .filter(dto -> matchesCategory(instrument, dto.getCategory()))
         .filter(dto -> dto.getExecId() != null)
         .flatMap(
             dto -> {
@@ -259,6 +262,23 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
     }
     return restTradeService.placeLimitOrder(
         LimitOrder.Builder.from(limitOrder).userReference(clientOid).build());
+  }
+
+  /**
+   * Whether a pushed {@code category} belongs to the subscribed {@code instrument}. Spot and
+   * margin share the spot instrument universe (margin rows map to the same {@link CurrencyPair}
+   * as their spot twin, matching the REST adapters), so a spot subscription accepts both; a
+   * futures subscription accepts only its own product family.
+   */
+  private static boolean matchesCategory(Instrument instrument, String pushedCategory) {
+    if (pushedCategory == null) {
+      return true;
+    }
+    BitgetUtaV3Category expected = BitgetUtaV3Adapters.toCategory(instrument);
+    if (!expected.isDerivative()) {
+      return "spot".equalsIgnoreCase(pushedCategory) || "margin".equalsIgnoreCase(pushedCategory);
+    }
+    return expected.getWireName().equalsIgnoreCase(pushedCategory);
   }
 
   private void failPendingPlacements() {

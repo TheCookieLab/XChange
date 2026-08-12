@@ -516,6 +516,35 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   }
 
   /**
+   * The no-argument {@code getOpenOrders()} entry point must work for generic XChange clients:
+   * the parameterized overload is the implementation, the no-arg form delegates to it with the
+   * default params instead of inheriting the interface's not-implemented default.
+   */
+  @Test
+  void no_arg_get_open_orders_delegates_to_parameterized_overload() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/unfilled-orders"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"orderId\":\"1\",\"clientOid\":\"c1\","
+                            + "\"category\":\"spot\",\"symbol\":\"BTCUSDT\",\"orderType\":\"limit\","
+                            + "\"side\":\"buy\",\"price\":\"60000\",\"qty\":\"0.1\","
+                            + "\"orderStatus\":\"new\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"\"}}")));
+
+    OpenOrders openOrders = tradeService.getOpenOrders();
+
+    assertThat(openOrders.getOpenOrders()).hasSize(1);
+    assertThat(openOrders.getOpenOrders().get(0).getId()).isEqualTo("1");
+  }
+
+  /**
    * A provider that repeats the same cursor (or echoes a stale one) must not be followed forever:
    * PRD CF-451 requires repeated/no-progress detection. A stuck cursor must surface an exception
    * instead of returning silently-truncated history.

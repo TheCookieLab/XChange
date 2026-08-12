@@ -108,6 +108,7 @@ public class BitgetUtaV3MarketDataService extends BitgetUtaV3MarketDataServiceRa
   public List<Ticker> getTickers(Params params) throws IOException {
     List<Ticker> result = new ArrayList<>();
     try {
+      Map<String, Instrument> instrumentsBySymbol = new ConcurrentHashMap<>();
       for (BitgetUtaV3Category category :
           new BitgetUtaV3Category[] {
             BitgetUtaV3Category.SPOT,
@@ -117,12 +118,11 @@ public class BitgetUtaV3MarketDataService extends BitgetUtaV3MarketDataServiceRa
           }) {
         // load the category's instruments once and map every ticker symbol from that result;
         // per-ticker lookups would be one /market/instruments request per product (10/s limit)
-        Map<String, Instrument> instrumentsBySymbol = new java.util.HashMap<>();
+        instrumentsBySymbol.clear();
         List<BitgetUtaV3Instrument> instrumentRows = getInstruments(category, null);
         if (instrumentRows != null) {
           for (BitgetUtaV3Instrument row : instrumentRows) {
-            instrumentsBySymbol.put(
-                row.getSymbol(), BitgetUtaV3Adapters.toInstrument(row));
+            instrumentsBySymbol.put(row.getSymbol(), BitgetUtaV3Adapters.toInstrument(row));
           }
         }
         for (BitgetUtaV3Ticker ticker : getTickers(category, null)) {

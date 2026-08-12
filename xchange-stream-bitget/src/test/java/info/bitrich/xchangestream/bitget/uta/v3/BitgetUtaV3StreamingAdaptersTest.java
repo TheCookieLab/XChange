@@ -216,6 +216,28 @@ class BitgetUtaV3StreamingAdaptersTest {
   }
 
   @Test
+  void toBalanceUsesEquityAsTotalAndDebtsAsBorrowedForLeveragedCoins() {
+    BitgetUtaV3AccountData.BitgetUtaV3CoinData dto =
+        BitgetUtaV3AccountData.BitgetUtaV3CoinData.builder()
+            .coin("BTC")
+            .balance(new BigDecimal("1.0"))
+            .equity(new BigDecimal("1.4"))
+            .available(new BigDecimal("0.8"))
+            .locked(new BigDecimal("0.2"))
+            .debts(new BigDecimal("0.3"))
+            .build();
+
+    Balance balance = BitgetUtaV3StreamingAdapters.toBalance(dto, Currency.BTC);
+
+    // mirrors the REST account adaptation: total is equity (balance + frozen margin + unrealized
+    // PnL), borrowed is the outstanding debt
+    assertThat(balance.getTotal()).isEqualByComparingTo("1.4");
+    assertThat(balance.getAvailable()).isEqualByComparingTo("0.8");
+    assertThat(balance.getFrozen()).isEqualByComparingTo("0.2");
+    assertThat(balance.getBorrowed()).isEqualByComparingTo("0.3");
+  }
+
+  @Test
   void toUserTradeMapsFillPushWithAggregatedFees() {
     BitgetUtaV3Fee maker =
         BitgetUtaV3Fee.builder().feeCoin("USDT").fee(new BigDecimal("0.01")).build();

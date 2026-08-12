@@ -17,6 +17,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.CandleStickInterval;
+import org.knowm.xchange.derivative.FuturesContract;
 
 /**
  * Concurrent subscribers on one subscription id must each receive pushes, and disposing one
@@ -65,6 +66,22 @@ class BitgetUtaV3StreamingSubscriptionTest {
         + "\"ts\":1710518400000}";
   }
 
+  /** UTA private order-channel push carrying an explicit product category. */
+  private static String orderPushWithCategory(String orderId, String symbol, String category) {
+    return "{\"action\":\"snapshot\",\"arg\":{\"instType\":\"UTA\",\"topic\":\"order\"},"
+        + "\"data\":[{\"orderId\":\""
+        + orderId
+        + "\",\"clientOid\":\"client-"
+        + orderId
+        + "\",\"symbol\":\""
+        + symbol
+        + "\",\"category\":\""
+        + category
+        + "\",\"side\":\"buy\",\"orderType\":\"limit\",\"price\":\"100.0\","
+        + "\"qty\":\"0.5\",\"orderStatus\":\"live\",\"createdTime\":\"1710518400000\"}],"
+        + "\"ts\":1710518400000}";
+  }
+
   /** Kline push; the provider echoes the interval inside the push {@code arg}. */
   private static String klinePush(String interval) {
     return "{\"action\":\"snapshot\",\"arg\":{\"instType\":\"spot\",\"topic\":\"kline\","
@@ -97,6 +114,31 @@ class BitgetUtaV3StreamingSubscriptionTest {
     eth.dispose();
     ws.messageHandler(orderPush("order-3", "BTCUSDT", "client-3"));
     btc.assertValueCount(2);
+  }
+
+  @Test
+  void orderPushesAreFilteredByProductCategory() throws Exception {
+    BitgetUtaV3PrivateStreamingService ws = newPrivateService();
+    BitgetUtaV3StreamingTradeService trade =
+        new BitgetUtaV3StreamingTradeService(ws, mock(BitgetUtaV3TradeService.class));
+
+    // spot subscription: the same symbol in the futures family must not leak into the stream
+    TestObserver<Order> spot = trade.getOrderChanges(BTC).test();
+    TestObserver<Order> usdtFutures =
+        trade.getOrderChanges(new FuturesContract(BTC, "PERP")).test();
+
+    ws.messageHandler(orderPushWithCategory("order-1", "BTCUSDT", "usdt-futures"));
+    spot.assertValueCount(0);
+    usdtFutures.assertValueCount(1);
+
+    // a margin push is the spot twin and must still reach the spot subscriber
+    ws.messageHandler(orderPushWithCategory("order-2", "BTCUSDT", "margin"));
+    spot.assertValueCount(1);
+    usdtFutures.assertValueCount(1);
+
+    ws.messageHandler(orderPushWithCategory("order-3", "BTCUSDT", "spot"));
+    spot.assertValueCount(2);
+    usdtFutures.assertValueCount(1);
   }
 
   @Test

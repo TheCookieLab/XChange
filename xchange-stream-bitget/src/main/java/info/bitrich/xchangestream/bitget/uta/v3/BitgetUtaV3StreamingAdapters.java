@@ -173,9 +173,20 @@ public class BitgetUtaV3StreamingAdapters {
         .build();
   }
 
-  /** XChange balance for a per-coin entry of a v3 account push. */
+  /**
+   * XChange balance for a per-coin entry of a v3 account push. Mirrors the REST account
+   * adaptation: {@code total} is the coin equity (balance + frozen margin + unrealized PnL) and
+   * {@code borrowed} is the outstanding debt, so streamed and REST consumers see the same
+   * account value and exposure for leveraged UTA balances.
+   */
   public Balance toBalance(BitgetUtaV3CoinData dto, Currency currency) {
-    return new Balance(currency, dto.getBalance(), dto.getAvailable(), dto.getLocked());
+    return new Balance.Builder()
+        .currency(currency)
+        .total(dto.getEquity() != null ? dto.getEquity() : dto.getBalance())
+        .available(dto.getAvailable())
+        .frozen(dto.getLocked())
+        .borrowed(dto.getDebts() != null ? dto.getDebts() : BigDecimal.ZERO)
+        .build();
   }
 
   /** XChange user trade for a v3 fill push; instrument resolved from push category+symbol. */
