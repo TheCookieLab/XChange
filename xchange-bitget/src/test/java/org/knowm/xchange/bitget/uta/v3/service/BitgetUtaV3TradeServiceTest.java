@@ -625,10 +625,12 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                     .withStatus(200)
                     .withHeader("Content-Type", "application/json")
                     .withBody(fillsPage("e1", "1725040472073", ""))));
+    // the older window's end is exclusive of the boundary, so a fill exactly at the boundary is
+    // never requested twice
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
             .withQueryParam("startTime", equalTo(String.valueOf(start)))
-            .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary)))
+            .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary - 1)))
             .willReturn(
                 aResponse()
                     .withStatus(200)
@@ -677,7 +679,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
             .withQueryParam("startTime", equalTo(String.valueOf(start)))
-            .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary)))
+            .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary - 1)))
             .willReturn(aResponse().withStatus(500)));
 
     BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
@@ -693,6 +695,63 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     assertThat(trades.getUserTrades()).hasSize(2);
     assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e1");
     assertThat(trades.getUserTrades().get(1).getId()).isEqualTo("e2");
+  }
+
+  @Test
+  void trade_history_never_duplicates_a_fill_at_the_window_boundary() throws Exception {
+    long start = 1_720_000_000_000L;
+    long end = 1_723_300_000_000L;
+    long windowMillis = 30L * 24 * 60 * 60 * 1000;
+    long windowBoundary = end - windowMillis;
+
+    // the newest window keeps the fill whose createdTime sits exactly on the boundary...
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(windowBoundary)))
+            .withQueryParam("endTime", equalTo(String.valueOf(end)))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e1,e-boundary", String.valueOf(windowBoundary), ""))));
+    // ...while the older window requests an end exclusive of the boundary; an overlapping
+    // inclusive endTime must never reach the wire
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(start)))
+            .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary - 1)))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e2", String.valueOf(start), ""))));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(start)))
+            .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary)))
+            .willReturn(aResponse().withStatus(500)));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+    params.setStartTime(new java.util.Date(start));
+    params.setEndTime(new java.util.Date(end));
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    assertThat(trades.getUserTrades()).hasSize(3);
+    assertThat(trades.getUserTrades())
+        .extracting(org.knowm.xchange.dto.trade.UserTrade::getId)
+        .containsExactlyInAnyOrder("e1", "e-boundary", "e2");
+    assertThat(trades.getUserTrades())
+        .extracting(org.knowm.xchange.dto.trade.UserTrade::getId)
+        .filteredOn("e-boundary"::equals)
+        .as("the boundary fill must be emitted exactly once")
+        .hasSize(1);
+    assertThat(trades.getUserTrades().get(2).getId())
+        .as("the older window must still come last")
+        .isEqualTo("e2");
   }
 
   @Test

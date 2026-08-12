@@ -188,7 +188,9 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
         if (remaining != null && rows.size() >= limit) {
           break;
         }
-        windowEnd = windowStart;
+        // the boundary fill belongs to the newer window (inclusive start); the older window's end
+        // is advanced one millisecond so inclusive bounds cannot surface it twice
+        windowEnd = windowStart - 1;
       }
     } else {
       rows.addAll(

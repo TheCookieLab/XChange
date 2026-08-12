@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3Adapters;
 import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Category;
@@ -81,15 +82,42 @@ public class BitgetUtaV3StreamingAdapters {
     return pair;
   }
 
+  /**
+   * Quote currencies the provider pairs against, in preference order. Bitget lists both USDT and
+   * USDC margin/futures families, USD coin-margined contracts, and BTC/ETH margined contracts;
+   * these disambiguate concatenated symbols whose prefix is also a registered currency (e.g. {@code
+   * BCHUSD} must be {@code BCH/USD}, not the coincidental {@code BC/HUSD}).
+   */
+  private static final Set<Currency> PREFERRED_QUOTE_CURRENCIES =
+      Set.of(Currency.USDT, Currency.USDC, Currency.USD, Currency.BTC, Currency.ETH);
+
   private CurrencyPair parseCurrencyPair(String symbol) {
-    // Bitget symbols are base+counter with no separator, e.g. BTCUSDT; prefer a split where both
-    // halves are registered currencies (shortest valid split, e.g. BTC+USDT for BTCUSDT)
+    // Bitget symbols are base+counter with no separator, e.g. BTCUSDT. Prefer a split where both
+    // halves are registered currencies; when several splits are valid, the provider's quote
+    // currency disambiguates (USDT/USDC/USD/BTC/ETH first), then the longest base (BCH/USD rather
+    // than the coincidental BC/HUSD for BCHUSD).
+    Currency bestBase = null;
+    Currency bestCounter = null;
+    int bestBaseLength = 0;
     for (int split = 1; split < symbol.length(); split++) {
       Currency base = Currency.getInstanceNoCreate(symbol.substring(0, split));
       Currency counter = Currency.getInstanceNoCreate(symbol.substring(split));
-      if (base != null && counter != null) {
-        return new CurrencyPair(base, counter);
+      if (base == null || counter == null) {
+        continue;
       }
+      boolean candidatePreferred = PREFERRED_QUOTE_CURRENCIES.contains(counter);
+      boolean bestPreferred =
+          bestCounter != null && PREFERRED_QUOTE_CURRENCIES.contains(bestCounter);
+      if (bestCounter == null
+          || (candidatePreferred && !bestPreferred)
+          || (candidatePreferred == bestPreferred && split > bestBaseLength)) {
+        bestBase = base;
+        bestCounter = counter;
+        bestBaseLength = split;
+      }
+    }
+    if (bestCounter != null) {
+      return new CurrencyPair(bestBase, bestCounter);
     }
     // unknown base (e.g. 1000PEPE): longest registered suffix wins as the counter, the remainder
     // is the base (1000PEPE+USDT for 1000PEPEUSDT)

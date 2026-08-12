@@ -81,6 +81,21 @@ class BitgetUtaV3StreamingAdaptersTest {
   }
 
   @Test
+  void toInstrumentDisambiguatesConcatenatedSymbolsByQuoteCurrency() {
+    // BCHUSD is BCH/USD, not the coincidental BC/HUSD (both BC and HUSD are registered)
+    Instrument coinFutures = BitgetUtaV3StreamingAdapters.toInstrument("coin-futures", "BCHUSD");
+    assertThat(coinFutures)
+        .isEqualTo(new FuturesContract(new CurrencyPair(Currency.BCH, Currency.USD), "PERP"));
+
+    Instrument spot = BitgetUtaV3StreamingAdapters.toInstrument("spot", "BCHUSD");
+    assertThat(spot).isEqualTo(new CurrencyPair(Currency.BCH, Currency.USD));
+
+    // USDT-quoted symbols keep their natural split
+    Instrument btc = BitgetUtaV3StreamingAdapters.toInstrument("spot", "BTCUSDT");
+    assertThat(btc).isEqualTo(CurrencyPair.BTC_USDT);
+  }
+
+  @Test
   void toTickerMapsV3FieldsAndEnvelopeTimestamp() {
     BitgetUtaV3TickerData dto =
         BitgetUtaV3TickerData.builder()
