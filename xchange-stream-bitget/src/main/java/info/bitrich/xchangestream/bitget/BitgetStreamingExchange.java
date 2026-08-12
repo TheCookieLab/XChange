@@ -15,6 +15,7 @@ import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import io.reactivex.rxjava3.core.Completable;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.StringUtils;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bitget.BitgetExchange;
 import org.knowm.xchange.bitget.uta.v3.service.BitgetUtaV3TradeService;
 
@@ -130,16 +131,14 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
               exchangeSpecification.getApiKey(),
               exchangeSpecification.getSecretKey(),
               exchangeSpecification.getPassword())) {
-            privateService =
-                new BitgetPrivateStreamingService(
-                    Config.V2_PRIVATE_WS_URL,
-                    exchangeSpecification.getApiKey(),
-                    exchangeSpecification.getSecretKey(),
-                    exchangeSpecification.getPassword());
+            privateService = createClassicPrivateService(exchangeSpecification);
             tradeService = new BitgetStreamingTradeService(privateService);
-            privateService.connect().blockingAwait();
           }
           applyStreamingSpecification(exchangeSpecification, publicService);
+          // install the holder BEFORE awaiting the private connection: NettyStreamingService
+          // schedules automatic reconnection when the handshake fails, and a private transport
+          // that is not yet reachable through the holder could never be stopped by disconnect(),
+          // leaking its event loop and reconnect attempts
           services.set(
               new StreamingServices(
                   publicService,
@@ -147,6 +146,9 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
                   new BitgetStreamingMarketDataService(publicService),
                   tradeService,
                   null));
+          if (privateService != null) {
+            privateService.connect().blockingAwait();
+          }
 
           if (privateService == null) {
             return publicService.connect();
@@ -158,6 +160,21 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
                   error ->
                       connectedPrivateService.disconnect().andThen(Completable.error(error)));
         });
+  }
+
+  /**
+   * Creates the classic V2 private transport for the configured credentials.
+   *
+   * <p>Protected so tests can substitute a transport whose connection outcome is deterministic
+   * (the classic path awaits the private connection with {@code blockingAwait()}).
+   */
+  protected BitgetPrivateStreamingService createClassicPrivateService(
+      ExchangeSpecification specification) {
+    return new BitgetPrivateStreamingService(
+        Config.V2_PRIVATE_WS_URL,
+        specification.getApiKey(),
+        specification.getSecretKey(),
+        specification.getPassword());
   }
 
   private Completable connectUtaV3() {

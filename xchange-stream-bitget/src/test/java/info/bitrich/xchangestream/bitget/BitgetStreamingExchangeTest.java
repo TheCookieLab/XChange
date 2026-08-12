@@ -1,6 +1,7 @@
 package info.bitrich.xchangestream.bitget;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import info.bitrich.xchangestream.bitget.config.Config;
 import info.bitrich.xchangestream.bitget.uta.v3.BitgetUtaV3PrivateStreamingService;
@@ -15,6 +16,7 @@ import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.observers.TestObserver;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicReference;
@@ -224,6 +226,48 @@ class BitgetStreamingExchangeTest {
 
     assertThat(exchange.getPublicNettyStreamingService()).isNull();
     assertThat(exchange.getPrivateNettyStreamingService()).isNull();
+  }
+
+  @Test
+  void classicConnectFailureStillInstallsHolderSoDisconnectCanStopTheTransport() throws Exception {
+    BitgetStreamingExchange exchange =
+        new BitgetStreamingExchange() {
+          @Override
+          protected BitgetPrivateStreamingService createClassicPrivateService(
+              ExchangeSpecification specification) {
+            return new BitgetPrivateStreamingService(
+                Config.V2_PRIVATE_WS_URL,
+                specification.getApiKey(),
+                specification.getSecretKey(),
+                specification.getPassword()) {
+              @Override
+              public Completable connect() {
+                // deterministic stand-in for a DNS/TCP/TLS/handshake failure; NettyStreamingService
+                // would otherwise schedule an automatic reconnect loop
+                return Completable.error(new IOException("connection refused"));
+              }
+            };
+          }
+        };
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    // hermetic: without this, applySpecification triggers remoteInitUtaV3(), a live instrument
+    // fetch that pollutes the shared Currency registry and breaks later tests
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setApiKey("api-key");
+    specification.setSecretKey("api-secret");
+    specification.setPassword("api-passphrase");
+    exchange.applySpecification(specification);
+
+    Completable connect = exchange.connect();
+
+    assertThatThrownBy(connect::blockingAwait)
+        .as("the classic path awaits the private connection and must surface its failure")
+        .isInstanceOf(Throwable.class);
+    // the private transport failed to connect, but the holder was installed BEFORE the await, so
+    // a subsequent disconnect() can stop its reconnect loop instead of leaking the event loop
+    assertThat(exchange.getPrivateNettyStreamingService())
+        .as("holder must be installed before awaiting the private connection")
+        .isNotNull();
   }
 
   private static void setServices(
