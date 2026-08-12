@@ -204,7 +204,9 @@ public class BitgetUtaV3Adapters {
             .qty(limitOrder.getOriginalAmount())
             .timeInForce("gtc")
             .clientOid(limitOrder.getUserReference());
-    applyDerivativeDefaults(builder, category);
+    if (category.isDerivative()) {
+      builder.marginMode("crossed").holdMode("one_way_mode");
+    }
     return builder.build();
   }
 
@@ -224,21 +226,15 @@ public class BitgetUtaV3Adapters {
     } else {
       builder.qty(marketOrder.getOriginalAmount());
     }
-    applyDerivativeDefaults(builder, category);
+    if (category.isDerivative()) {
+      builder.marginMode("crossed").holdMode("one_way_mode");
+    }
     return builder.build();
   }
 
   /** v3 cancel-order request for an order id (XChange's standard cancel identity). */
   public BitgetUtaV3CancelOrderRequest toCancelOrderRequest(String orderId) {
     return BitgetUtaV3CancelOrderRequest.builder().orderId(orderId).build();
-  }
-
-  private static void applyDerivativeDefaults(
-      BitgetUtaV3PlaceOrderRequest.BitgetUtaV3PlaceOrderRequestBuilder builder,
-      BitgetUtaV3Category category) {
-    if (category.isDerivative()) {
-      builder.marginMode("crossed").holdMode("one_way_mode");
-    }
   }
 
   private static OrderType toOrderType(String side) {
