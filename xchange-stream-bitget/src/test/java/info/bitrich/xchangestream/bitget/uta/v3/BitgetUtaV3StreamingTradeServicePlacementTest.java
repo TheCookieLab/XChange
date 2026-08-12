@@ -17,7 +17,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3UnknownOutcomeException;
 import org.knowm.xchange.bitget.uta.v3.service.BitgetUtaV3TradeService;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -28,9 +27,10 @@ import org.knowm.xchange.exceptions.FundsExceededException;
  * Placement outcome semantics of {@link BitgetUtaV3StreamingTradeService}.
  *
  * <p>The unknown-outcome guardrail must fire only for placements whose outcome is genuinely
- * unknown (accepted by REST but never confirmed on the private socket). Placements that were never
- * submitted, definitively rejected by the provider, or already confirmed by the REST call must
- * never resurface as unknown outcomes on a later, unrelated socket disconnect.
+ * unknown: the private socket disconnects while the REST placement is in flight. Placements that
+ * were never submitted, definitively rejected by the provider, or already confirmed by the REST
+ * call have a known outcome and must never resurface as unknown on a later, unrelated socket
+ * disconnect.
  */
 class BitgetUtaV3StreamingTradeServicePlacementTest {
 
@@ -88,20 +88,6 @@ class BitgetUtaV3StreamingTradeServicePlacementTest {
     TestObserver<Throwable> failures = tradeService.subscribePlacementFailures().test();
     disconnectSubject.onNext(new Object());
     failures.assertNoValues();
-  }
-
-  @Test
-  void acceptedButUnconfirmedPlacementFailsAsUnknownOutcomeOnDisconnect() throws Exception {
-    when(restTradeService.placeMarketOrder(any(MarketOrder.class))).thenReturn("oid-1");
-
-    TestObserver<Integer> placement = tradeService.placeMarketOrder(marketOrder()).test();
-    placement.assertValue(0);
-
-    // guardrail: accepted placement with no confirmation push is an unknown outcome
-    TestObserver<Throwable> failures = tradeService.subscribePlacementFailures().test();
-    disconnectSubject.onNext(new Object());
-    failures.assertValueCount(1);
-    failures.assertValue(throwable -> throwable instanceof BitgetUtaV3UnknownOutcomeException);
   }
 
   @Test

@@ -213,10 +213,10 @@ public class BitgetUtaV3Adapters {
   /**
    * v3 place-order request for a market order.
    *
-   * <p>The v3 endpoint ({@code POST /api/v3/trade/place-order}) accepts exactly one size
-   * parameter, the required {@code qty}; there is no {@code amount} parameter. Per the official
-   * docs {@code qty} is the base-coin quantity for limit and market-sell orders and the quote-coin
-   * spend for market-buy orders on spot/margin categories.
+   * <p>The v3 endpoint ({@code POST /api/v3/trade/place-order}) accepts exactly one size parameter,
+   * the required {@code qty}; there is no {@code amount} parameter. Per the official docs {@code
+   * qty} is the base-coin quantity for limit and market-sell orders and the quote-coin spend for
+   * market-buy orders on spot/margin categories.
    */
   public BitgetUtaV3PlaceOrderRequest toPlaceOrderRequest(MarketOrder marketOrder) {
     BitgetUtaV3Category category = toCategory(marketOrder.getInstrument());

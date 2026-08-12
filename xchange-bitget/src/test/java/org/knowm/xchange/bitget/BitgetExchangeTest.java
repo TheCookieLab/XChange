@@ -8,7 +8,8 @@ import org.knowm.xchange.bitget.config.BitgetApiMode;
 class BitgetExchangeTest {
 
   /**
-   * {@link org.knowm.xchange.BaseExchange#applySpecification(org.knowm.xchange.ExchangeSpecification)}
+   * {@link
+   * org.knowm.xchange.BaseExchange#applySpecification(org.knowm.xchange.ExchangeSpecification)}
    * documents {@code null} as "use the default specification"; Bitget's mode-aware override must
    * not break that contract for the default (classic) mode.
    */

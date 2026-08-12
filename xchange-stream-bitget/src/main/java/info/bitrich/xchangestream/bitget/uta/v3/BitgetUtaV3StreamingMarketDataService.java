@@ -72,10 +72,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
     return sharedChannels.computeIfAbsent(
         channel.toSubscriptionId(),
         id ->
-            service
-                .subscribeChannel(null, channel)
-                .doFinally(() -> assemblers.remove(id))
-                .share());
+            service.subscribeChannel(null, channel).doFinally(() -> assemblers.remove(id)).share());
   }
 
   @Override

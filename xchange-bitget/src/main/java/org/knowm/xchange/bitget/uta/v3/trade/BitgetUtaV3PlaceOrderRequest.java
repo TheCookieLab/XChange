@@ -15,10 +15,10 @@ import lombok.extern.jackson.Jacksonized;
  * {@code one_way_mode|hedge_mode}; reduceOnly {@code yes|no}; posSide {@code long|short} (futures
  * only); tpTriggerBy/slTriggerBy {@code market|mark}; tpOrderType/slOrderType {@code limit|market}.
  *
- * <p>{@code price} is required for limit orders; {@code qty} is the required size parameter for
- * all order types (base-coin quantity for limit and market-sell, quote-coin spend for market-buy
- * on spot/margin). There is no {@code amount} parameter on the v3 endpoint. {@code
- * clientOid} must match {@code ^[\.A-Z\:/a-z0-9_-]{1,32}$} and is idempotent for 6 hours.
+ * <p>{@code price} is required for limit orders; {@code qty} is the required size parameter for all
+ * order types (base-coin quantity for limit and market-sell, quote-coin spend for market-buy on
+ * spot/margin). There is no {@code amount} parameter on the v3 endpoint. {@code clientOid} must
+ * match {@code ^[\.A-Z\:/a-z0-9_-]{1,32}$} and is idempotent for 6 hours.
  */
 @Data
 @Builder

@@ -17,7 +17,6 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.CandleStickInterval;
-import org.knowm.xchange.dto.marketdata.OrderBook;
 
 /**
  * Concurrent subscribers on one subscription id must each receive pushes, and disposing one

@@ -17,8 +17,8 @@ import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
-import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamCurrencyPair;
 import org.knowm.xchange.service.trade.TradeService;
+import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
 
@@ -166,8 +166,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
             .atPriority(1)
-            .withQueryParam(
-                "cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
             .willReturn(
                 aResponse()
                     .withStatus(200)
@@ -214,8 +213,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/unfilled-orders"))
             .atPriority(1)
-            .withQueryParam(
-                "cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
             .willReturn(
                 aResponse()
                     .withStatus(200)
@@ -320,8 +318,7 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                             + "\"data\":{\"list\":[],\"cursor\":\"\"}}")));
 
     // generic core params type, not the exchange-specific subclass
-    UserTrades trades =
-        tradeService.getTradeHistory(new DefaultTradeHistoryParamCurrencyPair());
+    UserTrades trades = tradeService.getTradeHistory(new DefaultTradeHistoryParamCurrencyPair());
 
     assertThat(trades.getUserTrades()).isEmpty();
   }

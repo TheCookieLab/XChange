@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3Action;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3Channel;
@@ -22,10 +21,9 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
  * End-to-end order-book stream behavior of {@link BitgetUtaV3StreamingMarketDataService}.
  *
  * <p>The UTA v3 depth channel pushes levels as positional arrays ({@code ["99756.7","23.9774"]},
- * see the Bitget "Depth Channel" documentation), which {@code
- * BitgetUtaV3OrderBookLevel#fromArray} maps onto {@code [price, size]}. A snapshot push must
- * produce an {@link OrderBook}; a partial envelope without a {@code data} array must be skipped,
- * not terminate the stream.
+ * see the Bitget "Depth Channel" documentation), which {@code BitgetUtaV3OrderBookLevel#fromArray}
+ * maps onto {@code [price, size]}. A snapshot push must produce an {@link OrderBook}; a partial
+ * envelope without a {@code data} array must be skipped, not terminate the stream.
  */
 class BitgetUtaV3StreamingMarketDataServiceTest {
 
@@ -57,8 +55,7 @@ class BitgetUtaV3StreamingMarketDataServiceTest {
 
   @Test
   void snapshotPushProducesOrderBook() throws Exception {
-    TestObserver<OrderBook> observer =
-        marketDataService.getOrderBook(CurrencyPair.BTC_USDT).test();
+    TestObserver<OrderBook> observer = marketDataService.getOrderBook(CurrencyPair.BTC_USDT).test();
 
     channelSubject.onNext(
         push(
@@ -76,8 +73,7 @@ class BitgetUtaV3StreamingMarketDataServiceTest {
 
   @Test
   void pushWithoutDataArrayDoesNotKillOrderBookStream() throws Exception {
-    TestObserver<OrderBook> observer =
-        marketDataService.getOrderBook(CurrencyPair.BTC_USDT).test();
+    TestObserver<OrderBook> observer = marketDataService.getOrderBook(CurrencyPair.BTC_USDT).test();
 
     channelSubject.onNext(push(BitgetUtaV3Action.UPDATE, null));
 

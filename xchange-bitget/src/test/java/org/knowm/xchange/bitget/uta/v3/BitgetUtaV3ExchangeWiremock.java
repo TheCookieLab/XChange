@@ -69,8 +69,8 @@ public abstract class BitgetUtaV3ExchangeWiremock {
   }
 
   /**
-   * Each test starts from a clean stub slate (plus the instruments endpoints) so that
-   * cursor-scoped stubs registered by one test never intercept another test's requests.
+   * Each test starts from a clean stub slate (plus the instruments endpoints) so that cursor-scoped
+   * stubs registered by one test never intercept another test's requests.
    */
   @BeforeEach
   public void resetStubs() {

@@ -142,13 +142,7 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     List<BitgetUtaV3Fill> rows =
         fetchAllPages(
             (cursor) ->
-                getFills(
-                    requestCategory,
-                    null,
-                    requestStartTime,
-                    requestEndTime,
-                    pageSize,
-                    cursor),
+                getFills(requestCategory, null, requestStartTime, requestEndTime, pageSize, cursor),
             limit);
     List<UserTrade> trades = rows.stream().map(this::toUserTrade).collect(Collectors.toList());
     return new UserTrades(trades, TradeSortType.SortByID);

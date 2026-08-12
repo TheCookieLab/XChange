@@ -16,7 +16,6 @@ import org.apache.commons.lang3.Validate;
  */
 @Data
 @Builder
-
 public class BitgetUtaV3OrderBookLevel {
 
   private final BigDecimal price;
