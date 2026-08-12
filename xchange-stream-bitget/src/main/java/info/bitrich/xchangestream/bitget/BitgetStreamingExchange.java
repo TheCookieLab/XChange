@@ -49,11 +49,37 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
 
   private volatile StreamingServices services = StreamingServices.EMPTY;
 
-  public NettyStreamingService<?> getPublicStreamingService() {
+  /**
+   * The classic-mode public transport. Return type and descriptor are preserved for binary
+   * compatibility with clients compiled against the original Lombok getter; in UTA V3 mode the
+   * public socket is a different service type, so this accessor yields null and callers use
+   * {@link #getPublicNettyStreamingService()} instead.
+   */
+  public BitgetStreamingService getPublicStreamingService() {
+    return services.publicService instanceof BitgetStreamingService
+        ? (BitgetStreamingService) services.publicService
+        : null;
+  }
+
+  /**
+   * The classic-mode private transport. Return type and descriptor are preserved for binary
+   * compatibility with clients compiled against the original Lombok getter; in UTA V3 mode the
+   * private socket is a different service type, so this accessor yields null and callers use
+   * {@link #getPrivateNettyStreamingService()} instead.
+   */
+  public BitgetPrivateStreamingService getPrivateStreamingService() {
+    return services.privateService instanceof BitgetPrivateStreamingService
+        ? (BitgetPrivateStreamingService) services.privateService
+        : null;
+  }
+
+  /** The currently wired public transport, regardless of API mode. */
+  public NettyStreamingService<?> getPublicNettyStreamingService() {
     return services.publicService;
   }
 
-  public NettyStreamingService<?> getPrivateStreamingService() {
+  /** The currently wired private transport, regardless of API mode. */
+  public NettyStreamingService<?> getPrivateNettyStreamingService() {
     return services.privateService;
   }
 
@@ -161,21 +187,26 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
 
   @Override
   public Completable disconnect() {
-    StreamingServices current = services;
-    if (current.isEmpty()) {
-      return Completable.complete();
-    }
-    Completable disconnect =
-        current.publicService == null
-            ? current.privateService.disconnect()
-            : current.privateService == null
-                ? current.publicService.disconnect()
-                : current.privateService.disconnect().andThen(current.publicService.disconnect());
-    // drop the transport and wrapper fields so a later reconnect (possibly with a different
-    // specification, e.g. without credentials) cannot observe or leak the closed private socket;
-    // connect() rebuilds every field from scratch
-    services = StreamingServices.EMPTY;
-    return disconnect;
+    // cold: resolve the wired services at subscription time and clear them only after the
+    // transport shutdown completes, so a caller that composes the Completable without subscribing
+    // keeps the references (and can retry a failed disconnect) instead of losing them early
+    return Completable.defer(
+        () -> {
+          StreamingServices current = services;
+          if (current.isEmpty()) {
+            return Completable.complete();
+          }
+          Completable transportDisconnect =
+              current.publicService == null
+                  ? current.privateService.disconnect()
+                  : current.privateService == null
+                      ? current.publicService.disconnect()
+                      : current.privateService.disconnect().andThen(current.publicService.disconnect());
+          // drop the transport and wrapper fields so a later reconnect (possibly with a different
+          // specification, e.g. without credentials) cannot observe or leak the closed private
+          // socket; connect() rebuilds every field from scratch
+          return transportDisconnect.doOnComplete(() -> services = StreamingServices.EMPTY);
+        });
   }
 
   @Override
