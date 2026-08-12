@@ -13,8 +13,11 @@ import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.observers.TestObserver;
+import io.reactivex.rxjava3.subjects.CompletableSubject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bitget.config.BitgetApiMode;
@@ -120,6 +123,49 @@ class BitgetStreamingExchangeTest {
   }
 
   @Test
+  void disconnectCompletionPreservesAConcurrentlyInstalledHolder() throws Exception {
+    BitgetStreamingExchange exchange = new BitgetStreamingExchange();
+    CompletableSubject shutdownGate = CompletableSubject.create();
+    BitgetUtaV3StreamingService hangingService =
+        new BitgetUtaV3StreamingService(Config.V3_PUBLIC_WS_URL) {
+          @Override
+          public Completable disconnect() {
+            return shutdownGate;
+          }
+        };
+    setServices(
+        exchange,
+        hangingService,
+        null,
+        new BitgetUtaV3StreamingMarketDataService(hangingService),
+        null,
+        null);
+
+    // start a disconnect whose transport shutdown is still in flight
+    TestObserver<Void> disconnect = exchange.disconnect().test();
+
+    // a concurrent connect() installs a fresh holder while the old shutdown is completing
+    BitgetUtaV3StreamingService newPublic = new BitgetUtaV3StreamingService(Config.V3_PUBLIC_WS_URL);
+    setServices(
+        exchange,
+        newPublic,
+        null,
+        new BitgetUtaV3StreamingMarketDataService(newPublic),
+        null,
+        null);
+
+    // the old transport finally finishes shutting down
+    shutdownGate.onComplete();
+    disconnect.assertComplete();
+
+    assertThat(exchange.getPublicNettyStreamingService())
+        .as(
+            "a disconnect completing after a concurrent connect installed a fresh holder must not "
+                + "wipe it — the new sockets would stay live but unreachable through every getter")
+        .isSameAs(newPublic);
+  }
+
+  @Test
   void classicReconnectCompositionDefersServiceReplacementUntilSubscription() throws Exception {
     BitgetStreamingExchange exchange = new BitgetStreamingExchange();
     ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
@@ -203,6 +249,9 @@ class BitgetStreamingExchangeTest {
             publicService, privateService, marketDataService, tradeService, accountService);
     Field servicesField = BitgetStreamingExchange.class.getDeclaredField("services");
     servicesField.setAccessible(true);
-    servicesField.set(exchange, holder);
+    @SuppressWarnings("unchecked")
+    AtomicReference<Object> servicesRef =
+        (AtomicReference<Object>) servicesField.get(exchange);
+    servicesRef.set(holder);
   }
 }

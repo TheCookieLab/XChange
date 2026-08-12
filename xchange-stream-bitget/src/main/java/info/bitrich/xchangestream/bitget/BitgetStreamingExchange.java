@@ -13,6 +13,7 @@ import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import io.reactivex.rxjava3.core.Completable;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.bitget.BitgetExchange;
 import org.knowm.xchange.bitget.uta.v3.service.BitgetUtaV3TradeService;
@@ -47,7 +48,13 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
     }
   }
 
-  private volatile StreamingServices services = StreamingServices.EMPTY;
+  /**
+   * The currently wired transport/wrapper holder, updated atomically so a disconnect completing
+   * after a concurrent connect installed a fresh holder can only clear the holder it actually
+   * shut down (compare-and-set) instead of wiping the newer generation.
+   */
+  private final AtomicReference<StreamingServices> services =
+      new AtomicReference<>(StreamingServices.EMPTY);
 
   /**
    * The classic-mode public transport. Return type and descriptor are preserved for binary
@@ -56,8 +63,8 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
    * {@link #getPublicNettyStreamingService()} instead.
    */
   public BitgetStreamingService getPublicStreamingService() {
-    return services.publicService instanceof BitgetStreamingService
-        ? (BitgetStreamingService) services.publicService
+    return services.get().publicService instanceof BitgetStreamingService
+        ? (BitgetStreamingService) services.get().publicService
         : null;
   }
 
@@ -68,31 +75,31 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
    * {@link #getPrivateNettyStreamingService()} instead.
    */
   public BitgetPrivateStreamingService getPrivateStreamingService() {
-    return services.privateService instanceof BitgetPrivateStreamingService
-        ? (BitgetPrivateStreamingService) services.privateService
+    return services.get().privateService instanceof BitgetPrivateStreamingService
+        ? (BitgetPrivateStreamingService) services.get().privateService
         : null;
   }
 
   /** The currently wired public transport, regardless of API mode. */
   public NettyStreamingService<?> getPublicNettyStreamingService() {
-    return services.publicService;
+    return services.get().publicService;
   }
 
   /** The currently wired private transport, regardless of API mode. */
   public NettyStreamingService<?> getPrivateNettyStreamingService() {
-    return services.privateService;
+    return services.get().privateService;
   }
 
   public StreamingMarketDataService getStreamingMarketDataService() {
-    return services.marketDataService;
+    return services.get().marketDataService;
   }
 
   public StreamingTradeService getStreamingTradeService() {
-    return services.tradeService;
+    return services.get().tradeService;
   }
 
   public StreamingAccountService getStreamingAccountService() {
-    return services.accountService;
+    return services.get().accountService;
   }
 
   @Override
@@ -133,13 +140,13 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
             privateService.connect().blockingAwait();
           }
           applyStreamingSpecification(exchangeSpecification, publicService);
-          services =
+          services.set(
               new StreamingServices(
                   publicService,
                   privateService,
                   new BitgetStreamingMarketDataService(publicService),
                   tradeService,
-                  null);
+                  null));
 
           if (privateService == null) {
             return publicService.connect();
@@ -180,14 +187,14 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
             // private channels must honor the same proxy/cert/connection-hook/auto-reconnect
             // settings as the public socket
             applyStreamingSpecification(exchangeSpecification, privateService);
-            services =
+            services.set(
                 new StreamingServices(
                     publicService,
                     privateService,
                     marketDataService,
                     new BitgetUtaV3StreamingTradeService(
                         privateService, (BitgetUtaV3TradeService) getTradeService()),
-                    new BitgetUtaV3StreamingAccountService(privateService));
+                    new BitgetUtaV3StreamingAccountService(privateService)));
             return privateService
                 .connect()
                 .andThen(
@@ -199,7 +206,7 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
                                     .disconnect()
                                     .andThen(Completable.error(error))));
           }
-          services = new StreamingServices(publicService, null, marketDataService, null, null);
+          services.set(new StreamingServices(publicService, null, marketDataService, null, null));
           return publicService.connect();
         });
   }
@@ -211,7 +218,7 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
     // keeps the references (and can retry a failed disconnect) instead of losing them early
     return Completable.defer(
         () -> {
-          StreamingServices current = services;
+          StreamingServices current = services.get();
           if (current.isEmpty()) {
             return Completable.complete();
           }
@@ -223,29 +230,35 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
                       : current.privateService.disconnect().andThen(current.publicService.disconnect());
           // drop the transport and wrapper fields so a later reconnect (possibly with a different
           // specification, e.g. without credentials) cannot observe or leak the closed private
-          // socket; connect() rebuilds every field from scratch
-          return transportDisconnect.doOnComplete(() -> services = StreamingServices.EMPTY);
+          // socket; connect() rebuilds every field from scratch. Only clear when the holder still
+          // refers to the transport being shut down: if a concurrent connect() already installed a
+          // fresh holder while this disconnect was completing, wiping it would orphan the new live
+          // sockets (reachable through no getter, never shut down by a later disconnect).
+          return transportDisconnect.doOnComplete(
+              // atomic: if a concurrent connect() already installed a fresh holder, this only
+              // clears the holder that was actually shut down, never the newer generation
+              () -> services.compareAndSet(current, StreamingServices.EMPTY));
         });
   }
 
   @Override
   public boolean isAlive() {
-    if (services.publicService == null) {
+    if (services.get().publicService == null) {
       return false;
     }
-    if (services.privateService == null) {
-      return services.publicService.isSocketOpen();
+    if (services.get().privateService == null) {
+      return services.get().publicService.isSocketOpen();
     }
-    return services.publicService.isSocketOpen() && services.privateService.isSocketOpen();
+    return services.get().publicService.isSocketOpen() && services.get().privateService.isSocketOpen();
   }
 
   @Override
   public void useCompressedMessages(boolean compressedMessages) {
-    if (services.publicService != null) {
-      services.publicService.useCompressedMessages(compressedMessages);
+    if (services.get().publicService != null) {
+      services.get().publicService.useCompressedMessages(compressedMessages);
     }
-    if (services.privateService != null) {
-      services.privateService.useCompressedMessages(compressedMessages);
+    if (services.get().privateService != null) {
+      services.get().privateService.useCompressedMessages(compressedMessages);
     }
   }
 }
