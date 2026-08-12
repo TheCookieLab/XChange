@@ -147,7 +147,19 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
                   tradeService,
                   null));
           if (privateService != null) {
-            privateService.connect().blockingAwait();
+            BitgetPrivateStreamingService connectedPrivateService = privateService;
+            // a failing private connection is disconnected before the error propagates:
+            // NettyStreamingService schedules an automatic retry when the handshake fails, and
+            // cancelling it here prevents a later success beside a never-opened public transport
+            // (isAlive() false, public streams unavailable) until the caller reconnects
+            connectedPrivateService
+                .connect()
+                .onErrorResumeNext(
+                    error ->
+                        connectedPrivateService
+                            .disconnect()
+                            .andThen(Completable.error(error)))
+                .blockingAwait();
           }
 
           if (privateService == null) {

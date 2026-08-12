@@ -183,6 +183,15 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     // that must be split into compliant windows; the newest window is fetched first so a requested
     // limit is consumed by the most recent fills (PRD CF-451)
     final long windowMillis = 30L * 24 * 60 * 60 * 1000;
+    // an end time omitted by the caller means "now" to the provider; when the span from an old
+    // start to that implicit now exceeds the 30-day window, resolve the end up front so the span
+    // is split into compliant windows instead of sending an unbounded range the endpoint rejects
+    if (startMillis != null && endMillis == null) {
+      long now = System.currentTimeMillis();
+      if (now - startMillis > windowMillis) {
+        endMillis = now;
+      }
+    }
     List<BitgetUtaV3Fill> rows = new java.util.ArrayList<>();
     for (BitgetUtaV3Category requestCategory : requestCategories) {
       rows.addAll(

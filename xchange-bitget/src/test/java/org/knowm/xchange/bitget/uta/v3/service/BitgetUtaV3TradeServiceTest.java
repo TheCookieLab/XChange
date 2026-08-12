@@ -909,6 +909,58 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   }
 
   @Test
+  void trade_history_splits_an_old_start_without_an_end_time() throws Exception {
+    // a start older than the 30-day window with NO end time: the provider treats the omitted end
+    // as now, so the span must be split into compliant windows rather than sent unbounded (the
+    // endpoint rejects ranges over 30 days); the window boundaries depend on the live clock, so
+    // the wire contract is asserted structurally
+    long now = System.currentTimeMillis();
+    long start = now - 75L * 24 * 60 * 60 * 1000; // ~75 days ago, no end time
+
+    // every windowed spot fills query answers one fill
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
+            .withQueryParam(
+                "endTime", com.github.tomakehurst.wiremock.client.WireMock.matching("[0-9]+"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e1", "1725040472073", ""))));
+    // an unsplit unbounded query (old start, no endTime) must never reach the wire
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
+            .withQueryParam("startTime", equalTo(String.valueOf(start)))
+            .withQueryParam(
+                "endTime", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .willReturn(aResponse().withStatus(500)));
+    stubEmptyMarginFills();
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+    params.setStartTime(new java.util.Date(start));
+    // no end time: the implicit end is now
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    assertThat(trades.getUserTrades())
+        .as("the span must be fetched as three <=30-day windows, one fill per window")
+        .hasSize(3);
+    wireMockServer.verify(
+        3,
+        com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
+            urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
+            .withQueryParam(
+                "endTime",
+                com.github.tomakehurst.wiremock.client.WireMock.matching("[0-9]+")));
+  }
+
+  @Test
   void trade_history_respects_limit_across_windows() throws Exception {
     long start = 1_720_000_000_000L;
     long end = 1_723_300_000_000L;

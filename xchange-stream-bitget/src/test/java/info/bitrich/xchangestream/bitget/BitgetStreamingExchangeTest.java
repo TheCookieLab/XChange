@@ -324,6 +324,55 @@ class BitgetStreamingExchangeTest {
   }
 
   @Test
+  void classicPrivateConnectFailureCancelsThePrivateRetry() throws Exception {
+    AtomicInteger disconnectInvocations = new AtomicInteger();
+    BitgetStreamingExchange exchange =
+        new BitgetStreamingExchange() {
+          @Override
+          protected BitgetPrivateStreamingService createClassicPrivateService(
+              ExchangeSpecification specification) {
+            return new BitgetPrivateStreamingService(
+                Config.V2_PRIVATE_WS_URL,
+                specification.getApiKey(),
+                specification.getSecretKey(),
+                specification.getPassword()) {
+              @Override
+              public Completable connect() {
+                // deterministic stand-in for a DNS/TCP/TLS/handshake failure; NettyStreamingService
+                // would otherwise schedule an automatic reconnect that could later succeed
+                return Completable.error(new IOException("connection refused"));
+              }
+
+              @Override
+              public Completable disconnect() {
+                disconnectInvocations.incrementAndGet();
+                return Completable.complete();
+              }
+            };
+          }
+        };
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    // hermetic: without this, applySpecification triggers remoteInit, a live catalog fetch
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setApiKey("api-key");
+    specification.setSecretKey("api-secret");
+    specification.setPassword("api-passphrase");
+    exchange.applySpecification(specification);
+
+    Completable connect = exchange.connect();
+
+    assertThatThrownBy(connect::blockingAwait)
+        .as("the classic path awaits the private connection and must surface its failure")
+        .isInstanceOf(Throwable.class);
+    assertThat(disconnectInvocations.get())
+        .as(
+            "a failed classic private connection must be disconnected so its automatic reconnect "
+                + "cannot later succeed beside a never-opened public socket (isAlive() false, "
+                + "public streams unavailable) until the caller reconnects")
+        .isEqualTo(1);
+  }
+
+  @Test
   void classicPublicConnectFailureDisconnectsBothTransports() throws Exception {
     AtomicInteger privateDisconnects = new AtomicInteger();
     AtomicInteger publicDisconnects = new AtomicInteger();
