@@ -16,7 +16,7 @@ import lombok.extern.jackson.Jacksonized;
  * transfers. {@code clientOid} is idempotency-scoped per clientOid.
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @Jacksonized
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BitgetUtaV3TransferRequest {

@@ -164,7 +164,7 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     List<BitgetUtaV3Fill> rows = new java.util.ArrayList<>();
     if (startMillis != null && endMillis != null && endMillis - startMillis > windowMillis) {
       long windowEnd = endMillis;
-      while (windowEnd > startMillis) {
+      while (windowEnd >= startMillis) {
         long windowStart = Math.max(startMillis, windowEnd - windowMillis);
         final String windowStartParam = String.valueOf(windowStart);
         final String windowEndParam = String.valueOf(windowEnd);
@@ -189,7 +189,10 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
           break;
         }
         // the boundary fill belongs to the newer window (inclusive start); the older window's end
-        // is advanced one millisecond so inclusive bounds cannot surface it twice
+        // is advanced one millisecond so inclusive bounds cannot surface it twice. The loop keeps
+        // going while windowEnd >= startMillis so a final single-millisecond window [startMillis,
+        // startMillis] is still queried when the remainder is exactly one millisecond; the step
+        // then moves windowEnd below startMillis and the loop exits.
         windowEnd = windowStart - 1;
       }
     } else {

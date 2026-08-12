@@ -755,6 +755,72 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   }
 
   @Test
+  void trade_history_includes_fill_at_start_when_span_leaves_one_millisecond() throws Exception {
+    // a span of exactly 30 days plus one millisecond splits into [start+1, end] and a final
+    // single-millisecond window [start, start]; the fill exactly at the requested start must be
+    // fetched once, not skipped by a strict windowEnd > startMillis bound
+    long windowMillis = 30L * 24 * 60 * 60 * 1000;
+    long start = 1_720_000_000_000L;
+    long end = start + windowMillis + 1;
+
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(start + 1)))
+            .withQueryParam("endTime", equalTo(String.valueOf(end)))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e1", String.valueOf(start + 1), ""))));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(start)))
+            .withQueryParam("endTime", equalTo(String.valueOf(start)))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e-start", String.valueOf(start), ""))));
+    // an unsplit full-span query must never reach the wire
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(start)))
+            .withQueryParam("endTime", equalTo(String.valueOf(end)))
+            .willReturn(aResponse().withStatus(500)));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+    params.setStartTime(new java.util.Date(start));
+    params.setEndTime(new java.util.Date(end));
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    assertThat(trades.getUserTrades()).hasSize(2);
+    assertThat(trades.getUserTrades())
+        .extracting(org.knowm.xchange.dto.trade.UserTrade::getId)
+        .containsExactlyInAnyOrder("e1", "e-start");
+    assertThat(trades.getUserTrades())
+        .extracting(org.knowm.xchange.dto.trade.UserTrade::getId)
+        .filteredOn("e-start"::equals)
+        .as("the fill exactly at the requested start must be fetched exactly once")
+        .hasSize(1);
+    // the loop must issue the final single-millisecond window [start, start]; with a strict
+    // windowEnd > startMillis bound this request never reaches the wire and the fill is dropped
+    assertThat(
+            wireMockServer
+                .findAll(
+                    com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
+                            com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo(
+                                "/api/v3/trade/fills"))
+                        .withQueryParam("startTime", equalTo(String.valueOf(start)))
+                        .withQueryParam("endTime", equalTo(String.valueOf(start)))))
+        .as("the final single-millisecond window [start, start] must be queried")
+        .hasSize(1);
+  }
+
+  @Test
   void trade_history_with_null_params_does_not_throw() throws Exception {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
