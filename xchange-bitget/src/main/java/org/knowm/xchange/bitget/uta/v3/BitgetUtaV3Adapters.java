@@ -14,6 +14,9 @@ import org.knowm.xchange.bitget.uta.v3.market.BitgetUtaV3Ticker;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3CancelOrderRequest;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Fill;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Order;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3PlaceOrderRequest;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Position;
 import org.knowm.xchange.currency.Currency;
@@ -37,17 +40,32 @@ import org.knowm.xchange.instrument.Instrument;
  * <p>Instrument identity rules: SPOT and MARGIN share the spot instrument universe (margin rows map
  * to the same {@link CurrencyPair} as their spot twin to avoid equal-symbol collisions); futures
  * map to {@link FuturesContract} whose prompt preserves the derivative identity (perpetuals →
- * {@code "PERP"}).
+ * {@code "PERP"}, dated delivery contracts → the provider's expiry suffix such as {@code "1226"}),
+ * and {@link #toString} reproduces the provider symbol so catalog and requests round-trip.
  */
 @UtilityClass
 public class BitgetUtaV3Adapters {
 
-  /** Symbol text for a v3 request, e.g. {@code BTCUSDT}. */
+  /** Formats a delivery epoch-millis into the {@code MMdd} prompt shape. */
+  private static final DateTimeFormatter DELIVERY_PROMPT_FORMATTER =
+      DateTimeFormatter.ofPattern("MMdd").withZone(ZoneOffset.UTC);
+
+  /**
+   * Symbol text for a v3 request, e.g. {@code BTCUSDT}. Dated delivery contracts keep their
+   * provider-encoded expiry suffix (a {@code 1226} prompt yields {@code BTCUSD1226}) so requests
+   * made with the mapped instrument target the catalog symbol rather than the unsuffixed
+   * perpetual twin.
+   */
   public String toString(Instrument instrument) {
     if (instrument instanceof FuturesContract) {
       FuturesContract contract = (FuturesContract) instrument;
-      return contract.getCurrencyPair().getBase().getCurrencyCode()
-          + contract.getCurrencyPair().getCounter().getCurrencyCode();
+      String symbol =
+          contract.getCurrencyPair().getBase().getCurrencyCode()
+              + contract.getCurrencyPair().getCounter().getCurrencyCode();
+      if (!"PERP".equals(contract.getPrompt())) {
+        symbol += contract.getPrompt();
+      }
+      return symbol;
     }
     CurrencyPair pair = (CurrencyPair) instrument;
     return pair.getBase().getCurrencyCode() + pair.getCounter().getCurrencyCode();
@@ -86,17 +104,47 @@ public class BitgetUtaV3Adapters {
   }
 
   /**
-   * XChange instrument for a v3 instrument row. Derivative rows become {@link FuturesContract} with
-   * prompt {@code PERP} for perpetuals; spot/margin rows become the plain {@link CurrencyPair}.
+   * XChange instrument for a v3 instrument row. Derivative rows become {@link FuturesContract} —
+   * prompt {@code PERP} for perpetuals, the provider's expiry suffix (e.g. {@code 1226} for
+   * {@code BTCUSD1226}) for dated delivery contracts, so a delivery contract and a perpetual on
+   * the same pair never collapse to one catalog key. Spot/margin rows become the plain {@link
+   * CurrencyPair}.
    */
   public Instrument toInstrument(BitgetUtaV3Instrument dto) {
     CurrencyPair pair =
         new CurrencyPair(
             Currency.getInstance(dto.getBaseCoin()), Currency.getInstance(dto.getQuoteCoin()));
     if (BitgetUtaV3Category.fromWireName(dto.getCategory()).isDerivative()) {
-      return new FuturesContract(pair, "PERP");
+      return new FuturesContract(pair, derivativePrompt(dto));
     }
     return pair;
+  }
+
+  /**
+   * Contract prompt for a derivative instrument row: {@code PERP} for perpetuals; for dated
+   * delivery contracts (non-blank {@code deliveryTime}) the expiry suffix the provider embeds in
+   * the symbol ({@code BTCUSD1226} → {@code 1226}), falling back to the {@code MMdd} expiry
+   * derived from {@code deliveryTime} when the symbol carries no suffix.
+   */
+  private static String derivativePrompt(BitgetUtaV3Instrument dto) {
+    String deliveryTime = dto.getDeliveryTime();
+    if (deliveryTime == null || deliveryTime.isBlank()) {
+      return "PERP";
+    }
+    String symbol = dto.getSymbol();
+    String prefix = dto.getBaseCoin() + dto.getQuoteCoin();
+    if (symbol != null && symbol.startsWith(prefix) && symbol.length() > prefix.length()) {
+      // the provider encodes the expiry in the symbol itself; prefer it so the reverse formatter
+      // reproduces the catalog symbol exactly
+      return symbol.substring(prefix.length());
+    }
+    try {
+      return Instant.ofEpochMilli(Long.parseLong(deliveryTime))
+          .atZone(ZoneOffset.UTC)
+          .format(DELIVERY_PROMPT_FORMATTER);
+    } catch (NumberFormatException e) {
+      return "PERP";
+    }
   }
 
   /**

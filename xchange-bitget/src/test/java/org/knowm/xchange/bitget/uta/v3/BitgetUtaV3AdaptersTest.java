@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitget.config.BitgetJacksonObjectMapperFactory;
+import org.knowm.xchange.bitget.uta.v3.market.BitgetUtaV3Instrument;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Fill;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Order;
 import org.knowm.xchange.currency.Currency;
@@ -18,6 +19,7 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.instrument.Instrument;
 
 /**
  * Wire-contract tests for {@link BitgetUtaV3Adapters#toPlaceOrderRequest(MarketOrder)}.
@@ -268,5 +270,84 @@ class BitgetUtaV3AdaptersTest {
         .as("fees in a different denomination must not be added to the first")
         .isEqualByComparingTo("2");
     assertThat(trade.getFeeCurrency()).isEqualTo(Currency.USDT);
+  }
+
+  @Test
+  void dated_delivery_row_maps_to_dated_futures_contract() {
+    BitgetUtaV3Instrument row =
+        BitgetUtaV3Instrument.builder()
+            .symbol("BTCUSD1226")
+            .category("coin-futures")
+            .baseCoin("BTC")
+            .quoteCoin("USD")
+            .deliveryTime("1766707200000") // 2025-12-26T00:00:00Z
+            .build();
+
+    Instrument instrument = BitgetUtaV3Adapters.toInstrument(row);
+
+    assertThat(instrument)
+        .isEqualTo(new FuturesContract(new CurrencyPair(Currency.BTC, Currency.USD), "1226"));
+    // requests made with the mapped instrument target the catalog symbol, not the perpetual twin
+    assertThat(BitgetUtaV3Adapters.toString(instrument)).isEqualTo("BTCUSD1226");
+  }
+
+  @Test
+  void perpetual_row_maps_to_perp_prompt_and_round_trips() {
+    BitgetUtaV3Instrument row =
+        BitgetUtaV3Instrument.builder()
+            .symbol("BTCUSD")
+            .category("coin-futures")
+            .baseCoin("BTC")
+            .quoteCoin("USD")
+            .build();
+
+    Instrument instrument = BitgetUtaV3Adapters.toInstrument(row);
+
+    assertThat(instrument)
+        .isEqualTo(new FuturesContract(new CurrencyPair(Currency.BTC, Currency.USD), "PERP"));
+    assertThat(BitgetUtaV3Adapters.toString(instrument)).isEqualTo("BTCUSD");
+  }
+
+  @Test
+  void dated_and_perp_rows_on_the_same_pair_do_not_collapse() {
+    BitgetUtaV3Instrument delivery =
+        BitgetUtaV3Instrument.builder()
+            .symbol("BTCUSD1226")
+            .category("coin-futures")
+            .baseCoin("BTC")
+            .quoteCoin("USD")
+            .deliveryTime("1766707200000")
+            .build();
+    BitgetUtaV3Instrument perpetual =
+        BitgetUtaV3Instrument.builder()
+            .symbol("BTCUSD")
+            .category("coin-futures")
+            .baseCoin("BTC")
+            .quoteCoin("USD")
+            .build();
+
+    Instrument deliveryInstrument = BitgetUtaV3Adapters.toInstrument(delivery);
+    Instrument perpetualInstrument = BitgetUtaV3Adapters.toInstrument(perpetual);
+
+    assertThat(deliveryInstrument)
+        .as("a delivery contract and a perpetual on the same pair must not share a catalog key")
+        .isNotEqualTo(perpetualInstrument);
+    assertThat(BitgetUtaV3Adapters.toString(deliveryInstrument))
+        .isNotEqualTo(BitgetUtaV3Adapters.toString(perpetualInstrument));
+  }
+
+  @Test
+  void dated_row_without_symbol_suffix_derives_prompt_from_delivery_time() {
+    BitgetUtaV3Instrument row =
+        BitgetUtaV3Instrument.builder()
+            .symbol("BTCUSD")
+            .category("coin-futures")
+            .baseCoin("BTC")
+            .quoteCoin("USD")
+            .deliveryTime("1766707200000")
+            .build();
+
+    assertThat(BitgetUtaV3Adapters.toInstrument(row))
+        .isEqualTo(new FuturesContract(new CurrencyPair(Currency.BTC, Currency.USD), "1226"));
   }
 }

@@ -33,7 +33,8 @@ import org.knowm.xchange.instrument.Instrument;
  * Conversions between Bitget UTA v3 WebSocket wire DTOs and XChange core DTOs.
  *
  * <p>Instrument identity rules mirror the REST adapters: spot maps to {@link CurrencyPair}, futures
- * to {@link FuturesContract} with prompt {@code PERP}. Private channels (order, fill, position,
+ * to {@link FuturesContract} with prompt {@code PERP} (perpetuals) or the provider's expiry suffix
+ * (dated deliveries, e.g. {@code BTCUSD1226}). Private channels (order, fill, position,
  * account) are account-wide; pushed {@code symbol}/{@code category} fields (or the caller's
  * instrument for positions, whose pushes carry no category) resolve the instrument.
  *
@@ -63,7 +64,10 @@ public class BitgetUtaV3StreamingAdapters {
 
   /**
    * Instrument for a pushed {@code category}+{@code symbol} pair (orders and fills carry both;
-   * positions do not and must be resolved from the caller's instrument instead).
+   * positions do not and must be resolved from the caller's instrument instead). Dated delivery
+   * symbols (base+quote+{@code MMdd}, e.g. {@code BTCUSD1226}) map to {@link FuturesContract} with
+   * the expiry suffix as prompt, mirroring the REST catalog identity; perpetuals keep prompt
+   * {@code PERP}.
    */
   public Instrument toInstrument(String category, String symbol) {
     BitgetUtaV3Category parsed = null;
@@ -75,11 +79,35 @@ public class BitgetUtaV3StreamingAdapters {
         }
       }
     }
-    CurrencyPair pair = parseCurrencyPair(symbol);
     if (parsed != null && parsed.isDerivative()) {
-      return new FuturesContract(pair, "PERP");
+      String deliverySuffix = deliverySuffix(symbol);
+      if (deliverySuffix != null) {
+        return new FuturesContract(
+            parseCurrencyPair(symbol.substring(0, symbol.length() - deliverySuffix.length())),
+            deliverySuffix);
+      }
+      return new FuturesContract(parseCurrencyPair(symbol), "PERP");
     }
-    return pair;
+    return parseCurrencyPair(symbol);
+  }
+
+  /**
+   * Trailing 4-digit delivery expiry suffix ({@code MMdd}) of a derivative symbol, e.g. {@code
+   * 1226} for {@code BTCUSD1226}, or {@code null} for unsuffixed perpetual symbols. Spot/perpetual
+   * symbols always end with the quote currency code, never with digits, so a digit suffix uniquely
+   * identifies a dated delivery contract.
+   */
+  private static String deliverySuffix(String symbol) {
+    if (symbol == null || symbol.length() <= 4) {
+      return null;
+    }
+    String suffix = symbol.substring(symbol.length() - 4);
+    for (int i = 0; i < suffix.length(); i++) {
+      if (suffix.charAt(i) < '0' || suffix.charAt(i) > '9') {
+        return null;
+      }
+    }
+    return suffix;
   }
 
   /**

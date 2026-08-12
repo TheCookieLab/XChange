@@ -4,11 +4,14 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.Validate;
 import org.knowm.xchange.bitget.BitgetExchange;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3Adapters;
 import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Category;
+import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3EndpointPolicy;
 import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3CursorPage;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Fill;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Order;
@@ -41,6 +44,18 @@ import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
  * fills and positions, with cursor-based pagination over the provider's order/fill endpoints.
  */
 public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implements TradeService {
+
+  private static final long NANOS_PER_SECOND = 1_000_000_000L;
+
+  /** Endpoint policy whose per-second limits are enforced client-side during pagination. */
+  private static final BitgetUtaV3EndpointPolicy ENDPOINT_POLICY = BitgetUtaV3EndpointPolicy.defaults();
+
+  /** Endpoint paths of the paginated trade endpoints, keyed for the endpoint limiter. */
+  private static final String FILLS_ENDPOINT = "/api/v3/trade/fills";
+  private static final String UNFILLED_ORDERS_ENDPOINT = "/api/v3/trade/unfilled-orders";
+
+  /** Last request time per endpoint path (monotonic nanos), for spacing requests at 1/rate. */
+  private final ConcurrentMap<String, Long> lastRequestAtNanos = new ConcurrentHashMap<>();
 
   private final BitgetUtaV3InstrumentRegistry instrumentRegistry =
       new BitgetUtaV3InstrumentRegistry(new BitgetUtaV3MarketDataServiceRaw(exchange));
@@ -90,7 +105,9 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     // nothing beyond the first 100 rows is silently dropped
     final String requestSymbol = symbol;
     List<BitgetUtaV3Order> rows =
-        fetchAllPages((cursor) -> getUnfilledOrders(null, requestSymbol, null, null, 100, cursor));
+        fetchAllPages(
+            UNFILLED_ORDERS_ENDPOINT,
+            (cursor) -> getUnfilledOrders(null, requestSymbol, null, null, 100, cursor));
     List<LimitOrder> orders = new java.util.ArrayList<>();
     for (BitgetUtaV3Order row : rows) {
       Order order = toOrder(row);
@@ -171,6 +188,7 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
         Integer remaining = limit == null ? null : limit - rows.size();
         rows.addAll(
             fetchAllPages(
+                FILLS_ENDPOINT,
                 (cursor) ->
                     getFills(
                         requestCategory,
@@ -198,6 +216,7 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     } else {
       rows.addAll(
           fetchAllPages(
+              FILLS_ENDPOINT,
               (cursor) ->
                   getFills(
                       requestCategory, null, startTime, endTime, pageSize, cursor),
@@ -235,23 +254,28 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
   }
 
   /**
-   * Fetches every cursor page, oldest included, until the provider returns an empty cursor.
+   * Fetches every cursor page, oldest included, until the provider returns an empty cursor, spacing
+   * each request at {@code endpointPath}'s policy rate.
    *
    * <p>Guards: aggregation is bounded by {@code maxRows} (counting only rows that pass {@code
    * filter}, when one is supplied) and a provider that repeats the cursor just requested (no
    * progress) raises {@link org.knowm.xchange.exceptions.ExchangeException} instead of looping
    * forever or returning duplicated rows.
    */
-  private <T> List<T> fetchAllPages(PageFetcher<T> fetcher) throws IOException {
-    return fetchAllPages(fetcher, null, null);
+  private <T> List<T> fetchAllPages(String endpointPath, PageFetcher<T> fetcher) throws IOException {
+    return fetchAllPages(endpointPath, fetcher, null, null);
   }
 
   private <T> List<T> fetchAllPages(
-      PageFetcher<T> fetcher, Integer maxRows, java.util.function.Predicate<T> filter)
+      String endpointPath,
+      PageFetcher<T> fetcher,
+      Integer maxRows,
+      java.util.function.Predicate<T> filter)
       throws IOException {
     List<T> rows = new java.util.ArrayList<>();
     String cursor = null;
     while (true) {
+      awaitEndpointLimit(endpointPath);
       BitgetUtaV3CursorPage<T> page = fetcher.fetch(cursor);
       String nextCursor = page == null ? null : page.getCursor();
       // no-progress guard, checked against the cursor just requested: a provider that echoes it
@@ -277,6 +301,30 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
         return rows;
       }
       cursor = nextCursor;
+    }
+  }
+
+  /**
+   * Enforces the endpoint policy client-side: spaces consecutive requests to {@code endpointPath}
+   * at the policy's per-second rate (50 ms between requests at 20/s) so a low-latency pagination
+   * run cannot trip the provider's limiter partway through. The first request for a path passes
+   * immediately; concurrent callers queue on the same per-path slot.
+   */
+  private void awaitEndpointLimit(String endpointPath) throws IOException {
+    long intervalNanos = NANOS_PER_SECOND / ENDPOINT_POLICY.limitFor(endpointPath).getPerSecond();
+    long now = System.nanoTime();
+    long next =
+        lastRequestAtNanos.compute(
+            endpointPath, (path, prev) -> prev == null ? now : Math.max(now, prev + intervalNanos));
+    long delayNanos = next - now;
+    if (delayNanos > 0) {
+      try {
+        Thread.sleep(delayNanos / 1_000_000L, (int) (delayNanos % 1_000_000L));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException(
+            "Interrupted while waiting on the Bitget v3 rate limit for " + endpointPath, e);
+      }
     }
   }
 

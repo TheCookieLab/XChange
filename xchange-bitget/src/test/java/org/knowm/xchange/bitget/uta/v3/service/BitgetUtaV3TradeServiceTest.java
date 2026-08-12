@@ -1032,6 +1032,109 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
         .isInstanceOf(java.io.IOException.class);
   }
 
+  /**
+   * The endpoint policy must be enforced during pagination: fills page fetches are spaced at the
+   * endpoint's 20/s rate (50 ms between requests), so a low-latency run over many pages cannot hit
+   * Bitget's limiter partway through {@code getTradeHistory()}. {@code Thread.sleep} only sleeps
+   * longer under load, so the wall-clock lower bound is deterministic.
+   */
+  @Test
+  void trade_history_spaces_fills_requests_to_policy_rate() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e1", "1725040472073", "C1"))));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.equalTo("C1"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e2", "1725040472073", "C2"))));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.equalTo("C2"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e3", "1725040472073", ""))));
+
+    long start = System.nanoTime();
+    UserTrades trades = tradeService.getTradeHistory(tradeService.createTradeHistoryParams());
+    long elapsedMillis = (System.nanoTime() - start) / 1_000_000L;
+
+    assertThat(trades.getUserTrades()).hasSize(3);
+    wireMockServer.verify(
+        3,
+        com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
+            urlPathEqualTo("/api/v3/trade/fills")));
+    // the first request passes unthrottled; the second and third each sleep ~50 ms (2 x 50 ms)
+    assertThat(elapsedMillis)
+        .as("fills page fetches must be spaced at the endpoint policy's 20/s rate")
+        .isGreaterThanOrEqualTo(90);
+  }
+
+  /**
+   * Same contract for open orders: unfilled-orders pagination must also honor the endpoint policy
+   * (20/s) so {@code getOpenOrders()} cannot trip the provider's limiter on many-page accounts.
+   */
+  @Test
+  void open_orders_spaces_unfilled_orders_requests_to_policy_rate() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/unfilled-orders"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"orderId\":\"1\",\"clientOid\":\"c1\","
+                            + "\"category\":\"spot\",\"symbol\":\"BTCUSDT\",\"orderType\":\"limit\","
+                            + "\"side\":\"buy\",\"price\":\"60000\",\"qty\":\"0.1\","
+                            + "\"orderStatus\":\"new\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"o1\"}}")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/unfilled-orders"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.equalTo("o1"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"orderId\":\"2\",\"clientOid\":\"c2\","
+                            + "\"category\":\"spot\",\"symbol\":\"BTCUSDT\",\"orderType\":\"limit\","
+                            + "\"side\":\"buy\",\"price\":\"60000\",\"qty\":\"0.1\","
+                            + "\"orderStatus\":\"new\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"\"}}")));
+
+    long start = System.nanoTime();
+    OpenOrders openOrders = tradeService.getOpenOrders(new DefaultOpenOrdersParamInstrument());
+    long elapsedMillis = (System.nanoTime() - start) / 1_000_000L;
+
+    assertThat(openOrders.getOpenOrders()).hasSize(2);
+    wireMockServer.verify(
+        2,
+        com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
+            urlPathEqualTo("/api/v3/trade/unfilled-orders")));
+    // the first request passes unthrottled; the second sleeps ~50 ms
+    assertThat(elapsedMillis)
+        .as("unfilled-orders page fetches must be spaced at the endpoint policy's 20/s rate")
+        .isGreaterThanOrEqualTo(45);
+  }
+
   private static String fillsPage(String execIdsCsv, String createdTime, String cursor) {
     StringBuilder list = new StringBuilder();
     String[] ids = execIdsCsv.split(",");

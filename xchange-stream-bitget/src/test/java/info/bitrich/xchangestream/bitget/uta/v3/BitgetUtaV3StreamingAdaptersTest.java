@@ -96,6 +96,24 @@ class BitgetUtaV3StreamingAdaptersTest {
   }
 
   @Test
+  void toInstrumentMapsDatedDeliverySymbolsToExpiryPrompt() {
+    // base+quote+MMdd symbols (dated delivery contracts) split the expiry suffix off as the
+    // FuturesContract prompt, mirroring the REST catalog identity so pushes never crash
+    // parseCurrencyPair on the unsuffixed remainder
+    Instrument dated = BitgetUtaV3StreamingAdapters.toInstrument("coin-futures", "BTCUSD1226");
+    assertThat(dated)
+        .isEqualTo(new FuturesContract(new CurrencyPair(Currency.BTC, Currency.USD), "1226"));
+
+    Instrument datedUsdt = BitgetUtaV3StreamingAdapters.toInstrument("usdt-futures", "BTCUSDT1226");
+    assertThat(datedUsdt).isEqualTo(new FuturesContract(CurrencyPair.BTC_USDT, "1226"));
+
+    // the same pair without a suffix stays a perpetual
+    Instrument perpetual = BitgetUtaV3StreamingAdapters.toInstrument("coin-futures", "BTCUSD");
+    assertThat(perpetual)
+        .isEqualTo(new FuturesContract(new CurrencyPair(Currency.BTC, Currency.USD), "PERP"));
+  }
+
+  @Test
   void toTickerMapsV3FieldsAndEnvelopeTimestamp() {
     BitgetUtaV3TickerData dto =
         BitgetUtaV3TickerData.builder()
