@@ -352,8 +352,7 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     List<T> rows = new java.util.ArrayList<>();
     String cursor = null;
     while (true) {
-      awaitEndpointLimit(endpointPath);
-      BitgetUtaV3CursorPage<T> page = fetcher.fetch(cursor);
+      BitgetUtaV3CursorPage<T> page = fetchWithinEndpointLimit(endpointPath, cursor, fetcher);
       String nextCursor = page == null ? null : page.getCursor();
       // no-progress guard, checked against the cursor just requested: a provider that echoes it
       // back would serve the same page again. Reject before accepting the page so a duplicate
@@ -382,20 +381,21 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
   }
 
   /**
-   * Enforces the endpoint policy client-side: spaces consecutive requests to {@code endpointPath}
-   * at the policy's per-second rate (50 ms between requests at 20/s) so a low-latency pagination
-   * run cannot trip the provider's limiter partway through. The first request for a path passes
-   * immediately. Concurrent callers of the same path are serialized through a per-path lock, and
-   * the recorded timestamp is the ACTUAL admission instant (captured after the wait): a thread
-   * that is descheduled mid-wait cannot let a later caller slip inside the interval, because the
-   * next caller always spaces itself from the previous request's real issue time.
+   * Fetches one cursor page under the endpoint policy: waits out the per-path spacing interval,
+   * records the admission instant, and issues {@code fetcher.fetch(cursor)} — all while holding
+   * the per-path lock. Serializing the fetch itself (not just the timestamp) guarantees the
+   * recorded instant is the true request issue time: a thread descheduled between recording and
+   * issuing cannot slip its request past a later caller, because no caller of the same path can
+   * reach the wire while the lock is held. The first request for a path passes immediately.
    */
-  void awaitEndpointLimit(String endpointPath) throws IOException {
+  <T> BitgetUtaV3CursorPage<T> fetchWithinEndpointLimit(
+      String endpointPath, String cursor, PageFetcher<T> fetcher) throws IOException {
     long intervalNanos = NANOS_PER_SECOND / ENDPOINT_POLICY.limitFor(endpointPath).getPerSecond();
     Object lock = endpointLocks.computeIfAbsent(endpointPath, path -> new Object());
     synchronized (lock) {
       long now = System.nanoTime();
-      long delayNanos = Math.max(0L, lastRequestAtNanos.getOrDefault(endpointPath, 0L) + intervalNanos - now);
+      long delayNanos =
+          Math.max(0L, lastRequestAtNanos.getOrDefault(endpointPath, 0L) + intervalNanos - now);
       if (delayNanos > 0) {
         try {
           Thread.sleep(delayNanos / 1_000_000L, (int) (delayNanos % 1_000_000L));
@@ -405,14 +405,15 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
               "Interrupted while waiting on the Bitget v3 rate limit for " + endpointPath, e);
         }
       }
-      // the actual admission instant, not a reserved slot: a descheduled thread records when it
-      // really issues the request so the next caller's wait is correct after a scheduling hiccup
+      // the true issue point: recorded under the lock immediately before the request goes out,
+      // so the next caller spaces itself from this request's real wire time
       lastRequestAtNanos.put(endpointPath, System.nanoTime());
+      return fetcher.fetch(cursor);
     }
   }
 
   @FunctionalInterface
-  private interface PageFetcher<T> {
+  interface PageFetcher<T> {
     BitgetUtaV3CursorPage<T> fetch(String cursor) throws IOException;
   }
 

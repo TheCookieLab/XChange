@@ -18,6 +18,7 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bitget.BitgetExchange;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3ExchangeWiremock;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3UnknownOutcomeException;
+import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3CursorPage;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3StrategyOrderRequest;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -1613,10 +1614,11 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
    * identity), so every such test must answer the margin leg; this stub returns no margin fills.
    */
   @Test
-  void awaitEndpointLimitSerializesConcurrentAdmissionsPerPath() throws Exception {
+  void fetchWithinEndpointLimitSerializesConcurrentFetchesPerPath() throws Exception {
     // the endpoint limiter must space ACTUAL request issue times, not reserved slots: with the
-    // pre-fix reservation scheme a thread descheduled between reserving its slot and issuing its
-    // request let a later caller land on the same real instant as the late issuer
+    // pre-fix design the timestamp was recorded after the wait but the fetch ran outside the
+    // lock, so a thread descheduled between recording and issuing could fire back-to-back with a
+    // later caller; the fetch itself must be serialized under the per-path lock
     BitgetExchange exchange = new BitgetExchange();
     ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
     // hermetic: no live instrument fetch; the limiter never touches the network
@@ -1627,7 +1629,8 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     int callsPerThread = 4;
     long intervalNanos = 50_000_000L; // /api/v3/trade/fills is limited to 20/s
     long slackNanos = 5_000_000L; // timer granularity on a loaded machine
-    List<Long> admissionTimes = Collections.synchronizedList(new ArrayList<>());
+    // the instants at which the fake fetch is actually invoked = the true wire issue points
+    List<Long> fetchTimes = Collections.synchronizedList(new ArrayList<>());
     CountDownLatch start = new CountDownLatch(1);
     List<Thread> workers = new ArrayList<>();
     for (int t = 0; t < threads; t++) {
@@ -1637,8 +1640,16 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
                 try {
                   start.await();
                   for (int call = 0; call < callsPerThread; call++) {
-                    service.awaitEndpointLimit("/api/v3/trade/fills");
-                    admissionTimes.add(System.nanoTime());
+                    service.fetchWithinEndpointLimit(
+                        "/api/v3/trade/fills",
+                        null,
+                        cursor -> {
+                          fetchTimes.add(System.nanoTime());
+                          return BitgetUtaV3CursorPage.builder()
+                              .list(Collections.emptyList())
+                              .cursor("")
+                              .build();
+                        });
                   }
                 } catch (InterruptedException e) {
                   Thread.currentThread().interrupt();
@@ -1654,11 +1665,14 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     for (Thread worker : workers) {
       worker.join();
     }
-    List<Long> sorted = new ArrayList<>(admissionTimes);
+    List<Long> sorted = new ArrayList<>(fetchTimes);
     Collections.sort(sorted);
     for (int i = 1; i < sorted.size(); i++) {
       assertThat(sorted.get(i) - sorted.get(i - 1))
-          .as("consecutive admissions to the same endpoint must be spaced at the policy interval")
+          .as(
+              "consecutive fetches of the same endpoint must hit the wire spaced at the policy "
+                  + "interval: the fetch runs inside the per-path lock, so the recorded admission "
+                  + "instant is the true issue time")
           .isGreaterThanOrEqualTo(intervalNanos - slackNanos);
     }
   }
