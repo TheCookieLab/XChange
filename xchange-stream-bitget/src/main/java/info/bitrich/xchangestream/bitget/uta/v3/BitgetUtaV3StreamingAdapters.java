@@ -197,18 +197,30 @@ public class BitgetUtaV3StreamingAdapters {
         .build();
   }
 
-  /** XChange user trade for a v3 fill push; instrument resolved from push category+symbol. */
+  /**
+   * XChange user trade for a v3 fill push; instrument resolved from push category+symbol.
+   *
+   * <p>Fee detail may carry entries in several currencies (e.g. a discount token plus the trading
+   * currency). {@link UserTrade} carries a single fee amount and currency, so only entries sharing
+   * the first fee coin are summed; entries in other denominations are excluded rather than added
+   * across currencies and mislabeled. Mirrors {@link BitgetUtaV3Adapters#toUserTrade}.
+   */
   public UserTrade toUserTrade(BitgetUtaV3FillData dto, Instrument instrument) {
     BigDecimal fee = null;
     Currency feeCurrency = null;
-    if (dto.getFeeDetail() != null) {
+    if (dto.getFeeDetail() != null && !dto.getFeeDetail().isEmpty()) {
+      String feeCoin = null;
       for (org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Order.BitgetUtaV3Fee detail :
           dto.getFeeDetail()) {
-        if (detail.getFee() != null) {
-          fee = fee == null ? detail.getFee() : fee.add(detail.getFee());
+        if (detail.getFeeCoin() == null || detail.getFee() == null) {
+          continue;
         }
-        if (feeCurrency == null && detail.getFeeCoin() != null) {
-          feeCurrency = Currency.getInstance(detail.getFeeCoin());
+        if (feeCoin == null) {
+          feeCoin = detail.getFeeCoin();
+          feeCurrency = Currency.getInstance(feeCoin);
+        }
+        if (feeCoin.equals(detail.getFeeCoin())) {
+          fee = fee == null ? detail.getFee() : fee.add(detail.getFee());
         }
       }
     }

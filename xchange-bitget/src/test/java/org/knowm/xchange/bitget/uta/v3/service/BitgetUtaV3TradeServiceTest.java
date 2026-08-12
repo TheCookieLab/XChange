@@ -1,6 +1,7 @@
 package org.knowm.xchange.bitget.uta.v3.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -608,6 +609,93 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   }
 
   @Test
+  void trade_history_splits_spans_over_thirty_days() throws Exception {
+    // span of ~38.2 days must be split into two ≤30-day windows, newest first
+    long start = 1_720_000_000_000L;
+    long end = 1_723_300_000_000L;
+    long windowMillis = 30L * 24 * 60 * 60 * 1000;
+    long windowBoundary = end - windowMillis; // 1_720_708_000_000
+
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(windowBoundary)))
+            .withQueryParam("endTime", equalTo(String.valueOf(end)))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e1", "1725040472073", ""))));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(start)))
+            .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary)))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e2", "1725040472073", ""))));
+    // an unsplit full-span query must never reach the wire
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(start)))
+            .withQueryParam("endTime", equalTo(String.valueOf(end)))
+            .willReturn(aResponse().withStatus(500)));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+    params.setStartTime(new java.util.Date(start));
+    params.setEndTime(new java.util.Date(end));
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    assertThat(trades.getUserTrades()).hasSize(2);
+    assertThat(trades.getUserTrades().get(0).getId())
+        .as("newest window must be fetched first")
+        .isEqualTo("e1");
+    assertThat(trades.getUserTrades().get(1).getId()).isEqualTo("e2");
+  }
+
+  @Test
+  void trade_history_respects_limit_across_windows() throws Exception {
+    long start = 1_720_000_000_000L;
+    long end = 1_723_300_000_000L;
+    long windowMillis = 30L * 24 * 60 * 60 * 1000;
+    long windowBoundary = end - windowMillis;
+
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(windowBoundary)))
+            .withQueryParam("endTime", equalTo(String.valueOf(end)))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(fillsPage("e1,e2,e3", "1725040472073", ""))));
+    // the older window must not be fetched once the limit is satisfied
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("startTime", equalTo(String.valueOf(start)))
+            .withQueryParam("endTime", equalTo(String.valueOf(windowBoundary)))
+            .willReturn(aResponse().withStatus(500)));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+    params.setStartTime(new java.util.Date(start));
+    params.setEndTime(new java.util.Date(end));
+    params.setLimit(2);
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    assertThat(trades.getUserTrades()).hasSize(2);
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e1");
+    assertThat(trades.getUserTrades().get(1).getId()).isEqualTo("e2");
+  }
+
+  @Test
   void trade_history_with_null_params_does_not_throw() throws Exception {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))
@@ -817,5 +905,27 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
 
     org.assertj.core.api.Assertions.assertThatThrownBy(() -> tradeService.getOpenOrders())
         .isInstanceOf(java.io.IOException.class);
+  }
+
+  private static String fillsPage(String execIdsCsv, String createdTime, String cursor) {
+    StringBuilder list = new StringBuilder();
+    String[] ids = execIdsCsv.split(",");
+    for (int i = 0; i < ids.length; i++) {
+      if (i > 0) {
+        list.append(',');
+      }
+      list.append("{\"execId\":\"").append(ids[i]).append("\",\"orderId\":\"42\",\"clientOid\":\"c")
+          .append(ids[i])
+          .append("\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\",\"orderType\":\"limit\",")
+          .append("\"side\":\"buy\",\"execPrice\":\"60000\",\"execQty\":\"0.1\",\"createdTime\":\"")
+          .append(createdTime)
+          .append("\"}");
+    }
+    return "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+        + "\"data\":{\"list\":["
+        + list
+        + "],\"cursor\":\""
+        + cursor
+        + "\"}}";
   }
 }

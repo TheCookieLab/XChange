@@ -286,6 +286,34 @@ class BitgetUtaV3StreamingAdaptersTest {
   }
 
   @Test
+  void toUserTradeIgnoresFeesInOtherDenominations() {
+    BitgetUtaV3Fee usdt =
+        BitgetUtaV3Fee.builder().feeCoin("USDT").fee(new BigDecimal("0.03")).build();
+    BitgetUtaV3Fee bgb =
+        BitgetUtaV3Fee.builder().feeCoin("BGB").fee(new BigDecimal("0.001")).build();
+    BitgetUtaV3FillData dto =
+        BitgetUtaV3FillData.builder()
+            .symbol("BTCUSDT")
+            .category("spot")
+            .side("buy")
+            .execQty(new BigDecimal("0.5"))
+            .execPrice(new BigDecimal("100.0"))
+            .execTime(1_700_000_000_000L)
+            .execId("exec-3")
+            .orderId("order-3")
+            .clientOid("client-3")
+            .feeDetail(List.of(usdt, bgb))
+            .build();
+
+    UserTrade trade = BitgetUtaV3StreamingAdapters.toUserTrade(dto, CurrencyPair.BTC_USDT);
+
+    assertThat(trade.getFeeAmount())
+        .as("fees in a different denomination must not be added to the first")
+        .isEqualByComparingTo("0.03");
+    assertThat(trade.getFeeCurrency()).isEqualTo(Currency.USDT);
+  }
+
+  @Test
   void toIntervalMapsSupportedAndRejectsUnsupported() {
     assertThat(BitgetUtaV3StreamingAdapters.toInterval(CandleStickInterval.m1)).isEqualTo("1m");
     assertThat(BitgetUtaV3StreamingAdapters.toInterval(CandleStickInterval.m3)).isEqualTo("3m");

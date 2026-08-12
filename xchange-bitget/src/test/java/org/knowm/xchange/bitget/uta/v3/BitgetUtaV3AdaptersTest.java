@@ -1,17 +1,23 @@
 package org.knowm.xchange.bitget.uta.v3;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitget.config.BitgetJacksonObjectMapperFactory;
+import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Fill;
+import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3Order;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.UserTrade;
+import org.knowm.xchange.exceptions.ExchangeException;
 
 /**
  * Wire-contract tests for {@link BitgetUtaV3Adapters#toPlaceOrderRequest(MarketOrder)}.
@@ -140,6 +146,7 @@ class BitgetUtaV3AdaptersTest {
             .limitPrice(new BigDecimal("60000"))
             .flag(BitgetUtaV3OrderFlags.ISOLATED_MARGIN)
             .flag(BitgetUtaV3OrderFlags.HEDGE_MODE)
+            .flag(BitgetUtaV3OrderFlags.POS_SIDE_LONG)
             .build();
 
     JsonNode json =
@@ -147,6 +154,7 @@ class BitgetUtaV3AdaptersTest {
 
     assertThat(json.get("marginMode").asText()).isEqualTo("isolated");
     assertThat(json.get("holdMode").asText()).isEqualTo("hedge_mode");
+    assertThat(json.get("posSide").asText()).isEqualTo("long");
   }
 
   @Test
@@ -156,6 +164,7 @@ class BitgetUtaV3AdaptersTest {
             .originalAmount(new BigDecimal("0.5"))
             .flag(BitgetUtaV3OrderFlags.ISOLATED_MARGIN)
             .flag(BitgetUtaV3OrderFlags.HEDGE_MODE)
+            .flag(BitgetUtaV3OrderFlags.POS_SIDE_SHORT)
             .build();
 
     JsonNode json =
@@ -163,5 +172,101 @@ class BitgetUtaV3AdaptersTest {
 
     assertThat(json.get("marginMode").asText()).isEqualTo("isolated");
     assertThat(json.get("holdMode").asText()).isEqualTo("hedge_mode");
+    assertThat(json.get("posSide").asText()).isEqualTo("short");
+  }
+
+  @Test
+  void hedge_mode_without_position_side_fails_before_placement() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .flag(BitgetUtaV3OrderFlags.HEDGE_MODE)
+            .build();
+
+    assertThatThrownBy(() -> BitgetUtaV3Adapters.toPlaceOrderRequest(order))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("POS_SIDE_LONG");
+  }
+
+  @Test
+  void one_way_futures_order_omits_posSide() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("holdMode").asText()).isEqualTo("one_way_mode");
+    assertThat(json.has("posSide"))
+        .as("one-way mode orders must not carry a position side")
+        .isFalse();
+  }
+
+  @Test
+  void fill_fees_in_one_currency_are_summed() throws Exception {
+    BitgetUtaV3Fill fill =
+        BitgetUtaV3Fill.builder()
+            .execId("e1")
+            .symbol("BTCUSDT")
+            .category("spot")
+            .side("buy")
+            .execPrice(new BigDecimal("60000"))
+            .execQty(new BigDecimal("0.1"))
+            .createdTime("1725040472073")
+            .feeDetail(
+                java.util.List.of(
+                    BitgetUtaV3Order.BitgetUtaV3Fee.builder()
+                        .feeCoin("USDT")
+                        .fee(new BigDecimal("1.5"))
+                        .build(),
+                    BitgetUtaV3Order.BitgetUtaV3Fee.builder()
+                        .feeCoin("USDT")
+                        .fee(new BigDecimal("0.5"))
+                        .build()))
+            .build();
+
+    UserTrade trade = BitgetUtaV3Adapters.toUserTrade(fill, CurrencyPair.BTC_USDT);
+
+    assertThat(trade.getFeeAmount()).isEqualByComparingTo("2");
+    assertThat(trade.getFeeCurrency()).isEqualTo(Currency.USDT);
+  }
+
+  @Test
+  void fill_fees_in_mixed_currencies_keep_first_denomination_only() throws Exception {
+    BitgetUtaV3Fill fill =
+        BitgetUtaV3Fill.builder()
+            .execId("e1")
+            .symbol("BTCUSDT")
+            .category("spot")
+            .side("buy")
+            .execPrice(new BigDecimal("60000"))
+            .execQty(new BigDecimal("0.1"))
+            .createdTime("1725040472073")
+            .feeDetail(
+                java.util.List.of(
+                    BitgetUtaV3Order.BitgetUtaV3Fee.builder()
+                        .feeCoin("USDT")
+                        .fee(new BigDecimal("1.5"))
+                        .build(),
+                    BitgetUtaV3Order.BitgetUtaV3Fee.builder()
+                        .feeCoin("USDT")
+                        .fee(new BigDecimal("0.5"))
+                        .build(),
+                    BitgetUtaV3Order.BitgetUtaV3Fee.builder()
+                        .feeCoin("BGB")
+                        .fee(new BigDecimal("0.01"))
+                        .build()))
+            .build();
+
+    UserTrade trade = BitgetUtaV3Adapters.toUserTrade(fill, CurrencyPair.BTC_USDT);
+
+    assertThat(trade.getFeeAmount())
+        .as("fees in a different denomination must not be added to the first")
+        .isEqualByComparingTo("2");
+    assertThat(trade.getFeeCurrency()).isEqualTo(Currency.USDT);
   }
 }

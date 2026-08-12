@@ -28,6 +28,7 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 
 /**
@@ -168,17 +169,29 @@ public class BitgetUtaV3Adapters {
         .build();
   }
 
-  /** XChange user trade for a v3 fill DTO; instrument must be resolved by the caller. */
+  /**
+   * XChange user trade for a v3 fill DTO; instrument must be resolved by the caller.
+   *
+   * <p>Fee detail may carry entries in several currencies (e.g. a discount token plus the trading
+   * currency). {@link UserTrade} carries a single fee amount and currency, so only entries sharing
+   * the first fee coin are summed; entries in other denominations are excluded rather than added
+   * across currencies and mislabeled.
+   */
   public UserTrade toUserTrade(BitgetUtaV3Fill dto, Instrument instrument) {
     BigDecimal fee = null;
     Currency feeCurrency = null;
-    if (dto.getFeeDetail() != null) {
+    if (dto.getFeeDetail() != null && !dto.getFeeDetail().isEmpty()) {
+      String feeCoin = null;
       for (BitgetUtaV3Order.BitgetUtaV3Fee detail : dto.getFeeDetail()) {
-        if (detail.getFee() != null) {
-          fee = fee == null ? detail.getFee() : fee.add(detail.getFee());
+        if (detail.getFeeCoin() == null || detail.getFee() == null) {
+          continue;
         }
-        if (feeCurrency == null && detail.getFeeCoin() != null) {
-          feeCurrency = Currency.getInstance(detail.getFeeCoin());
+        if (feeCoin == null) {
+          feeCoin = detail.getFeeCoin();
+          feeCurrency = Currency.getInstance(feeCoin);
+        }
+        if (feeCoin.equals(detail.getFeeCoin())) {
+          fee = fee == null ? detail.getFee() : fee.add(detail.getFee());
         }
       }
     }
@@ -235,6 +248,9 @@ public class BitgetUtaV3Adapters {
               limitOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)
                   ? "hedge_mode"
                   : "one_way_mode");
+      if (limitOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)) {
+        builder.posSide(toPosSide(limitOrder));
+      }
     }
     return builder.build();
   }
@@ -265,6 +281,9 @@ public class BitgetUtaV3Adapters {
               marketOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)
                   ? "hedge_mode"
                   : "one_way_mode");
+      if (marketOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)) {
+        builder.posSide(toPosSide(marketOrder));
+      }
     }
     return builder.build();
   }
@@ -280,6 +299,27 @@ public class BitgetUtaV3Adapters {
 
   private static String toSide(OrderType orderType) {
     return orderType == OrderType.BID ? "buy" : "sell";
+  }
+
+  /**
+   * Position side for a hedge-mode futures order.
+   *
+   * <p>In two-way position mode a bare buy/sell is ambiguous — it can open one side or close the
+   * other — so Bitget requires an explicit {@code posSide}. XChange core carries no position-side
+   * field, so callers must declare it with {@link BitgetUtaV3OrderFlags#POS_SIDE_LONG} or {@link
+   * BitgetUtaV3OrderFlags#POS_SIDE_SHORT}; a hedge-mode order without exactly one of them fails
+   * before any request is sent.
+   *
+   * @throws ExchangeException when neither or both position-side flags are set on a hedge-mode order
+   */
+  private static String toPosSide(Order order) {
+    boolean longSide = order.hasFlag(BitgetUtaV3OrderFlags.POS_SIDE_LONG);
+    boolean shortSide = order.hasFlag(BitgetUtaV3OrderFlags.POS_SIDE_SHORT);
+    if (longSide == shortSide) {
+      throw new ExchangeException(
+          "Hedge-mode futures orders require exactly one of POS_SIDE_LONG or POS_SIDE_SHORT");
+    }
+    return longSide ? "long" : "short";
   }
 
   private static OrderStatus toOrderStatus(String status) {

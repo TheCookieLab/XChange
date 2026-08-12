@@ -144,33 +144,64 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     if (historyParams.getInstrument() != null) {
       category = BitgetUtaV3Adapters.toCategory(historyParams.getInstrument());
     }
-    String startTime =
-        historyParams.getStartTime() == null
-            ? null
-            : String.valueOf(historyParams.getStartTime().getTime());
-    String endTime =
-        historyParams.getEndTime() == null
-            ? null
-            : String.valueOf(historyParams.getEndTime().getTime());
+    Long startMillis =
+        historyParams.getStartTime() == null ? null : historyParams.getStartTime().getTime();
+    Long endMillis =
+        historyParams.getEndTime() == null ? null : historyParams.getEndTime().getTime();
+    final String startTime = startMillis == null ? null : String.valueOf(startMillis);
+    final String endTime = endMillis == null ? null : String.valueOf(endMillis);
     Integer limit = historyParams.getLimit();
     final String requestCategory = category == null ? null : category.getWireName();
     final String requestSymbol =
         historyParams.getInstrument() == null
             ? null
             : BitgetUtaV3Adapters.toString(historyParams.getInstrument());
-    final String requestStartTime = startTime;
-    final String requestEndTime = endTime;
     final int pageSize = limit == null ? 100 : Math.min(limit, 100);
-    List<BitgetUtaV3Fill> rows =
-        fetchAllPages(
-            (cursor) ->
-                getFills(
-                    requestCategory, null, requestStartTime, requestEndTime, pageSize, cursor),
-            limit,
-            // the fills endpoint filters by category only, so client-side symbol filtering is
-            // required to honor TradeHistoryParamInstrument (PRD CF-451); the filter runs inside
-            // the pagination loop so the requested limit counts only rows that survive it
-            row -> requestSymbol == null || requestSymbol.equals(row.getSymbol()));
+    // the fills endpoint permits at most a 30-day range per query (last 90 days), so spans beyond
+    // that must be split into compliant windows; the newest window is fetched first so a requested
+    // limit is consumed by the most recent fills (PRD CF-451)
+    final long windowMillis = 30L * 24 * 60 * 60 * 1000;
+    List<BitgetUtaV3Fill> rows = new java.util.ArrayList<>();
+    if (startMillis != null && endMillis != null && endMillis - startMillis > windowMillis) {
+      long windowEnd = endMillis;
+      while (windowEnd > startMillis) {
+        long windowStart = Math.max(startMillis, windowEnd - windowMillis);
+        final String windowStartParam = String.valueOf(windowStart);
+        final String windowEndParam = String.valueOf(windowEnd);
+        Integer remaining = limit == null ? null : limit - rows.size();
+        rows.addAll(
+            fetchAllPages(
+                (cursor) ->
+                    getFills(
+                        requestCategory,
+                        null,
+                        windowStartParam,
+                        windowEndParam,
+                        pageSize,
+                        cursor),
+                remaining,
+                // the fills endpoint filters by category only, so client-side symbol filtering is
+                // required to honor TradeHistoryParamInstrument (PRD CF-451); the filter runs
+                // inside the pagination loop so the requested limit counts only rows that survive
+                // it
+                row -> requestSymbol == null || requestSymbol.equals(row.getSymbol())));
+        if (remaining != null && rows.size() >= limit) {
+          break;
+        }
+        windowEnd = windowStart;
+      }
+    } else {
+      rows.addAll(
+          fetchAllPages(
+              (cursor) ->
+                  getFills(
+                      requestCategory, null, startTime, endTime, pageSize, cursor),
+              limit,
+              // the fills endpoint filters by category only, so client-side symbol filtering is
+              // required to honor TradeHistoryParamInstrument (PRD CF-451); the filter runs inside
+              // the pagination loop so the requested limit counts only rows that survive it
+              row -> requestSymbol == null || requestSymbol.equals(row.getSymbol())));
+    }
     List<UserTrade> trades = new java.util.ArrayList<>();
     for (BitgetUtaV3Fill row : rows) {
       trades.add(toUserTrade(row));
@@ -271,7 +302,10 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     return instrumentRegistry.resolve(parsed, symbol);
   }
 
-  /** Fill-history params: optional instrument, time span (at most 30 days), page size. */
+  /**
+   * Fill-history params: optional instrument, time span (split into ≤30-day windows by {@link
+   * #getTradeHistory(TradeHistoryParams)} per the fills endpoint limit), page size.
+   */
   public static class BitgetUtaV3TradeHistoryParams
       implements TradeHistoryParams,
           TradeHistoryParamInstrument,
