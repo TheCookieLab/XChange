@@ -124,7 +124,7 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
     // freshly created unopened transports instead of the live sockets, orphaning them.
     return Completable.defer(
         () -> {
-          BitgetStreamingService publicService = new BitgetStreamingService(Config.V2_PUBLIC_WS_URL);
+          BitgetStreamingService publicService = createClassicPublicService(exchangeSpecification);
           BitgetPrivateStreamingService privateService = null;
           StreamingTradeService tradeService = null;
           if (StringUtils.isNoneBlank(
@@ -158,8 +158,26 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
               .connect()
               .onErrorResumeNext(
                   error ->
-                      connectedPrivateService.disconnect().andThen(Completable.error(error)));
+                      // disconnect BOTH transports: the public failure schedules its own
+                      // NettyStreamingService retry, and if it later succeeded beside a closed
+                      // private socket the holder would report isAlive() false with private
+                      // streams unrecoverable until the caller reconnects
+                      connectedPrivateService
+                          .disconnect()
+                          .andThen(publicService.disconnect())
+                          .andThen(Completable.error(error)));
         });
+  }
+
+  /**
+   * Creates the classic V2 public transport.
+   *
+   * <p>Protected so tests can substitute a transport whose connection outcome is deterministic
+   * (a failed public connection is disconnected together with the private transport so its
+   * automatic retry cannot outlive the failed aggregate connect).
+   */
+  protected BitgetStreamingService createClassicPublicService(ExchangeSpecification specification) {
+    return new BitgetStreamingService(Config.V2_PUBLIC_WS_URL);
   }
 
   /**
@@ -175,6 +193,18 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
         specification.getApiKey(),
         specification.getSecretKey(),
         specification.getPassword());
+  }
+
+  /**
+   * Creates the UTA V3 public transport.
+   *
+   * <p>Protected so tests can substitute a transport whose connection outcome is deterministic
+   * (a failed public connection is disconnected together with the private transport so its
+   * automatic retry cannot outlive the failed aggregate connect).
+   */
+  protected BitgetUtaV3StreamingService createUtaV3PublicService(
+      ExchangeSpecification specification) {
+    return new BitgetUtaV3StreamingService(Config.V3_PUBLIC_WS_URL);
   }
 
   /**
@@ -203,7 +233,7 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
     return Completable.defer(
         () -> {
           BitgetUtaV3StreamingService publicService =
-              new BitgetUtaV3StreamingService(Config.V3_PUBLIC_WS_URL);
+              createUtaV3PublicService(exchangeSpecification);
           applyStreamingSpecification(exchangeSpecification, publicService);
           StreamingMarketDataService marketDataService =
               new BitgetUtaV3StreamingMarketDataService(publicService);
@@ -238,8 +268,13 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
                         .connect()
                         .onErrorResumeNext(
                             error ->
+                                // a failed public connection schedules its own automatic retry,
+                                // so disconnect BOTH transports: a later public success beside the
+                                // closed private socket would keep isAlive() false with private
+                                // streams unrecoverable until the caller reconnects
                                 privateService
                                     .disconnect()
+                                    .andThen(publicService.disconnect())
                                     .andThen(Completable.error(error))));
           }
           services.set(new StreamingServices(publicService, null, marketDataService, null, null));

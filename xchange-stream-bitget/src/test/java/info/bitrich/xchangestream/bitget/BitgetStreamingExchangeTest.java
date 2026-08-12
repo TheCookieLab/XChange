@@ -323,6 +323,147 @@ class BitgetStreamingExchangeTest {
         .isEqualTo(1);
   }
 
+  @Test
+  void classicPublicConnectFailureDisconnectsBothTransports() throws Exception {
+    AtomicInteger privateDisconnects = new AtomicInteger();
+    AtomicInteger publicDisconnects = new AtomicInteger();
+    BitgetStreamingExchange exchange =
+        new BitgetStreamingExchange() {
+          @Override
+          protected BitgetStreamingService createClassicPublicService(
+              ExchangeSpecification specification) {
+            return new BitgetStreamingService(Config.V2_PUBLIC_WS_URL) {
+              @Override
+              public Completable connect() {
+                // deterministic stand-in for a DNS/TCP/TLS/handshake failure; NettyStreamingService
+                // would otherwise schedule an automatic retry that could later succeed
+                return Completable.error(new IOException("connection refused"));
+              }
+
+              @Override
+              public Completable disconnect() {
+                publicDisconnects.incrementAndGet();
+                return Completable.complete();
+              }
+            };
+          }
+
+          @Override
+          protected BitgetPrivateStreamingService createClassicPrivateService(
+              ExchangeSpecification specification) {
+            return new BitgetPrivateStreamingService(
+                Config.V2_PRIVATE_WS_URL,
+                specification.getApiKey(),
+                specification.getSecretKey(),
+                specification.getPassword()) {
+              @Override
+              public Completable connect() {
+                return Completable.complete();
+              }
+
+              @Override
+              public Completable disconnect() {
+                privateDisconnects.incrementAndGet();
+                return Completable.complete();
+              }
+            };
+          }
+        };
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    // hermetic: without this, applySpecification triggers remoteInit, a live catalog fetch
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setApiKey("api-key");
+    specification.setSecretKey("api-secret");
+    specification.setPassword("api-passphrase");
+    exchange.applySpecification(specification);
+
+    Completable connect = exchange.connect();
+
+    assertThatThrownBy(connect::blockingAwait)
+        .as("the classic path must surface the failed public connection")
+        .isInstanceOf(Throwable.class);
+    assertThat(publicDisconnects.get())
+        .as(
+            "a failed public connection must be disconnected so its automatic retry cannot "
+                + "later succeed beside the closed private socket")
+        .isEqualTo(1);
+    assertThat(privateDisconnects.get())
+        .as("the already-connected private transport must be shut down with the aggregate")
+        .isEqualTo(1);
+  }
+
+  @Test
+  void utaV3PublicConnectFailureDisconnectsBothTransports() throws Exception {
+    AtomicInteger privateDisconnects = new AtomicInteger();
+    AtomicInteger publicDisconnects = new AtomicInteger();
+    BitgetStreamingExchange exchange =
+        new BitgetStreamingExchange() {
+          @Override
+          protected BitgetUtaV3StreamingService createUtaV3PublicService(
+              ExchangeSpecification specification) {
+            return new BitgetUtaV3StreamingService(Config.V3_PUBLIC_WS_URL) {
+              @Override
+              public Completable connect() {
+                // deterministic stand-in for a DNS/TCP/TLS/handshake failure; NettyStreamingService
+                // would otherwise schedule an automatic retry that could later succeed
+                return Completable.error(new IOException("connection refused"));
+              }
+
+              @Override
+              public Completable disconnect() {
+                publicDisconnects.incrementAndGet();
+                return Completable.complete();
+              }
+            };
+          }
+
+          @Override
+          protected BitgetUtaV3PrivateStreamingService createUtaV3PrivateService(
+              ExchangeSpecification specification) {
+            return new BitgetUtaV3PrivateStreamingService(
+                Config.V3_PRIVATE_WS_URL,
+                specification.getApiKey(),
+                specification.getSecretKey(),
+                specification.getPassword()) {
+              @Override
+              public Completable connect() {
+                return Completable.complete();
+              }
+
+              @Override
+              public Completable disconnect() {
+                privateDisconnects.incrementAndGet();
+                return Completable.complete();
+              }
+            };
+          }
+        };
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    // hermetic: without this, applySpecification triggers remoteInitUtaV3(), a live instrument
+    // fetch that pollutes the shared Currency registry and breaks later tests
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setApiKey("api-key");
+    specification.setSecretKey("api-secret");
+    specification.setPassword("api-passphrase");
+    specification.setExchangeSpecificParametersItem(
+        BitgetConfiguration.API_MODE, BitgetApiMode.UTA_V3);
+    exchange.applySpecification(specification);
+
+    Completable connect = exchange.connect();
+
+    assertThatThrownBy(connect::blockingAwait)
+        .as("the UTA V3 path must surface the failed public connection")
+        .isInstanceOf(Throwable.class);
+    assertThat(publicDisconnects.get())
+        .as(
+            "a failed public connection must be disconnected so its automatic retry cannot "
+                + "later succeed beside the closed private socket")
+        .isEqualTo(1);
+    assertThat(privateDisconnects.get())
+        .as("the already-connected private transport must be shut down with the aggregate")
+        .isEqualTo(1);
+  }
+
   private static void setServices(
       BitgetStreamingExchange exchange,
       NettyStreamingService<?> publicService,
