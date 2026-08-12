@@ -13,6 +13,8 @@ public final class Config {
 
   public static final String V2_PUBLIC_WS_URL = "wss://ws.bitget.com/v2/ws/public";
   public static final String V2_PRIVATE_WS_URL = "wss://ws.bitget.com/v2/ws/private";
+  public static final String V3_PUBLIC_WS_URL = "wss://ws.bitget.com/v3/ws/public";
+  public static final String V3_PRIVATE_WS_URL = "wss://ws.bitget.com/v3/ws/private";
 
   private ObjectMapper objectMapper;
   private Clock clock;
