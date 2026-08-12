@@ -2,6 +2,7 @@ package org.knowm.xchange.bitget.uta.v3.service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 import org.knowm.xchange.bitget.BitgetExchange;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3ErrorAdapter;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3UnknownOutcomeException;
@@ -23,26 +24,50 @@ public class BitgetUtaV3TradeServiceRaw extends BitgetUtaV3BaseService {
     super(exchange);
   }
 
-  /** Places an order; returns provider order identity (orderId + echoed clientOid). */
+  /**
+   * Places an order; returns provider order identity (orderId + echoed clientOid). When the
+   * request carries no clientOid, one is generated so every placement is idempotency-keyed.
+   */
   public BitgetUtaV3OrderId placeOrder(BitgetUtaV3PlaceOrderRequest request) throws IOException {
+    BitgetUtaV3PlaceOrderRequest idempotentRequest = withClientOid(request);
     try {
       return bitgetUtaV3Authenticated
-          .placeOrder(apiKey, bitgetUtaV3Digest, passphrase, exchange.getNonceFactory(), request)
+          .placeOrder(
+              apiKey,
+              bitgetUtaV3Digest,
+              passphrase,
+              exchange.getNonceFactory(),
+              idempotentRequest)
           .getData();
     } catch (BitgetUtaV3Exception e) {
       // 40010/40725/45001: the order may have been placed server-side after transmission. Never
       // replay blindly; surface an explicit unknown-outcome exception so callers reconcile by
       // client/exchange order id through trade/order-info.
       if (BitgetUtaV3ErrorAdapter.isAmbiguousPlacementOutcome(e.getCode())) {
-        throw new BitgetUtaV3UnknownOutcomeException(e, request.getClientOid());
+        throw new BitgetUtaV3UnknownOutcomeException(e, idempotentRequest.getClientOid());
       }
       throw BitgetUtaV3ErrorAdapter.adapt(e);
     } catch (IOException e) {
       // Transport failure (read timeout, connection reset): the provider may still have accepted
       // the order. Treat exactly like the ambiguous provider codes — never replay blindly,
       // reconcile by client/exchange order id through trade/order-info.
-      throw new BitgetUtaV3UnknownOutcomeException(e, request.getClientOid());
+      throw new BitgetUtaV3UnknownOutcomeException(e, idempotentRequest.getClientOid());
     }
+  }
+
+  /**
+   * Returns the request with a generated clientOid when none was supplied, so every placement is
+   * idempotency-keyed before transmission: if the provider accepts the order but the response is
+   * lost, the surfaced {@link BitgetUtaV3UnknownOutcomeException} carries the key and callers can
+   * reconcile through trade/order-info without duplicating on retry. Mirror of
+   * {@link BitgetUtaV3AccountServiceRaw#withClientOid(BitgetUtaV3TransferRequest)}; the generated
+   * key drops hyphens because place-order clientOid must match {@code ^[\.A-Z\:/a-z0-9_-]{1,32}$}.
+   */
+  private static BitgetUtaV3PlaceOrderRequest withClientOid(BitgetUtaV3PlaceOrderRequest request) {
+    if (request.getClientOid() != null && !request.getClientOid().isEmpty()) {
+      return request;
+    }
+    return request.toBuilder().clientOid(UUID.randomUUID().toString().replace("-", "")).build();
   }
 
   /** Cancels an order; requires orderId or clientOid. */

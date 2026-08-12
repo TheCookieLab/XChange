@@ -480,6 +480,110 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
             urlPathEqualTo("/api/v3/trade/place-order")));
   }
 
+  @Test
+  void placement_without_user_reference_sends_generated_client_oid() throws Exception {
+    wireMockServer.stubFor(
+        com.github.tomakehurst.wiremock.client.WireMock.post(
+                urlPathEqualTo("/api/v3/trade/place-order"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"orderId\":\"123456789\",\"clientOid\":\"gen-oid\"}}")));
+
+    LimitOrder order =
+        new LimitOrder.Builder(Order.OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .build();
+
+    tradeService.placeLimitOrder(order);
+
+    // an idempotency key must be generated and transmitted when the caller set no userReference
+    // (hyphen-stripped UUID: 32 chars, satisfies the ^[\.A-Z\:/a-z0-9_-]{1,32}$ wire constraint)
+    wireMockServer.verify(
+        com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
+                urlPathEqualTo("/api/v3/trade/place-order"))
+            .withRequestBody(
+                com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath(
+                    "$.clientOid",
+                    com.github.tomakehurst.wiremock.client.WireMock.matching("^[0-9a-f]{32}$"))));
+  }
+
+  @Test
+  void placement_keeps_caller_supplied_user_reference_as_client_oid() throws Exception {
+    wireMockServer.stubFor(
+        com.github.tomakehurst.wiremock.client.WireMock.post(
+                urlPathEqualTo("/api/v3/trade/place-order"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"orderId\":\"123456789\",\"clientOid\":\"my-oid\"}}")));
+
+    LimitOrder order =
+        new LimitOrder.Builder(Order.OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .userReference("caller-oid-123")
+            .build();
+
+    tradeService.placeLimitOrder(order);
+
+    // a caller-supplied userReference is the idempotency key and must pass through untouched
+    wireMockServer.verify(
+        com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
+                urlPathEqualTo("/api/v3/trade/place-order"))
+            .withRequestBody(
+                com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath(
+                    "$.clientOid",
+                    com.github.tomakehurst.wiremock.client.WireMock.equalTo("caller-oid-123"))));
+  }
+
+  @Test
+  void unknown_outcome_carries_generated_client_oid_that_reached_the_wire() throws Exception {
+    wireMockServer.stubFor(
+        com.github.tomakehurst.wiremock.client.WireMock.post(
+                urlPathEqualTo("/api/v3/trade/place-order"))
+            .willReturn(
+                aResponse()
+                    .withFault(com.github.tomakehurst.wiremock.http.Fault.CONNECTION_RESET_BY_PEER)));
+
+    LimitOrder order =
+        new LimitOrder.Builder(Order.OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .build();
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> tradeService.placeLimitOrder(order))
+        .isInstanceOf(BitgetUtaV3UnknownOutcomeException.class)
+        .satisfies(
+            t -> {
+              BitgetUtaV3UnknownOutcomeException e = (BitgetUtaV3UnknownOutcomeException) t;
+              // the surfaced clientOid is the generated key that actually reached the wire, so
+              // callers can reconcile through order-info instead of replaying blindly
+              assertThat(e.getClientOid()).isNotNull().matches("^[0-9a-f]{32}$");
+              List<com.github.tomakehurst.wiremock.verification.LoggedRequest> requests =
+                  wireMockServer.findAll(
+                      com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
+                          urlPathEqualTo("/api/v3/trade/place-order")));
+              // the transport layer may retry a reset connection; every retry must resend the
+              // same idempotency key, and the surfaced exception must carry exactly that key
+              assertThat(requests).isNotEmpty();
+              com.fasterxml.jackson.databind.ObjectMapper mapper =
+                  new com.fasterxml.jackson.databind.ObjectMapper();
+              for (com.github.tomakehurst.wiremock.verification.LoggedRequest request : requests) {
+                String wireClientOid =
+                    mapper.readTree(request.getBodyAsString()).get("clientOid").asText();
+                assertThat(wireClientOid).isEqualTo(e.getClientOid());
+              }
+            });
+  }
+
   /**
    * Same contract for open orders: unfilled-orders paginates by cursor, so a single 100-row page
    * silently drops older open orders. All pages must be aggregated.

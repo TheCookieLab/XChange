@@ -21,7 +21,7 @@ import lombok.extern.jackson.Jacksonized;
  * match {@code ^[\.A-Z\:/a-z0-9_-]{1,32}$} and is idempotent for 6 hours.
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @Jacksonized
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BitgetUtaV3PlaceOrderRequest {
