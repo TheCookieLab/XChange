@@ -202,6 +202,11 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
     return sharedChannels.computeIfAbsent(subscriptionId, id -> ref.get());
   }
 
+  /** Test seam (same package): the cached shared observables keyed by subscription id. */
+  Map<String, Observable<BitgetUtaV3WsNotification>> sharedChannelsForTesting() {
+    return sharedChannels;
+  }
+
   /**
    * Bumps the connection generation on every (re)connect and binds it to the message callback of
    * the connection being resubscribed. v3 acknowledgements are correlated to the generation they

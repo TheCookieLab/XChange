@@ -66,13 +66,8 @@ class BitgetUtaV3StreamingDeadChannelRetryTest {
       return channels.containsKey(subscriptionId);
     }
 
-    Map<String, Observable<BitgetUtaV3WsNotification>> sharedChannels() throws Exception {
-      Field field = BitgetUtaV3StreamingService.class.getDeclaredField("sharedChannels");
-      field.setAccessible(true);
-      @SuppressWarnings("unchecked")
-      Map<String, Observable<BitgetUtaV3WsNotification>> map =
-          (Map<String, Observable<BitgetUtaV3WsNotification>>) field.get(this);
-      return map;
+    Map<String, Observable<BitgetUtaV3WsNotification>> sharedChannels() {
+      return sharedChannelsForTesting();
     }
 
     @Override

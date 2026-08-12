@@ -72,13 +72,8 @@ class BitgetUtaV3StreamingNotConnectedTest {
       return channels.containsKey(subscriptionId);
     }
 
-    Map<String, Observable<BitgetUtaV3WsNotification>> sharedChannels() throws Exception {
-      Field field = BitgetUtaV3StreamingService.class.getDeclaredField("sharedChannels");
-      field.setAccessible(true);
-      @SuppressWarnings("unchecked")
-      Map<String, Observable<BitgetUtaV3WsNotification>> map =
-          (Map<String, Observable<BitgetUtaV3WsNotification>>) field.get(this);
-      return map;
+    Map<String, Observable<BitgetUtaV3WsNotification>> sharedChannels() {
+      return sharedChannelsForTesting();
     }
 
     @Override
@@ -102,13 +97,8 @@ class BitgetUtaV3StreamingNotConnectedTest {
   }
 
   private static Map<String, Observable<BitgetUtaV3WsNotification>> marketDataSharedChannels(
-      BitgetUtaV3StreamingMarketDataService service) throws Exception {
-    Field field = BitgetUtaV3StreamingMarketDataService.class.getDeclaredField("sharedChannels");
-    field.setAccessible(true);
-    @SuppressWarnings("unchecked")
-    Map<String, Observable<BitgetUtaV3WsNotification>> map =
-        (Map<String, Observable<BitgetUtaV3WsNotification>>) field.get(service);
-    return map;
+      BitgetUtaV3StreamingMarketDataService service) {
+    return service.sharedChannelsForTesting();
   }
 
   @Test

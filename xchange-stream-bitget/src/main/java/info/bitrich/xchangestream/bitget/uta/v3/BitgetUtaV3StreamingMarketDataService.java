@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -92,6 +93,11 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
             .share();
     ref.set(shared);
     return sharedChannels.computeIfAbsent(subscriptionId, id -> ref.get());
+  }
+
+  /** Test seam (same package): the cached shared observables keyed by subscription id. */
+  Map<String, Observable<BitgetUtaV3WsNotification>> sharedChannelsForTesting() {
+    return sharedChannels;
   }
 
   @Override

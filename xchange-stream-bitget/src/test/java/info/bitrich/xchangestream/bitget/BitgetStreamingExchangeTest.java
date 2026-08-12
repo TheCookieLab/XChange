@@ -249,9 +249,8 @@ class BitgetStreamingExchangeTest {
             publicService, privateService, marketDataService, tradeService, accountService);
     Field servicesField = BitgetStreamingExchange.class.getDeclaredField("services");
     servicesField.setAccessible(true);
-    @SuppressWarnings("unchecked")
-    AtomicReference<Object> servicesRef =
-        (AtomicReference<Object>) servicesField.get(exchange);
-    servicesRef.set(holder);
+    // the holder is an AtomicReference<StreamingServices> and StreamingServices is a private
+    // nested class, so the atomic set is invoked reflectively instead of with an unchecked cast
+    AtomicReference.class.getMethod("set", Object.class).invoke(servicesField.get(exchange), holder);
   }
 }

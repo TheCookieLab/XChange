@@ -10,6 +10,7 @@ import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3WsNotification;
 import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.disposables.Disposable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -133,6 +134,39 @@ class BitgetUtaV3PrivateStreamingLoginGateTest {
     assertThat(outcome.error.get()).isInstanceOf(NotConnectedException.class);
     assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isFalse();
     assertThat(service.frames()).isEmpty();
+  }
+
+  @Test
+  void disposeBeforeLoginAckSendsNoUnsubscribeForNeverTransmittedRegistration() {
+    TestablePrivateStreamingService service = new TestablePrivateStreamingService(true);
+    Disposable subscription = service.subscribeChannel(null, BTC_TRADE).subscribe();
+
+    // registered, but the subscribe frame is deferred until the login ack
+    assertThat(service.frames()).isEmpty();
+    assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isTrue();
+
+    subscription.dispose();
+
+    // the registration never reached the server: an unsubscribe frame would be rejected, and the
+    // rejection acknowledgement could later kill a legitimate re-subscription of the same channel
+    assertThat(service.frames()).isEmpty();
+    assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isFalse();
+  }
+
+  @Test
+  void disposeAfterLoginAckFlushSendsUnsubscribeFrame() {
+    TestablePrivateStreamingService service = new TestablePrivateStreamingService(true);
+    Disposable subscription = service.subscribeChannel(null, BTC_TRADE).subscribe();
+    assertThat(service.frames()).isEmpty();
+
+    service.handleEventNotification(loginAck());
+    assertThat(service.frames()).hasSize(1);
+
+    subscription.dispose();
+
+    assertThat(service.frames()).hasSize(2);
+    assertThat(service.frames().get(1)).contains("unsubscribe");
+    assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isFalse();
   }
 
   @Test

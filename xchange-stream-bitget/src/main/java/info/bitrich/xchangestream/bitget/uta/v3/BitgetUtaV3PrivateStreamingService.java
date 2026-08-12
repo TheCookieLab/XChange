@@ -11,7 +11,9 @@ import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.exceptions.ExchangeException;
@@ -42,6 +44,13 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
   /** Whether the current connection's {@code login} acknowledgement has been received. */
   private volatile boolean authenticated;
 
+  /**
+   * Subscription ids whose subscribe frame was actually transmitted on the current connection,
+   * guarded by {@link #loginLock}. A registration deferred until the login ack has NOT reached the
+   * server yet, so disposing it must not send an unsubscribe frame the server would reject.
+   */
+  private final Set<String> transmittedRegistrations = new HashSet<>();
+
   public BitgetUtaV3PrivateStreamingService(
       String apiUri, String apiKey, String apiSecret, String apiPassword) {
     super(apiUri);
@@ -57,6 +66,9 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
       authenticated = false;
       connectionGeneration.incrementAndGet();
       stampCurrentConnection();
+      // fresh connection: no subscribe frame has been transmitted on it yet, so every
+      // registration is deferred until the login ack and must not be unsubscribed before then
+      transmittedRegistrations.clear();
       sendLoginMessage();
     }
   }
@@ -96,6 +108,7 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
                 if (newlyCreated[0] && authenticated) {
                   try {
                     sendMessage(getSubscribeMessage(channelName, args));
+                    transmittedRegistrations.add(subscriptionUniqueId);
                   } catch (IOException throwable) {
                     e.onError(throwable);
                   }
@@ -104,12 +117,21 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
             })
         .doOnDispose(
             () -> {
-              if (channels.remove(subscriptionUniqueId) != null) {
-                try {
-                  sendMessage(getUnsubscribeMessage(subscriptionUniqueId, args));
-                } catch (IOException e) {
-                  log.debug(
-                      "Failed to unsubscribe channel: {} {}", subscriptionUniqueId, e.toString());
+              synchronized (loginLock) {
+                if (channels.remove(subscriptionUniqueId) != null) {
+                  // only the wire-unsubscribe a registration whose subscribe frame actually
+                  // reached the server: a channel disposed before the login ack flushed it was
+                  // never subscribed, and sending an unsubscribe for it would be rejected — that
+                  // rejection acknowledgement could then kill a later, legitimate subscription of
+                  // the same account-wide channel
+                  if (transmittedRegistrations.remove(subscriptionUniqueId)) {
+                    try {
+                      sendMessage(getUnsubscribeMessage(subscriptionUniqueId, args));
+                    } catch (IOException e) {
+                      log.debug(
+                          "Failed to unsubscribe channel: {} {}", subscriptionUniqueId, e.toString());
+                    }
+                  }
                 }
               }
             })
@@ -122,6 +144,7 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
       try {
         Subscription subscription = entry.getValue();
         sendMessage(getSubscribeMessage(subscription.getChannelName(), subscription.getArgs()));
+        transmittedRegistrations.add(entry.getKey());
       } catch (IOException e) {
         log.error("Failed to reconnect channel: {}", entry.getKey());
       }
