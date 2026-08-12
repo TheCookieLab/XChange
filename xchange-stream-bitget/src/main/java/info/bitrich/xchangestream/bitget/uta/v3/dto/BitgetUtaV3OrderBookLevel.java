@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Builder;
 import lombok.Data;
-import lombok.extern.jackson.Jacksonized;
 import org.apache.commons.lang3.Validate;
 
 /**
@@ -17,7 +16,7 @@ import org.apache.commons.lang3.Validate;
  */
 @Data
 @Builder
-@Jacksonized
+
 public class BitgetUtaV3OrderBookLevel {
 
   private final BigDecimal price;
