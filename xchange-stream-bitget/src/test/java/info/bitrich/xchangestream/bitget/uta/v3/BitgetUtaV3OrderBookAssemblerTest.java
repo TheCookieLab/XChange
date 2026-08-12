@@ -175,6 +175,23 @@ class BitgetUtaV3OrderBookAssemblerTest {
   }
 
   @Test
+  void negativeSizeLevelIsNotInserted() {
+    BitgetUtaV3OrderBookAssembler assembler = new BitgetUtaV3OrderBookAssembler();
+    assembler.apply(
+        snapshot(10, one(), one(), one(), one()), BitgetUtaV3Action.SNAPSHOT, SUBSCRIPTION_ID);
+
+    // negative size is not a valid quantity: it must not be inserted as a level
+    assembler.apply(
+        update(10, 11, "bid", new BigDecimal("98.0"), new BigDecimal("-2")),
+        BitgetUtaV3Action.UPDATE,
+        SUBSCRIPTION_ID);
+
+    assertThat(assembler.getBids()).hasSize(2);
+    assertThat(assembler.getBids().get(0).getSize()).isPositive();
+    assertThat(assembler.getBids().get(1).getSize()).isPositive();
+  }
+
+  @Test
   void zeroSizeDeletesLevel() {
     BitgetUtaV3OrderBookAssembler assembler = new BitgetUtaV3OrderBookAssembler();
     assembler.apply(
