@@ -18,7 +18,7 @@ import lombok.extern.jackson.Jacksonized;
  * trigger). Optional header {@code X-CHANNEL-API-CODE} carries the broker rebate code.
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @Jacksonized
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BitgetUtaV3StrategyOrderRequest {

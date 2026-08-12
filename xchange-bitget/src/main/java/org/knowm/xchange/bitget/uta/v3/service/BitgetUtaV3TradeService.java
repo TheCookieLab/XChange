@@ -35,7 +35,6 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParamLimit;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
-import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 
@@ -126,15 +125,22 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
   @Override
   public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {
     Validate.validState(orderQueryParams.length == 1);
-    Validate.isInstanceOf(DefaultQueryOrderParam.class, orderQueryParams[0]);
-    String orderId = ((DefaultQueryOrderParam) orderQueryParams[0]).getOrderId();
-    BitgetUtaV3Order dto = getOrderInfo(orderId, null);
+    Validate.isInstanceOf(OrderQueryParams.class, orderQueryParams[0]);
+    String orderId = orderQueryParams[0].getOrderId();
+    // BitgetUtaV3OrderQueryParams additionally carries the placement clientOid (idempotency key /
+    // user reference), which the endpoint accepts in place of orderId; plain OrderQueryParams
+    // implementations keep the pre-existing orderId-only behavior.
+    String clientOid =
+        orderQueryParams[0] instanceof BitgetUtaV3OrderQueryParams
+            ? ((BitgetUtaV3OrderQueryParams) orderQueryParams[0]).getClientOid()
+            : null;
+    BitgetUtaV3Order dto = getOrderInfo(orderId, clientOid);
     return java.util.Collections.singletonList(toOrder(dto));
   }
 
   @Override
   public Class getRequiredOrderQueryParamClass() {
-    return DefaultQueryOrderParam.class;
+    return BitgetUtaV3OrderQueryParams.class;
   }
 
   @Override

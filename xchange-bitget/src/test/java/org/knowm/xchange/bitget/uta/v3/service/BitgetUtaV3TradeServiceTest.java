@@ -1147,6 +1147,107 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
             urlPathEqualTo("/api/v3/trade/place-strategy-order")));
   }
 
+  @Test
+  void strategy_tpsl_placement_injects_generated_client_oid() throws Exception {
+    wireMockServer.stubFor(
+        com.github.tomakehurst.wiremock.client.WireMock.post(
+                urlPathEqualTo("/api/v3/trade/place-strategy-order"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"orderId\":\"123456789\"}}")));
+
+    BitgetUtaV3StrategyOrderRequest request =
+        BitgetUtaV3StrategyOrderRequest.builder()
+            .category("spot")
+            .symbol("BTCUSDT")
+            .type("tpsl")
+            .side("buy")
+            .qty(new BigDecimal("0.1"))
+            .build();
+
+    ((BitgetUtaV3TradeServiceRaw) tradeService).placeStrategyOrder(request, "api-code");
+
+    // tpsl is the documented default: a TP-SL placement without a caller clientOid must still get
+    // the 6-hour idempotency key (hyphen-stripped UUID, 32 chars, satisfies the wire constraint),
+    // so a timeout/ambiguous response can be reconciled instead of replayed into a duplicate
+    wireMockServer.verify(
+        com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
+                urlPathEqualTo("/api/v3/trade/place-strategy-order"))
+            .withRequestBody(
+                com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath(
+                    "$.clientOid",
+                    com.github.tomakehurst.wiremock.client.WireMock.matching("^[0-9a-f]{32}$"))));
+  }
+
+  @Test
+  void strategy_trigger_placement_omits_client_oid() throws Exception {
+    wireMockServer.stubFor(
+        com.github.tomakehurst.wiremock.client.WireMock.post(
+                urlPathEqualTo("/api/v3/trade/place-strategy-order"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"orderId\":\"123456789\"}}")));
+
+    BitgetUtaV3StrategyOrderRequest request =
+        BitgetUtaV3StrategyOrderRequest.builder()
+            .category("spot")
+            .symbol("BTCUSDT")
+            .type("trigger")
+            .side("buy")
+            .qty(new BigDecimal("0.1"))
+            .triggerPrice(new BigDecimal("55000"))
+            .build();
+
+    ((BitgetUtaV3TradeServiceRaw) tradeService).placeStrategyOrder(request, "api-code");
+
+    // trigger orders do not support clientOid: no key may be invented for them
+    wireMockServer.verify(
+        com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
+                urlPathEqualTo("/api/v3/trade/place-strategy-order"))
+            .withRequestBody(
+                com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath(
+                    "$.clientOid", com.github.tomakehurst.wiremock.client.WireMock.absent())));
+  }
+
+  @Test
+  void order_query_by_client_oid_routes_client_reference() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/order-info"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"orderId\":\"42\",\"clientOid\":\"c42\","
+                            + "\"category\":\"spot\",\"symbol\":\"BTCUSDT\",\"orderType\":\"market\","
+                            + "\"side\":\"sell\",\"qty\":\"0.2\",\"cumExecQty\":\"0.2\","
+                            + "\"avgPrice\":\"59900\",\"orderStatus\":\"filled\","
+                            + "\"createdTime\":\"1725040472073\"}}")));
+
+    BitgetUtaV3OrderQueryParams params = new BitgetUtaV3OrderQueryParams();
+    params.setClientOid("c42");
+
+    Collection<Order> orders = tradeService.getOrder(params);
+
+    assertThat(orders).hasSize(1);
+    assertThat(orders.iterator().next().getId()).isEqualTo("42");
+    // the reconciliation path advertised for unknown-outcome exceptions: the placement clientOid
+    // must reach the endpoint's clientOid parameter, not be dropped
+    wireMockServer.verify(
+        com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
+                urlPathEqualTo("/api/v3/trade/order-info"))
+            .withQueryParam("clientOid", equalTo("c42")));
+  }
+
   /**
    * A transient public-endpoint failure must not silently pair private order data with a {@code
    * null} instrument: the catalog lookup failure propagates as {@code IOException} instead of

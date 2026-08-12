@@ -93,15 +93,19 @@ public class BitgetUtaV3TradeServiceRaw extends BitgetUtaV3BaseService {
   }
 
   /**
-   * Places a strategy (trigger/TP-SL) order. Ambiguous provider placement codes (40010/40725/45001)
-   * and transport failures surface as {@link BitgetUtaV3UnknownOutcomeException}: the strategy
-   * order may have been accepted server-side after transmission, so callers must reconcile by
-   * client/exchange order id instead of replaying blindly. {@code clientOid} is only echoed for
-   * tpsl orders (trigger orders do not support it), so the exception carries it only when the DTO
-   * did.
+   * Places a strategy (trigger/TP-SL) order. TP-SL requests carry a generated {@code clientOid}
+   * (6-hour idempotency) when none was supplied, so an ambiguous provider code or transport
+   * failure surfaces an unknown-outcome exception with a reconciliation key instead of an
+   * unprotected retry that could duplicate the protective order. Ambiguous provider placement
+   * codes (40010/40725/45001) and transport failures surface as {@link
+   * BitgetUtaV3UnknownOutcomeException}: the strategy order may have been accepted server-side
+   * after transmission, so callers must reconcile by client/exchange order id instead of replaying
+   * blindly. {@code clientOid} is only supported for tpsl orders (trigger orders do not support
+   * it), so the exception carries it only when the request type is not {@code trigger}.
    */
   public BitgetUtaV3OrderId placeStrategyOrder(
       BitgetUtaV3StrategyOrderRequest request, String channelApiCode) throws IOException {
+    BitgetUtaV3StrategyOrderRequest idempotentRequest = withClientOid(request);
     try {
       return bitgetUtaV3Authenticated
           .placeStrategyOrder(
@@ -110,23 +114,41 @@ public class BitgetUtaV3TradeServiceRaw extends BitgetUtaV3BaseService {
               passphrase,
               exchange.getNonceFactory(),
               channelApiCode,
-              request)
+              idempotentRequest)
           .getData();
     } catch (BitgetUtaV3Exception e) {
       // 40010/40725/45001: the strategy order may have been placed server-side after transmission.
       // Never replay blindly; surface an explicit unknown-outcome exception so callers reconcile by
       // client/exchange order id through trade/order-info.
       if (BitgetUtaV3ErrorAdapter.isAmbiguousPlacementOutcome(e.getCode())) {
-        throw new BitgetUtaV3UnknownOutcomeException(e, request.getClientOid());
+        throw new BitgetUtaV3UnknownOutcomeException(e, idempotentRequest.getClientOid());
       }
       throw BitgetUtaV3ErrorAdapter.adapt(e);
     } catch (IOException e) {
       // Transport failure (read timeout, connection reset): the provider may still have accepted
       // the strategy order. Same unknown-outcome contract as placeOrder — never replay blindly.
       // clientOid is only echoed for tpsl orders (trigger orders do not support it), so the
-      // exception carries it only when the DTO did.
-      throw new BitgetUtaV3UnknownOutcomeException(e, request.getClientOid());
+      // exception carries it only when the request type is not trigger.
+      throw new BitgetUtaV3UnknownOutcomeException(e, idempotentRequest.getClientOid());
     }
+  }
+
+  /**
+   * Returns the request with a generated clientOid when the type is {@code tpsl} (or unset, the
+   * provider default) and none was supplied, so every TP-SL placement is idempotency-keyed before
+   * transmission: if the provider accepts the order but the response is lost, the surfaced {@link
+   * BitgetUtaV3UnknownOutcomeException} carries the key and callers can reconcile through
+   * trade/order-info without duplicating on retry. Trigger orders do not support clientOid and are
+   * returned unchanged. The generated key drops hyphens because strategy clientOid must match
+   * {@code ^[\.A-Z\:/a-z0-9_-]{1,32}$}.
+   */
+  private static BitgetUtaV3StrategyOrderRequest withClientOid(
+      BitgetUtaV3StrategyOrderRequest request) {
+    if ("trigger".equals(request.getType())
+        || (request.getClientOid() != null && !request.getClientOid().isEmpty())) {
+      return request;
+    }
+    return request.toBuilder().clientOid(UUID.randomUUID().toString().replace("-", "")).build();
   }
 
   /**
