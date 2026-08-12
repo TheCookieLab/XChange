@@ -133,7 +133,9 @@ public class BitgetUtaV3OrderBookAssembler {
       return;
     }
     for (BitgetUtaV3OrderBookLevel level : levels) {
-      if (level.getSize().signum() == 0) {
+      if (level.getSize().signum() <= 0) {
+        // quantity 0 deletes a level; a negative quantity is malformed and must
+        // never surface as a negative-amount level in the book
         side.remove(level.getPrice());
       } else {
         side.put(level.getPrice(), level);
