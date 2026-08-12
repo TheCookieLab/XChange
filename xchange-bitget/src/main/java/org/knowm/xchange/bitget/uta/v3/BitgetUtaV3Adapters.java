@@ -210,7 +210,14 @@ public class BitgetUtaV3Adapters {
     return builder.build();
   }
 
-  /** v3 place-order request for a market order. Spot/margin size in quote coin. */
+  /**
+   * v3 place-order request for a market order.
+   *
+   * <p>The v3 endpoint ({@code POST /api/v3/trade/place-order}) accepts exactly one size
+   * parameter, the required {@code qty}; there is no {@code amount} parameter. Per the official
+   * docs {@code qty} is the base-coin quantity for limit and market-sell orders and the quote-coin
+   * spend for market-buy orders on spot/margin categories.
+   */
   public BitgetUtaV3PlaceOrderRequest toPlaceOrderRequest(MarketOrder marketOrder) {
     BitgetUtaV3Category category = toCategory(marketOrder.getInstrument());
     BitgetUtaV3PlaceOrderRequest.BitgetUtaV3PlaceOrderRequestBuilder builder =
@@ -219,13 +226,8 @@ public class BitgetUtaV3Adapters {
             .symbol(toString(marketOrder.getInstrument()))
             .side(toSide(marketOrder.getType()))
             .orderType("market")
+            .qty(marketOrder.getOriginalAmount())
             .clientOid(marketOrder.getUserReference());
-    if (category == BitgetUtaV3Category.SPOT || category == BitgetUtaV3Category.MARGIN) {
-      // spot/margin market orders size in quote coin
-      builder.amount(marketOrder.getOriginalAmount());
-    } else {
-      builder.qty(marketOrder.getOriginalAmount());
-    }
     if (category.isDerivative()) {
       builder.marginMode("crossed").holdMode("one_way_mode");
     }

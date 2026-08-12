@@ -30,14 +30,15 @@ class BitgetUtaV3AdaptersTest {
   }
 
   @Test
-  void spot_market_buy_uses_qty_not_amount() {
+  void spot_market_buy_uses_qty_not_amount() throws Exception {
     MarketOrder buy =
         new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
             .originalAmount(new BigDecimal("100"))
             .userReference("buy-1")
             .build();
 
-    JsonNode json = MAPPER.valueToTree(BitgetUtaV3Adapters.toPlaceOrderRequest(buy));
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(buy)));
 
     assertThat(json.get("category").asText()).isEqualTo("spot");
     assertThat(json.get("orderType").asText()).isEqualTo("market");
@@ -49,14 +50,15 @@ class BitgetUtaV3AdaptersTest {
   }
 
   @Test
-  void spot_market_sell_uses_qty_not_amount() {
+  void spot_market_sell_uses_qty_not_amount() throws Exception {
     MarketOrder sell =
         new MarketOrder.Builder(OrderType.ASK, CurrencyPair.BTC_USDT)
             .originalAmount(new BigDecimal("0.5"))
             .userReference("sell-1")
             .build();
 
-    JsonNode json = MAPPER.valueToTree(BitgetUtaV3Adapters.toPlaceOrderRequest(sell));
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(sell)));
 
     assertThat(json.get("category").asText()).isEqualTo("spot");
     assertThat(json.has("qty")).isTrue();
