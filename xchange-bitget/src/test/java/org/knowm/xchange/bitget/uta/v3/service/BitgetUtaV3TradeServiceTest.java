@@ -17,6 +17,7 @@ import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamCurrencyPair;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
@@ -166,6 +167,42 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     assertThat(trade.getOriginalAmount()).isEqualByComparingTo("0.1");
     assertThat(trade.getFeeAmount()).isEqualByComparingTo("6");
     assertThat(trade.getFeeCurrency()).isEqualTo(org.knowm.xchange.currency.Currency.USDT);
+  }
+
+  @Test
+  void trade_history_with_null_params_does_not_throw() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[],\"cursor\":\"\"}}")));
+
+    UserTrades trades = tradeService.getTradeHistory(null);
+
+    assertThat(trades.getUserTrades()).isEmpty();
+  }
+
+  @Test
+  void trade_history_with_generic_params_does_not_throw() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[],\"cursor\":\"\"}}")));
+
+    // generic core params type, not the exchange-specific subclass
+    UserTrades trades =
+        tradeService.getTradeHistory(new DefaultTradeHistoryParamCurrencyPair());
+
+    assertThat(trades.getUserTrades()).isEmpty();
   }
 
   @Test
