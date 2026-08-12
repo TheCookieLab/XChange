@@ -146,15 +146,14 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     List<BitgetUtaV3Fill> rows =
         fetchAllPages(
             (cursor) ->
-                getFills(requestCategory, null, requestStartTime, requestEndTime, pageSize, cursor),
-            limit);
-    List<UserTrade> trades =
-        rows.stream()
+                getFills(
+                    requestCategory, null, requestStartTime, requestEndTime, pageSize, cursor),
+            limit,
             // the fills endpoint filters by category only, so client-side symbol filtering is
-            // required to honor TradeHistoryParamInstrument (PRD CF-451)
-            .filter(row -> requestSymbol == null || requestSymbol.equals(row.getSymbol()))
-            .map(this::toUserTrade)
-            .collect(Collectors.toList());
+            // required to honor TradeHistoryParamInstrument (PRD CF-451); the filter runs inside
+            // the pagination loop so the requested limit counts only rows that survive it
+            row -> requestSymbol == null || requestSymbol.equals(row.getSymbol()));
+    List<UserTrade> trades = rows.stream().map(this::toUserTrade).collect(Collectors.toList());
     return new UserTrades(trades, TradeSortType.SortByID);
   }
 
@@ -180,37 +179,49 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
   /**
    * Fetches every cursor page, oldest included, until the provider returns an empty cursor.
    *
-   * <p>Guards: aggregation is bounded by {@code maxRows} when non-null, and a provider that repeats
-   * its cursor (no progress) raises {@link org.knowm.xchange.exceptions.ExchangeException} instead
-   * of looping forever or returning silently-truncated data.
+   * <p>Guards: aggregation is bounded by {@code maxRows} (counting only rows that pass {@code
+   * filter}, when one is supplied) and a provider that repeats the cursor just requested (no
+   * progress) raises {@link org.knowm.xchange.exceptions.ExchangeException} instead of looping
+   * forever or returning duplicated rows.
    */
   private <T> List<T> fetchAllPages(PageFetcher<T> fetcher) throws IOException {
-    return fetchAllPages(fetcher, null);
+    return fetchAllPages(fetcher, null, null);
   }
 
   private <T> List<T> fetchAllPages(PageFetcher<T> fetcher, Integer maxRows) throws IOException {
+    return fetchAllPages(fetcher, maxRows, null);
+  }
+
+  private <T> List<T> fetchAllPages(
+      PageFetcher<T> fetcher, Integer maxRows, java.util.function.Predicate<T> filter)
+      throws IOException {
     List<T> rows = new java.util.ArrayList<>();
     String cursor = null;
-    String previousCursor = null;
     while (true) {
       BitgetUtaV3CursorPage<T> page = fetcher.fetch(cursor);
+      String nextCursor = page == null ? null : page.getCursor();
+      // no-progress guard, checked against the cursor just requested: a provider that echoes it
+      // back would serve the same page again. Reject before accepting the page so a duplicate
+      // can never be appended (and never counted toward maxRows).
+      if (nextCursor != null && nextCursor.equals(cursor)) {
+        throw new org.knowm.xchange.exceptions.ExchangeException(
+            "Provider cursor did not advance between pages: " + nextCursor);
+      }
       if (page != null && page.getList() != null) {
-        rows.addAll(page.getList());
+        for (T row : page.getList()) {
+          if (filter == null || filter.test(row)) {
+            rows.add(row);
+          }
+        }
       }
       if (maxRows != null && rows.size() >= maxRows) {
         // the provider returns full pages, so the final page can overshoot the requested limit;
         // trim the aggregate so callers can rely on TradeHistoryParamLimit (PRD CF-451)
         return new java.util.ArrayList<>(rows.subList(0, maxRows));
       }
-      String nextCursor = page == null ? null : page.getCursor();
       if (nextCursor == null || nextCursor.isEmpty()) {
         return rows;
       }
-      if (nextCursor.equals(previousCursor)) {
-        throw new org.knowm.xchange.exceptions.ExchangeException(
-            "Provider cursor did not advance between pages: " + nextCursor);
-      }
-      previousCursor = cursor;
       cursor = nextCursor;
     }
   }

@@ -115,8 +115,18 @@ public class BitgetUtaV3MarketDataService extends BitgetUtaV3MarketDataServiceRa
             BitgetUtaV3Category.COIN_FUTURES,
             BitgetUtaV3Category.USDC_FUTURES
           }) {
+        // load the category's instruments once and map every ticker symbol from that result;
+        // per-ticker lookups would be one /market/instruments request per product (10/s limit)
+        Map<String, Instrument> instrumentsBySymbol = new java.util.HashMap<>();
+        List<BitgetUtaV3Instrument> instrumentRows = getInstruments(category, null);
+        if (instrumentRows != null) {
+          for (BitgetUtaV3Instrument row : instrumentRows) {
+            instrumentsBySymbol.put(
+                row.getSymbol(), BitgetUtaV3Adapters.toInstrument(row));
+          }
+        }
         for (BitgetUtaV3Ticker ticker : getTickers(category, null)) {
-          Instrument instrument = instrumentForTicker(category, ticker);
+          Instrument instrument = instrumentsBySymbol.get(ticker.getSymbol());
           if (instrument != null) {
             result.add(BitgetUtaV3Adapters.toTicker(ticker, instrument));
           }
@@ -126,19 +136,6 @@ public class BitgetUtaV3MarketDataService extends BitgetUtaV3MarketDataServiceRa
       throw BitgetUtaV3ErrorAdapter.adapt(e);
     }
     return result;
-  }
-
-  private Instrument instrumentForTicker(BitgetUtaV3Category category, BitgetUtaV3Ticker ticker) {
-    try {
-      // resolve via instruments list to get category-correct instrument identity
-      List<BitgetUtaV3Instrument> rows = getInstruments(category, ticker.getSymbol());
-      if (rows != null && !rows.isEmpty()) {
-        return BitgetUtaV3Adapters.toInstrument(rows.get(0));
-      }
-    } catch (IOException ignored) {
-      // fall through to symbol-only mapping
-    }
-    return null;
   }
 
   @Override

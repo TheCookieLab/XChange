@@ -307,6 +307,173 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   }
 
   /**
+   * The symbol filter must be applied during pagination, not after it: {@code
+   * TradeHistoryParamLimit} counts rows that survive the instrument filter. A page full of other
+   * symbols must not satisfy the limit early — the loop keeps paging until enough matching rows
+   * arrive, then trims the final page's overshoot.
+   */
+  @Test
+  void trade_history_limit_counts_only_matching_symbols() throws Exception {
+    StringBuilder page1 = new StringBuilder();
+    for (int i = 1; i <= 5; i++) {
+      page1
+          .append("{\"execId\":\"e")
+          .append(i)
+          .append("\",\"orderId\":\"")
+          .append(i)
+          .append("\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\",")
+          .append("\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\",")
+          .append("\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"},");
+    }
+    for (int i = 6; i <= 100; i++) {
+      page1
+          .append("{\"execId\":\"e")
+          .append(i)
+          .append("\",\"orderId\":\"")
+          .append(i)
+          .append("\",\"category\":\"spot\",\"symbol\":\"ETHUSDT\",")
+          .append("\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"3500\",")
+          .append("\"execQty\":\"1\",\"createdTime\":\"1725040472073\"},");
+    }
+    page1.setLength(page1.length() - 1);
+    StringBuilder page2 = new StringBuilder();
+    for (int i = 101; i <= 160; i++) {
+      page2
+          .append("{\"execId\":\"e")
+          .append(i)
+          .append("\",\"orderId\":\"")
+          .append(i)
+          .append("\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\",")
+          .append("\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\",")
+          .append("\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"},");
+    }
+    page2.setLength(page2.length() - 1);
+    // page 1: only 5 of 100 fills match BTCUSDT; page 2: 60 of 60 match
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":["
+                            + page1
+                            + "],\"cursor\":\"C1\"}}")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.equalTo("C1"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":["
+                            + page2
+                            + "],\"cursor\":\"\"}}")));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+    params.setLimit(50);
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    // 5 matching rows on page 1 are not enough for the limit: the loop must fetch page 2 and
+    // take 45 of its 60 matching rows, then trim to exactly 50 (ids e1..e5 + e101..e145,
+    // re-sorted ascending by SortByID)
+    assertThat(trades.getUserTrades()).hasSize(50);
+    assertThat(trades.getUserTrades())
+        .allSatisfy(t -> assertThat(t.getInstrument()).isEqualTo(CurrencyPair.BTC_USDT));
+    assertThat(
+            trades.getUserTrades().stream()
+                .map(t -> t.getId())
+                .collect(java.util.stream.Collectors.toList()))
+        .isEqualTo(
+            java.util.stream.Stream.concat(
+                    java.util.stream.IntStream.rangeClosed(1, 5).mapToObj(i -> "e" + i),
+                    java.util.stream.IntStream.rangeClosed(101, 145).mapToObj(i -> "e" + i))
+                .collect(java.util.stream.Collectors.toList()));
+    wireMockServer.verify(
+        2,
+        com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
+            urlPathEqualTo("/api/v3/trade/fills")));
+  }
+
+  /**
+   * A provider that repeats the cursor must be rejected even when a row limit is set: the limit
+   * check must never run on an un-advanced page, otherwise the duplicated rows would be returned
+   * as if they were fresh history.
+   */
+  @Test
+  void trade_history_repeated_cursor_not_satisfied_by_duplicate_page() throws Exception {
+    // every fills request returns the same single-row page and the same cursor
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e1\",\"orderId\":\"42\","
+                            + "\"clientOid\":\"c42\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"STUCK\"}}")));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setLimit(2);
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> tradeService.getTradeHistory(params))
+        .isInstanceOf(org.knowm.xchange.exceptions.ExchangeException.class);
+  }
+
+  /**
+   * A transport failure on placement (read timeout, connection reset) must not leak as a plain
+   * {@code IOException}: the provider may still have accepted the order, so the outcome is
+   * unknown and callers must not replay blindly — same contract as the ambiguous provider codes.
+   */
+  @Test
+  void transport_failure_on_placement_surfaces_unknown_outcome() throws Exception {
+    wireMockServer.stubFor(
+        com.github.tomakehurst.wiremock.client.WireMock.post(
+                urlPathEqualTo("/api/v3/trade/place-order"))
+            .willReturn(
+                aResponse()
+                    .withFault(com.github.tomakehurst.wiremock.http.Fault.CONNECTION_RESET_BY_PEER)));
+
+    LimitOrder order =
+        new LimitOrder.Builder(Order.OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .build();
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> tradeService.placeLimitOrder(order))
+        .isInstanceOf(BitgetUtaV3UnknownOutcomeException.class)
+        .satisfies(
+            t -> {
+              BitgetUtaV3UnknownOutcomeException e = (BitgetUtaV3UnknownOutcomeException) t;
+              assertThat(e.getProviderCode()).isNull();
+              assertThat(e.getCause()).isInstanceOf(java.io.IOException.class);
+            });
+
+    // No application-level replay: the transport layer may retry a reset connection, but the
+    // service must surface the unknown outcome instead of silently resending the placement.
+    wireMockServer.verify(
+        com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
+            urlPathEqualTo("/api/v3/trade/place-order")));
+  }
+
+  /**
    * Same contract for open orders: unfilled-orders paginates by cursor, so a single 100-row page
    * silently drops older open orders. All pages must be aggregated.
    */

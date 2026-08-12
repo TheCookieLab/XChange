@@ -1,5 +1,6 @@
 package org.knowm.xchange.bitget.uta.v3;
 
+import java.io.IOException;
 import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Exception;
 
 /**
@@ -7,10 +8,12 @@ import org.knowm.xchange.bitget.uta.v3.common.BitgetUtaV3Exception;
  *
  * <p>Raised when {@code trade/order} responds with an ambiguous provider code ({@code 40010}
  * partially placed/matched, {@code 40725} order may be placed, {@code 45001} order may be matched)
- * after the request was transmitted, so the server-side outcome is unknown. Callers must not
- * blindly replay the placement; they should reconcile by client/exchange order id through {@code
- * trade/order-info} or surface the ambiguity to the operator. The message carries the provider code
- * and the echoed {@code clientOid}, never key material.
+ * after the request was transmitted, so the server-side outcome is unknown. Also raised when the
+ * placement dies in transport (read timeout, connection reset), because the provider may still have
+ * accepted it. Callers must not blindly replay the placement; they should reconcile by
+ * client/exchange order id through {@code trade/order-info} or surface the ambiguity to the
+ * operator. The message carries the provider code (or a transport marker) and the echoed {@code
+ * clientOid}, never key material.
  *
  * @since 5.1.0
  */
@@ -33,12 +36,28 @@ public class BitgetUtaV3UnknownOutcomeException extends RuntimeException {
     this.providerCode = e.getCode();
   }
 
+  /** Transport-failure variant: the request died after transmission, so the outcome is unknown. */
+  public BitgetUtaV3UnknownOutcomeException(IOException e, String clientOid) {
+    super(
+        "Bitget UTA v3 order outcome is unknown after transmission (transport failure"
+            + (clientOid == null ? "" : ", clientOid=" + clientOid)
+            + "); do not replay blindly, reconcile by order id via trade/order-info"
+            + (e.getMessage() == null ? "" : ": " + e.getMessage()),
+        e);
+    this.clientOid = clientOid;
+    this.providerCode = null;
+  }
+
   /** The {@code clientOid} of the interrupted placement, when one was supplied. */
   public String getClientOid() {
     return clientOid;
   }
 
-  /** The ambiguous provider code verbatim ({@code 40010}, {@code 40725} or {@code 45001}). */
+  /**
+   * The ambiguous provider code verbatim ({@code 40010}, {@code 40725} or {@code 45001}), or
+   * {@code null} when the outcome is unknown because of a transport failure rather than a provider
+   * response.
+   */
   public String getProviderCode() {
     return providerCode;
   }

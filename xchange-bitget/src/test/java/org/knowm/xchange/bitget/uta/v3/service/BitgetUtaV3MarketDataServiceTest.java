@@ -97,6 +97,71 @@ class BitgetUtaV3MarketDataServiceTest extends BitgetUtaV3ExchangeWiremock {
     assertThat(tickers).allSatisfy(t -> assertThat(t.getLast()).isEqualByComparingTo("60000"));
   }
 
+  /**
+   * Instruments are the category-wide product catalog: getTickers must load them once per category
+   * and map every ticker symbol from that result. A per-ticker instruments lookup would fire one
+   * {@code /market/instruments} request per product and blow through the 10/s endpoint limit on
+   * any market with more than a handful of symbols.
+   */
+  @Test
+  void all_tickers_resolves_instruments_once_per_category() throws Exception {
+    for (String category : new String[] {"spot", "usdt-futures", "coin-futures", "usdc-futures"}) {
+      wireMockServer.stubFor(
+          get(urlPathEqualTo("/api/v3/market/instruments"))
+              .atPriority(1)
+              .withQueryParam(
+                  "category", com.github.tomakehurst.wiremock.client.WireMock.equalTo(category))
+              .willReturn(
+                  aResponse()
+                      .withStatus(200)
+                      .withHeader("Content-Type", "application/json")
+                      .withBody(
+                          "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                              + "\"data\":[{\"symbol\":\"BTCUSDT\",\"baseCoin\":\"BTC\","
+                              + "\"quoteCoin\":\"USDT\",\"pricePrecision\":\"2\","
+                              + "\"quantityPrecision\":\"4\",\"status\":\"online\","
+                              + "\"isReality\":\"no\",\"category\":\""
+                              + category
+                              + "\"},"
+                              + "{\"symbol\":\"ETHUSDT\",\"baseCoin\":\"ETH\","
+                              + "\"quoteCoin\":\"USDT\",\"pricePrecision\":\"2\","
+                              + "\"quantityPrecision\":\"4\",\"status\":\"online\","
+                              + "\"isReality\":\"no\",\"category\":\""
+                              + category
+                              + "\"}]}")));
+      wireMockServer.stubFor(
+          get(urlPathEqualTo("/api/v3/market/tickers"))
+              .withQueryParam(
+                  "category", com.github.tomakehurst.wiremock.client.WireMock.equalTo(category))
+              .willReturn(
+                  aResponse()
+                      .withStatus(200)
+                      .withHeader("Content-Type", "application/json")
+                      .withBody(
+                          "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                              + "\"data\":[{\"category\":\""
+                              + category
+                              + "\",\"symbol\":\"BTCUSDT\",\"ts\":\"1725040472073\","
+                              + "\"lastPrice\":\"60000\",\"volume24h\":\"120.5\"},"
+                              + "{\"category\":\""
+                              + category
+                              + "\",\"symbol\":\"ETHUSDT\",\"ts\":\"1725040472073\","
+                              + "\"lastPrice\":\"3500\",\"volume24h\":\"80\"}]}")));
+    }
+
+    List<Ticker> tickers = marketDataService.getTickers(null);
+
+    assertThat(tickers).hasSize(8);
+    assertThat(tickers)
+        .extracting(t -> t.getInstrument().toString())
+        .contains("BTC/USDT", "ETH/USDT");
+    // exactly one instruments request per category (4 total), not one per ticker (8)
+    wireMockServer.verify(
+        4,
+        com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
+            urlPathEqualTo("/api/v3/market/instruments")));
+  }
+
   @Test
   void metadata_includes_online_instruments() {
     // remoteInit ran at exchange creation against the instruments stub

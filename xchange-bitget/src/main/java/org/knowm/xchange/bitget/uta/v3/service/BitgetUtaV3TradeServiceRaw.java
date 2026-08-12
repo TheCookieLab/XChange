@@ -37,6 +37,11 @@ public class BitgetUtaV3TradeServiceRaw extends BitgetUtaV3BaseService {
         throw new BitgetUtaV3UnknownOutcomeException(e, request.getClientOid());
       }
       throw BitgetUtaV3ErrorAdapter.adapt(e);
+    } catch (IOException e) {
+      // Transport failure (read timeout, connection reset): the provider may still have accepted
+      // the order. Treat exactly like the ambiguous provider codes — never replay blindly,
+      // reconcile by client/exchange order id through trade/order-info.
+      throw new BitgetUtaV3UnknownOutcomeException(e, request.getClientOid());
     }
   }
 

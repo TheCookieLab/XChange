@@ -78,6 +78,9 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
               exchangeSpecification.getApiKey(),
               exchangeSpecification.getSecretKey(),
               exchangeSpecification.getPassword());
+      // private channels must honor the same proxy/cert/connection-hook/auto-reconnect
+      // settings as the public socket
+      applyStreamingSpecification(exchangeSpecification, privateStreamingService);
       streamingTradeService =
           new BitgetUtaV3StreamingTradeService(
               (BitgetUtaV3PrivateStreamingService) privateStreamingService,
