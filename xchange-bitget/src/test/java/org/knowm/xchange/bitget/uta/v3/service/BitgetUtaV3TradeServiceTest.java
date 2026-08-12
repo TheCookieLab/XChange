@@ -139,6 +139,127 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     assertThat(order.getStatus()).isEqualTo(Order.OrderStatus.FILLED);
   }
 
+  /**
+   * The provider returns fills one cursor page at a time. A single uncursored call must not be
+   * taken as the whole history: PRD CF-451 requires that partial pages are never silently dropped
+   * (the README states repeated cursors are protected). This test proves page 2 is fetched and
+   * merged.
+   */
+  @Test
+  void trade_history_follows_cursor_pages() throws Exception {
+    // page 2 must win over any previously registered generic fills stub
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.equalTo("C1"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e3\",\"orderId\":\"43\","
+                            + "\"clientOid\":\"c43\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"59950\","
+                            + "\"execQty\":\"0.2\",\"createdTime\":\"1725040471073\"}],"
+                            + "\"cursor\":\"\"}}")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .withQueryParam(
+                "cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e1\",\"orderId\":\"42\","
+                            + "\"clientOid\":\"c42\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"},"
+                            + "{\"execId\":\"e2\",\"orderId\":\"42\",\"clientOid\":\"c42\","
+                            + "\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"59990\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040471573\"}],"
+                            + "\"cursor\":\"C1\"}}")));
+
+    UserTrades trades = tradeService.getTradeHistory(tradeService.createTradeHistoryParams());
+
+    assertThat(trades.getUserTrades()).hasSize(3);
+    assertThat(trades.getUserTrades().get(2).getId()).isEqualTo("e3");
+  }
+
+  /**
+   * Same contract for open orders: unfilled-orders paginates by cursor, so a single 100-row page
+   * silently drops older open orders. All pages must be aggregated.
+   */
+  @Test
+  void open_orders_follow_cursor_pages() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/unfilled-orders"))
+            .atPriority(1)
+            .withQueryParam("cursor", com.github.tomakehurst.wiremock.client.WireMock.equalTo("o1"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"orderId\":\"2\",\"clientOid\":\"c2\","
+                            + "\"category\":\"spot\",\"symbol\":\"BTCUSDT\",\"orderType\":\"limit\","
+                            + "\"side\":\"sell\",\"price\":\"60100\",\"qty\":\"0.2\","
+                            + "\"orderStatus\":\"new\",\"createdTime\":\"1725040471073\"}],"
+                            + "\"cursor\":\"\"}}")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/unfilled-orders"))
+            .atPriority(1)
+            .withQueryParam(
+                "cursor", com.github.tomakehurst.wiremock.client.WireMock.absent())
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"orderId\":\"1\",\"clientOid\":\"c1\","
+                            + "\"category\":\"spot\",\"symbol\":\"BTCUSDT\",\"orderType\":\"limit\","
+                            + "\"side\":\"buy\",\"price\":\"60000\",\"qty\":\"0.1\","
+                            + "\"orderStatus\":\"new\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"o1\"}}")));
+
+    OpenOrders openOrders = tradeService.getOpenOrders(new DefaultOpenOrdersParamInstrument());
+
+    assertThat(openOrders.getOpenOrders()).hasSize(2);
+  }
+
+  /**
+   * A provider that repeats the same cursor (or echoes a stale one) must not be followed forever:
+   * PRD CF-451 requires repeated/no-progress detection. A stuck cursor must surface an exception
+   * instead of returning silently-truncated history.
+   */
+  @Test
+  void trade_history_stops_on_repeated_cursor() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .atPriority(1)
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e1\",\"orderId\":\"42\","
+                            + "\"clientOid\":\"c42\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"STUCK\"}}")));
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> tradeService.getTradeHistory(tradeService.createTradeHistoryParams()))
+        .isInstanceOf(org.knowm.xchange.exceptions.ExchangeException.class);
+  }
+
   @Test
   void trade_history_maps_fills() throws Exception {
     wireMockServer.stubFor(

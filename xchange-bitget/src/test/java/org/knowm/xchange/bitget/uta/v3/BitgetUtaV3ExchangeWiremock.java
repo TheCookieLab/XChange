@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bitget.BitgetExchange;
@@ -65,6 +66,16 @@ public abstract class BitgetUtaV3ExchangeWiremock {
                               + category
                               + "\"}]}")));
     }
+  }
+
+  /**
+   * Each test starts from a clean stub slate (plus the instruments endpoints) so that
+   * cursor-scoped stubs registered by one test never intercept another test's requests.
+   */
+  @BeforeEach
+  public void resetStubs() {
+    wireMockServer.resetAll();
+    stubInstruments();
   }
 
   @AfterAll
