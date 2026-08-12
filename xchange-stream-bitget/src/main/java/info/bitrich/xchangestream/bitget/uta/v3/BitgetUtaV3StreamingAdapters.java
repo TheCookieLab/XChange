@@ -103,7 +103,12 @@ public class BitgetUtaV3StreamingAdapters {
         "Cannot parse Bitget symbol into a currency pair: " + symbol);
   }
 
-  /** XChange ticker for a v3 ticker push; the timestamp comes from the push envelope. */
+  /**
+   * XChange ticker for a v3 ticker push; the timestamp comes from the push envelope. The provider's
+   * {@code price24hPcnt} is a decimal fraction ({@code 0.015} = 1.5%) while {@link
+   * Ticker.Builder#percentageChange} contracts percentage units ({@code 1} = 1%), so the wire value
+   * is scaled by 100.
+   */
   public Ticker toTicker(BitgetUtaV3TickerData dto, Instrument instrument, Long envelopeTs) {
     return new Ticker.Builder()
         .instrument(instrument)
@@ -118,7 +123,10 @@ public class BitgetUtaV3StreamingAdapters {
         .timestamp(envelopeTs == null ? null : new Date(envelopeTs))
         .bidSize(dto.getBidSize())
         .askSize(dto.getAskSize())
-        .percentageChange(dto.getPrice24hPcnt())
+        .percentageChange(
+            dto.getPrice24hPcnt() == null
+                ? null
+                : dto.getPrice24hPcnt().movePointRight(2))
         .build();
   }
 

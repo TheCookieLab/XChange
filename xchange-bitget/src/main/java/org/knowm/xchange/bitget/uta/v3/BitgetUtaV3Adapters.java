@@ -98,6 +98,11 @@ public class BitgetUtaV3Adapters {
     return pair;
   }
 
+  /**
+   * XChange ticker for a v3 ticker row. The provider's {@code price24hPcnt} is a decimal fraction
+   * ({@code 0.0345} = 3.45%) while {@link Ticker.Builder#percentageChange} contracts percentage
+   * units ({@code 1} = 1%), so the wire value is scaled by 100.
+   */
   public Ticker toTicker(BitgetUtaV3Ticker dto, Instrument instrument) {
     return new Ticker.Builder()
         .instrument(instrument)
@@ -112,7 +117,10 @@ public class BitgetUtaV3Adapters {
         .timestamp(toDate(dto.getTs()))
         .bidSize(dto.getBid1Size())
         .askSize(dto.getAsk1Size())
-        .percentageChange(dto.getPrice24hPcnt())
+        .percentageChange(
+            dto.getPrice24hPcnt() == null
+                ? null
+                : dto.getPrice24hPcnt().movePointRight(2))
         .build();
   }
 

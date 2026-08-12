@@ -111,7 +111,9 @@ class BitgetUtaV3StreamingAdaptersTest {
     assertThat(ticker.getLow()).isEqualByComparingTo("98.0");
     assertThat(ticker.getVolume()).isEqualByComparingTo("1000.0");
     assertThat(ticker.getQuoteVolume()).isEqualByComparingTo("100100.0");
-    assertThat(ticker.getPercentageChange()).isEqualByComparingTo("0.015");
+    assertThat(ticker.getPercentageChange())
+        .as("price24hPcnt 0.015 is 1.5% and must scale to percentage units")
+        .isEqualByComparingTo("1.5");
     assertThat(ticker.getTimestamp()).isEqualTo(new Date(1_700_000_000_123L));
   }
 

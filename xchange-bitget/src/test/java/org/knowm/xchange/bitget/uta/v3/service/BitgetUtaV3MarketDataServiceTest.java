@@ -47,6 +47,9 @@ class BitgetUtaV3MarketDataServiceTest extends BitgetUtaV3ExchangeWiremock {
     assertThat(ticker.getAskSize()).isEqualByComparingTo("0.6");
     assertThat(ticker.getVolume()).isEqualByComparingTo("120.5");
     assertThat(ticker.getQuoteVolume()).isEqualByComparingTo("7200000");
+    assertThat(ticker.getPercentageChange())
+        .as("price24hPcnt 0.0345 is 3.45% and must scale to percentage units")
+        .isEqualByComparingTo("3.45");
   }
 
   @Test
