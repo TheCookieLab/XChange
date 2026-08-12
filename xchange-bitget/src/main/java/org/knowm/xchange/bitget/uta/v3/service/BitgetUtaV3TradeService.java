@@ -206,8 +206,9 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     }
     if (requestCategories.size() > 1) {
       // newest first across categories (stable: equal fill times keep per-category provider
-      // order): without this, an older spot execution could precede a newer margin execution;
-      // with a limit, it also selects the most recent executions regardless of category
+      // order): without this, an older spot execution could precede a newer margin execution
+      // before the trim, so the limit would keep the wrong executions; the returned DTO then
+      // re-orders ascending by fill time (oldest first, see below)
       rows.sort(
           java.util.Comparator.comparingLong((BitgetUtaV3Fill row) -> fillTimeMillis(row))
               .reversed());
@@ -219,7 +220,11 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
     for (BitgetUtaV3Fill row : rows) {
       trades.add(toUserTrade(row));
     }
-    return new UserTrades(trades, TradeSortType.SortByID);
+    // SortByTimestamp, never SortByID: execution ids are not ordered like their timestamps
+    // (numeric ids are chronological), so an ID sort would discard the fill-time order
+    // established above; the DTO's timestamp comparator is ascending, which yields the
+    // conventional oldest-first history
+    return new UserTrades(trades, TradeSortType.SortByTimestamp);
   }
 
   /**

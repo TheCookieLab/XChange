@@ -189,11 +189,13 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     UserTrades trades = tradeService.getTradeHistory(tradeService.createTradeHistoryParams());
 
     assertThat(trades.getUserTrades()).hasSize(3);
-    assertThat(trades.getUserTrades().get(2).getId()).isEqualTo("e3");
+    // the DTO lists ascending by fill time, so the oldest page's fill comes first
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e3");
     assertThat(trades.getUserTrades().get(0).getOrderUserReference())
         .as("fill clientOid must survive into orderUserReference")
-        .isEqualTo("c42");
-    assertThat(trades.getUserTrades().get(2).getOrderUserReference()).isEqualTo("c43");
+        .isEqualTo("c43");
+    assertThat(trades.getUserTrades().get(2).getId()).isEqualTo("e1");
+    assertThat(trades.getUserTrades().get(2).getOrderUserReference()).isEqualTo("c42");
   }
 
   /**
@@ -364,11 +366,12 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
 
     UserTrades trades = tradeService.getTradeHistory(params);
 
-    // newest first across categories even without a limit: the newer margin fill precedes the
-    // older spot fill
+    // time-sorted across categories even without a limit: the DTO lists ascending by fill time,
+    // so the older spot fill precedes the newer margin fill (execution ids are never used as the
+    // sort key — they are not ordered like timestamps)
     assertThat(trades.getUserTrades()).hasSize(2);
-    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e-margin");
-    assertThat(trades.getUserTrades().get(1).getId()).isEqualTo("e-spot");
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e-spot");
+    assertThat(trades.getUserTrades().get(1).getId()).isEqualTo("e-margin");
   }
 
   /**
@@ -532,8 +535,8 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
     UserTrades trades = tradeService.getTradeHistory(params);
 
     // 5 matching rows on page 1 are not enough for the limit: the loop must fetch page 2 and
-    // take 45 of its 60 matching rows, then trim to exactly 50 (ids e1..e5 + e101..e145,
-    // re-sorted ascending by SortByID)
+    // take 45 of its 60 matching rows, then trim to exactly 50 (ids e1..e5 + e101..e145; all
+    // fills share one timestamp, so the DTO's ascending fill-time sort keeps the merge order)
     assertThat(trades.getUserTrades()).hasSize(50);
     assertThat(trades.getUserTrades())
         .allSatisfy(t -> assertThat(t.getInstrument()).isEqualTo(CurrencyPair.BTC_USDT));
@@ -1057,8 +1060,8 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
         .filteredOn("e-boundary"::equals)
         .as("the boundary fill must be emitted exactly once")
         .hasSize(1);
-    assertThat(trades.getUserTrades().get(2).getId())
-        .as("the older window must still come last")
+    assertThat(trades.getUserTrades().get(0).getId())
+        .as("the DTO is ascending by fill time, so the older window comes first")
         .isEqualTo("e2");
   }
 

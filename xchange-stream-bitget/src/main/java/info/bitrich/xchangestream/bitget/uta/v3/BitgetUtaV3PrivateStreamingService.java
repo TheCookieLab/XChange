@@ -45,6 +45,15 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
   private volatile boolean authenticated;
 
   /**
+   * Set while the current connection is being torn down after a rejected login, guarded by
+   * {@link #loginLock}: an immediate Rx retry must fail with {@link NotConnectedException}
+   * instead of installing a fresh channel registration that the inherited {@code disconnect()}
+   * completion then clears — the retried stream would stay alive but never receive pushes.
+   * Cleared by {@link #resubscribeChannels()} when a fresh connection starts.
+   */
+  private volatile boolean disconnecting;
+
+  /**
    * Subscription ids whose subscribe frame was actually transmitted on the current connection,
    * guarded by {@link #loginLock}. A registration deferred until the login ack has NOT reached the
    * server yet, so disposing it must not send an unsubscribe frame the server would reject.
@@ -64,6 +73,7 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
   public void resubscribeChannels() {
     synchronized (loginLock) {
       authenticated = false;
+      disconnecting = false;
       connectionGeneration.incrementAndGet();
       stampCurrentConnection();
       // fresh connection: no subscribe frame has been transmitted on it yet, so every
@@ -94,7 +104,7 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
     return Observable.<BitgetUtaV3WsNotification>create(
             e -> {
               synchronized (loginLock) {
-                if (!isSocketOpen()) {
+                if (disconnecting || !isSocketOpen()) {
                   e.onError(new NotConnectedException());
                   return;
                 }
@@ -186,8 +196,17 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
         // rejection on every private channel stream and drop the unauthenticated connection so
         // isSocketOpen() and reconnect logic observe reality instead of leaving subscribers to
         // hang on acknowledgements that will never arrive.
-        failAllChannels(new ExchangeException(failure));
+        //
+        // The transport is torn down BEFORE the subscribers are notified: disconnect() flips the
+        // manual-disconnect flag and initiates the close, and the disconnecting guard makes a
+        // subscriber's immediate Rx retry fail with NotConnectedException instead of installing a
+        // fresh channel registration that the inherited disconnect() completion then clears (the
+        // retried stream would stay alive but never receive pushes).
+        synchronized (loginLock) {
+          disconnecting = true;
+        }
         disconnect().subscribe();
+        failAllChannels(new ExchangeException(failure));
       }
       return;
     }

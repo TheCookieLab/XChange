@@ -1,14 +1,23 @@
 package info.bitrich.xchangestream.bitget.uta.v3;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3Channel;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3EventNotification;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3EventNotification.Event;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3InstType;
 import info.bitrich.xchangestream.bitget.uta.v3.dto.BitgetUtaV3WsNotification;
+import info.bitrich.xchangestream.service.exception.NotConnectedException;
+import info.bitrich.xchangestream.service.netty.NettyStreamingService;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.ObservableEmitter;
+import io.reactivex.rxjava3.observers.TestObserver;
+import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -57,6 +66,37 @@ class BitgetUtaV3StreamingErrorRoutingTest {
     @Override
     public void register(String subscriptionId, ObservableEmitter<BitgetUtaV3WsNotification> emitter) {
       channels.put(subscriptionId, new Subscription(emitter, subscriptionId, new Object[0]));
+    }
+  }
+
+  /**
+   * Private service with an open injected socket, so {@code subscribeChannel}'s socket guard
+   * passes and the {@code disconnecting} guard is what an immediate retry observes.
+   */
+  private static class TestablePrivateStreamingServiceWithSocket
+      extends BitgetUtaV3PrivateStreamingService {
+
+    TestablePrivateStreamingServiceWithSocket() {
+      super("ws://127.0.0.1:9", "api-key", "api-secret", "api-passphrase");
+      injectOpenChannel(this);
+    }
+
+    boolean containsChannel(String subscriptionId) {
+      return channels.containsKey(subscriptionId);
+    }
+  }
+
+  private static void injectOpenChannel(BitgetUtaV3StreamingService service) {
+    Channel channel = mock(Channel.class);
+    when(channel.isOpen()).thenReturn(true);
+    when(channel.isWritable()).thenReturn(true);
+    when(channel.writeAndFlush(any())).thenReturn(mock(ChannelFuture.class));
+    try {
+      Field field = NettyStreamingService.class.getDeclaredField("webSocketChannel");
+      field.setAccessible(true);
+      field.set(service, channel);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new IllegalStateException("Cannot inject WebSocket channel", e);
     }
   }
 
@@ -161,5 +201,30 @@ class BitgetUtaV3StreamingErrorRoutingTest {
         .isInstanceOf(ExchangeException.class)
         .hasMessageContaining("login rejected");
     assertThat(second.error.get()).isInstanceOf(ExchangeException.class);
+  }
+
+  @Test
+  void immediateRetryAfterRejectedLoginFailsNotConnectedInsteadOfInstallingDoomedRegistration() {
+    TestablePrivateStreamingServiceWithSocket service =
+        new TestablePrivateStreamingServiceWithSocket();
+    Observable<BitgetUtaV3WsNotification> shared = service.sharedChannel(BTC_TRADE);
+    TestObserver<BitgetUtaV3WsNotification> first = shared.test();
+    assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isTrue();
+
+    service.handleEventNotification(
+        BitgetUtaV3EventNotification.builder()
+            .event(Event.LOGIN)
+            .code("40001")
+            .message("invalid signature")
+            .build());
+
+    // the rejection terminates the original private stream ...
+    first.assertError(ExchangeException.class);
+    // ... and an immediate Rx retry fails fast with NotConnectedException while the transport is
+    // being torn down, instead of installing a fresh registration that the inherited disconnect()
+    // completion then clears — the retried stream would stay alive but never receive pushes
+    TestObserver<BitgetUtaV3WsNotification> retried = service.sharedChannel(BTC_TRADE).test();
+    retried.assertError(NotConnectedException.class);
+    assertThat(service.containsChannel(BTC_TRADE.toSubscriptionId())).isFalse();
   }
 }
