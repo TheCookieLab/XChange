@@ -59,7 +59,13 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
     streamingMarketDataService =
         new BitgetStreamingMarketDataService((BitgetStreamingService) publicStreamingService);
 
-    return publicStreamingService.connect();
+    if (privateStreamingService == null) {
+      return publicStreamingService.connect();
+    }
+    return publicStreamingService
+        .connect()
+        .onErrorResumeNext(
+            error -> privateStreamingService.disconnect().andThen(Completable.error(error)));
   }
 
   private Completable connectUtaV3() {
@@ -88,7 +94,16 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
       streamingAccountService =
           new BitgetUtaV3StreamingAccountService(
               (BitgetUtaV3PrivateStreamingService) privateStreamingService);
-      return privateStreamingService.connect().andThen(publicStreamingService.connect());
+      return privateStreamingService
+          .connect()
+          .andThen(
+              publicStreamingService
+                  .connect()
+                  .onErrorResumeNext(
+                      error ->
+                          privateStreamingService
+                              .disconnect()
+                              .andThen(Completable.error(error))));
     }
     return publicStreamingService.connect();
   }

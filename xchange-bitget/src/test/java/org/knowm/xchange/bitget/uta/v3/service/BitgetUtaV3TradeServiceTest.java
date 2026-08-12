@@ -189,6 +189,10 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
 
     assertThat(trades.getUserTrades()).hasSize(3);
     assertThat(trades.getUserTrades().get(2).getId()).isEqualTo("e3");
+    assertThat(trades.getUserTrades().get(0).getOrderUserReference())
+        .as("fill clientOid must survive into orderUserReference")
+        .isEqualTo("c42");
+    assertThat(trades.getUserTrades().get(2).getOrderUserReference()).isEqualTo("c43");
   }
 
   /**

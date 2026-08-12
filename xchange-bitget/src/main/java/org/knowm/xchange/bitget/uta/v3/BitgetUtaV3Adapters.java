@@ -190,6 +190,7 @@ public class BitgetUtaV3Adapters {
         .timestamp(toDate(dto.getCreatedTime()))
         .id(dto.getExecId())
         .orderId(dto.getOrderId())
+        .orderUserReference(dto.getClientOid())
         .feeAmount(fee)
         .feeCurrency(feeCurrency)
         .build();
