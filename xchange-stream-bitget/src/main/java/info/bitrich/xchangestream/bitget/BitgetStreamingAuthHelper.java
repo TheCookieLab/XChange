@@ -36,7 +36,7 @@ public class BitgetStreamingAuthHelper {
       throw new IllegalArgumentException("Invalid key for hmac initialization.", e);
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException(
-          "Illegal algorithm for post body digest. Check the implementation.");
+          "Illegal algorithm for post body digest. Check the implementation.", e);
     }
   }
 }

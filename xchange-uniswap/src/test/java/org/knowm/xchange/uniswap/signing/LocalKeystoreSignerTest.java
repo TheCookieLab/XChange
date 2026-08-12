@@ -48,8 +48,8 @@ class LocalKeystoreSignerTest {
     List<byte[]> rlp = decodeRlp(signed.signedBytes());
     // items: chainId, nonce, maxPriority, maxFee, gasLimit, to, value, data, accessList,
     // yParity, r, s
-    byte[] r = rlp.get(10);
-    byte[] s = rlp.get(11);
+    byte[] r = org.web3j.utils.Numeric.toBytesPadded(new BigInteger(1, rlp.get(10)), 32);
+    byte[] s = org.web3j.utils.Numeric.toBytesPadded(new BigInteger(1, rlp.get(11)), 32);
     // yParity is RLP-encoded as a single byte or an empty string for zero; web3j recovery
     // expects the legacy 27/28 header
     byte v = (byte) ((rlp.get(9).length == 1 ? rlp.get(9)[0] : 0) + 27);
