@@ -69,6 +69,27 @@ class BitgetUtaV3AccountServiceTest extends BitgetUtaV3ExchangeWiremock {
   }
 
   @Test
+  void account_info_includes_locked_funds_in_frozen_balance() throws Exception {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/account/assets"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":[{\"coin\":\"USDT\",\"available\":\"900\",\"locked\":\"30\","
+                            + "\"frozen\":\"50\",\"margin\":\"50\",\"debts\":\"0\",\"bonus\":\"0\","
+                            + "\"equity\":\"1000\",\"usdValue\":\"1000\",\"unrealizedPnl\":\"50\"}]}")));
+
+    Balance usdt = accountService.getAccountInfo().getWallet().getBalance(Currency.USDT);
+    // spot-order locked funds are committed to open orders; they must count as frozen, not vanish
+    assertThat(usdt.getFrozen()).isEqualByComparingTo("80");
+    assertThat(usdt.getAvailable()).isEqualByComparingTo("900");
+    assertThat(usdt.getTotal()).isEqualByComparingTo("1000");
+  }
+
+  @Test
   void transfer_injects_client_oid_when_absent() throws Exception {
     wireMockServer.stubFor(
         post(urlPathEqualTo("/api/v3/account/transfer"))

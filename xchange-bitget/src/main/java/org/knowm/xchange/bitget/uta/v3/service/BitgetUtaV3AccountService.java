@@ -67,7 +67,9 @@ public class BitgetUtaV3AccountService extends BitgetUtaV3AccountServiceRaw
         .currency(Currency.getInstance(asset.getCoin()))
         .total(asset.getEquity())
         .available(asset.getAvailable())
-        .frozen(asset.getFrozen())
+        // frozen = margin committed to futures positions plus spot-order locked funds; reporting
+        // only getFrozen() understates what is committed to open orders when locked > 0.
+        .frozen(asset.getFrozen().add(asset.getLocked()))
         .borrowed(asset.getDebts())
         .build();
   }

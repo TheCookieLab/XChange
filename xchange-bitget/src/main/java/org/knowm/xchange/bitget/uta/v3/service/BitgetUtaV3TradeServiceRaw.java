@@ -92,7 +92,14 @@ public class BitgetUtaV3TradeServiceRaw extends BitgetUtaV3BaseService {
     }
   }
 
-  /** Places a strategy (trigger/TP-SL) order. */
+  /**
+   * Places a strategy (trigger/TP-SL) order. Ambiguous provider placement codes (40010/40725/45001)
+   * and transport failures surface as {@link BitgetUtaV3UnknownOutcomeException}: the strategy
+   * order may have been accepted server-side after transmission, so callers must reconcile by
+   * client/exchange order id instead of replaying blindly. {@code clientOid} is only echoed for
+   * tpsl orders (trigger orders do not support it), so the exception carries it only when the DTO
+   * did.
+   */
   public BitgetUtaV3OrderId placeStrategyOrder(
       BitgetUtaV3StrategyOrderRequest request, String channelApiCode) throws IOException {
     try {
@@ -106,6 +113,12 @@ public class BitgetUtaV3TradeServiceRaw extends BitgetUtaV3BaseService {
               request)
           .getData();
     } catch (BitgetUtaV3Exception e) {
+      // 40010/40725/45001: the strategy order may have been placed server-side after transmission.
+      // Never replay blindly; surface an explicit unknown-outcome exception so callers reconcile by
+      // client/exchange order id through trade/order-info.
+      if (BitgetUtaV3ErrorAdapter.isAmbiguousPlacementOutcome(e.getCode())) {
+        throw new BitgetUtaV3UnknownOutcomeException(e, request.getClientOid());
+      }
       throw BitgetUtaV3ErrorAdapter.adapt(e);
     } catch (IOException e) {
       // Transport failure (read timeout, connection reset): the provider may still have accepted

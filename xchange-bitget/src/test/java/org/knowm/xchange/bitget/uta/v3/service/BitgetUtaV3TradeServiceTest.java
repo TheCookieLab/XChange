@@ -1103,6 +1103,50 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
             urlPathEqualTo("/api/v3/trade/place-strategy-order")));
   }
 
+  @Test
+  void strategy_ambiguous_placement_surfaces_unknown_outcome_no_replay() throws Exception {
+    wireMockServer.stubFor(
+        com.github.tomakehurst.wiremock.client.WireMock.post(
+                urlPathEqualTo("/api/v3/trade/place-strategy-order"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"40725\",\"msg\":\"Order may be placed, please check\","
+                            + "\"requestTime\":1725040472073}")));
+
+    BitgetUtaV3StrategyOrderRequest request =
+        BitgetUtaV3StrategyOrderRequest.builder()
+            .category("spot")
+            .symbol("BTCUSDT")
+            .type("tpsl")
+            .side("buy")
+            .qty(new BigDecimal("0.1"))
+            .clientOid("strat-oid")
+            .build();
+
+    // 40725 means the strategy order may have been accepted server-side; a caller must reconcile
+    // by order id instead of treating it as rejected and replaying (which would duplicate orders).
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () ->
+                ((BitgetUtaV3TradeServiceRaw) tradeService)
+                    .placeStrategyOrder(request, "api-code"))
+        .isInstanceOf(BitgetUtaV3UnknownOutcomeException.class)
+        .satisfies(
+            t -> {
+              BitgetUtaV3UnknownOutcomeException e = (BitgetUtaV3UnknownOutcomeException) t;
+              assertThat(e.getProviderCode()).isEqualTo("40725");
+              assertThat(e.getClientOid()).isEqualTo("strat-oid");
+            });
+
+    // Zero automatic replay: exactly one strategy placement request hit the wire.
+    wireMockServer.verify(
+        1,
+        com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
+            urlPathEqualTo("/api/v3/trade/place-strategy-order")));
+  }
+
   /**
    * A transient public-endpoint failure must not silently pair private order data with a {@code
    * null} instrument: the catalog lookup failure propagates as {@code IOException} instead of
