@@ -56,6 +56,12 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
   /** Last request time per endpoint path (monotonic nanos), for spacing requests at 1/rate. */
   private final ConcurrentMap<String, Long> lastRequestAtNanos = new ConcurrentHashMap<>();
 
+  /**
+   * Per-path admission locks: concurrent pagination of the same endpoint is serialized through
+   * sleep/admission so actual request spacing cannot be violated by a descheduled thread.
+   */
+  private final ConcurrentMap<String, Object> endpointLocks = new ConcurrentHashMap<>();
+
   private final BitgetUtaV3InstrumentRegistry instrumentRegistry =
       new BitgetUtaV3InstrumentRegistry(new BitgetUtaV3MarketDataServiceRaw(exchange));
 
@@ -379,23 +385,29 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
    * Enforces the endpoint policy client-side: spaces consecutive requests to {@code endpointPath}
    * at the policy's per-second rate (50 ms between requests at 20/s) so a low-latency pagination
    * run cannot trip the provider's limiter partway through. The first request for a path passes
-   * immediately; concurrent callers queue on the same per-path slot.
+   * immediately. Concurrent callers of the same path are serialized through a per-path lock, and
+   * the recorded timestamp is the ACTUAL admission instant (captured after the wait): a thread
+   * that is descheduled mid-wait cannot let a later caller slip inside the interval, because the
+   * next caller always spaces itself from the previous request's real issue time.
    */
-  private void awaitEndpointLimit(String endpointPath) throws IOException {
+  void awaitEndpointLimit(String endpointPath) throws IOException {
     long intervalNanos = NANOS_PER_SECOND / ENDPOINT_POLICY.limitFor(endpointPath).getPerSecond();
-    long now = System.nanoTime();
-    long next =
-        lastRequestAtNanos.compute(
-            endpointPath, (path, prev) -> prev == null ? now : Math.max(now, prev + intervalNanos));
-    long delayNanos = next - now;
-    if (delayNanos > 0) {
-      try {
-        Thread.sleep(delayNanos / 1_000_000L, (int) (delayNanos % 1_000_000L));
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new IOException(
-            "Interrupted while waiting on the Bitget v3 rate limit for " + endpointPath, e);
+    Object lock = endpointLocks.computeIfAbsent(endpointPath, path -> new Object());
+    synchronized (lock) {
+      long now = System.nanoTime();
+      long delayNanos = Math.max(0L, lastRequestAtNanos.getOrDefault(endpointPath, 0L) + intervalNanos - now);
+      if (delayNanos > 0) {
+        try {
+          Thread.sleep(delayNanos / 1_000_000L, (int) (delayNanos % 1_000_000L));
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new IOException(
+              "Interrupted while waiting on the Bitget v3 rate limit for " + endpointPath, e);
+        }
       }
+      // the actual admission instant, not a reserved slot: a descheduled thread records when it
+      // really issues the request so the next caller's wait is correct after a scheduling hiccup
+      lastRequestAtNanos.put(endpointPath, System.nanoTime());
     }
   }
 

@@ -6,10 +6,16 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.bitget.BitgetExchange;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3ExchangeWiremock;
 import org.knowm.xchange.bitget.uta.v3.BitgetUtaV3UnknownOutcomeException;
 import org.knowm.xchange.bitget.uta.v3.trade.BitgetUtaV3StrategyOrderRequest;
@@ -1606,6 +1612,57 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
    * Instrument-scoped history queries both spot and margin (they share the {@link CurrencyPair}
    * identity), so every such test must answer the margin leg; this stub returns no margin fills.
    */
+  @Test
+  void awaitEndpointLimitSerializesConcurrentAdmissionsPerPath() throws Exception {
+    // the endpoint limiter must space ACTUAL request issue times, not reserved slots: with the
+    // pre-fix reservation scheme a thread descheduled between reserving its slot and issuing its
+    // request let a later caller land on the same real instant as the late issuer
+    BitgetExchange exchange = new BitgetExchange();
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    // hermetic: no live instrument fetch; the limiter never touches the network
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
+    BitgetUtaV3TradeService service = new BitgetUtaV3TradeService(exchange);
+    int threads = 8;
+    int callsPerThread = 4;
+    long intervalNanos = 50_000_000L; // /api/v3/trade/fills is limited to 20/s
+    long slackNanos = 5_000_000L; // timer granularity on a loaded machine
+    List<Long> admissionTimes = Collections.synchronizedList(new ArrayList<>());
+    CountDownLatch start = new CountDownLatch(1);
+    List<Thread> workers = new ArrayList<>();
+    for (int t = 0; t < threads; t++) {
+      Thread worker =
+          new Thread(
+              () -> {
+                try {
+                  start.await();
+                  for (int call = 0; call < callsPerThread; call++) {
+                    service.awaitEndpointLimit("/api/v3/trade/fills");
+                    admissionTimes.add(System.nanoTime());
+                  }
+                } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  throw new RuntimeException(e);
+                } catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              });
+      workers.add(worker);
+      worker.start();
+    }
+    start.countDown();
+    for (Thread worker : workers) {
+      worker.join();
+    }
+    List<Long> sorted = new ArrayList<>(admissionTimes);
+    Collections.sort(sorted);
+    for (int i = 1; i < sorted.size(); i++) {
+      assertThat(sorted.get(i) - sorted.get(i - 1))
+          .as("consecutive admissions to the same endpoint must be spaced at the policy interval")
+          .isGreaterThanOrEqualTo(intervalNanos - slackNanos);
+    }
+  }
+
   private static void stubEmptyMarginFills() {
     wireMockServer.stubFor(
         get(urlPathEqualTo("/api/v3/trade/fills"))

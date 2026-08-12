@@ -115,6 +115,18 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
     }
   }
 
+  /**
+   * The auto-reconnect policy the user configured via {@link StreamingExchange#AUTO_RECONNECT},
+   * defaulting to the transport default (true). {@link #applyStreamingSpecification} only
+   * overrides the transport's value when the specification item is present, so this mirrors that
+   * decision so the initial aggregate connect can restore the configured policy after success.
+   */
+  private boolean configuredAutoReconnect() {
+    Object value =
+        exchangeSpecification.getExchangeSpecificParametersItem(StreamingExchange.AUTO_RECONNECT);
+    return value == null || (Boolean) value;
+  }
+
   private Completable connectClassicV2() {
     // cold composition, same rationale as connectUtaV3(): the exchange holder must keep serving
     // the live transports until the connect subscription begins, so the standard reconnect idiom
@@ -135,6 +147,14 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
             tradeService = new BitgetStreamingTradeService(privateService);
           }
           applyStreamingSpecification(exchangeSpecification, publicService);
+          // disable automatic retries for the duration of the initial aggregate attempt:
+          // NettyStreamingService.scheduleReconnect() queues an unconditional connect() on the
+          // event loop when the initial DNS/TCP connect fails, and disconnect() only flips the
+          // manual-disconnect flag without cancelling that queued task, so a later retry success
+          // would leave a live transport beside a never-opened sibling; each transport re-enables
+          // the configured policy once its own connect succeeds
+          boolean autoReconnect = configuredAutoReconnect();
+          publicService.setAutoReconnect(false);
           // install the holder BEFORE awaiting the private connection: NettyStreamingService
           // schedules automatic reconnection when the handshake fails, and a private transport
           // that is not yet reachable through the holder could never be stopped by disconnect(),
@@ -147,6 +167,7 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
                   tradeService,
                   null));
           if (privateService != null) {
+            privateService.setAutoReconnect(false);
             BitgetPrivateStreamingService connectedPrivateService = privateService;
             // a failing private connection is disconnected before the error propagates:
             // NettyStreamingService schedules an automatic retry when the handshake fails, and
@@ -154,6 +175,7 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
             // (isAlive() false, public streams unavailable) until the caller reconnects
             connectedPrivateService
                 .connect()
+                .doOnComplete(() -> connectedPrivateService.setAutoReconnect(autoReconnect))
                 .onErrorResumeNext(
                     error ->
                         connectedPrivateService
@@ -163,11 +185,14 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
           }
 
           if (privateService == null) {
-            return publicService.connect();
+            return publicService
+                .connect()
+                .doOnComplete(() -> publicService.setAutoReconnect(autoReconnect));
           }
           BitgetPrivateStreamingService connectedPrivateService = privateService;
           return publicService
               .connect()
+              .doOnComplete(() -> publicService.setAutoReconnect(autoReconnect))
               .onErrorResumeNext(
                   error ->
                       // disconnect BOTH transports: the public failure schedules its own
@@ -247,6 +272,14 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
           BitgetUtaV3StreamingService publicService =
               createUtaV3PublicService(exchangeSpecification);
           applyStreamingSpecification(exchangeSpecification, publicService);
+          // disable automatic retries for the duration of the initial aggregate attempt:
+          // NettyStreamingService.scheduleReconnect() queues an unconditional connect() on the
+          // event loop when the initial DNS/TCP connect fails, and disconnect() only flips the
+          // manual-disconnect flag without cancelling that queued task, so a later retry success
+          // would leave a live transport beside a never-opened sibling; each transport re-enables
+          // the configured policy once its own connect succeeds
+          boolean autoReconnect = configuredAutoReconnect();
+          publicService.setAutoReconnect(false);
           StreamingMarketDataService marketDataService =
               new BitgetUtaV3StreamingMarketDataService(publicService);
           if (StringUtils.isNoneBlank(
@@ -258,6 +291,7 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
             // private channels must honor the same proxy/cert/connection-hook/auto-reconnect
             // settings as the public socket
             applyStreamingSpecification(exchangeSpecification, privateService);
+            privateService.setAutoReconnect(false);
             services.set(
                 new StreamingServices(
                     publicService,
@@ -273,11 +307,13 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
             // unavailable) until the caller manually reconnects
             return privateService
                 .connect()
+                .doOnComplete(() -> privateService.setAutoReconnect(autoReconnect))
                 .onErrorResumeNext(
                     error -> privateService.disconnect().andThen(Completable.error(error)))
                 .andThen(
                     publicService
                         .connect()
+                        .doOnComplete(() -> publicService.setAutoReconnect(autoReconnect))
                         .onErrorResumeNext(
                             error ->
                                 // a failed public connection schedules its own automatic retry,
@@ -290,7 +326,9 @@ public class BitgetStreamingExchange extends BitgetExchange implements Streaming
                                     .andThen(Completable.error(error))));
           }
           services.set(new StreamingServices(publicService, null, marketDataService, null, null));
-          return publicService.connect();
+          return publicService
+              .connect()
+              .doOnComplete(() -> publicService.setAutoReconnect(autoReconnect));
         });
   }
 

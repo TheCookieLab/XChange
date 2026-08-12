@@ -274,6 +274,7 @@ class BitgetStreamingExchangeTest {
   @Test
   void utaV3PrivateConnectFailureCancelsThePrivateRetry() throws Exception {
     AtomicInteger disconnectInvocations = new AtomicInteger();
+    AtomicReference<Boolean> autoReconnectDuringConnect = new AtomicReference<>();
     BitgetStreamingExchange exchange =
         new BitgetStreamingExchange() {
           @Override
@@ -288,6 +289,7 @@ class BitgetStreamingExchangeTest {
               public Completable connect() {
                 // deterministic stand-in for a DNS/TCP/TLS/handshake failure; NettyStreamingService
                 // would otherwise schedule an automatic reconnect that could later succeed
+                autoReconnectDuringConnect.set(isAutoReconnect());
                 return Completable.error(new IOException("connection refused"));
               }
 
@@ -315,6 +317,14 @@ class BitgetStreamingExchangeTest {
     assertThatThrownBy(connect::blockingAwait)
         .as("the UTA V3 path must surface the failed private connection")
         .isInstanceOf(Throwable.class);
+    assertThat(autoReconnectDuringConnect.get())
+        .as(
+            "the initial aggregate attempt must run with automatic retries disabled: on a real "
+                + "DNS/TCP failure NettyStreamingService.scheduleReconnect() queues an "
+                + "unconditional connect() on the event loop that disconnect() cannot cancel, so "
+                + "a late retry success would leave a live transport beside a never-opened "
+                + "sibling")
+        .isFalse();
     assertThat(disconnectInvocations.get())
         .as(
             "a failed private connection must be disconnected so its automatic reconnect cannot "
@@ -324,8 +334,109 @@ class BitgetStreamingExchangeTest {
   }
 
   @Test
+  void successfulUtaV3ConnectRestoresTheConfiguredAutoReconnectPolicy() throws Exception {
+    AtomicReference<Boolean> privateDuringConnect = new AtomicReference<>();
+    AtomicReference<Boolean> publicDuringConnect = new AtomicReference<>();
+    AtomicReference<Boolean> privateAfterConnect = new AtomicReference<>();
+    AtomicReference<Boolean> publicAfterConnect = new AtomicReference<>();
+    class RecordingPrivateService extends BitgetUtaV3PrivateStreamingService {
+      RecordingPrivateService(ExchangeSpecification specification) {
+        super(
+            Config.V3_PRIVATE_WS_URL,
+            specification.getApiKey(),
+            specification.getSecretKey(),
+            specification.getPassword());
+      }
+
+      @Override
+      public Completable connect() {
+        privateDuringConnect.set(isAutoReconnect());
+        return Completable.complete();
+      }
+
+      @Override
+      public Completable disconnect() {
+        return Completable.complete();
+      }
+
+      void recordFinalState() {
+        privateAfterConnect.set(isAutoReconnect());
+      }
+    }
+    class RecordingPublicService extends BitgetUtaV3StreamingService {
+      RecordingPublicService() {
+        super(Config.V3_PUBLIC_WS_URL);
+      }
+
+      @Override
+      public Completable connect() {
+        publicDuringConnect.set(isAutoReconnect());
+        return Completable.complete();
+      }
+
+      @Override
+      public Completable disconnect() {
+        return Completable.complete();
+      }
+
+      void recordFinalState() {
+        publicAfterConnect.set(isAutoReconnect());
+      }
+    }
+    AtomicReference<RecordingPrivateService> privateService = new AtomicReference<>();
+    AtomicReference<RecordingPublicService> publicService = new AtomicReference<>();
+    BitgetStreamingExchange exchange =
+        new BitgetStreamingExchange() {
+          @Override
+          protected BitgetUtaV3PrivateStreamingService createUtaV3PrivateService(
+              ExchangeSpecification specification) {
+            RecordingPrivateService service = new RecordingPrivateService(specification);
+            privateService.set(service);
+            return service;
+          }
+
+          @Override
+          protected BitgetUtaV3StreamingService createUtaV3PublicService(
+              ExchangeSpecification specification) {
+            RecordingPublicService service = new RecordingPublicService();
+            publicService.set(service);
+            return service;
+          }
+        };
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    // hermetic: without this, applySpecification triggers remoteInitUtaV3(), a live instrument
+    // fetch that pollutes the shared Currency registry and breaks later tests
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setApiKey("api-key");
+    specification.setSecretKey("api-secret");
+    specification.setPassword("api-passphrase");
+    specification.setExchangeSpecificParametersItem(
+        BitgetConfiguration.API_MODE, BitgetApiMode.UTA_V3);
+    exchange.applySpecification(specification);
+
+    exchange.connect().blockingAwait();
+
+    assertThat(privateDuringConnect.get())
+        .as(
+            "the initial aggregate attempt must run with automatic retries disabled: on a real "
+                + "DNS/TCP failure NettyStreamingService.scheduleReconnect() queues an "
+                + "unconditional connect() on the event loop that disconnect() cannot cancel, so "
+                + "a late retry success would leave a live transport beside a never-opened "
+                + "sibling")
+        .isFalse();
+    assertThat(publicDuringConnect.get()).isFalse();
+    // once both transports are up, the user-configured policy takes over for mid-session
+    // resilience (NettyStreamingService default is true)
+    privateService.get().recordFinalState();
+    publicService.get().recordFinalState();
+    assertThat(privateAfterConnect.get()).isTrue();
+    assertThat(publicAfterConnect.get()).isTrue();
+  }
+
+  @Test
   void classicPrivateConnectFailureCancelsThePrivateRetry() throws Exception {
     AtomicInteger disconnectInvocations = new AtomicInteger();
+    AtomicReference<Boolean> autoReconnectDuringConnect = new AtomicReference<>();
     BitgetStreamingExchange exchange =
         new BitgetStreamingExchange() {
           @Override
@@ -340,6 +451,7 @@ class BitgetStreamingExchangeTest {
               public Completable connect() {
                 // deterministic stand-in for a DNS/TCP/TLS/handshake failure; NettyStreamingService
                 // would otherwise schedule an automatic reconnect that could later succeed
+                autoReconnectDuringConnect.set(isAutoReconnect());
                 return Completable.error(new IOException("connection refused"));
               }
 
@@ -364,6 +476,14 @@ class BitgetStreamingExchangeTest {
     assertThatThrownBy(connect::blockingAwait)
         .as("the classic path awaits the private connection and must surface its failure")
         .isInstanceOf(Throwable.class);
+    assertThat(autoReconnectDuringConnect.get())
+        .as(
+            "the initial aggregate attempt must run with automatic retries disabled: on a real "
+                + "DNS/TCP failure NettyStreamingService.scheduleReconnect() queues an "
+                + "unconditional connect() on the event loop that disconnect() cannot cancel, so "
+                + "a late retry success would leave a live transport beside a never-opened "
+                + "sibling")
+        .isFalse();
     assertThat(disconnectInvocations.get())
         .as(
             "a failed classic private connection must be disconnected so its automatic reconnect "
