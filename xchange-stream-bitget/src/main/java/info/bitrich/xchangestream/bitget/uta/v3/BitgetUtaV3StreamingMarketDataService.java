@@ -49,6 +49,8 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
   private final BitgetUtaV3StreamingService service;
   private final ConcurrentMap<String, BitgetUtaV3OrderBookAssembler> assemblers =
       new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Observable<BitgetUtaV3WsNotification>> sharedChannels =
+      new ConcurrentHashMap<>();
   private final PublishSubject<Throwable> orderBookContinuityFailures = PublishSubject.create();
 
   public BitgetUtaV3StreamingMarketDataService(BitgetUtaV3StreamingService service) {
@@ -58,6 +60,22 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
   /** Dedicated failure stream for order-book continuity errors (never the order-book stream). */
   public Observable<Throwable> subscribeOrderBookContinuityFailures() {
     return orderBookContinuityFailures.share();
+  }
+
+  /**
+   * Shared per-subscription-id channel stream with order-book assembler lifecycle: when the last
+   * subscriber disposes, the underlying channel is unsubscribed and the assembler for that
+   * subscription id is evicted, so a stream of short-lived book subscriptions cannot grow the
+   * {@link #assemblers} map without bound.
+   */
+  private Observable<BitgetUtaV3WsNotification> sharedChannel(BitgetUtaV3Channel channel) {
+    return sharedChannels.computeIfAbsent(
+        channel.toSubscriptionId(),
+        id ->
+            service
+                .subscribeChannel(null, channel)
+                .doFinally(() -> assemblers.remove(id))
+                .share());
   }
 
   @Override
@@ -87,8 +105,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
     String subscriptionId = channel.toSubscriptionId();
     assemblers.computeIfAbsent(subscriptionId, id -> new BitgetUtaV3OrderBookAssembler());
 
-    return service
-        .sharedChannel(channel)
+    return sharedChannel(channel)
         .flatMap(notification -> processOrderBookPush(notification, instrument, channel))
         .filter(book -> book != null);
   }
@@ -165,8 +182,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
             .topic("ticker")
             .symbol(BitgetUtaV3StreamingAdapters.toString(instrument))
             .build();
-    return service
-        .sharedChannel(channel)
+    return sharedChannel(channel)
         .flatMap(
             notification ->
                 Observable.fromIterable(notification.getPayloadItems())
@@ -195,8 +211,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
             .topic("publicTrade")
             .symbol(BitgetUtaV3StreamingAdapters.toString(instrument))
             .build();
-    return service
-        .sharedChannel(channel)
+    return sharedChannel(channel)
         .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
         .map(
             item ->
@@ -217,8 +232,7 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
             .symbol(BitgetUtaV3StreamingAdapters.toString(instrument))
             .interval(wireInterval)
             .build();
-    return service
-        .sharedChannel(channel)
+    return sharedChannel(channel)
         .flatMap(notification -> Observable.fromIterable(notification.getPayloadItems()))
         .map(
             item ->
