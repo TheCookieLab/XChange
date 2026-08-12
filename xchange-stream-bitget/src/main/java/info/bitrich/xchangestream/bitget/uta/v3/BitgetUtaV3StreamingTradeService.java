@@ -223,11 +223,15 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
         clientOid == null || clientOid.isEmpty()
             ? UUID.randomUUID().toString().replace("-", "")
             : clientOid;
-    pendingClientOids.add(effectiveClientOid);
     return Single.fromCallable(
         () -> {
+          // Track the oid only while the REST placement is in flight: an order whose callable
+          // never ran (not submitted) or already returned (confirmed) has a known outcome, and
+          // must not be reported as unknown on a later disconnect.
+          pendingClientOids.add(effectiveClientOid);
           try {
             action.place(effectiveClientOid);
+            pendingClientOids.remove(effectiveClientOid);
             return 0;
           } catch (IOException e) {
             pendingClientOids.remove(effectiveClientOid);
