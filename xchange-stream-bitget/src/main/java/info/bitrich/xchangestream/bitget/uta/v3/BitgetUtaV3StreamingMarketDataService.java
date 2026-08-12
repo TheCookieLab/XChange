@@ -76,15 +76,27 @@ public class BitgetUtaV3StreamingMarketDataService implements StreamingMarketDat
    */
   private Observable<BitgetUtaV3WsNotification> sharedChannel(BitgetUtaV3Channel channel) {
     String subscriptionId = channel.toSubscriptionId();
+    // defer both the cache materialization and the underlying subscription until a consumer
+    // actually subscribes: composing observables for symbols or intervals that are never
+    // subscribed to (e.g. optional feed combinations) must not retain shared observables or
+    // assemblers for the service lifetime, while every consumer of a live channel must share the
+    // single canonical observable (and therefore the service's single emitter) so no consumer is
+    // silently dropped
+    return Observable.defer(
+        () -> sharedChannels.computeIfAbsent(subscriptionId, id -> createShared(channel)));
+  }
+
+  /**
+   * Builds the canonical shared stream for a channel. Inserted into {@link #sharedChannels} only
+   * when the first consumer subscribes; evicted when the stream terminates or when the last
+   * subscriber disposes, so dynamic subscriptions cannot grow the cache without bound.
+   */
+  private Observable<BitgetUtaV3WsNotification> createShared(BitgetUtaV3Channel channel) {
+    String subscriptionId = channel.toSubscriptionId();
     AtomicReference<Observable<BitgetUtaV3WsNotification>> ref = new AtomicReference<>();
     Observable<BitgetUtaV3WsNotification> shared =
         service
             .subscribeChannel(null, channel)
-            // cache entries are materialized only for live subscriptions: composing observables
-            // for symbols or intervals that are never subscribed to (e.g. optional feed
-            // combinations) must not retain shared observables or assemblers for the service
-            // lifetime
-            .doOnSubscribe(ignored -> sharedChannels.putIfAbsent(subscriptionId, ref.get()))
             .doOnError(t -> sharedChannels.remove(subscriptionId, ref.get()))
             .doFinally(
                 () -> {

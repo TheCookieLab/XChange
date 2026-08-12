@@ -306,6 +306,72 @@ class BitgetUtaV3TradeServiceTest extends BitgetUtaV3ExchangeWiremock {
   }
 
   /**
+   * The per-category merge must be sorted even when no limit (or a limit at least the aggregate
+   * size) is requested: without a stable cross-category sort, an older spot execution can precede
+   * a newer margin execution on the shared {@link CurrencyPair} identity (review wave 15k).
+   */
+  @Test
+  void trade_history_merge_sorts_spot_and_margin_fills_without_limit() throws Exception {
+    // margin fills resolve back to instruments through the catalog: category=margin must be stubbed
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/market/instruments"))
+            .withQueryParam("category", equalTo("margin"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":[{\"symbol\":\"BTCUSDT\",\"baseCoin\":\"BTC\","
+                            + "\"quoteCoin\":\"USDT\",\"minTradeNum\":\"0.0001\","
+                            + "\"maxTradeNum\":\"10\",\"pricePrecision\":\"2\","
+                            + "\"quantityPrecision\":\"4\",\"status\":\"online\","
+                            + "\"isReality\":\"no\",\"category\":\"margin\"}]}")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("spot"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e-spot\",\"orderId\":\"42\","
+                            + "\"clientOid\":\"c42\",\"category\":\"spot\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472070\"}],"
+                            + "\"cursor\":\"\"}}")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/api/v3/trade/fills"))
+            .withQueryParam("category", equalTo("margin"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"code\":\"00000\",\"msg\":\"success\",\"requestTime\":1725040472073,"
+                            + "\"data\":{\"list\":[{\"execId\":\"e-margin\",\"orderId\":\"43\","
+                            + "\"clientOid\":\"c43\",\"category\":\"margin\",\"symbol\":\"BTCUSDT\","
+                            + "\"orderType\":\"limit\",\"side\":\"buy\",\"execPrice\":\"60000\","
+                            + "\"execQty\":\"0.1\",\"createdTime\":\"1725040472073\"}],"
+                            + "\"cursor\":\"\"}}")));
+
+    BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams params =
+        (BitgetUtaV3TradeService.BitgetUtaV3TradeHistoryParams)
+            tradeService.createTradeHistoryParams();
+    params.setInstrument(CurrencyPair.BTC_USDT);
+    params.setLimit(null);
+
+    UserTrades trades = tradeService.getTradeHistory(params);
+
+    // newest first across categories even without a limit: the newer margin fill precedes the
+    // older spot fill
+    assertThat(trades.getUserTrades()).hasSize(2);
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("e-margin");
+    assertThat(trades.getUserTrades().get(1).getId()).isEqualTo("e-spot");
+  }
+
+  /**
    * When the requested limit exceeds the provider page size, the aggregate must be trimmed to the
    * limit instead of returning the overshoot from the final page, so callers can rely on {@code
    * TradeHistoryParamLimit}.

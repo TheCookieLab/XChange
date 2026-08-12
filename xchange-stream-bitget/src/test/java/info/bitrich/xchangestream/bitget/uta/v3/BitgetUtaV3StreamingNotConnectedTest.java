@@ -151,6 +151,34 @@ class BitgetUtaV3StreamingNotConnectedTest {
   }
 
   @Test
+  void consumersOfTheSameMarketDataChannelShareTheWinningObservable() throws Exception {
+    TestableStreamingService service = new TestableStreamingService();
+    BitgetUtaV3StreamingMarketDataService marketData =
+        new BitgetUtaV3StreamingMarketDataService(service);
+    service.open();
+
+    TestObserver<Ticker> first = marketData.getTicker(CurrencyPair.BTC_USDT).test();
+    // a second consumer of the same channel must attach to the canonical observable that won the
+    // per-subscription cache: the service keeps a single emitter per subscription id, so a second
+    // independently constructed stream would silently receive no pushes (review wave 15k)
+    Observable<Ticker> secondSource = marketData.getTicker(CurrencyPair.BTC_USDT);
+    TestObserver<Ticker> second = secondSource.test();
+
+    // exactly one wire subscription, one registry entry, one cache entry
+    assertThat(service.frames().stream().filter(f -> f.contains("\"subscribe\"")).count())
+        .isEqualTo(1);
+    assertThat(service.containsChannel(BTC_TICKER.toSubscriptionId())).isTrue();
+    assertThat(marketDataSharedChannels(marketData))
+        .containsOnlyKeys(BTC_TICKER.toSubscriptionId());
+
+    // the shared stream is evicted with its last subscriber
+    first.dispose();
+    second.dispose();
+    assertThat(service.containsChannel(BTC_TICKER.toSubscriptionId())).isFalse();
+    assertThat(marketDataSharedChannels(marketData)).isEmpty();
+  }
+
+  @Test
   void sharedChannelEvictsTerminatedStreamSoRetryRebuilds() throws Exception {
     TestableStreamingService service = new TestableStreamingService();
 

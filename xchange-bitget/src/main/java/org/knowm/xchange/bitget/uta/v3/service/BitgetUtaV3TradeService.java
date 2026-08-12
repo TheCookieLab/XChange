@@ -195,12 +195,15 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
               pageSize,
               windowMillis));
     }
-    if (limit != null && rows.size() > limit) {
+    if (requestCategories.size() > 1) {
       // newest first across categories (stable: equal fill times keep per-category provider
-      // order), so the limit selects the most recent executions regardless of category
+      // order): without this, an older spot execution could precede a newer margin execution;
+      // with a limit, it also selects the most recent executions regardless of category
       rows.sort(
           java.util.Comparator.comparingLong((BitgetUtaV3Fill row) -> fillTimeMillis(row))
               .reversed());
+    }
+    if (limit != null && rows.size() > limit) {
       rows = new java.util.ArrayList<>(rows.subList(0, limit));
     }
     List<UserTrade> trades = new java.util.ArrayList<>();
