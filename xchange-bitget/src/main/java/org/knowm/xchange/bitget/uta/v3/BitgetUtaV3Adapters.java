@@ -71,6 +71,20 @@ public class BitgetUtaV3Adapters {
   }
 
   /**
+   * Category for a place-order request: {@link #toCategory(Instrument)} plus the caller-controlled
+   * {@link BitgetUtaV3OrderFlags#MARGIN} override. Margin orders are only valid on spot-family
+   * instruments; a futures instrument keeps its derivative category even when the flag is set.
+   */
+  private BitgetUtaV3Category toPlaceOrderCategory(Instrument instrument, Order order) {
+    BitgetUtaV3Category category = toCategory(instrument);
+    if (!(instrument instanceof FuturesContract)
+        && order.hasFlag(BitgetUtaV3OrderFlags.MARGIN)) {
+      return BitgetUtaV3Category.MARGIN;
+    }
+    return category;
+  }
+
+  /**
    * XChange instrument for a v3 instrument row. Derivative rows become {@link FuturesContract} with
    * prompt {@code PERP} for perpetuals; spot/margin rows become the plain {@link CurrencyPair}.
    */
@@ -193,7 +207,8 @@ public class BitgetUtaV3Adapters {
 
   /** v3 place-order request for a limit order. */
   public BitgetUtaV3PlaceOrderRequest toPlaceOrderRequest(LimitOrder limitOrder) {
-    BitgetUtaV3Category category = toCategory(limitOrder.getInstrument());
+    BitgetUtaV3Category category =
+        toPlaceOrderCategory(limitOrder.getInstrument(), limitOrder);
     BitgetUtaV3PlaceOrderRequest.BitgetUtaV3PlaceOrderRequestBuilder builder =
         BitgetUtaV3PlaceOrderRequest.builder()
             .category(category.getWireName())
@@ -209,7 +224,7 @@ public class BitgetUtaV3Adapters {
               limitOrder.hasFlag(BitgetUtaV3OrderFlags.ISOLATED_MARGIN) ? "isolated" : "crossed")
           .holdMode(
               limitOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)
-                  ? "two_way_mode"
+                  ? "hedge_mode"
                   : "one_way_mode");
     }
     return builder.build();
@@ -224,7 +239,8 @@ public class BitgetUtaV3Adapters {
    * market-buy orders on spot/margin categories.
    */
   public BitgetUtaV3PlaceOrderRequest toPlaceOrderRequest(MarketOrder marketOrder) {
-    BitgetUtaV3Category category = toCategory(marketOrder.getInstrument());
+    BitgetUtaV3Category category =
+        toPlaceOrderCategory(marketOrder.getInstrument(), marketOrder);
     BitgetUtaV3PlaceOrderRequest.BitgetUtaV3PlaceOrderRequestBuilder builder =
         BitgetUtaV3PlaceOrderRequest.builder()
             .category(category.getWireName())
@@ -238,7 +254,7 @@ public class BitgetUtaV3Adapters {
               marketOrder.hasFlag(BitgetUtaV3OrderFlags.ISOLATED_MARGIN) ? "isolated" : "crossed")
           .holdMode(
               marketOrder.hasFlag(BitgetUtaV3OrderFlags.HEDGE_MODE)
-                  ? "two_way_mode"
+                  ? "hedge_mode"
                   : "one_way_mode");
     }
     return builder.build();

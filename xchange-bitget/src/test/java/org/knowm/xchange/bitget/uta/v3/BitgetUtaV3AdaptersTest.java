@@ -85,6 +85,54 @@ class BitgetUtaV3AdaptersTest {
   }
 
   @Test
+  void spot_order_with_margin_flag_lifts_category_to_margin() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .flag(BitgetUtaV3OrderFlags.MARGIN)
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("category").asText()).isEqualTo("margin");
+    assertThat(json.has("marginMode"))
+        .as("margin orders are not derivatives; no marginMode/holdMode fields")
+        .isFalse();
+    assertThat(json.has("holdMode")).isFalse();
+  }
+
+  @Test
+  void spot_order_without_margin_flag_stays_spot() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("category").asText()).isEqualTo("spot");
+  }
+
+  @Test
+  void futures_order_ignores_margin_flag() throws Exception {
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
+            .originalAmount(new BigDecimal("0.1"))
+            .limitPrice(new BigDecimal("60000"))
+            .flag(BitgetUtaV3OrderFlags.MARGIN)
+            .build();
+
+    JsonNode json =
+        MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
+
+    assertThat(json.get("category").asText()).isEqualTo("usdt-futures");
+  }
+
+  @Test
   void futures_limit_order_flags_select_isolated_hedge_mode() throws Exception {
     LimitOrder order =
         new LimitOrder.Builder(OrderType.BID, new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))
@@ -98,7 +146,7 @@ class BitgetUtaV3AdaptersTest {
         MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
 
     assertThat(json.get("marginMode").asText()).isEqualTo("isolated");
-    assertThat(json.get("holdMode").asText()).isEqualTo("two_way_mode");
+    assertThat(json.get("holdMode").asText()).isEqualTo("hedge_mode");
   }
 
   @Test
@@ -114,6 +162,6 @@ class BitgetUtaV3AdaptersTest {
         MAPPER.readTree(MAPPER.writeValueAsString(BitgetUtaV3Adapters.toPlaceOrderRequest(order)));
 
     assertThat(json.get("marginMode").asText()).isEqualTo("isolated");
-    assertThat(json.get("holdMode").asText()).isEqualTo("two_way_mode");
+    assertThat(json.get("holdMode").asText()).isEqualTo("hedge_mode");
   }
 }

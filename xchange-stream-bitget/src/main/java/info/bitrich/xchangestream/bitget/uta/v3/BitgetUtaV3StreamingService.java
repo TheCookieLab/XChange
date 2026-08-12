@@ -13,10 +13,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
+import org.knowm.xchange.exceptions.ExchangeException;
 
 /**
  * Netty transport for the Bitget UTA v3 WebSocket protocol.
@@ -152,18 +154,35 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
     super.handleMessage(message);
   }
 
-  /** Logs ack outcomes; subscribe/unsubscribe/login errors are surfaced, not silently ignored. */
+  /**
+   * Delivers an acknowledgement failure to the affected subscriber streams.
+   *
+   * <p>Subscribe/unsubscribe acknowledgements carry the channel they concern ({@code arg}); on an
+   * error ack the matching {@link Subscription} emitter is terminated with the failure so the
+   * caller observes the rejection instead of waiting on a push that will never arrive.
+   */
   protected void handleEventNotification(BitgetUtaV3EventNotification notification) {
     if (notification.getEvent() == BitgetUtaV3EventNotification.Event.ERROR
         || (notification.getCode() != null
             && !notification.getCode().isEmpty()
             && !"0".equals(notification.getCode()))) {
-      log.warn(
-          "Bitget UTA v3 WebSocket {} failed: code={}, msg={}, channel={}",
-          notification.getEvent(),
-          notification.getCode(),
-          notification.getMessage(),
-          notification.getChannel());
+      String failure =
+          String.format(
+              "Bitget UTA v3 WebSocket %s failed: code=%s, msg=%s, channel=%s",
+              notification.getEvent(),
+              notification.getCode(),
+              notification.getMessage(),
+              notification.getChannel());
+      log.warn(failure);
+      if (notification.getChannel() != null) {
+        Subscription subscription =
+            channels.get(notification.getChannel().toSubscriptionId());
+        if (subscription != null) {
+          subscription
+              .getEmitter()
+              .tryOnError(new ExchangeException(failure));
+        }
+      }
       return;
     }
     log.debug(
@@ -171,6 +190,16 @@ public class BitgetUtaV3StreamingService extends NettyStreamingService<BitgetUta
         notification.getEvent(),
         notification.getChannel(),
         notification.getConnectionId());
+  }
+
+  /**
+   * Terminates every registered channel stream with {@code error}; used when the connection fails
+   * as a whole (e.g. a rejected private login) so subscribers never hang on it.
+   */
+  protected void failAllChannels(Throwable error) {
+    for (Entry<String, Subscription> entry : channels.entrySet()) {
+      entry.getValue().getEmitter().tryOnError(error);
+    }
   }
 
   /** UTA v3 keeps the connection alive with the text frame {@code "ping"}. */

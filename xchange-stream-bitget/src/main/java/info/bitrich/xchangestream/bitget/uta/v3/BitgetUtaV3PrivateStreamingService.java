@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.knowm.xchange.exceptions.ExchangeException;
 
 /**
  * Private Bitget UTA v3 transport: logs in with the classic v2 signature scheme (preimage {@code
@@ -91,10 +92,17 @@ public class BitgetUtaV3PrivateStreamingService extends BitgetUtaV3StreamingServ
       if ("0".equals(notification.getCode())) {
         resubscribeChannelsAfterLogin();
       } else {
-        log.error(
-            "Bitget UTA v3 private WebSocket login failed: code={}, msg={}",
-            notification.getCode(),
-            notification.getMessage());
+        String failure =
+            String.format(
+                "Bitget UTA v3 private WebSocket login rejected: code=%s, msg=%s",
+                notification.getCode(), notification.getMessage());
+        log.error(failure);
+        // The socket handshake already completed, so connect() reported success; surface the
+        // rejection on every private channel stream and drop the unauthenticated connection so
+        // isSocketOpen() and reconnect logic observe reality instead of leaving subscribers to
+        // hang on acknowledgements that will never arrive.
+        failAllChannels(new ExchangeException(failure));
+        disconnect().subscribe();
       }
       return;
     }
