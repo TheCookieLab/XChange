@@ -117,7 +117,12 @@ public class BitgetUtaV3TradeService extends BitgetUtaV3TradeServiceRaw implemen
 
   @Override
   public UserTrades getTradeHistory(TradeHistoryParams params) throws IOException {
-    BitgetUtaV3TradeHistoryParams historyParams = (BitgetUtaV3TradeHistoryParams) params;
+    // The TradeService contract allows null or generic params implementations; fall back to
+    // defaults rather than casting blindly (the classic BitgetTradeService behaves the same way).
+    BitgetUtaV3TradeHistoryParams historyParams =
+        params instanceof BitgetUtaV3TradeHistoryParams
+            ? (BitgetUtaV3TradeHistoryParams) params
+            : new BitgetUtaV3TradeHistoryParams();
     BitgetUtaV3Category category = null;
     if (historyParams.getInstrument() != null) {
       category = BitgetUtaV3Adapters.toCategory(historyParams.getInstrument());
