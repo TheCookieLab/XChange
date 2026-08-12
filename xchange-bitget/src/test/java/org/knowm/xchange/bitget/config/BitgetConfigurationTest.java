@@ -21,6 +21,13 @@ class BitgetConfigurationTest {
   }
 
   @Test
+  void null_specification_uses_defaults() {
+    BitgetConfiguration configuration = BitgetConfiguration.from(null);
+
+    assertThat(configuration.getApiMode()).isEqualTo(BitgetApiMode.CLASSIC_V2);
+  }
+
+  @Test
   void reads_typed_mode() {
     ExchangeSpecification specification = specification();
     specification.setExchangeSpecificParametersItem(
