@@ -232,6 +232,11 @@ public class BitgetUtaV3StreamingTradeService implements StreamingTradeService {
           } catch (IOException e) {
             pendingClientOids.remove(effectiveClientOid);
             throw new ExchangeException("Failed to place order on Bitget UTA v3", e);
+          } catch (RuntimeException e) {
+            // A rejected placement has a known outcome; leaving it pending would make a
+            // later, unrelated socket disconnect re-raise it as an unknown outcome.
+            pendingClientOids.remove(effectiveClientOid);
+            throw e;
           }
         });
   }
