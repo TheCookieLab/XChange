@@ -244,11 +244,14 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
   
   @Test
-  void trade_history_without_paging_preserves_all_records() throws IOException {
-    UserTrades userTrades =
-        gateioTradeService.getTradeHistory(
-            GateioTradeHistoryParams.builder().currencyPair(CurrencyPair.BTC_USDT).build());
-
-    assertThat(userTrades.getUserTrades()).hasSize(1001);
+  void trade_history_without_paging_rejects_truncated_result() throws IOException {
+    assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(
+            () ->
+                gateioTradeService.getTradeHistory(
+                    GateioTradeHistoryParams.builder()
+                        .currencyPair(CurrencyPair.BTC_USDT)
+                        .build()))
+        .withMessageContaining("use bounded pagination");
   }
 }

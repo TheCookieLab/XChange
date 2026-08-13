@@ -13,6 +13,7 @@ import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.gateio.GateioAdapters;
 import org.knowm.xchange.gateio.GateioExchange;
 import org.knowm.xchange.gateio.dto.GateioContinuation;
+import org.knowm.xchange.gateio.dto.GateioIterationStop;
 import org.knowm.xchange.gateio.dto.GateioPage;
 import org.knowm.xchange.gateio.dto.GateioPageCursor;
 import org.knowm.xchange.gateio.dto.account.GateioAmendOrderRequest;
@@ -105,8 +106,13 @@ public class GateioTradeServiceRaw extends GateioBaseService {
             : null;
 
     if (ObjectUtils.allNull(pageLength, pageNumber)) {
-      // bounded default: never fetch the full history implicitly
-      return getGateioUserTradesBounded(params, DEFAULT_HISTORY_CEILING).getItems();
+      GateioContinuation<GateioUserTradeRaw> continuation =
+          getGateioUserTradesBounded(params, DEFAULT_HISTORY_CEILING);
+      if (continuation.getStop() != GateioIterationStop.COMPLETED) {
+        throw new IllegalStateException(
+            "Trade history exceeds the default result ceiling; use bounded pagination");
+      }
+      return continuation.getItems();
     }
 
     TradeHistoryArgs args = new TradeHistoryArgs(params);
