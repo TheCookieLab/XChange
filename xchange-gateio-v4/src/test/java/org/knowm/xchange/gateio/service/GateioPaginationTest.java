@@ -107,6 +107,7 @@ class GateioPaginationTest {
     GateioContinuation<String> result = GateioPagination.iterate(looping, Integer.MAX_VALUE);
 
     assertThat(result.getStop()).isEqualTo(GateioIterationStop.REPEATED_CURSOR);
+    assertThat(result.getNextCursor()).isNull();
     assertThat(result.getItems()).containsExactly("a", "b", "c", "d");
   }
 
@@ -119,8 +120,8 @@ class GateioPaginationTest {
             .build();
 
     GateioContinuation<String> result = GateioPagination.iterate(noProgress, Integer.MAX_VALUE);
-
     assertThat(result.getStop()).isEqualTo(GateioIterationStop.NO_PROGRESS);
+    assertThat(result.getNextCursor()).isNull();
     assertThat(result.getItems()).isEmpty();
   }
 
