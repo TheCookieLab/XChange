@@ -1,6 +1,7 @@
 package org.knowm.xchange.gateio.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -17,7 +18,9 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.gateio.GateioAdapters;
 import org.knowm.xchange.gateio.GateioExchangeWiremock;
+import org.knowm.xchange.gateio.dto.marketdata.GateioTrade;
 
 public class GateioMarketDataServiceTest extends GateioExchangeWiremock {
 
@@ -128,4 +131,21 @@ public class GateioMarketDataServiceTest extends GateioExchangeWiremock {
     assertThat(second.getMakerOrderId()).isEqualTo("381068734893");
     assertThat(second.getTakerOrderId()).isNull();
   }
+  @Test
+  void getTrades_unknownSide_rejected() {
+    GateioTrade malformed =
+        GateioTrade.builder()
+            .side("unexpected")
+            .role("maker")
+            .createTimeMs(BigDecimal.ONE)
+            .amount(BigDecimal.ONE)
+            .price(BigDecimal.ONE)
+            .currencyPair(CurrencyPair.BTC_USDT)
+            .build();
+
+    assertThatThrownBy(() -> GateioAdapters.toTrade(malformed))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("side");
+  }
+
 }
