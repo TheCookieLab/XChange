@@ -237,6 +237,14 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
     assertThat(bounded.getItems()).hasSize(2);
     assertThat(bounded.getNextCursor().getPage()).isEqualTo(2);
   }
+  
+  @Test
+  void getOpenOrdersPage_flattensProviderGroups() throws IOException {
+    GateioPage<GateioOrder> page = gateioTradeServiceRaw.getOpenOrdersPage(null, 99);
+
+    assertThat(page.getItems()).hasSize(1);
+    assertThat(page.getItems().get(0).getId()).isEqualTo("745504484392");
+  }
 
   @Test
   void amendOrder_valid() throws IOException {

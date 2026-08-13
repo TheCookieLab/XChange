@@ -1,0 +1,14 @@
+{
+  "id": "c2dd980b-b8ca-4ddf-84c5-1b8bf3df8e9a",
+  "name": "api_v4_spot_open_orders_grouped.json",
+  "request": {
+    "url": "/api/v4/spot/open_orders?page=1&limit=99",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_open_orders_grouped.json"
+  },
+  "persistent": true,
+  "insertionIndex": 0
+}

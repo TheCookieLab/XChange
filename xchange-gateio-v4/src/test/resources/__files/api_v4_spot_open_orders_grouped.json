@@ -1,0 +1,20 @@
+[
+  {
+    "currency_pair": "BTC_USDT",
+    "total": 1,
+    "orders": [
+      {
+        "id": "745504484392",
+        "text": "web",
+        "create_time_ms": 1733442414447,
+        "status": "open",
+        "currency_pair": "BTC_USDT",
+        "type": "limit",
+        "account": "spot",
+        "side": "buy",
+        "amount": "0.00012",
+        "price": "80000"
+      }
+    ]
+  }
+]
