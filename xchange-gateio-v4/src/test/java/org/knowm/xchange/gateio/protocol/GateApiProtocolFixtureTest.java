@@ -158,10 +158,10 @@ class GateApiProtocolFixtureTest {
     for (JsonNode entry : manifest) {
       keys.add(entry.path("method").asText() + " " + entry.path("path").asText());
     }
-    // existing Spot market data + wallet chains (public) and account/trade/wallet (authenticated)
     assertThat(keys).contains(
         "GET /spot/time",
         "GET /spot/currencies",
+        "GET /spot/currencies/{currency}",
         "GET /spot/order_book",
         "GET /spot/tickers",
         "GET /wallet/currency_chains",
@@ -172,6 +172,14 @@ class GateApiProtocolFixtureTest {
         "GET /spot/my_trades",
         "GET /wallet/withdrawals",
         "GET /wallet/deposits",
-        "POST /withdrawals");
+        "POST /withdrawals",
+        "GET /spot/trades",
+        "GET /spot/candlesticks",
+        "GET /spot/open_orders",
+        "PATCH /spot/orders/{order_id}",
+        "DELETE /spot/orders",
+        "POST /spot/batch_orders",
+        "POST /spot/cancel_batch_orders",
+        "POST /spot/countdown_cancel_all");
   }
 }
