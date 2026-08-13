@@ -47,6 +47,14 @@ import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopInfos;
 import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopPayload;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitWalletBalance;
 import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
+import org.knowm.xchange.bybit.dto.trade.BybitPreCheckPayload;
+import org.knowm.xchange.bybit.dto.trade.BybitPreCheckResult;
+import org.knowm.xchange.bybit.dto.trade.batch.BybitBatchAmendPayload;
+import org.knowm.xchange.bybit.dto.trade.batch.BybitBatchCancelPayload;
+import org.knowm.xchange.bybit.dto.trade.batch.BybitBatchPlacePayload;
+import org.knowm.xchange.bybit.dto.trade.batch.BybitBatchResult;
+import org.knowm.xchange.bybit.dto.trade.execution.BybitExecutions;
+import org.knowm.xchange.bybit.dto.trade.history.BybitOrderHistoryDetails;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderResponse;
 import org.knowm.xchange.bybit.dto.trade.BybitPlaceOrderPayload;
@@ -107,8 +115,9 @@ public interface BybitAuthenticated {
       @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
       @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
       @QueryParam("category") String category,
-      @Nonnull @QueryParam("symbol") String symbol,
-      @Nonnull @QueryParam("orderId") String orderId)
+      @QueryParam("symbol") String symbol,
+      @QueryParam("orderId") String orderId,
+      @QueryParam("orderLinkId") String orderLinkId)
       throws IOException, BybitException;
 
   /**
@@ -138,7 +147,100 @@ public interface BybitAuthenticated {
       throws IOException, BybitException;
 
   /**
-   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/leverage">API</a>
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/order/order-history">API</a>
+   */
+  @GET
+  @Path("/order/history")
+  BybitResult<BybitOrderHistoryDetails> getOrderHistory(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("orderId") String orderId,
+      @QueryParam("orderLinkId") String orderLinkId,
+      @QueryParam("orderStatus") String orderStatus,
+      @QueryParam("startTime") String startTime,
+      @QueryParam("endTime") String endTime,
+      @QueryParam("baseCoin") String baseCoin,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/order/execution">API</a>
+   */
+  @GET
+  @Path("/execution/list")
+  BybitResult<BybitExecutions> getExecutions(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("baseCoin") String baseCoin,
+      @QueryParam("orderId") String orderId,
+      @QueryParam("orderLinkId") String orderLinkId,
+      @QueryParam("startTime") String startTime,
+      @QueryParam("endTime") String endTime,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/order/create-batch">API</a>
+   */
+  @POST
+  @Path("/order/create-batch")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitBatchResult createBatch(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitBatchPlacePayload payload)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/order/amend-batch">API</a>
+   */
+  @POST
+  @Path("/order/amend-batch")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitBatchResult amendBatch(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitBatchAmendPayload payload)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/order/cancel-batch">API</a>
+   */
+  @POST
+  @Path("/order/cancel-batch")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitBatchResult cancelBatch(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitBatchCancelPayload payload)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/order/pre-check">API</a>
+   */
+  @POST
+  @Path("/order/pre-check")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitResult<BybitPreCheckResult> preCheck(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitPreCheckPayload payload)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/set-leverage">API</a>
    */
   @POST
   @Path("/position/set-leverage")

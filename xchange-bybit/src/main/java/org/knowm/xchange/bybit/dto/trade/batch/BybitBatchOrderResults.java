@@ -1,0 +1,17 @@
+package org.knowm.xchange.bybit.dto.trade.batch;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+import lombok.Builder;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
+
+/** The {@code result} object of a batch create/amend/cancel response. */
+@Builder
+@Jacksonized
+@Value
+public class BybitBatchOrderResults {
+
+  @JsonProperty("list")
+  List<BybitBatchOrderResult> list;
+}

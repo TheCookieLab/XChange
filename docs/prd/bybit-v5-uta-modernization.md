@@ -10,8 +10,8 @@
 
 * **Lifecycle:** Ready for implementation
 * **Blocking state:** None
-* **Active phase:** Phase 5 — orders/executions
-* **Overall checklist progress:** 4/9 phases complete
+* **Active phase:** Phase 6 — options/RFQ
+* **Overall checklist progress:** 5/9 phases complete
 
 ## Execution Status
 
@@ -112,7 +112,7 @@ Not needed for this feature.
 2. [x] **Catalog/pagination:** make Spot/Linear/Inverse/Option discovery cursor-complete with repeated-cursor/no-progress/page-ceiling guards. **Touchpoint:** `BybitExchange.remoteInit()` plus existing raw instruments-info surface. **Verification:** multi-page and malformed-cursor fixtures.
 3. [x] **Market/account assets:** complete public market data plus UTA wallet, account, fee, asset, transfer, collateral, borrowing/liability surfaces. **Verification:** exact-decimal DTO/adaptor and pagination fixtures.
 4. [x] **Positions/risk:** add category-aware position, leverage, margin-mode, risk-tier and PnL operations without discarding hedge/subposition identity. **Verification:** one-way/hedge and linear/inverse/option fixtures.
-5. [ ] **Orders/executions:** complete create/amend/cancel/batch/pre-check/open/history/fill/transaction-log coverage and `orderLinkId` reconciliation. **Verification:** order-form matrix, partial batch results, unknown-outcome tests.
+5. [x] **Orders/executions:** complete create/amend/cancel/batch/pre-check/open/history/fill/transaction-log coverage and `orderLinkId` reconciliation. **Verification:** order-form matrix, partial batch results, unknown-outcome tests.
 6. [ ] **Options/RFQ:** expose lossless raw Option/RFQ workflows; map only common lossless data to XChange core. **Verification:** multi-leg/quote identity fixtures and explicit unsupported cases.
 7. [ ] **Public streaming recovery:** implement category-aware subscription identity, heartbeat, sequence validation, snapshot rebuild, and gap signaling. **Verification:** deterministic snapshot/delta/gap/reconnect tests.
 8. [ ] **Private/trade lifecycle:** add generation-scoped request correlation, auth/reauth, bounded reconnect, resubscription of the trade socket, private-event deduplication, and null-safe lifecycle observables. **Touchpoint:** `BybitStreamingExchange`. **Verification:** stale-generation, reconnect, resubscribe and no-credential tests.
