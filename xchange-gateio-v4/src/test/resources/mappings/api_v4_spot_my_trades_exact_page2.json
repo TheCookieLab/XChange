@@ -1,0 +1,15 @@
+{
+  "id": "a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  "name": "api_v4_spot_my_trades_exact_page2.json",
+  "request": {
+    "url": "/api/v4/spot/my_trades?currency_pair=ETH_USDT&limit=1000&page=2",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_my_trades_page2_empty.json"
+  },
+  "uuid": "a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  "persistent": true,
+  "insertionIndex": 46
+}

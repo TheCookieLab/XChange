@@ -1,0 +1,20 @@
+{
+  "id": "5d38a6c3-20bf-48a5-afbf-6d894b16a55a",
+  "name": "api_v4_spot_countdown_cancel_all.json",
+  "request": {
+    "url": "/api/v4/spot/countdown_cancel_all",
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.timeout"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_countdown_cancel_all.json"
+  },
+  "uuid": "5d38a6c3-20bf-48a5-afbf-6d894b16a55a",
+  "persistent": true,
+  "insertionIndex": 0
+}

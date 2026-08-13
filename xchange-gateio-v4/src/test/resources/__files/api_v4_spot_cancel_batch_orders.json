@@ -1,0 +1,20 @@
+[
+  {
+    "currency_pair": "BTC_USDT",
+    "id": "376835979523",
+    "text": "t-cancel-1",
+    "succeeded": true,
+    "label": "",
+    "message": "",
+    "account": "spot"
+  },
+  {
+    "currency_pair": "BTC_USDT",
+    "id": "376835979524",
+    "text": "t-cancel-2",
+    "succeeded": false,
+    "label": "ORDER_NOT_FOUND",
+    "message": "order not found",
+    "account": "spot"
+  }
+]

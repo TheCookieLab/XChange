@@ -1,0 +1,307 @@
+[
+ {
+  "method": "GET",
+  "path": "/spot/time",
+  "domain": "spot",
+  "support": "generic",
+  "required_params": [],
+  "summary": "Get server current time",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/currencies",
+  "domain": "spot",
+  "support": "generic",
+  "required_params": [],
+  "summary": "Query all currency information",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/currencies/{currency}",
+  "domain": "spot",
+  "support": "generic",
+  "required_params": [
+   "currency"
+  ],
+  "summary": "Query currency information",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/order_book",
+  "domain": "spot",
+  "support": "generic",
+  "required_params": [
+   "currency_pair"
+  ],
+  "summary": "Get market depth information",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/wallet/currency_chains",
+  "domain": "wallet",
+  "support": "generic",
+  "required_params": [
+   "currency"
+  ],
+  "summary": "Query chains supported for specified currency",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/currency_pairs",
+  "domain": "spot",
+  "support": "generic",
+  "required_params": [],
+  "summary": "Query all supported currency pairs",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/currency_pairs/{currency_pair}",
+  "domain": "spot",
+  "support": "generic",
+  "required_params": [
+   "currency_pair"
+  ],
+  "summary": "Query single currency pair details",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/tickers",
+  "domain": "spot",
+  "support": "generic",
+  "required_params": [],
+  "summary": "Get currency pair ticker information",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/wallet/deposit_address",
+  "domain": "wallet",
+  "support": "raw",
+  "required_params": [
+   "currency"
+  ],
+  "summary": "Generate currency deposit address",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/wallet/withdraw_status",
+  "domain": "wallet",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Query withdrawal status",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/accounts",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Query spot accounts (consolidated into /unified/accounts in docs as of 2026-08-13; still served by the live API per gateapi-go SDK)",
+  "extra": true
+ },
+ {
+  "method": "GET",
+  "path": "/spot/account_book",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Query spot account transaction history",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/orders",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [
+   "currency_pair",
+   "status"
+  ],
+  "summary": "List orders",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/orders/{order_id}",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [
+   "currency_pair",
+   "order_id"
+  ],
+  "summary": "Query single order details",
+  "extra": false
+ },
+ {
+  "method": "DELETE",
+  "path": "/spot/orders/{order_id}",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [
+   "currency_pair",
+   "order_id"
+  ],
+  "summary": "Cancel single order",
+  "extra": false
+ },
+ {
+  "method": "POST",
+  "path": "/spot/orders",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [
+   "body.amount",
+   "body.currency_pair",
+   "body.side"
+  ],
+  "summary": "Create order",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/my_trades",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Query personal trading records",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/wallet/saved_address",
+  "domain": "wallet",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Query saved address",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/wallet/sub_account_transfers",
+  "domain": "wallet",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Get transfer records between main and sub accounts",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/wallet/withdrawals",
+  "domain": "wallet",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Get withdrawal records",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/wallet/deposits",
+  "domain": "wallet",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Get deposit records",
+  "extra": false
+ },
+ {
+  "method": "POST",
+  "path": "/withdrawals",
+  "domain": "withdrawal",
+  "support": "raw",
+  "required_params": [
+   "body.amount",
+   "body.chain",
+   "body.currency"
+  ],
+  "summary": "Withdraw",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/trades",
+  "domain": "spot",
+  "support": "generic",
+  "required_params": [
+   "currency_pair"
+  ],
+  "summary": "Query market transaction records",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/candlesticks",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [
+   "currency_pair"
+  ],
+  "summary": "Market K-line chart",
+  "extra": false
+ },
+ {
+  "method": "GET",
+  "path": "/spot/open_orders",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [],
+  "summary": "List all open orders",
+  "extra": false
+ },
+ {
+  "method": "PATCH",
+  "path": "/spot/orders/{order_id}",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [
+   "order_id"
+  ],
+  "summary": "Amend single order",
+  "extra": false
+ },
+ {
+  "method": "DELETE",
+  "path": "/spot/orders",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Cancel all open orders in specified currency pair",
+  "extra": false
+ },
+ {
+  "method": "POST",
+  "path": "/spot/batch_orders",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Batch place orders",
+  "extra": false
+ },
+ {
+  "method": "POST",
+  "path": "/spot/cancel_batch_orders",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [],
+  "summary": "Cancel batch orders by specified ID list",
+  "extra": false
+ },
+ {
+  "method": "POST",
+  "path": "/spot/countdown_cancel_all",
+  "domain": "spot",
+  "support": "raw",
+  "required_params": [
+   "body.timeout"
+  ],
+  "summary": "Countdown cancel orders",
+  "extra": false
+ }
+]

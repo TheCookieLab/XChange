@@ -1,0 +1,26 @@
+{
+  "id": "b75b2dfa-6337-4bb8-9b8e-a9d50b1d185d",
+  "name": "api_v4_spot_batch_orders.json",
+  "request": {
+    "url": "/api/v4/spot/batch_orders",
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[0].currency_pair"
+      },
+      {
+        "matchesJsonPath": "$[0].amount"
+      },
+      {
+        "matchesJsonPath": "$[0].side"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_batch_orders.json"
+  },
+  "uuid": "b75b2dfa-6337-4bb8-9b8e-a9d50b1d185d",
+  "persistent": true,
+  "insertionIndex": 0
+}

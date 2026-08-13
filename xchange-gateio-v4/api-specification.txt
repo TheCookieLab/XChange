@@ -1,8 +1,17 @@
 Gate.io Exchange API V4 specification
 ================================
 
-Public API
+Pinned protocol fixture
+-----------------------
+src/main/resources/protocol/gate-api-v4-2026-08-13.json
+  - Normalized snapshot of the official Gate API v4 contract (227 endpoints)
+    extracted from https://www.gate.com/docs/developers/apiv4/en/<domain>/
+  - Pinned at 2026-08-13; GET /spot/accounts pinned from the official
+    gateapi-go SDK with provenance (docs consolidate it under /unified/accounts)
+  - Drift gate: scripts/check-gate-api-drift.py + GateApiProtocolFixtureTest
+  - Regenerate: scripts/extract-gate-docs.js (browser context, Akamai-gated)
+    -> scripts/assemble-gate-fixture.py -> commit new fixture date
 
-Documentation
--------------
+Official documentation
+----------------------
 https://www.gate.io/docs/developers/apiv4

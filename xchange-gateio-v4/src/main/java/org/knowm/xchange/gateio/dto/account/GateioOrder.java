@@ -7,7 +7,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.Builder;
 import lombok.Data;
-import lombok.extern.jackson.Jacksonized;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -19,7 +20,8 @@ import org.knowm.xchange.gateio.config.converter.StringToOrderTypeConverter;
 
 @Data
 @Builder
-@Jacksonized
+@NoArgsConstructor
+@AllArgsConstructor
 public class GateioOrder {
 
   @JsonProperty("id")
@@ -120,4 +122,10 @@ public class GateioOrder {
 
   @JsonProperty("finish_as")
   String finishAs;
+
+  @JsonProperty("stop_profit")
+  GateioOrderTrigger stopProfit;
+
+  @JsonProperty("stop_loss")
+  GateioOrderTrigger stopLoss;
 }

@@ -1,0 +1,23 @@
+{
+  "id": "d883b818-7fb9-4197-91fb-be1b48035f6e",
+  "name": "api_v4_spot_cancel_batch_orders.json",
+  "request": {
+    "url": "/api/v4/spot/cancel_batch_orders",
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[0].currency_pair"
+      },
+      {
+        "matchesJsonPath": "$[0].id"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_cancel_batch_orders.json"
+  },
+  "uuid": "d883b818-7fb9-4197-91fb-be1b48035f6e",
+  "persistent": true,
+  "insertionIndex": 0
+}

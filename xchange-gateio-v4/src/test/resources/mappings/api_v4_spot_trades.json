@@ -1,0 +1,15 @@
+{
+  "id": "1b5f9194-8a54-4aa0-acf2-8360859cbc49",
+  "name": "api_v4_spot_trades.json",
+  "request": {
+    "url": "/api/v4/spot/trades?currency_pair=BTC_USDT",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_trades.json"
+  },
+  "uuid": "1b5f9194-8a54-4aa0-acf2-8360859cbc49",
+  "persistent": true,
+  "insertionIndex": 0
+}

@@ -242,4 +242,16 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
 
     assertThat(actual).usingRecursiveComparison().isEqualTo(expected);
   }
+  
+  @Test
+  void trade_history_without_paging_rejects_truncated_result() throws IOException {
+    assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(
+            () ->
+                gateioTradeService.getTradeHistory(
+                    GateioTradeHistoryParams.builder()
+                        .currencyPair(CurrencyPair.BTC_USDT)
+                        .build()))
+        .withMessageContaining("use bounded pagination");
+  }
 }

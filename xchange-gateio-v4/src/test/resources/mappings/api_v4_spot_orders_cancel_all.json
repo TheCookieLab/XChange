@@ -1,0 +1,15 @@
+{
+  "id": "aca6f039-0a7b-4c84-88c5-495992cdec58",
+  "name": "api_v4_spot_orders_cancel_all.json",
+  "request": {
+    "url": "/api/v4/spot/orders?currency_pair=BTC_USDT",
+    "method": "DELETE"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_orders_cancel_all.json"
+  },
+  "uuid": "aca6f039-0a7b-4c84-88c5-495992cdec58",
+  "persistent": true,
+  "insertionIndex": 0
+}

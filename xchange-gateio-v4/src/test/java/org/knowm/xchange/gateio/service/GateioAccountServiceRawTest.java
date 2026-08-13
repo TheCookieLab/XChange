@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,13 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.exceptions.InstrumentNotValidException;
 import org.knowm.xchange.exceptions.InternalServerException;
+import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.gateio.GateioExchangeWiremock;
+import org.knowm.xchange.gateio.dto.GateioContinuation;
+import org.knowm.xchange.gateio.dto.GateioIterationStop;
+import org.knowm.xchange.gateio.dto.GateioPage;
+import org.knowm.xchange.gateio.dto.GateioPageCursor;
+import org.knowm.xchange.gateio.dto.account.GateioAccountBookRecord;
 import org.knowm.xchange.gateio.dto.account.GateioAddressRecord;
 import org.knowm.xchange.gateio.dto.account.GateioDepositAddress;
 import org.knowm.xchange.gateio.dto.account.GateioDepositAddress.MultichainAddress;
@@ -25,6 +32,7 @@ import org.knowm.xchange.gateio.dto.account.GateioWithdrawStatus;
 import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRecord;
 import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRequest;
 import org.knowm.xchange.gateio.dto.account.params.GateioSubAccountTransfersParams;
+import org.knowm.xchange.gateio.service.params.GateioFundingHistoryParams;
 import org.knowm.xchange.gateio.service.params.GateioDepositsParams;
 import org.knowm.xchange.gateio.service.params.GateioWithdrawalsParams;
 
@@ -252,5 +260,70 @@ public class GateioAccountServiceRawTest extends GateioExchangeWiremock {
 
     assertThat(actual).hasSize(1);
     assertThat(actual).first().usingRecursiveComparison().isEqualTo(expected);
+  }
+
+  @Test
+  void getAccountBookRecords_valid() throws IOException {
+    GateioFundingHistoryParams params =
+        GateioFundingHistoryParams.builder()
+            .currency(Currency.USDT)
+            .pageLength(2)
+            .pageNumber(1)
+            .startTime(Date.from(Instant.ofEpochSecond(1691447482)))
+            .endTime(Date.from(Instant.ofEpochSecond(1691533882)))
+            .type("order_fee")
+            .build();
+
+    List<GateioAccountBookRecord> actual = gateioAccountServiceRaw.getAccountBookRecords(params);
+
+    assertThat(actual).hasSize(2);
+    assertThat(actual.get(0).getId()).isEqualTo("40558668441");
+    assertThat(actual.get(0).getCurrency()).isEqualTo(Currency.USDT);
+    assertThat(actual.get(0).getChange()).isEqualByComparingTo("-0.0113918056");
+    assertThat(actual.get(0).getBalance()).isEqualByComparingTo("16.00283141582979715942");
+    assertThat(actual.get(0).getType()).isEqualTo(FundingRecord.Type.OTHER_OUTFLOW);
+  }
+
+  @Test
+  void getAccountBookRecordsPage_bounded() throws IOException {
+    GateioFundingHistoryParams params =
+        GateioFundingHistoryParams.builder().currency(Currency.USDT).type("order_fee").build();
+
+    GateioPage<GateioAccountBookRecord> page =
+        gateioAccountServiceRaw.getAccountBookRecordsPage(null, params);
+
+    assertThat(page.getItems()).hasSize(1000);
+    assertThat(page.getItems().get(0).getId()).isEqualTo("40558668441");
+    assertThat(page.hasNext()).isTrue();
+    assertThat(page.getNextCursor().getPage()).isEqualTo(2);
+  }
+
+  @Test
+  void getAccountBookRecordsBounded_maxResults_resumable() throws IOException {
+    GateioFundingHistoryParams params =
+        GateioFundingHistoryParams.builder().currency(Currency.USDT).type("order_fee").build();
+
+    GateioContinuation<GateioAccountBookRecord> bounded =
+        gateioAccountServiceRaw.getAccountBookRecordsBounded(params, 1);
+
+    assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
+    // the ceiling is a hard bound: never more than maxResults, even on a full page
+    assertThat(bounded.getItems()).hasSize(1);
+    assertThat(bounded.getItems().get(0).getId()).isEqualTo("40558668441");
+    // the cut page is resumable: same page, skip advanced past the consumed record
+    assertThat(bounded.getNextCursor()).isEqualTo(GateioPageCursor.page(1).withSkip(1));
+
+    // resume re-fetches the cut page and drops the consumed prefix
+    GateioPage<GateioAccountBookRecord> resumed =
+        gateioAccountServiceRaw.getAccountBookRecordsPage(bounded.getNextCursor(), params);
+    assertThat(resumed.getItems()).hasSize(999);
+    assertThat(resumed.getItems().get(0).getId()).isEqualTo("40558668440");
+    assertThat(resumed.hasNext()).isTrue();
+
+    GateioPage<GateioAccountBookRecord> second =
+        gateioAccountServiceRaw.getAccountBookRecordsPage(resumed.getNextCursor(), params);
+    assertThat(second.getItems()).hasSize(1);
+    assertThat(second.getItems().get(0).getId()).isEqualTo("40558668400");
+    assertThat(second.hasNext()).isFalse();
   }
 }

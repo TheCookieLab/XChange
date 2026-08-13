@@ -1,0 +1,18 @@
+[
+  {
+    "id": "6068789000",
+    "create_time": "1691702000",
+    "create_time_ms": "1691702000356.911000",
+    "currency_pair": "BTC_USDT",
+    "side": "sell",
+    "role": "maker",
+    "amount": "0.00007",
+    "price": "29440.1",
+    "order_id": "381064900001",
+    "fee": "0.002",
+    "fee_currency": "USDT",
+    "point_fee": "0",
+    "gt_fee": "0",
+    "amend_text": "-"
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "id": "ccbab54e-37e3-4272-8426-0ec2bb530116",
+  "name": "api_v4_spot_currencies_btc.json",
+  "request": {
+    "url": "/api/v4/spot/currencies/BTC",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_currencies_btc.json"
+  },
+  "uuid": "ccbab54e-37e3-4272-8426-0ec2bb530116",
+  "persistent": true,
+  "insertionIndex": 0
+}

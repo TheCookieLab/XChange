@@ -12,8 +12,20 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.gateio.GateioAdapters;
 import org.knowm.xchange.gateio.GateioExchange;
+import org.knowm.xchange.gateio.dto.GateioContinuation;
+import org.knowm.xchange.gateio.dto.GateioIterationStop;
+import org.knowm.xchange.gateio.dto.GateioPage;
+import org.knowm.xchange.gateio.dto.GateioPageCursor;
+import org.knowm.xchange.gateio.dto.account.GateioAmendOrderRequest;
+import org.knowm.xchange.gateio.dto.account.GateioBatchOrderResult;
+import org.knowm.xchange.gateio.dto.account.GateioCancelBatchRequest;
+import org.knowm.xchange.gateio.dto.account.GateioCancelOrderResult;
+import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelRequest;
+import org.knowm.xchange.gateio.dto.account.GateioTriggerTime;
 import org.knowm.xchange.gateio.dto.account.GateioOrder;
+import org.knowm.xchange.gateio.dto.account.GateioOpenOrders;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
+import java.util.stream.Collectors;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.CurrencyPairParam;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
@@ -23,6 +35,42 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 
 public class GateioTradeServiceRaw extends GateioBaseService {
+
+  /**
+   * Result ceiling for the no-paging convenience of {@link #getGateioUserTrades(TradeHistoryParams)}.
+   * History is never fetched unboundedly; callers needing more use {@link
+   * #getGateioUserTradesBounded(TradeHistoryParams, int)} with an explicit ceiling.
+   */
+  public static final int DEFAULT_HISTORY_CEILING = 1000;
+
+  /** Query arguments shared by the paged and bounded user-trade accessors. */
+  private static final class TradeHistoryArgs {
+    final String currencyPair;
+    final String orderId;
+    final Long from;
+    final Long to;
+
+    TradeHistoryArgs(TradeHistoryParams params) {
+      this.currencyPair =
+          params instanceof TradeHistoryParamCurrencyPair
+              ? GateioAdapters.toString(((CurrencyPairParam) params).getCurrencyPair())
+              : null;
+      this.orderId =
+          params instanceof TradeHistoryParamTransactionId
+              ? ((TradeHistoryParamTransactionId) params).getTransactionId()
+              : null;
+      Long start = null;
+      Long end = null;
+      if (params instanceof TradeHistoryParamsTimeSpan) {
+        TradeHistoryParamsTimeSpan timeSpan = (TradeHistoryParamsTimeSpan) params;
+        start =
+            timeSpan.getStartTime() != null ? timeSpan.getStartTime().getTime() / 1000 : null;
+        end = timeSpan.getEndTime() != null ? timeSpan.getEndTime().getTime() / 1000 : null;
+      }
+      this.from = start;
+      this.to = end;
+    }
+  }
 
   public GateioTradeServiceRaw(GateioExchange exchange) {
     super(exchange);
@@ -50,10 +98,6 @@ public class GateioTradeServiceRaw extends GateioBaseService {
   public List<GateioUserTradeRaw> getGateioUserTrades(TradeHistoryParams params)
       throws IOException {
     // get arguments
-    CurrencyPair currencyPair =
-        params instanceof TradeHistoryParamCurrencyPair
-            ? ((CurrencyPairParam) params).getCurrencyPair()
-            : null;
     Integer pageLength =
         params instanceof TradeHistoryParamPaging
             ? ((TradeHistoryParamPaging) params).getPageLength()
@@ -62,59 +106,179 @@ public class GateioTradeServiceRaw extends GateioBaseService {
         params instanceof TradeHistoryParamPaging
             ? ((TradeHistoryParamPaging) params).getPageNumber()
             : null;
-    String orderId =
-        params instanceof TradeHistoryParamTransactionId
-            ? ((TradeHistoryParamTransactionId) params).getTransactionId()
-            : null;
-    Long from = null;
-    Long to = null;
-    if (params instanceof TradeHistoryParamsTimeSpan) {
-      TradeHistoryParamsTimeSpan paramsTimeSpan = ((TradeHistoryParamsTimeSpan) params);
-      from =
-          paramsTimeSpan.getStartTime() != null
-              ? paramsTimeSpan.getStartTime().getTime() / 1000
-              : null;
-      to =
-          paramsTimeSpan.getEndTime() != null ? paramsTimeSpan.getEndTime().getTime() / 1000 : null;
-    }
 
-    // if no pagination is given, get all records in chunks
     if (ObjectUtils.allNull(pageLength, pageNumber)) {
-      List<GateioUserTradeRaw> result = new ArrayList<>();
-      List<GateioUserTradeRaw> chunk;
-      Integer currentPageNumber = 1;
-
-      do {
-        chunk =
-            gateioV4Authenticated.getTradingHistory(
-                apiKey,
-                exchange.getNonceFactory(),
-                gateioV4ParamsDigest,
-                GateioAdapters.toString(currencyPair),
-                1000,
-                currentPageNumber,
-                orderId,
-                null,
-                from,
-                to);
-        currentPageNumber++;
-        result.addAll(chunk);
-      } while (!chunk.isEmpty());
-
-      return result;
+      GateioContinuation<GateioUserTradeRaw> continuation =
+          getGateioUserTradesBounded(params, DEFAULT_HISTORY_CEILING);
+      if (continuation.getStop() != GateioIterationStop.COMPLETED) {
+        // a full first page stops the bounded run at MAX_RESULTS even when the
+        // history ends exactly at the ceiling; confirm with one more page
+        // fetch before rejecting
+        GateioPageCursor next = continuation.getNextCursor();
+        if (next != null) {
+          GateioPage<GateioUserTradeRaw> confirmation = getGateioUserTradesPage(next, params);
+          if (confirmation.getItems().isEmpty() && !confirmation.hasNext()) {
+            return continuation.getItems();
+          }
+        }
+        throw new IllegalStateException(
+            "Trade history exceeds the default result ceiling; use bounded pagination");
+      }
+      return continuation.getItems();
     }
 
+    TradeHistoryArgs args = new TradeHistoryArgs(params);
     return gateioV4Authenticated.getTradingHistory(
         apiKey,
         exchange.getNonceFactory(),
         gateioV4ParamsDigest,
-        GateioAdapters.toString(currencyPair),
+        args.currencyPair,
         pageLength,
         pageNumber,
-        orderId,
+        args.orderId,
         null,
-        from,
-        to);
+        args.from,
+        args.to);
+  }
+
+  /** Fetches one page of the user's spot trade history; {@code null} cursor = first page. */
+  public GateioPage<GateioUserTradeRaw> getGateioUserTradesPage(
+      GateioPageCursor cursor, TradeHistoryParams params) throws IOException {
+    return fetchUserTradesPage(cursor, params, 1000);
+  }
+
+  private GateioPage<GateioUserTradeRaw> fetchUserTradesPage(
+      GateioPageCursor cursor, TradeHistoryParams params, int limit) throws IOException {
+    TradeHistoryArgs args = new TradeHistoryArgs(params);
+    int page = cursor == null ? 1 : cursor.getPage();
+    int skip = cursor == null ? 0 : cursor.getSkip();
+    List<GateioUserTradeRaw> providerItems =
+        gateioV4Authenticated.getTradingHistory(
+            apiKey,
+            exchange.getNonceFactory(),
+            gateioV4ParamsDigest,
+            args.currencyPair,
+            limit,
+            page,
+            args.orderId,
+            null,
+            args.from,
+            args.to);
+    // resume state: drop the prefix already consumed by a previous bounded run
+    List<GateioUserTradeRaw> items =
+        skip == 0
+            ? providerItems
+            : providerItems.size() <= skip
+                ? List.of()
+                : new ArrayList<>(providerItems.subList(skip, providerItems.size()));
+    GateioPageCursor next = providerItems.size() < limit ? null : GateioPageCursor.page(page + 1);
+    return GateioPage.<GateioUserTradeRaw>builder().items(items).nextCursor(next).build();
+  }
+
+  /**
+   * Iterates the user's spot trade history up to {@code maxResults}; see {@link
+   * GateioPagination#iterate} for stop semantics.
+   */
+  public GateioContinuation<GateioUserTradeRaw> getGateioUserTradesBounded(
+      TradeHistoryParams params, int maxResults) throws IOException {
+    return GateioPagination.iterate(
+        cursor -> fetchUserTradesPage(cursor, params, 1000), maxResults);
+  }
+
+  /** Fetches one page of open spot orders; {@code null} cursor = first page. */
+  public GateioPage<GateioOrder> getOpenOrdersPage(GateioPageCursor cursor, Integer limit)
+      throws IOException {
+    int page = cursor == null ? 1 : cursor.getPage();
+    int skip = cursor == null ? 0 : cursor.getSkip();
+    List<GateioOpenOrders> groups =
+        gateioV4Authenticated.getOpenOrders(
+            apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, page, limit, null);
+    List<GateioOrder> providerItems =
+        groups.stream()
+            .filter(group -> group.getOrders() != null)
+            .flatMap(group -> group.getOrders().stream())
+            .collect(Collectors.toList());
+    // resume state: drop the prefix already consumed by a previous bounded run
+    List<GateioOrder> items =
+        skip == 0
+            ? providerItems
+            : providerItems.size() <= skip
+                ? List.of()
+                : new ArrayList<>(providerItems.subList(skip, providerItems.size()));
+    int pageLimit = limit == null ? 100 : limit;
+    boolean hasNext =
+        groups.stream()
+            .filter(group -> group.getOrders() != null)
+            .anyMatch(group -> group.getOrders().size() >= pageLimit);
+    GateioPageCursor next = hasNext ? GateioPageCursor.page(page + 1) : null;
+    return GateioPage.<GateioOrder>builder().items(items).nextCursor(next).build();
+  }
+
+  /**
+   * Iterates open spot orders up to {@code maxResults}; see {@link GateioPagination#iterate} for
+   * stop semantics.
+   */
+  public GateioContinuation<GateioOrder> getOpenOrdersBounded(Integer limit, int maxResults)
+      throws IOException {
+    return GateioPagination.iterate(cursor -> getOpenOrdersPage(cursor, limit), maxResults);
+  }
+
+  public GateioOrder amendOrder(
+      String orderId, CurrencyPair currencyPair, GateioAmendOrderRequest amendRequest)
+      throws IOException {
+    Objects.requireNonNull(orderId);
+    Objects.requireNonNull(amendRequest);
+    return gateioV4Authenticated.amendOrder(
+        apiKey,
+        exchange.getNonceFactory(),
+        gateioV4ParamsDigest,
+        orderId,
+        GateioAdapters.toString(currencyPair),
+        null,
+        amendRequest);
+  }
+
+  /**
+   * Cancels all matching open spot orders for the pair.
+   *
+   * <p>Gate's {@code OrderCancel} elements carry per-order outcome fields ({@code succeeded},
+   * {@code label}, {@code message}) next to the order fields: bulk cancellation succeeds
+   * partially, and callers must inspect {@link GateioCancelOrderResult#getSucceeded()} before
+   * treating an order as cancelled.
+   */
+  public List<GateioCancelOrderResult> cancelAllOrders(CurrencyPair currencyPair)
+      throws IOException {
+    return gateioV4Authenticated.cancelAllOrders(
+        apiKey,
+        exchange.getNonceFactory(),
+        gateioV4ParamsDigest,
+        GateioAdapters.toString(currencyPair),
+        null,
+        null,
+        null);
+  }
+
+  public List<GateioBatchOrderResult> createBatchOrders(List<GateioOrder> gateioOrders)
+      throws IOException {
+    Objects.requireNonNull(gateioOrders);
+    Validate.validState(!gateioOrders.isEmpty(), "batch must not be empty");
+    return gateioV4Authenticated.createBatchOrders(
+        apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, gateioOrders);
+  }
+
+  public List<GateioCancelOrderResult> cancelBatchOrders(
+      List<GateioCancelBatchRequest> cancelRequests) throws IOException {
+    Objects.requireNonNull(cancelRequests);
+    Validate.validState(!cancelRequests.isEmpty(), "batch must not be empty");
+    return gateioV4Authenticated.cancelBatchOrders(
+        apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, cancelRequests);
+  }
+
+  public GateioTriggerTime countdownCancelAll(GateioCountdownCancelRequest request)
+      throws IOException {
+    Objects.requireNonNull(request);
+    return gateioV4Authenticated.countdownCancelAll(
+        apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, request);
   }
 
   public GateioOrder createOrder(GateioOrder gateioOrder) throws IOException {

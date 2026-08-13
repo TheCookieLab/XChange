@@ -1,0 +1,15 @@
+{
+  "id": "cf7fd75e-e42f-4788-9fea-746056978eba",
+  "name": "api_v4_spot_open_orders_p2.json",
+  "request": {
+    "url": "/api/v4/spot/open_orders?page=2&limit=2",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_open_orders_p2.json"
+  },
+  "uuid": "cf7fd75e-e42f-4788-9fea-746056978eba",
+  "persistent": true,
+  "insertionIndex": 0
+}

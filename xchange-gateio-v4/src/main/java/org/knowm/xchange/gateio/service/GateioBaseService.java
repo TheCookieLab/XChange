@@ -10,6 +10,7 @@ import org.knowm.xchange.gateio.config.GateioJacksonObjectMapperFactory;
 import org.knowm.xchange.service.BaseExchangeService;
 import org.knowm.xchange.service.BaseService;
 import si.mazi.rescu.ParamsDigest;
+import si.mazi.rescu.clients.HttpConnectionType;
 
 public class GateioBaseService extends BaseExchangeService<GateioExchange> implements BaseService {
 
@@ -40,9 +41,14 @@ public class GateioBaseService extends BaseExchangeService<GateioExchange> imple
         ExchangeRestProxyBuilder.forInterface(
                 GateioV4Authenticated.class, exchange.getExchangeSpecification())
             .clientConfigCustomizer(
-                clientConfig ->
-                    clientConfig.setJacksonObjectMapperFactory(
-                        new GateioJacksonObjectMapperFactory()))
+                clientConfig -> {
+                  clientConfig.setJacksonObjectMapperFactory(
+                      new GateioJacksonObjectMapperFactory());
+                  // The amend-order endpoint uses PATCH, which the default
+                  // HttpURLConnection transport rejects; rescu's Apache client
+                  // supports it (org.apache.httpcomponents:httpclient).
+                  clientConfig.setConnectionType(HttpConnectionType.apache);
+                })
             .restProxyFactory(
                 Config.getInstance()
                     .getRestProxyFactoryClass()

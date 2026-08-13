@@ -2,6 +2,7 @@ package org.knowm.xchange.gateio;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -14,6 +15,7 @@ import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
@@ -24,6 +26,7 @@ import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRequest;
 import org.knowm.xchange.gateio.dto.marketdata.GateioCurrencyPairDetails;
 import org.knowm.xchange.gateio.dto.marketdata.GateioOrderBook;
 import org.knowm.xchange.gateio.dto.marketdata.GateioTicker;
+import org.knowm.xchange.gateio.dto.marketdata.GateioTrade;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTrade;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
 import org.knowm.xchange.gateio.service.params.GateioWithdrawFundsParams;
@@ -235,6 +238,32 @@ public class GateioAdapters {
         .quoteVolume(gateioTicker.getQuoteVolume())
         .percentageChange(gateioTicker.getChangePercentage24h())
         .build();
+  }
+
+  public Trade toTrade(GateioTrade gateioTrade) {
+    OrderType tradeType;
+    if ("buy".equalsIgnoreCase(gateioTrade.getSide())) {
+      tradeType = OrderType.BID;
+    } else if ("sell".equalsIgnoreCase(gateioTrade.getSide())) {
+      tradeType = OrderType.ASK;
+    } else {
+      throw new IllegalArgumentException("Can't map trade side " + gateioTrade.getSide());
+    }
+
+    Trade.TradeBuilder<?, ?> builder =
+        Trade.builder()
+            .type(tradeType)
+            .originalAmount(gateioTrade.getAmount())
+            .instrument(gateioTrade.getCurrencyPair())
+            .price(gateioTrade.getPrice())
+            .timestamp(Date.from(Instant.ofEpochMilli(gateioTrade.getCreateTimeMs().longValue())))
+            .id(gateioTrade.getId());
+    if ("maker".equals(gateioTrade.getRole())) {
+      builder.makerOrderId(gateioTrade.getOrderId());
+    } else {
+      builder.takerOrderId(gateioTrade.getOrderId());
+    }
+    return builder.build();
   }
 
   public FundingRecord toFundingRecords(GateioAccountBookRecord gateioAccountBookRecord) {

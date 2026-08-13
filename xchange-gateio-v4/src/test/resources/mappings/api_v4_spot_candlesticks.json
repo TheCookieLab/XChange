@@ -1,0 +1,15 @@
+{
+  "id": "9ad51f5b-0eb7-46a9-8085-41f84e4d49a5",
+  "name": "api_v4_spot_candlesticks.json",
+  "request": {
+    "url": "/api/v4/spot/candlesticks?currency_pair=BTC_USDT&interval=1h",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_candlesticks.json"
+  },
+  "uuid": "9ad51f5b-0eb7-46a9-8085-41f84e4d49a5",
+  "persistent": true,
+  "insertionIndex": 0
+}

@@ -1,12 +1,16 @@
 package org.knowm.xchange.gateio.service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.gateio.GateioErrorAdapter;
 import org.knowm.xchange.gateio.GateioExchange;
+import org.knowm.xchange.gateio.dto.GateioContinuation;
 import org.knowm.xchange.gateio.dto.GateioException;
+import org.knowm.xchange.gateio.dto.GateioPage;
+import org.knowm.xchange.gateio.dto.GateioPageCursor;
 import org.knowm.xchange.gateio.dto.account.GateioAccountBookRecord;
 import org.knowm.xchange.gateio.dto.account.GateioAddressRecord;
 import org.knowm.xchange.gateio.dto.account.GateioCurrencyBalance;
@@ -143,6 +147,68 @@ public class GateioAccountServiceRaw extends GateioBaseService {
         pageLength,
         pageNumber,
         type);
+  }
+
+  /** Fetches one page of account book records; {@code null} cursor = first page. */
+  public GateioPage<GateioAccountBookRecord> getAccountBookRecordsPage(
+      GateioPageCursor cursor, TradeHistoryParams params) throws IOException {
+    return fetchAccountBookPage(cursor, params, 1000);
+  }
+
+  private GateioPage<GateioAccountBookRecord> fetchAccountBookPage(
+      GateioPageCursor cursor, TradeHistoryParams params, int limit) throws IOException {
+    Currency currency =
+        params instanceof GateioFundingHistoryParams
+            ? ((GateioFundingHistoryParams) params).getCurrency()
+            : null;
+    String currencyCode = currency != null ? currency.toString() : null;
+    String type =
+        params instanceof GateioFundingHistoryParams
+            ? ((GateioFundingHistoryParams) params).getType()
+            : null;
+    Long from = null;
+    Long to = null;
+    if (params instanceof TradeHistoryParamsTimeSpan) {
+      TradeHistoryParamsTimeSpan timeSpan = (TradeHistoryParamsTimeSpan) params;
+      from = timeSpan.getStartTime() != null ? timeSpan.getStartTime().getTime() / 1000 : null;
+      to = timeSpan.getEndTime() != null ? timeSpan.getEndTime().getTime() / 1000 : null;
+    }
+
+    int page = cursor == null ? 1 : cursor.getPage();
+    int skip = cursor == null ? 0 : cursor.getSkip();
+    List<GateioAccountBookRecord> providerItems =
+        gateioV4Authenticated.getAccountBookRecords(
+            apiKey,
+            exchange.getNonceFactory(),
+            gateioV4ParamsDigest,
+            currencyCode,
+            from,
+            to,
+            limit,
+            page,
+            type);
+    // resume state: drop the prefix already consumed by a previous bounded run
+    List<GateioAccountBookRecord> items =
+        skip == 0
+            ? providerItems
+            : providerItems.size() <= skip
+                ? List.of()
+                : new ArrayList<>(providerItems.subList(skip, providerItems.size()));
+    GateioPageCursor next = providerItems.size() < limit ? null : GateioPageCursor.page(page + 1);
+    return GateioPage.<GateioAccountBookRecord>builder()
+        .items(items)
+        .nextCursor(next)
+        .build();
+  }
+
+  /**
+   * Iterates account book records up to {@code maxResults}; see {@link GateioPagination#iterate}
+   * for stop semantics.
+   */
+  public GateioContinuation<GateioAccountBookRecord> getAccountBookRecordsBounded(
+      TradeHistoryParams params, int maxResults) throws IOException {
+    return GateioPagination.iterate(
+        cursor -> fetchAccountBookPage(cursor, params, 1000), maxResults);
   }
 
   public List<GateioSubAccountTransfer> getSubAccountTransfers(
