@@ -47,7 +47,9 @@ public interface Bybit {
   @GET
   @Path("/instruments-info")
   BybitResult<BybitInstrumentsInfo<BybitInstrumentInfo>> getInstrumentsInfo(
-      @QueryParam("category") String category, @QueryParam("limit") String limit)
+      @QueryParam("category") String category,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
       throws IOException, BybitException;
 
   /**

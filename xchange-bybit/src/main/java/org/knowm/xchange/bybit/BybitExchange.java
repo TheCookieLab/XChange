@@ -71,10 +71,8 @@ public class BybitExchange extends BaseExchange implements Exchange {
 
   @Override
   public void remoteInit() throws IOException, ExchangeException {
-    ((BybitMarketDataServiceRaw) marketDataService)
-        .getInstrumentsInfo(BybitCategory.SPOT)
-        .getResult()
-        .getList()
+    BybitMarketDataServiceRaw raw = (BybitMarketDataServiceRaw) marketDataService;
+    raw.getAllInstrumentsInfo(BybitCategory.SPOT)
         .forEach(
             instrumentInfo ->
                 exchangeMetaData
@@ -84,10 +82,7 @@ public class BybitExchange extends BaseExchange implements Exchange {
                         BybitAdapters.symbolToCurrencyPairMetaData(
                             (BybitSpotInstrumentInfo) instrumentInfo)));
 
-    ((BybitMarketDataServiceRaw) marketDataService)
-        .getInstrumentsInfo(BybitCategory.LINEAR)
-        .getResult()
-        .getList()
+    raw.getAllInstrumentsInfo(BybitCategory.LINEAR)
         .forEach(
             instrumentInfo ->
                 exchangeMetaData
@@ -97,10 +92,7 @@ public class BybitExchange extends BaseExchange implements Exchange {
                         BybitAdapters.symbolToCurrencyPairMetaData(
                             (BybitLinearInverseInstrumentInfo) instrumentInfo)));
 
-    ((BybitMarketDataServiceRaw) marketDataService)
-        .getInstrumentsInfo(BybitCategory.INVERSE)
-        .getResult()
-        .getList()
+    raw.getAllInstrumentsInfo(BybitCategory.INVERSE)
         .forEach(
             instrumentInfo ->
                 exchangeMetaData
@@ -110,10 +102,7 @@ public class BybitExchange extends BaseExchange implements Exchange {
                         BybitAdapters.symbolToCurrencyPairMetaData(
                             (BybitLinearInverseInstrumentInfo) instrumentInfo)));
 
-    ((BybitMarketDataServiceRaw) marketDataService)
-        .getInstrumentsInfo(BybitCategory.OPTION)
-        .getResult()
-        .getList()
+    raw.getAllInstrumentsInfo(BybitCategory.OPTION)
         .forEach(
             instrumentInfo ->
                 exchangeMetaData
