@@ -122,4 +122,10 @@ public class GateioOrder {
 
   @JsonProperty("finish_as")
   String finishAs;
+
+  @JsonProperty("stop_profit")
+  GateioOrderTrigger stopProfit;
+
+  @JsonProperty("stop_loss")
+  GateioOrderTrigger stopLoss;
 }

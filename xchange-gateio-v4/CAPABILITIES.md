@@ -63,8 +63,8 @@ authenticated interface is not a dumping ground for unrelated product surfaces.
 | Currency chains | `GET /wallet/currency_chains` | generic | |
 | Deposit address, withdraw status | `GET /wallet/deposit_address`, `GET /wallet/withdraw_status` | raw | |
 | Saved addresses | `GET /wallet/saved_address` | raw | |
-| Sub-account transfers | `GET /wallet/sub_account_transfers` | raw | bounded pagination (offset/limit) |
-| Withdrawals/deposits | `GET /wallet/withdrawals`, `GET /wallet/deposits` | raw | bounded pagination (offset/limit) |
+| Sub-account transfers | `GET /wallet/sub_account_transfers` | raw | single-page offset paging (offset/limit); no bounded iteration |
+| Withdrawals/deposits | `GET /wallet/withdrawals`, `GET /wallet/deposits` | raw | single-page offset paging (offset/limit); no bounded iteration |
 | Withdraw | `POST /withdrawals` | raw | explicit opt-in only; never in default CI |
 | Withdrawal cancel/push, transfer, sub-account balances | wallet domain endpoints | unsupported | planned (Phase 6) |
 

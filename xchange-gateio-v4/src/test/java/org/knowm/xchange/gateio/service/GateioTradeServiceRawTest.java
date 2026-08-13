@@ -335,6 +335,11 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
     assertThat(actual.getAmount()).isEqualByComparingTo("0.0002");
     assertThat(actual.getPrice()).isEqualByComparingTo("80000.5");
     assertThat(actual.getStatus()).isEqualTo("open");
+    // Gate returns the resulting trigger configuration on the amended order
+    assertThat(actual.getStopProfit().getTriggerPrice()).isEqualTo("81000");
+    assertThat(actual.getStopProfit().getOrderPrice()).isEqualTo("81200");
+    assertThat(actual.getStopLoss().getTriggerPrice()).isEqualTo("79000");
+    assertThat(actual.getStopLoss().getOrderPrice()).isEqualTo("78800");
   }
 
   @Test

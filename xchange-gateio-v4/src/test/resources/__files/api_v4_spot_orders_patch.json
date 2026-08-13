@@ -28,5 +28,13 @@
   "gt_discount": false,
   "rebated_fee": "0",
   "rebated_fee_currency": "USDT",
-  "finish_as": "open"
+  "finish_as": "open",
+  "stop_profit": {
+    "trigger_price": "81000",
+    "order_price": "81200"
+  },
+  "stop_loss": {
+    "trigger_price": "79000",
+    "order_price": "78800"
+  }
 }
