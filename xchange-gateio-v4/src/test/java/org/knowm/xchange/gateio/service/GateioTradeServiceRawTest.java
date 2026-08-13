@@ -359,10 +359,17 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
     assertThat(actual).hasSize(2);
     assertThat(actual.get(0).getSucceeded()).isTrue();
-    // Gate returns each element flat: the order fields sit at the response root
+    // Gate returns each element flat: the full order sits at the response root
     assertThat(actual.get(0).getId()).isEqualTo("745504484392");
     assertThat(actual.get(0).getCurrencyPair()).isEqualTo(CurrencyPair.BTC_USDT);
     assertThat(actual.get(0).getStatus()).isEqualTo("open");
+    assertThat(actual.get(0).getType()).isEqualTo("limit");
+    assertThat(actual.get(0).getSide()).isEqualTo(OrderType.BID);
+    assertThat(actual.get(0).getAmount()).isEqualByComparingTo("0.001");
+    assertThat(actual.get(0).getPrice()).isEqualByComparingTo("10000");
+    assertThat(actual.get(1).getSucceeded()).isFalse();
+    assertThat(actual.get(1).getLabel()).isEqualTo("ORDER_NOT_FOUND");
+    assertThat(actual.get(1).getMessage()).isEqualTo("order not found");
     assertThat(actual.get(1).getSucceeded()).isFalse();
     assertThat(actual.get(1).getLabel()).isEqualTo("ORDER_NOT_FOUND");
     assertThat(actual.get(1).getMessage()).isEqualTo("order not found");

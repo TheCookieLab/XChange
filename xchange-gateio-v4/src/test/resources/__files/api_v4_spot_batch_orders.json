@@ -6,7 +6,18 @@
     "label": "",
     "message": "",
     "currency_pair": "BTC_USDT",
-    "status": "open"
+    "status": "open",
+    "type": "limit",
+    "account": "spot",
+    "side": "buy",
+    "amount": "0.001",
+    "price": "10000",
+    "time_in_force": "gtc",
+    "left": "0.001",
+    "filled_total": "0",
+    "fee": "0",
+    "fee_currency": "BTC",
+    "finish_as": "open"
   },
   {
     "id": "745504484400",

@@ -1,39 +1,24 @@
 package org.knowm.xchange.gateio.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import lombok.Builder;
 import lombok.Data;
-import lombok.extern.jackson.Jacksonized;
-import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.gateio.config.converter.StringToCurrencyPairConverter;
+import lombok.EqualsAndHashCode;
 
 /**
- * One element of a batch order placement (POST /spot/batch_orders) or modification (POST
- * /spot/amend_batch_orders).
+ * One element of a batch order response (POST /spot/batch_orders or POST /spot/amend_batch_orders).
  *
- * <p>Batch operations succeed partially: each element carries its own outcome. Gate returns each
- * element as a flat object with the order fields at the response root next to {@link
- * #getSucceeded()}, {@link #getLabel()} and {@link #getMessage()}; there is no nested order
- * wrapper. {@link #getId()} holds the order id for placements, {@link #getOrderId()} the referenced
- * order id for amendments. Consumers must not treat a failed element as placed (no blind retry).
+ * <p>Gate's {@code BatchOrder} element is flat: the complete order (see {@link GateioOrder}) next
+ * to the outcome fields. {@code succeeded} marks the per-item result and {@code label}/{@code
+ * message} carry failure classification. {@link #getId()} is the placed order's id; {@link
+ * #getOrderId()} is only present for amendments and references the amended order. Extends {@link
+ * GateioOrder} so order details stay available under the same accessors as a plain order.
  */
 @Data
-@Builder
-@Jacksonized
-public class GateioBatchOrderResult {
-
-  @JsonProperty("id")
-  String id;
+@EqualsAndHashCode(callSuper = true)
+public class GateioBatchOrderResult extends GateioOrder {
 
   @JsonProperty("order_id")
   String orderId;
-
-  @JsonProperty("text")
-  String text;
-
-  @JsonProperty("amend_text")
-  String amendText;
 
   @JsonProperty("succeeded")
   Boolean succeeded;
@@ -43,11 +28,4 @@ public class GateioBatchOrderResult {
 
   @JsonProperty("message")
   String message;
-
-  @JsonProperty("currency_pair")
-  @JsonDeserialize(converter = StringToCurrencyPairConverter.class)
-  CurrencyPair currencyPair;
-
-  @JsonProperty("status")
-  String status;
 }

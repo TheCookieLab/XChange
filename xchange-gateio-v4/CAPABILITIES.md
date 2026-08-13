@@ -34,7 +34,8 @@ authenticated interface is not a dumping ground for unrelated product surfaces.
 | Account book | `GET /spot/account_book` | raw | bounded pagination (page/limit) |
 | Orders (list/get/cancel/create/amend/cancel-all) | `GET /spot/orders`, `GET /spot/orders/{order_id}`, `DELETE /spot/orders/{order_id}`, `POST /spot/orders`, `PATCH /spot/orders/{order_id}`, `DELETE /spot/orders` | raw | client `text` identity, partial-fill fields |
 | Batch and open-order management | `GET /spot/open_orders`, `POST /spot/batch_orders`, `POST /spot/cancel_batch_orders`, `POST /spot/countdown_cancel_all` | raw | Gate-specific partial-success and countdown semantics |
-| Market trades and candlesticks | `GET /spot/trades`, `GET /spot/candlesticks` | generic | lossless mapping into XChange core DTOs |
+| Market trades | `GET /spot/trades` | generic | lossless mapping into XChange core DTOs |
+| Candlesticks | `GET /spot/candlesticks` | raw | raw-only; no generic `CandleStickData` mapping |
 
 ## Margin + Unified Account
 
