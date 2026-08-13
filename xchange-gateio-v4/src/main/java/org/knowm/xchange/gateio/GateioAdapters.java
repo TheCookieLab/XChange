@@ -241,9 +241,18 @@ public class GateioAdapters {
   }
 
   public Trade toTrade(GateioTrade gateioTrade) {
+    OrderType tradeType;
+    if ("buy".equalsIgnoreCase(gateioTrade.getSide())) {
+      tradeType = OrderType.BID;
+    } else if ("sell".equalsIgnoreCase(gateioTrade.getSide())) {
+      tradeType = OrderType.ASK;
+    } else {
+      throw new IllegalArgumentException("Can't map trade side " + gateioTrade.getSide());
+    }
+
     Trade.TradeBuilder<?, ?> builder =
         Trade.builder()
-            .type("buy".equalsIgnoreCase(gateioTrade.getSide()) ? OrderType.BID : OrderType.ASK)
+            .type(tradeType)
             .originalAmount(gateioTrade.getAmount())
             .instrument(gateioTrade.getCurrencyPair())
             .price(gateioTrade.getPrice())
