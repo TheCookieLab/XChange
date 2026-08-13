@@ -1,0 +1,39 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "rows": [
+      {
+        "name": "BTC",
+        "coin": "BTC",
+        "remainAmount": "0.123456789",
+        "chains": [
+          {
+            "chain": "BTC",
+            "chainType": "Bitcoin",
+            "withdrawalFee": "0.0005",
+            "minDeposit": "0.000001",
+            "minWithdrawal": "0.0005",
+            "depositStatus": "OK",
+            "withdrawalStatus": "OK",
+            "confirmation": "2",
+            "contractAddress": ""
+          },
+          {
+            "chain": "BSC",
+            "chainType": "BEP20",
+            "withdrawalFee": "0.0001",
+            "minDeposit": "0.0001",
+            "minWithdrawal": "0.0001",
+            "depositStatus": "OK",
+            "withdrawalStatus": "MAINTENANCE",
+            "confirmation": "15",
+            "contractAddress": "0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c"
+          }
+        ]
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1672304894063
+}

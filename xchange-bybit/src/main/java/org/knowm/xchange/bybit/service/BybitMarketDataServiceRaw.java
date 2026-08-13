@@ -5,11 +5,15 @@ import java.util.ArrayList;
 import java.util.List;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.BybitExchange;
+import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistoryRaw;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
+import org.knowm.xchange.bybit.dto.marketdata.BybitOpenInterest;
 import org.knowm.xchange.bybit.dto.marketdata.BybitOrderbook;
+import org.knowm.xchange.bybit.dto.marketdata.BybitPublicTrade;
+import org.knowm.xchange.bybit.dto.marketdata.BybitServerTime;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentsInfo;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTicker;
@@ -93,6 +97,37 @@ public class BybitMarketDataServiceRaw extends BybitBaseService {
     throw new ExchangeException(
         "Bybit instruments-info pagination exceeded " + MAX_INSTRUMENT_PAGES + " pages for category "
             + category + "; aborting");
+  }
+
+  public BybitResult<BybitCategorizedPayload<BybitPublicTrade>> getPublicTrades(
+      BybitCategory category, String symbol, Integer limit) throws IOException {
+    BybitResult<BybitCategorizedPayload<BybitPublicTrade>> result =
+        bybit.getPublicTrades(category.getValue(), symbol, limit == null ? null : limit.toString());
+
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result;
+  }
+
+  public BybitServerTime getServerTime() throws IOException {
+    BybitResult<BybitServerTime> result = bybit.getServerTime();
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result.getResult();
+  }
+
+  public BybitOpenInterest getOpenInterest(
+      BybitCategory category, String symbol, String intervalTime, Integer limit)
+      throws IOException {
+    BybitResult<BybitOpenInterest> result =
+        bybit.getOpenInterest(
+            category.getValue(), symbol, intervalTime, limit == null ? null : limit.toString());
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result.getResult();
   }
 
   public BybitResult<BybitTickers<BybitTicker>> getTickers(BybitCategory category)

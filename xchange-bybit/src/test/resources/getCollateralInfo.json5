@@ -1,0 +1,23 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "list": [
+      {
+        "currency": "BTC",
+        "hourlyBorrowRate": "0.00000667",
+        "maxBorrowAmount": "10.5",
+        "borrowableAmount": "10.5",
+        "availableToBorrow": "7.25",
+        "borrowAmountUsd": "0",
+        "collateralRatio": "0.95",
+        "collateralRate": "1",
+        "maxCollateralAmount": "0.5",
+        "minCollateralAmount": "0.0001",
+        "status": "OK"
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1672304894063
+}

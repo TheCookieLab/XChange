@@ -20,6 +20,7 @@ import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitCoinWalletBalance;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKline;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
+import org.knowm.xchange.bybit.dto.marketdata.BybitPublicTrade;
 import org.knowm.xchange.bybit.dto.marketdata.candles.BybitCandleStickInterval;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.linear.BybitLinearInverseInstrumentInfo;
@@ -41,6 +42,7 @@ import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.IOrderFlags;
 import org.knowm.xchange.dto.Order.OrderStatus;
+import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Wallet;
@@ -410,6 +412,21 @@ public class BybitAdapters {
   public static Ticker adaptBybitOptionTicker(
       Instrument instrument, Date time, BybitOptionTicker bybitTicker) {
     return adaptBybitTickerBuilder(instrument, time, bybitTicker).build();
+  }
+
+  /**
+   * Maps a public trade to the generic XChange model. Wire strings convert with exact precision;
+   * the millisecond epoch string becomes the trade timestamp.
+   */
+  public static Trade adaptPublicTrade(BybitPublicTrade publicTrade, Instrument instrument) {
+    return Trade.builder()
+        .id(publicTrade.getExecId())
+        .instrument(instrument)
+        .originalAmount(new BigDecimal(publicTrade.getSize()))
+        .price(new BigDecimal(publicTrade.getPrice()))
+        .timestamp(new Date(Long.parseLong(publicTrade.getTime())))
+        .type("Buy".equals(publicTrade.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK)
+        .build();
   }
 
   private static Builder adaptBybitTickerBuilder(

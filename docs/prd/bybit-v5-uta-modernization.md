@@ -10,8 +10,8 @@
 
 * **Lifecycle:** Ready for implementation
 * **Blocking state:** None
-* **Active phase:** Phase 1 — capability/environment/pagination foundation
-* **Overall checklist progress:** 0/9 phases complete
+* **Active phase:** Phase 3 — market/account assets
+* **Overall checklist progress:** 3/9 phases complete
 
 ## Execution Status
 
@@ -108,9 +108,9 @@ Not needed for this feature.
 
 ## 9 Rollout plan & Implementation Checklist
 
-1. [ ] **Foundation:** inventory current V5 endpoints and channels; publish the capability/environment matrix; introduce validated configuration used by REST/public/private/trade transports. **Touchpoints:** `BybitExchange`, `BybitStreamingExchange`. **Verification:** exhaustive environment/config tests and compatibility fixtures.
-2. [ ] **Catalog/pagination:** make Spot/Linear/Inverse/Option discovery cursor-complete with repeated-cursor/no-progress/page-ceiling guards. **Touchpoint:** `BybitExchange.remoteInit()` plus existing raw instruments-info surface. **Verification:** multi-page and malformed-cursor fixtures.
-3. [ ] **Market/account assets:** complete public market data plus UTA wallet, account, fee, asset, transfer, collateral, borrowing/liability surfaces. **Verification:** exact-decimal DTO/adaptor and pagination fixtures.
+1. [x] **Foundation:** inventory current V5 endpoints and channels; publish the capability/environment matrix; introduce validated configuration used by REST/public/private/trade transports. **Touchpoints:** `BybitExchange`, `BybitStreamingExchange`. **Verification:** exhaustive environment/config tests and compatibility fixtures.
+2. [x] **Catalog/pagination:** make Spot/Linear/Inverse/Option discovery cursor-complete with repeated-cursor/no-progress/page-ceiling guards. **Touchpoint:** `BybitExchange.remoteInit()` plus existing raw instruments-info surface. **Verification:** multi-page and malformed-cursor fixtures.
+3. [x] **Market/account assets:** complete public market data plus UTA wallet, account, fee, asset, transfer, collateral, borrowing/liability surfaces. **Verification:** exact-decimal DTO/adaptor and pagination fixtures.
 4. [ ] **Positions/risk:** add category-aware position, leverage, margin-mode, risk-tier and PnL operations without discarding hedge/subposition identity. **Verification:** one-way/hedge and linear/inverse/option fixtures.
 5. [ ] **Orders/executions:** complete create/amend/cancel/batch/pre-check/open/history/fill/transaction-log coverage and `orderLinkId` reconciliation. **Verification:** order-form matrix, partial batch results, unknown-outcome tests.
 6. [ ] **Options/RFQ:** expose lossless raw Option/RFQ workflows; map only common lossless data to XChange core. **Verification:** multi-leg/quote identity fixtures and explicit unsupported cases.

@@ -25,6 +25,8 @@ import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trade;
+import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.knowm.xchange.instrument.Instrument;
@@ -142,6 +144,32 @@ public class BybitMarketDataService extends BybitMarketDataServiceRaw implements
   @Override
   public OrderBook getOrderBook(CurrencyPair currencyPair, Object... args) throws IOException {
     return getOrderBook((Instrument) currencyPair, args);
+  }
+
+  @Override
+  public Trades getTrades(Instrument instrument, Object... args) throws IOException {
+    Integer limit = null;
+    for (Object arg : args) {
+      if (arg instanceof Integer) {
+        limit = (Integer) arg;
+      }
+    }
+    List<Trade> trades =
+        getPublicTrades(
+                BybitAdapters.getCategory(instrument),
+                BybitAdapters.convertToBybitSymbol(instrument),
+                limit)
+            .getResult()
+            .getList()
+            .stream()
+            .map(publicTrade -> BybitAdapters.adaptPublicTrade(publicTrade, instrument))
+            .collect(Collectors.toList());
+    return new Trades(trades, Trades.TradeSortType.SortByTimestamp);
+  }
+
+  @Override
+  public Trades getTrades(CurrencyPair currencyPair, Object... args) throws IOException {
+    return getTrades((Instrument) currencyPair, args);
   }
 
   public static OrderBook convertOrderBook(BybitOrderbook ob, Instrument pair) {

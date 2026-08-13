@@ -1,0 +1,11 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "currency": "BTC",
+    "maxBorrowAmount": "10.5",
+    "borrowableAmount": "7.25"
+  },
+  "retExtInfo": {},
+  "time": 1672304894063
+}

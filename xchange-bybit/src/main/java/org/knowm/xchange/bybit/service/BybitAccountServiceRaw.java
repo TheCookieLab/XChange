@@ -8,9 +8,17 @@ import static org.knowm.xchange.bybit.BybitResilience.POSITION_SET_LEVERAGE_LINE
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import java.io.IOException;
 import org.knowm.xchange.bybit.BybitExchange;
+import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.BybitAccountInfoResponse;
+import org.knowm.xchange.bybit.dto.account.BybitBorrowHistory;
+import org.knowm.xchange.bybit.dto.account.BybitBorrowableAmount;
+import org.knowm.xchange.bybit.dto.account.BybitCoinInfos;
+import org.knowm.xchange.bybit.dto.account.BybitCollateralInfos;
+import org.knowm.xchange.bybit.dto.account.BybitTransactionLog;
+import org.knowm.xchange.bybit.dto.account.BybitTransferPayload;
+import org.knowm.xchange.bybit.dto.account.BybitTransferResponse;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
 import org.knowm.xchange.bybit.dto.account.feerates.BybitFeeRates;
 import org.knowm.xchange.bybit.dto.account.position.BybitSetLeveragePayload;
@@ -113,5 +121,105 @@ public class BybitAccountServiceRaw extends BybitBaseService {
       throw createBybitExceptionFromResult(accountInfo);
     }
     return accountInfo;
+  }
+
+  BybitResult<BybitCategorizedPayload<BybitTransactionLog>> getTransactionLog(
+      BybitAccountType accountType,
+      BybitCategory category,
+      String symbol,
+      String baseCoin,
+      String type,
+      String startTime,
+      String endTime,
+      String limit,
+      String cursor)
+      throws IOException {
+    BybitResult<BybitCategorizedPayload<BybitTransactionLog>> transactionLog =
+        bybitAuthenticated.getTransactionLog(
+            apiKey,
+            signatureCreator,
+            exchange.getTimeStampFactory(),
+            accountType.name(),
+            category == null ? null : category.getValue(),
+            symbol,
+            baseCoin,
+            type,
+            startTime,
+            endTime,
+            limit,
+            cursor);
+    if (!transactionLog.isSuccess()) {
+      throw createBybitExceptionFromResult(transactionLog);
+    }
+    return transactionLog;
+  }
+
+  BybitResult<BybitTransferResponse> interTransfer(
+      String transferId, String coin, String amount, String fromAccountType, String toAccountType)
+      throws IOException {
+    BybitTransferPayload payload =
+        BybitTransferPayload.builder()
+            .transferId(transferId)
+            .coin(coin)
+            .amount(amount)
+            .fromAccountType(fromAccountType)
+            .toAccountType(toAccountType)
+            .build();
+    BybitResult<BybitTransferResponse> transfer =
+        bybitAuthenticated.interTransfer(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
+    if (!transfer.isSuccess()) {
+      throw createBybitExceptionFromResult(transfer);
+    }
+    return transfer;
+  }
+
+  BybitResult<BybitCollateralInfos> getCollateralInfo(String currency) throws IOException {
+    BybitResult<BybitCollateralInfos> collateralInfo =
+        bybitAuthenticated.getCollateralInfo(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), currency);
+    if (!collateralInfo.isSuccess()) {
+      throw createBybitExceptionFromResult(collateralInfo);
+    }
+    return collateralInfo;
+  }
+
+  BybitResult<BybitCategorizedPayload<BybitBorrowHistory>> getBorrowHistory(
+      String currency, String startTime, String endTime, String limit, String cursor)
+      throws IOException {
+    BybitResult<BybitCategorizedPayload<BybitBorrowHistory>> borrowHistory =
+        bybitAuthenticated.getBorrowHistory(
+            apiKey,
+            signatureCreator,
+            exchange.getTimeStampFactory(),
+            currency,
+            startTime,
+            endTime,
+            limit,
+            cursor);
+    if (!borrowHistory.isSuccess()) {
+      throw createBybitExceptionFromResult(borrowHistory);
+    }
+    return borrowHistory;
+  }
+
+  BybitResult<BybitBorrowableAmount> getBorrowableAmount(String currency) throws IOException {
+    BybitResult<BybitBorrowableAmount> borrowableAmount =
+        bybitAuthenticated.getBorrowableAmount(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), currency);
+    if (!borrowableAmount.isSuccess()) {
+      throw createBybitExceptionFromResult(borrowableAmount);
+    }
+    return borrowableAmount;
+  }
+
+  BybitResult<BybitCoinInfos> getCoinInfo(String coin) throws IOException {
+    BybitResult<BybitCoinInfos> coinInfo =
+        bybitAuthenticated.getCoinInfo(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), coin);
+    if (!coinInfo.isSuccess()) {
+      throw createBybitExceptionFromResult(coinInfo);
+    }
+    return coinInfo;
   }
 }

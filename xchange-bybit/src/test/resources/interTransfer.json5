@@ -1,0 +1,10 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "transferId": "8888888888888888888",
+    "status": "SUCCESS"
+  },
+  "retExtInfo": {},
+  "time": 1672304894063
+}

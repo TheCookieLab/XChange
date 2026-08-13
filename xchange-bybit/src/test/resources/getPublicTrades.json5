@@ -1,0 +1,29 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "spot",
+    "list": [
+      {
+        "execId": "b6b5f5e4e8f0f2f4-0",
+        "symbol": "BTCUSDT",
+        "price": "33125.42",
+        "size": "0.011",
+        "side": "Buy",
+        "time": "1672304894063",
+        "isBlockTrade": false
+      },
+      {
+        "execId": "c7c6f6f5f9f1f3f5-1",
+        "symbol": "BTCUSDT",
+        "price": "33124.987654321",
+        "size": "0.0000001",
+        "side": "Sell",
+        "time": "1672304895063",
+        "isBlockTrade": true
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1672304894063
+}

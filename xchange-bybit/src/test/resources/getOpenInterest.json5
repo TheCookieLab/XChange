@@ -1,0 +1,12 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "linear",
+    "symbol": "BTCUSDT",
+    "openInterest": "190.937",
+    "timestamp": "1672300000000"
+  },
+  "retExtInfo": {},
+  "time": 1672300000000
+}

@@ -14,10 +14,20 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import javax.annotation.Nonnull;
+import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.BybitAccountInfoResponse;
+import org.knowm.xchange.bybit.dto.account.BybitBorrowableAmount;
+import org.knowm.xchange.bybit.dto.account.BybitBorrowHistory;
 import org.knowm.xchange.bybit.dto.account.BybitCancelAllOrdersPayload;
 import org.knowm.xchange.bybit.dto.account.BybitCancelAllOrdersResponse;
+import org.knowm.xchange.bybit.dto.account.BybitCoinInfo;
+import org.knowm.xchange.bybit.dto.account.BybitCoinInfos;
+import org.knowm.xchange.bybit.dto.account.BybitCollateralInfo;
+import org.knowm.xchange.bybit.dto.account.BybitCollateralInfos;
+import org.knowm.xchange.bybit.dto.account.BybitTransactionLog;
+import org.knowm.xchange.bybit.dto.account.BybitTransferPayload;
+import org.knowm.xchange.bybit.dto.account.BybitTransferResponse;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
 import org.knowm.xchange.bybit.dto.account.feerates.BybitFeeRates;
 import org.knowm.xchange.bybit.dto.account.position.BybitSetLeveragePayload;
@@ -175,5 +185,90 @@ public interface BybitAuthenticated {
       @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
       @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
       BybitCancelAllOrdersPayload payload)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/account/transaction-log">API</a>
+   */
+  @GET
+  @Path("/account/transaction-log")
+  BybitResult<BybitCategorizedPayload<BybitTransactionLog>> getTransactionLog(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("accountType") String accountType,
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("baseCoin") String baseCoin,
+      @QueryParam("type") String type,
+      @QueryParam("startTime") String startTime,
+      @QueryParam("endTime") String endTime,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/asset/inter-transfer">API</a>
+   */
+  @POST
+  @Path("/asset/transfer/inter-transfer")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitResult<BybitTransferResponse> interTransfer(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitTransferPayload payload)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/account/collateral-info">API</a>
+   */
+  @GET
+  @Path("/account/collateral-info")
+  BybitResult<BybitCollateralInfos> getCollateralInfo(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("currency") String currency)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/account/borrow-history">API</a>
+   */
+  @GET
+  @Path("/account/borrow-history")
+  BybitResult<BybitCategorizedPayload<BybitBorrowHistory>> getBorrowHistory(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("currency") String currency,
+      @QueryParam("startTime") String startTime,
+      @QueryParam("endTime") String endTime,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/account/borrowable-amount">API</a>
+   */
+  @GET
+  @Path("/account/borrowable-amount")
+  BybitResult<BybitBorrowableAmount> getBorrowableAmount(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("currency") String currency)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/asset/coin-info">API</a>
+   */
+  @GET
+  @Path("/asset/coin/query-info")
+  BybitResult<BybitCoinInfos> getCoinInfo(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("coin") String coin)
       throws IOException, BybitException;
 }

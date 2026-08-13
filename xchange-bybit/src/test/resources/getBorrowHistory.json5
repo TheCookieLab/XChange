@@ -1,0 +1,22 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "nextPageCursor": "",
+    "list": [
+      {
+        "currency": "BTC",
+        "createdTime": "1672304894063",
+        "borrowCost": "0.00000001",
+        "borrowAmount": "0.5",
+        "unrealisedLoss": "0.00000000",
+        "repaidAmount": "0.25",
+        "interestAmount": "0.00000001",
+        "borrowOrderId": "9999999999999999999",
+        "borrowType": "collateral"
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1672304894063
+}
