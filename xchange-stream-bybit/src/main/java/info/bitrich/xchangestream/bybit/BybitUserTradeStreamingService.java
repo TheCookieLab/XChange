@@ -164,12 +164,12 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
    */
   @Override
   public void resubscribeChannels() {
-    java.util.Map<String, Subscription> pending = new java.util.HashMap<>(channels);
+    java.util.Map<String, Subscription> pending =
+        new java.util.concurrent.ConcurrentHashMap<>(channels);
+    ExchangeException resetError =
+        new ExchangeException("Order-entry connection reset; request outcome unknown, reconcile via REST");
     for (java.util.Map.Entry<String, Subscription> entry : pending.entrySet()) {
-      handleChannelError(
-          entry.getKey(),
-          new ExchangeException(
-              "Order-entry connection reset; request outcome unknown, reconcile via REST"));
+      handleChannelError(entry.getKey(), resetError);
     }
     channels.clear();
     isAuthorized = false;

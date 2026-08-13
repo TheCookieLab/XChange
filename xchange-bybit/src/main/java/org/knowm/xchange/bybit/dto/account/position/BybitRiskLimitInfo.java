@@ -42,15 +42,4 @@ public class BybitRiskLimitInfo {
   @JsonProperty("marginMode")
   String marginMode;
 
-  /** Wrapper of the {@code list} envelope. */
-  @Builder
-  @Jacksonized
-  @Value
-  public static class BybitRiskLimitInfos {
-    @JsonProperty("list")
-    List<BybitRiskLimitInfo> list;
-
-    @JsonProperty("nextPageCursor")
-    String nextPageCursor;
-  }
 }

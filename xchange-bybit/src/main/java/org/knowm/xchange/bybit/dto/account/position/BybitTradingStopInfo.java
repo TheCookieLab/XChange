@@ -1,7 +1,6 @@
 package org.knowm.xchange.bybit.dto.account.position;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
@@ -51,15 +50,4 @@ public class BybitTradingStopInfo {
   @JsonProperty("updatedTime")
   String updatedTime;
 
-  /** Wrapper of the {@code list} envelope. */
-  @Builder
-  @Jacksonized
-  @Value
-  public static class BybitTradingStopInfos {
-    @JsonProperty("list")
-    List<BybitTradingStopInfo> list;
-
-    @JsonProperty("nextPageCursor")
-    String nextPageCursor;
-  }
 }
