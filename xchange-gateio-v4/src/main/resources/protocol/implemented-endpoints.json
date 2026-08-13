@@ -223,8 +223,7 @@
   ],
   "summary": "Withdraw",
   "extra": false
- }
- ,
+ },
  {
   "method": "GET",
   "path": "/spot/trades",
@@ -240,7 +239,7 @@
   "method": "GET",
   "path": "/spot/candlesticks",
   "domain": "spot",
-  "support": "generic",
+  "support": "raw",
   "required_params": [
    "currency_pair"
   ],

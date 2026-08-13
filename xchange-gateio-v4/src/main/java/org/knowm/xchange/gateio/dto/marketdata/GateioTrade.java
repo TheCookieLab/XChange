@@ -64,7 +64,7 @@ public class GateioTrade {
   String amendText;
 
   @JsonProperty("sequence_id")
-  Long sequenceId;
+  String sequenceId;
 
   @JsonProperty("text")
   String text;

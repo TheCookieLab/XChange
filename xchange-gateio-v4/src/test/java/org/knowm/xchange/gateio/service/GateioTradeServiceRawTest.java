@@ -236,6 +236,10 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
     GateioTradeHistoryParams params =
         GateioTradeHistoryParams.builder().currencyPair(CurrencyPair.BTC_USDT).build();
 
+    // the class-level server keeps one request journal across tests; reset it
+    // so the exact-count verifies below are immune to JUnit method ordering
+    wireMockServer().resetRequests();
+
     // a ceiling above the page size must not shrink the limit mid-iteration:
     // page-number addressing is relative to the limit, so a variable limit
     // would duplicate records and skip history
