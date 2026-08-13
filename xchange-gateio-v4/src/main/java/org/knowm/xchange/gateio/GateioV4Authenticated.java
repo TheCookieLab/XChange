@@ -120,6 +120,7 @@ public interface GateioV4Authenticated {
       GateioOrder gateioOrder)
       throws IOException, GateioException;
 
+  /** Lists all open spot orders, optionally scoped by page, page size, and account. */
   @GET
   @Path("spot/open_orders")
   List<GateioOpenOrders> getOpenOrders(
@@ -131,6 +132,7 @@ public interface GateioV4Authenticated {
       @QueryParam("account") String account)
       throws IOException, GateioException;
 
+  /** Amends an existing spot order by replacing the supplied mutable fields. */
   @PATCH
   @Path("spot/orders/{order_id}")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -144,6 +146,7 @@ public interface GateioV4Authenticated {
       GateioAmendOrderRequest amendRequest)
       throws IOException, GateioException;
 
+  /** Cancels all matching open spot orders, optionally filtered by pair, side, and account. */
   @DELETE
   @Path("spot/orders")
   List<GateioOrder> cancelAllOrders(
@@ -156,6 +159,7 @@ public interface GateioV4Authenticated {
       @QueryParam("action_mode") String actionMode)
       throws IOException, GateioException;
 
+  /** Creates multiple spot orders in one request and returns per-order outcomes. */
   @POST
   @Path("spot/batch_orders")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -166,6 +170,7 @@ public interface GateioV4Authenticated {
       List<GateioOrder> gateioOrders)
       throws IOException, GateioException;
 
+  /** Cancels multiple spot orders in one request and returns per-order outcomes. */
   @POST
   @Path("spot/cancel_batch_orders")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -176,6 +181,7 @@ public interface GateioV4Authenticated {
       List<GateioCancelBatchRequest> cancelRequests)
       throws IOException, GateioException;
 
+  /** Starts or updates the spot countdown that cancels matching open orders. */
   @POST
   @Path("spot/countdown_cancel_all")
   @Consumes(MediaType.APPLICATION_JSON)
