@@ -10,8 +10,8 @@
 
 * **Lifecycle:** Ready for implementation
 * **Blocking state:** None
-* **Active phase:** Phase 7 — public streaming recovery
-* **Overall checklist progress:** 6/9 phases complete
+* **Active phase:** Phase 8 — private streaming and resubscribe
+* **Overall checklist progress:** 7/9 phases complete
 
 ## Execution Status
 

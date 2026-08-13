@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import info.bitrich.xchangestream.bybit.dto.BybitResponse;
+import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderBookGap;
 import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderbook;
 import info.bitrich.xchangestream.bybit.dto.marketdata.BybitPublicOrder;
 import info.bitrich.xchangestream.bybit.dto.trade.BybitTrade;
@@ -43,6 +44,9 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   private final Map<String, OrderBook> orderBookMap = new HashMap<>();
   private final Map<Instrument, PublishSubject<List<OrderBookUpdate>>>
       orderBookUpdatesSubscriptions;
+
+  /** Dedicated continuity-gap signals for order-book streams (see {@link BybitOrderBookGap}). */
+  private final PublishSubject<BybitOrderBookGap> orderBookGapSubject = PublishSubject.create();
 
   private final Map<String, FundingRate> fundingRateMap = new HashMap<>();
   private final Map<String, BybitLinearInverseTicker> tickerSnapshotMap = new HashMap<>();
@@ -91,27 +95,28 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                       String type = bybitOrderBooks.getDataType();
                       if (type.equalsIgnoreCase("snapshot")) {
                         orderBookUpdateIdPrev.get(finalI).set(bybitOrderBooks.getData().getU());
-                        // snapshot only for first stream
-                        if (finalI == 0) {
-                          OrderBook orderBook =
-                              BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
-                          orderBookMap.put(orderBookMapId, orderBook);
-                          return orderBook;
-                        }
+                        // Every depth's snapshot is a complete book; rebuild regardless of which
+                        // depth delivered it so a resubscribed shallow stream cannot strand the
+                        // shared book in a removed state.
+                        OrderBook orderBook =
+                            BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
+                        orderBookMap.put(orderBookMapId, orderBook);
+                        return orderBook;
                       } else if (type.equalsIgnoreCase("delta")) {
                         return applyOrderBookDeltaSnapshot(
                             orderBookMapId,
                             instrument,
+                            channelUniqueId,
                             bybitOrderBooks,
                             orderBookUpdateIdPrev.get(finalI));
                       }
                       return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
                     } catch (IllegalStateException e) {
                       LOG.warn(
-                          "Resubscribing {} channel after adapter error {}",
-                          instrument,
+                          "Resubscribing {} channel after order book recovery {}",
+                          channelUniqueId,
                           e.getMessage());
-                      // Resubscribe to the channel, triggering a new snapshot
+                      // Rebuild from a fresh snapshot: drop the book and re-subscribe the channel.
                       orderBookMap.remove(orderBookMapId);
                       if (streamingService.isSocketOpen()) {
                         streamingService.sendMessage(
@@ -131,12 +136,22 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   private OrderBook applyOrderBookDeltaSnapshot(
       String orderBookMapId,
       Instrument instrument,
+      String channelUniqueId,
       BybitOrderbook bybitOrderBookUpdate,
       AtomicLong orderBookUpdateIdPrev) {
     OrderBook orderBook = orderBookMap.getOrDefault(orderBookMapId, null);
     if (orderBook == null) {
+      // Delta without a provable snapshot base: continuity is unprovable, surface the gap and
+      // force a fresh snapshot rebuild instead of silently dropping the update.
       LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
-      return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
+      orderBookGapSubject.onNext(
+          new BybitOrderBookGap(
+              channelUniqueId,
+              orderBookUpdateIdPrev.get(),
+              bybitOrderBookUpdate.getData().getU(),
+              "missing-snapshot"));
+      throw new IllegalStateException(
+          "orderBookUpdate without snapshot, channel " + channelUniqueId);
     }
     if (orderBookUpdateIdPrev.incrementAndGet() == bybitOrderBookUpdate.getData().getU()) {
       LOG.debug(
@@ -161,12 +176,23 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
       }
       return orderBook;
     } else {
+      long expected = orderBookUpdateIdPrev.get();
+      long actual = bybitOrderBookUpdate.getData().getU();
       LOG.error(
           "orderBookUpdate id sequence failed, expected {}, in fact {}",
-          orderBookUpdateIdPrev.get(),
-          bybitOrderBookUpdate.getData().getU());
+          expected,
+          actual);
+      orderBookGapSubject.onNext(new BybitOrderBookGap(channelUniqueId, expected, actual, "sequence"));
       throw new IllegalStateException("orderBookUpdate id sequence failed");
     }
+  }
+
+  /**
+   * Dedicated order-book continuity-gap signals. A gap is emitted before the affected channel is
+   * resubscribed and rebuilt from a fresh snapshot; the stream itself recovers automatically.
+   */
+  public Observable<BybitOrderBookGap> getOrderBookGapEvents() {
+    return orderBookGapSubject;
   }
 
   @Override

@@ -29,7 +29,9 @@ public class BybitStreamingService extends JsonNettyStreamingService {
 
   private final Logger LOG = LoggerFactory.getLogger(BybitStreamingService.class);
   public final String exchange_type;
-  private final Observable<Long> pingPongSrc = Observable.interval(15, 20, TimeUnit.SECONDS);
+  // Bybit closes connections that stay silent for 20s; a fixed 15s cadence
+  // keeps the heartbeat inside the limit even under scheduling jitter.
+  private final Observable<Long> pingPongSrc = Observable.interval(15, 15, TimeUnit.SECONDS);
   private Disposable pingPongSubscription;
   private final ExchangeSpecification spec;
   @Setter private WebSocketClientHandler.WebSocketMessageHandler channelInactiveHandler = null;
