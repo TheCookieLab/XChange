@@ -41,7 +41,9 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(BybitUserDataStreamingService.class);
   private Disposable pingPongSubscription;
-  private final Observable<Long> pingPongSrc = Observable.interval(15, 20, TimeUnit.SECONDS);
+  // Bybit closes connections that stay silent for 20s; a fixed 15s cadence keeps the
+  // heartbeat inside the limit even under scheduling jitter.
+  private final Observable<Long> pingPongSrc = Observable.interval(15, 15, TimeUnit.SECONDS);
   private final ExchangeSpecification spec;
   @Getter private boolean isAuthorized = false;
   @Setter private WebSocketClientHandler.WebSocketMessageHandler channelInactiveHandler = null;
@@ -73,6 +75,9 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
 
   private void login() {
     String key = spec.getApiKey();
+    if (key == null || key.isEmpty() || spec.getSecretKey() == null || spec.getSecretKey().isEmpty()) {
+      throw new ExchangeException("API key and secret are required for private user-data streams");
+    }
     long expires = Instant.now().toEpochMilli() + 10000;
     String _val = "GET/realtime" + expires;
     try {
@@ -181,7 +186,14 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
 
   @Override
   public void resubscribeChannels() {
-    // need to authorize first
+    if (channels.isEmpty()) {
+      return;
+    }
+    // A reconnected socket has no server-side auth state and private subscriptions are
+    // rejected before auth. Re-authenticate first; the auth ack re-subscribes every
+    // channel (resubscribeChannelsAfterLogin). Never replay raw subscribe messages here.
+    isAuthorized = false;
+    login();
   }
 
   private void resubscribeChannelsAfterLogin() {

@@ -54,7 +54,9 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
   private static final Logger LOG = LoggerFactory.getLogger(BybitUserTradeStreamingService.class);
   private final ExchangeSpecification spec;
   private Disposable pingPongSubscription;
-  private final Observable<Long> pingPongSrc = Observable.interval(15, 20, TimeUnit.SECONDS);
+  // Bybit closes connections that stay silent for 20s; a fixed 15s cadence keeps the
+  // heartbeat inside the limit even under scheduling jitter.
+  private final Observable<Long> pingPongSrc = Observable.interval(15, 15, TimeUnit.SECONDS);
   public static final String ORDER_CREATE = "order.create";
   public static final String BATCH_ORDER_CREATE = "order.create-batch";
   public static final String ORDER_CHANGE = "order.amend";
@@ -63,6 +65,8 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
   public static final String BATCH_ORDER_CANCEL = "order.cancel-batch";
   @Getter private boolean isAuthorized = false;
   private String connId;
+  /** Connection generation: bumped on every reconnect so stale responses can be dropped. */
+  private final java.util.concurrent.atomic.AtomicLong generation = new java.util.concurrent.atomic.AtomicLong();
 
   public BybitUserTradeStreamingService(String apiUrl, ExchangeSpecification spec) {
     super(
@@ -91,6 +95,9 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
 
   private void login() {
     String key = spec.getApiKey();
+    if (key == null || key.isEmpty() || spec.getSecretKey() == null || spec.getSecretKey().isEmpty()) {
+      throw new ExchangeException("API key and secret are required for the order-entry stream");
+    }
     long expires = Instant.now().toEpochMilli() + 10000;
     String _val = "GET/realtime" + expires;
     try {
@@ -141,7 +148,35 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
           }
       }
     }
+    // Generation-scoped correlation: order-entry responses carry the connection id of the
+    // socket that processed them. A response from a previous generation (delivered after a
+    // reconnect) must not satisfy a pending request of the current generation.
+    if (jsonNode.has("connId") && !connId.equals(jsonNode.get("connId").asText())) {
+      LOG.warn("Dropping stale order-entry response from a previous connection: {}", message);
+      return;
+    }
     handleMessage(jsonNode);
+  }
+
+  /**
+   * A reconnected order-entry socket must never replay pending requests (a replay would
+   * duplicate live orders). The outcome of every in-flight request is unknown after the
+   * transport reset, so pending requests fail with an explicit error for REST reconciliation,
+   * and the socket re-authenticates for subsequent requests.
+   */
+  @Override
+  public void resubscribeChannels() {
+    generation.incrementAndGet();
+    java.util.Map<String, Subscription> pending = new java.util.HashMap<>(channels);
+    for (java.util.Map.Entry<String, Subscription> entry : pending.entrySet()) {
+      handleChannelError(
+          entry.getKey(),
+          new ExchangeException(
+              "Order-entry connection reset; request outcome unknown, reconcile via REST"));
+    }
+    channels.clear();
+    isAuthorized = false;
+    login();
   }
 
   @Override
