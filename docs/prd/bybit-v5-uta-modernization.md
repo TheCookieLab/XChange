@@ -10,8 +10,8 @@
 
 * **Lifecycle:** Ready for implementation
 * **Blocking state:** None
-* **Active phase:** Phase 9 — compatibility/ship
-* **Overall checklist progress:** 8/9 phases complete
+* **Active phase:** Phase 9 — compatibility/ship (complete)
+* **Overall checklist progress:** 9/9 phases complete
 
 ## Execution Status
 
@@ -116,7 +116,7 @@ Not needed for this feature.
 6. [x] **Options/RFQ:** expose lossless raw Option/RFQ workflows; map only common lossless data to XChange core. **Verification:** multi-leg/quote identity fixtures and explicit unsupported cases. Note: V5 options are single-leg; OTC RFQ trading (`/v5/otc/rfq/*`) is deprecated/absent from current V5 docs and explicitly unsupported (guarded by test).
 7. [x] **Public streaming recovery:** implement category-aware subscription identity, heartbeat, sequence validation, snapshot rebuild, and gap signaling. **Verification:** deterministic snapshot/delta/gap/reconnect tests.
 8. [x] **Private/trade lifecycle:** add generation-scoped request correlation, auth/reauth, bounded reconnect, resubscription of the trade socket, private-event deduplication, and null-safe lifecycle observables. **Touchpoint:** `BybitStreamingExchange`. **Verification:** stale-generation, reconnect, resubscribe and no-credential tests.
-9. [ ] **Compatibility/ship:** document migration and capability matrix, run demo/testnet/read-only smoke tests where stable, then targeted and root build gates. **Verification:** `mvn -B -pl xchange-bybit,xchange-stream-bybit -am test`, repository quality checks, root `mvn -B clean install`.
+9. [x] **Compatibility/ship:** document migration and capability matrix, run demo/testnet/read-only smoke tests where stable, then targeted and root build gates. **Verification:** `mvn -B -pl xchange-bybit,xchange-stream-bybit -am test` (bybit 87 + streaming 33 green), repository quality checks (PMD: zero new violations; 78 pre-existing baseline at base `a2155b1117`), root `mvn -B clean install` (full reactor, 649 test-run lines, BUILD SUCCESS), review-tourney adversarial review completed (self-fallback mode; resolver roster unavailable in harness).
 
 ## 10 Risks, dependencies, and edge cases
 
