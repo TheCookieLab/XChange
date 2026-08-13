@@ -40,6 +40,15 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
+            <!-- Module-local: rescu declares httpclient optional; required here to
+                 drive the Apache transport for the PATCH amendOrder endpoint
+                 (HttpURLConnection does not support PATCH). -->
+        </dependency>
+
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>

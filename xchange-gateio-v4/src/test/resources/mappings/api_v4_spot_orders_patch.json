@@ -1,0 +1,15 @@
+{
+  "id": "e89cdc7f-d75e-4f10-9854-015becb2265a",
+  "name": "api_v4_spot_orders_patch.json",
+  "request": {
+    "url": "/api/v4/spot/orders/1?currency_pair=BTC_USDT",
+    "method": "PATCH"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_orders_patch.json"
+  },
+  "uuid": "e89cdc7f-d75e-4f10-9854-015becb2265a",
+  "persistent": true,
+  "insertionIndex": 0
+}

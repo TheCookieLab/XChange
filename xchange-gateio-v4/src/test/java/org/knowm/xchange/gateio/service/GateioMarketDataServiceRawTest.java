@@ -20,6 +20,8 @@ import org.knowm.xchange.gateio.dto.marketdata.GateioCurrencyInfo.Chain;
 import org.knowm.xchange.gateio.dto.marketdata.GateioCurrencyPairDetails;
 import org.knowm.xchange.gateio.dto.marketdata.GateioOrderBook;
 import org.knowm.xchange.gateio.dto.marketdata.GateioOrderBook.PriceSizeEntry;
+import org.knowm.xchange.gateio.dto.marketdata.GateioCandleStick;
+import org.knowm.xchange.gateio.dto.marketdata.GateioTrade;
 
 public class GateioMarketDataServiceRawTest extends GateioExchangeWiremock {
 
@@ -162,5 +164,61 @@ public class GateioMarketDataServiceRawTest extends GateioExchangeWiremock {
             .build();
 
     assertThat(actualChz).isEqualTo(expectedChz);
+  }
+
+  @Test
+  void getCurrencyInfo_valid() throws IOException {
+    GateioCurrencyInfo actual = gateioMarketDataServiceRaw.getGateioCurrencyInfo(Currency.BTC);
+
+    assertThat(actual.getCurrency()).isEqualTo(Currency.BTC);
+    assertThat(actual.getDelisted()).isFalse();
+    assertThat(actual.getMainChain()).isEqualTo("BTC");
+    assertThat(actual.getChains()).hasSize(2);
+    assertThat(actual.getChains().get(1).getName()).isEqualTo("BSC");
+  }
+
+  @Test
+  void getTrades_valid() throws IOException {
+    List<GateioTrade> actual =
+        gateioMarketDataServiceRaw.getGateioTrades(CurrencyPair.BTC_USDT, null, null, null, null);
+
+    assertThat(actual).hasSize(2);
+
+    GateioTrade maker = actual.get(0);
+    assertThat(maker.getId()).isEqualTo("6068816979");
+    assertThat(maker.getSide()).isEqualTo("buy");
+    assertThat(maker.getRole()).isEqualTo("maker");
+    assertThat(maker.getAmount()).isEqualByComparingTo("0.00003");
+    assertThat(maker.getPrice()).isEqualByComparingTo("29454.6");
+    assertThat(maker.getOrderId()).isEqualTo("381068734893");
+    assertThat(maker.getCreateTimeMs()).isEqualByComparingTo("1691702924010.071000");
+
+    GateioTrade taker = actual.get(1);
+    assertThat(taker.getSide()).isEqualTo("sell");
+    assertThat(taker.getRole()).isEqualTo("taker");
+    assertThat(taker.getCurrencyPair()).isEqualTo(CurrencyPair.BTC_USDT);
+  }
+
+  @Test
+  void getCandlesticks_valid() throws IOException {
+    List<GateioCandleStick> actual =
+        gateioMarketDataServiceRaw.getGateioCandlesticks(
+            CurrencyPair.BTC_USDT, "1h", null, null, null);
+
+    assertThat(actual).hasSize(2);
+
+    GateioCandleStick first = actual.get(0);
+    assertThat(first.getTime()).isEqualTo(1691700000L);
+    assertThat(first.getOpen()).isEqualByComparingTo("29450.0");
+    assertThat(first.getClose()).isEqualByComparingTo("29454.6");
+    assertThat(first.getHigh()).isEqualByComparingTo("29460.0");
+    assertThat(first.getLow()).isEqualByComparingTo("29440.0");
+    assertThat(first.getQuoteVolume()).isEqualByComparingTo("12345.67");
+    assertThat(first.getBaseVolume()).isEqualByComparingTo("0.42");
+    assertThat(first.isClosed()).isTrue();
+
+    GateioCandleStick second = actual.get(1);
+    assertThat(second.getTime()).isEqualTo(1691703600L);
+    assertThat(second.isClosed()).isFalse();
   }
 }

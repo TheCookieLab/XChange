@@ -5,12 +5,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.gateio.GateioExchangeWiremock;
+import org.knowm.xchange.gateio.dto.GateioContinuation;
+import org.knowm.xchange.gateio.dto.GateioIterationStop;
+import org.knowm.xchange.gateio.dto.GateioPage;
+import org.knowm.xchange.gateio.dto.GateioPageCursor;
+import org.knowm.xchange.gateio.dto.account.GateioAmendOrderRequest;
+import org.knowm.xchange.gateio.dto.account.GateioBatchOrderResult;
+import org.knowm.xchange.gateio.dto.account.GateioCancelBatchRequest;
+import org.knowm.xchange.gateio.dto.account.GateioCancelOrderResult;
+import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelRequest;
+import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelResult;
 import org.knowm.xchange.gateio.dto.account.GateioOrder;
+import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
+import org.knowm.xchange.gateio.dto.trade.Role;
+import org.knowm.xchange.gateio.service.params.GateioTradeHistoryParams;
+import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamCurrencyPair;
 
 class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
@@ -119,5 +134,179 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
         gateioTradeServiceRaw.getOrder("342251629898", CurrencyPair.BTC_USDT);
 
     assertThat(actualResponse).usingRecursiveComparison().isEqualTo(sampleMarketOrder);
+  }
+
+  @Test
+  void getUserTrades_default_bounded() throws IOException {
+    List<GateioUserTradeRaw> actual =
+        gateioTradeServiceRaw.getGateioUserTrades(
+            new DefaultTradeHistoryParamCurrencyPair(CurrencyPair.BTC_USDT));
+
+    // The default ceiling (1000) is reached on the first full page, so the
+    // convenience accessor stops at the ceiling with a resumable cursor.
+    assertThat(actual).hasSize(1000);
+    assertThat(actual.get(0).getId()).isEqualTo(6068816979L);
+    assertThat(actual.get(0).getCurrencyPair()).isEqualTo(CurrencyPair.BTC_USDT);
+    assertThat(actual.get(0).getSide()).isEqualTo(OrderType.BID);
+    assertThat(actual.get(0).getRole()).isEqualTo(Role.MAKER);
+
+    GateioContinuation<GateioUserTradeRaw> capped =
+        gateioTradeServiceRaw.getGateioUserTradesBounded(
+            new DefaultTradeHistoryParamCurrencyPair(CurrencyPair.BTC_USDT),
+            GateioTradeServiceRaw.DEFAULT_HISTORY_CEILING);
+    assertThat(capped.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
+    assertThat(capped.getItems()).hasSize(1000);
+    assertThat(capped.getNextCursor().getPage()).isEqualTo(2);
+  }
+
+  @Test
+  void getUserTrades_page_and_resume() throws IOException {
+    GateioTradeHistoryParams params =
+        GateioTradeHistoryParams.builder()
+            .currencyPair(CurrencyPair.BTC_USDT)
+            .pageLength(1000)
+            .pageNumber(1)
+            .build();
+
+    GateioPage<GateioUserTradeRaw> page =
+        gateioTradeServiceRaw.getGateioUserTradesPage(null, params);
+
+    assertThat(page.getItems()).hasSize(1000);
+    assertThat(page.getItems().get(0).getId()).isEqualTo(6068816979L);
+    assertThat(page.hasNext()).isTrue();
+    assertThat(page.getNextCursor().getPage()).isEqualTo(2);
+
+    GateioPage<GateioUserTradeRaw> secondPage =
+        gateioTradeServiceRaw.getGateioUserTradesPage(page.getNextCursor(), params);
+    assertThat(secondPage.getItems()).hasSize(1);
+    assertThat(secondPage.getItems().get(0).getId()).isEqualTo(6068789000L);
+    assertThat(secondPage.hasNext()).isFalse();
+  }
+
+  @Test
+  void getUserTrades_bounded_maxResults_resumable() throws IOException {
+    GateioTradeHistoryParams params =
+        GateioTradeHistoryParams.builder().currencyPair(CurrencyPair.BTC_USDT).build();
+
+    GateioContinuation<GateioUserTradeRaw> bounded =
+        gateioTradeServiceRaw.getGateioUserTradesBounded(params, 1);
+
+    assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
+    assertThat(bounded.getItems()).hasSize(1000);
+    assertThat(bounded.getNextCursor().isPageBased()).isTrue();
+    assertThat(bounded.getNextCursor().getPage()).isEqualTo(2);
+
+    GateioPage<GateioUserTradeRaw> resumed =
+        gateioTradeServiceRaw.getGateioUserTradesPage(bounded.getNextCursor(), params);
+    assertThat(resumed.getItems()).hasSize(1);
+    assertThat(resumed.getItems().get(0).getId()).isEqualTo(6068789000L);
+    assertThat(resumed.hasNext()).isFalse();
+  }
+
+  @Test
+  void getOpenOrdersPage_pagination() throws IOException {
+    GateioPage<GateioOrder> firstPage = gateioTradeServiceRaw.getOpenOrdersPage(null, 2);
+
+    assertThat(firstPage.getItems()).hasSize(2);
+    assertThat(firstPage.hasNext()).isTrue();
+    assertThat(firstPage.getNextCursor().getPage()).isEqualTo(2);
+
+    GateioPage<GateioOrder> secondPage =
+        gateioTradeServiceRaw.getOpenOrdersPage(firstPage.getNextCursor(), 2);
+    assertThat(secondPage.getItems()).hasSize(1);
+    assertThat(secondPage.getItems().get(0).getId()).isEqualTo("745504484394");
+    assertThat(secondPage.hasNext()).isFalse();
+  }
+
+  @Test
+  void getOpenOrders_bounded_completed() throws IOException {
+    GateioContinuation<GateioOrder> bounded = gateioTradeServiceRaw.getOpenOrdersBounded(2, 3);
+
+    assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.COMPLETED);
+    assertThat(bounded.getItems()).hasSize(3);
+    assertThat(bounded.getNextCursor()).isNull();
+    assertThat(bounded.getItems().get(0).getId()).isEqualTo("745504484392");
+    assertThat(bounded.getItems().get(2).getId()).isEqualTo("745504484394");
+  }
+
+  @Test
+  void getOpenOrders_bounded_maxResults() throws IOException {
+    GateioContinuation<GateioOrder> bounded = gateioTradeServiceRaw.getOpenOrdersBounded(2, 1);
+
+    assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
+    assertThat(bounded.getItems()).hasSize(2);
+    assertThat(bounded.getNextCursor().getPage()).isEqualTo(2);
+  }
+
+  @Test
+  void amendOrder_valid() throws IOException {
+    GateioOrder actual =
+        gateioTradeServiceRaw.amendOrder(
+            "1",
+            CurrencyPair.BTC_USDT,
+            GateioAmendOrderRequest.builder().amount(new BigDecimal("0.0002")).build());
+
+    assertThat(actual.getId()).isEqualTo("1");
+    assertThat(actual.getAmount()).isEqualByComparingTo("0.0002");
+    assertThat(actual.getPrice()).isEqualByComparingTo("80000.5");
+    assertThat(actual.getStatus()).isEqualTo("open");
+  }
+
+  @Test
+  void cancelAllOrders_valid() throws IOException {
+    List<GateioOrder> actual = gateioTradeServiceRaw.cancelAllOrders(CurrencyPair.BTC_USDT);
+
+    assertThat(actual).hasSize(2);
+    assertThat(actual.get(0).getId()).isEqualTo("376835979523");
+    assertThat(actual.get(0).getStatus()).isEqualTo("cancelled");
+    assertThat(actual.get(1).getId()).isEqualTo("376835979524");
+  }
+
+  @Test
+  void createBatchOrders_valid() throws IOException {
+    List<GateioBatchOrderResult> actual =
+        gateioTradeServiceRaw.createBatchOrders(List.of(sampleMarketOrder));
+
+    assertThat(actual).hasSize(2);
+    assertThat(actual.get(0).getSucceeded()).isTrue();
+    assertThat(actual.get(0).getId()).isEqualTo("745504484399");
+    assertThat(actual.get(0).getOrder().getId()).isEqualTo("745504484392");
+    assertThat(actual.get(1).getSucceeded()).isFalse();
+    assertThat(actual.get(1).getLabel()).isEqualTo("ORDER_NOT_FOUND");
+    assertThat(actual.get(1).getMessage()).isEqualTo("order not found");
+  }
+
+  @Test
+  void cancelBatchOrders_valid() throws IOException {
+    List<GateioCancelOrderResult> actual =
+        gateioTradeServiceRaw.cancelBatchOrders(
+            List.of(
+                GateioCancelBatchRequest.builder()
+                    .currencyPair(CurrencyPair.BTC_USDT)
+                    .orderId("376835979523")
+                    .build(),
+                GateioCancelBatchRequest.builder()
+                    .currencyPair(CurrencyPair.BTC_USDT)
+                    .orderId("376835979524")
+                    .build()));
+
+    assertThat(actual).hasSize(2);
+    assertThat(actual.get(0).getSucceeded()).isTrue();
+    assertThat(actual.get(0).getId()).isEqualTo("376835979523");
+    assertThat(actual.get(1).getSucceeded()).isFalse();
+    assertThat(actual.get(1).getLabel()).isEqualTo("ORDER_NOT_FOUND");
+  }
+
+  @Test
+  void countdownCancelAll_valid() throws IOException {
+    GateioCountdownCancelResult actual =
+        gateioTradeServiceRaw.countdownCancelAll(
+            GateioCountdownCancelRequest.builder()
+                .timeout(300)
+                .currencyPair(CurrencyPair.BTC_USDT)
+                .build());
+
+    assertThat(actual.getTriggered()).isTrue();
+    assertThat(actual.getOrderIds()).containsExactly("745504484392", "745504484393");
   }
 }

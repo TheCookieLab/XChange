@@ -14,6 +14,8 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trade;
+import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.gateio.GateioExchangeWiremock;
 
@@ -101,5 +103,29 @@ public class GateioMarketDataServiceTest extends GateioExchangeWiremock {
 
     assertThat(actual)
         .containsOnly(CurrencyPair.BTC_USDT, CurrencyPair.ETH_USDT, new CurrencyPair("CHZ/USDT"));
+  }
+
+  @Test
+  void getTrades_valid() throws IOException {
+    Trades actual = gateioMarketDataService.getTrades(CurrencyPair.BTC_USDT);
+
+    assertThat(actual.getTrades()).hasSize(2);
+
+    // Trades(List) defaults to SortByID, so the lower id sorts first.
+    Trade first = actual.getTrades().get(0);
+    assertThat(first.getType()).isEqualTo(OrderType.ASK);
+    assertThat(first.getOriginalAmount()).isEqualByComparingTo("0.00005");
+    assertThat(first.getInstrument()).isEqualTo(CurrencyPair.BTC_USDT);
+    assertThat(first.getPrice()).isEqualByComparingTo("29447.2");
+    assertThat(first.getTimestamp()).isEqualTo(Date.from(Instant.ofEpochMilli(1691702286356L)));
+    assertThat(first.getId()).isEqualTo("6068789332");
+    assertThat(first.getMakerOrderId()).isNull();
+    assertThat(first.getTakerOrderId()).isEqualTo("381064942553");
+
+    Trade second = actual.getTrades().get(1);
+    assertThat(second.getType()).isEqualTo(OrderType.BID);
+    assertThat(second.getId()).isEqualTo("6068816979");
+    assertThat(second.getMakerOrderId()).isEqualTo("381068734893");
+    assertThat(second.getTakerOrderId()).isNull();
   }
 }

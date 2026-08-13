@@ -4,6 +4,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -15,6 +16,12 @@ import java.util.List;
 import org.knowm.xchange.gateio.dto.GateioException;
 import org.knowm.xchange.gateio.dto.account.GateioAccountBookRecord;
 import org.knowm.xchange.gateio.dto.account.GateioAddressRecord;
+import org.knowm.xchange.gateio.dto.account.GateioAmendOrderRequest;
+import org.knowm.xchange.gateio.dto.account.GateioBatchOrderResult;
+import org.knowm.xchange.gateio.dto.account.GateioCancelBatchRequest;
+import org.knowm.xchange.gateio.dto.account.GateioCancelOrderResult;
+import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelRequest;
+import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelResult;
 import org.knowm.xchange.gateio.dto.account.GateioCurrencyBalance;
 import org.knowm.xchange.gateio.dto.account.GateioDepositAddress;
 import org.knowm.xchange.gateio.dto.account.GateioDepositRecord;
@@ -110,6 +117,72 @@ public interface GateioV4Authenticated {
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,
       GateioOrder gateioOrder)
+      throws IOException, GateioException;
+
+  @GET
+  @Path("spot/open_orders")
+  List<GateioOrder> getOpenOrders(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @QueryParam("page") Integer page,
+      @QueryParam("limit") Integer limit,
+      @QueryParam("account") String account)
+      throws IOException, GateioException;
+
+  @PATCH
+  @Path("spot/orders/{order_id}")
+  @Consumes(MediaType.APPLICATION_JSON)
+  GateioOrder amendOrder(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @PathParam("order_id") String orderId,
+      @QueryParam("currency_pair") String currencyPair,
+      @QueryParam("account") String account,
+      GateioAmendOrderRequest amendRequest)
+      throws IOException, GateioException;
+
+  @DELETE
+  @Path("spot/orders")
+  List<GateioOrder> cancelAllOrders(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @QueryParam("currency_pair") String currencyPair,
+      @QueryParam("side") String side,
+      @QueryParam("account") String account,
+      @QueryParam("action_mode") String actionMode)
+      throws IOException, GateioException;
+
+  @POST
+  @Path("spot/batch_orders")
+  @Consumes(MediaType.APPLICATION_JSON)
+  List<GateioBatchOrderResult> createBatchOrders(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      List<GateioOrder> gateioOrders)
+      throws IOException, GateioException;
+
+  @POST
+  @Path("spot/cancel_batch_orders")
+  @Consumes(MediaType.APPLICATION_JSON)
+  List<GateioCancelOrderResult> cancelBatchOrders(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      List<GateioCancelBatchRequest> cancelRequests)
+      throws IOException, GateioException;
+
+  @POST
+  @Path("spot/countdown_cancel_all")
+  @Consumes(MediaType.APPLICATION_JSON)
+  GateioCountdownCancelResult countdownCancelAll(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      GateioCountdownCancelRequest countdownRequest)
       throws IOException, GateioException;
 
   @GET

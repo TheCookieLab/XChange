@@ -12,6 +12,8 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trade;
+import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.meta.ExchangeHealth;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.gateio.GateioAdapters;
@@ -83,6 +85,25 @@ public class GateioMarketDataService extends GateioMarketDataServiceRaw
   @Override
   public OrderBook getOrderBook(CurrencyPair currencyPair, Object... args) throws IOException {
     return getOrderBook((Instrument) currencyPair, args);
+  }
+
+  @Override
+  public Trades getTrades(CurrencyPair currencyPair, Object... args) throws IOException {
+    return getTrades((Instrument) currencyPair, args);
+  }
+
+  @Override
+  public Trades getTrades(Instrument instrument, Object... args) throws IOException {
+    Objects.requireNonNull(instrument);
+    try {
+      List<Trade> trades =
+          getGateioTrades(instrument, null, null, null, null).stream()
+              .map(GateioAdapters::toTrade)
+              .collect(Collectors.toList());
+      return new Trades(trades);
+    } catch (GateioException e) {
+      throw GateioErrorAdapter.adapt(e);
+    }
   }
 
   @Override

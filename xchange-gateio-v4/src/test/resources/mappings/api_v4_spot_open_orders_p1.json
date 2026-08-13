@@ -1,0 +1,15 @@
+{
+  "id": "639d30fb-771f-4eaa-b3a5-65d08e0234e3",
+  "name": "api_v4_spot_open_orders_p1.json",
+  "request": {
+    "url": "/api/v4/spot/open_orders?page=1&limit=2",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "api_v4_spot_open_orders_p1.json"
+  },
+  "uuid": "639d30fb-771f-4eaa-b3a5-65d08e0234e3",
+  "persistent": true,
+  "insertionIndex": 0
+}
