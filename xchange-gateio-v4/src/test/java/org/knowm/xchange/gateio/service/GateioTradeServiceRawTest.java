@@ -1,6 +1,7 @@
 package org.knowm.xchange.gateio.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -137,19 +138,17 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void getUserTrades_default_bounded() throws IOException {
-    List<GateioUserTradeRaw> actual =
-        gateioTradeServiceRaw.getGateioUserTrades(
-            new DefaultTradeHistoryParamCurrencyPair(CurrencyPair.BTC_USDT));
+  void getUserTrades_no_page_rejects_ceiling_overflow() throws IOException {
+    // The no-page convenience accessor refuses to silently truncate history at
+    // the default ceiling; it must direct callers to bounded pagination.
+    assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(
+            () ->
+                gateioTradeServiceRaw.getGateioUserTrades(
+                    new DefaultTradeHistoryParamCurrencyPair(CurrencyPair.BTC_USDT)))
+        .withMessageContaining("use bounded pagination");
 
-    // The default ceiling (1000) is reached on the first full page, so the
-    // convenience accessor stops at the ceiling with a resumable cursor.
-    assertThat(actual).hasSize(1000);
-    assertThat(actual.get(0).getId()).isEqualTo(6068816979L);
-    assertThat(actual.get(0).getCurrencyPair()).isEqualTo(CurrencyPair.BTC_USDT);
-    assertThat(actual.get(0).getSide()).isEqualTo(OrderType.BID);
-    assertThat(actual.get(0).getRole()).isEqualTo(Role.MAKER);
-
+    // The bounded accessor exposes the ceiling stop with a resumable cursor.
     GateioContinuation<GateioUserTradeRaw> capped =
         gateioTradeServiceRaw.getGateioUserTradesBounded(
             new DefaultTradeHistoryParamCurrencyPair(CurrencyPair.BTC_USDT),
@@ -157,6 +156,10 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
     assertThat(capped.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
     assertThat(capped.getItems()).hasSize(1000);
     assertThat(capped.getNextCursor().getPage()).isEqualTo(2);
+    assertThat(capped.getItems().get(0).getId()).isEqualTo(6068816979L);
+    assertThat(capped.getItems().get(0).getCurrencyPair()).isEqualTo(CurrencyPair.BTC_USDT);
+    assertThat(capped.getItems().get(0).getSide()).isEqualTo(OrderType.BID);
+    assertThat(capped.getItems().get(0).getRole()).isEqualTo(Role.MAKER);
   }
 
   @Test
