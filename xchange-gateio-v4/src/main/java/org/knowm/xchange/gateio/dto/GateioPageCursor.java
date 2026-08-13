@@ -54,6 +54,9 @@ public class GateioPageCursor {
   }
 
   public static GateioPageCursor since(long lastTimestamp) {
+    if (lastTimestamp < 0) {
+      throw new IllegalArgumentException("lastTimestamp must be >= 0");
+    }
     return new GateioPageCursor(-1, -1, null, lastTimestamp);
   }
 
