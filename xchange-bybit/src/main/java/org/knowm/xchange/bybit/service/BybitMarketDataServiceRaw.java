@@ -8,6 +8,7 @@ import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
+import org.knowm.xchange.bybit.dto.marketdata.BybitDeliveryPrice;
 import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistoryRaw;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
 import org.knowm.xchange.bybit.dto.marketdata.BybitOpenInterest;
@@ -104,6 +105,26 @@ public class BybitMarketDataServiceRaw extends BybitBaseService {
     BybitResult<BybitCategorizedPayload<BybitPublicTrade>> result =
         bybit.getPublicTrades(category.getValue(), symbol, limit == null ? null : limit.toString());
 
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result;
+  }
+
+  /**
+   * Option/linear/inverse delivery-price history. Cursor-complete via {@link
+   * BybitCategorizedPayload#getNextPageCursor()}.
+   */
+  public BybitResult<BybitCategorizedPayload<BybitDeliveryPrice>> getDeliveryPrice(
+      BybitCategory category, String symbol, String baseCoin, Integer limit, String cursor)
+      throws IOException {
+    BybitResult<BybitCategorizedPayload<BybitDeliveryPrice>> result =
+        bybit.getDeliveryPrice(
+            category.getValue(),
+            symbol,
+            baseCoin,
+            limit == null ? null : limit.toString(),
+            cursor);
     if (!result.isSuccess()) {
       throw BybitAdapters.createBybitExceptionFromResult(result);
     }

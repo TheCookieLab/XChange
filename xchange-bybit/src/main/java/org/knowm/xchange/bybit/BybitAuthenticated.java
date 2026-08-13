@@ -25,6 +25,7 @@ import org.knowm.xchange.bybit.dto.account.BybitCoinInfo;
 import org.knowm.xchange.bybit.dto.account.BybitCoinInfos;
 import org.knowm.xchange.bybit.dto.account.BybitCollateralInfo;
 import org.knowm.xchange.bybit.dto.account.BybitCollateralInfos;
+import org.knowm.xchange.bybit.dto.account.BybitDeliveryRecord;
 import org.knowm.xchange.bybit.dto.account.BybitTransactionLog;
 import org.knowm.xchange.bybit.dto.account.BybitTransferPayload;
 import org.knowm.xchange.bybit.dto.account.BybitTransferResponse;
@@ -359,6 +360,24 @@ public interface BybitAuthenticated {
       @QueryParam("currency") String currency,
       @QueryParam("startTime") String startTime,
       @QueryParam("endTime") String endTime,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/asset/delivery">API</a>
+   */
+  @GET
+  @Path("/asset/delivery-record")
+  BybitResult<BybitCategorizedPayload<BybitDeliveryRecord>> getDeliveryRecord(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("startTime") String startTime,
+      @QueryParam("endTime") String endTime,
+      @QueryParam("expDate") String expDate,
       @QueryParam("limit") String limit,
       @QueryParam("cursor") String cursor)
       throws IOException, BybitException;

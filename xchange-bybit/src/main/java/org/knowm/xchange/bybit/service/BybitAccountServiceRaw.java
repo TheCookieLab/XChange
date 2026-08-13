@@ -16,6 +16,7 @@ import org.knowm.xchange.bybit.dto.account.BybitBorrowHistory;
 import org.knowm.xchange.bybit.dto.account.BybitBorrowableAmount;
 import org.knowm.xchange.bybit.dto.account.BybitCoinInfos;
 import org.knowm.xchange.bybit.dto.account.BybitCollateralInfos;
+import org.knowm.xchange.bybit.dto.account.BybitDeliveryRecord;
 import org.knowm.xchange.bybit.dto.account.BybitTransactionLog;
 import org.knowm.xchange.bybit.dto.account.BybitTransferPayload;
 import org.knowm.xchange.bybit.dto.account.BybitTransferResponse;
@@ -211,6 +212,33 @@ public class BybitAccountServiceRaw extends BybitBaseService {
       throw createBybitExceptionFromResult(borrowableAmount);
     }
     return borrowableAmount;
+  }
+
+  BybitResult<BybitCategorizedPayload<BybitDeliveryRecord>> getDeliveryRecord(
+      BybitCategory category,
+      String symbol,
+      String startTime,
+      String endTime,
+      String expDate,
+      String limit,
+      String cursor)
+      throws IOException {
+    BybitResult<BybitCategorizedPayload<BybitDeliveryRecord>> deliveryRecord =
+        bybitAuthenticated.getDeliveryRecord(
+            apiKey,
+            signatureCreator,
+            exchange.getTimeStampFactory(),
+            category.getValue(),
+            symbol,
+            startTime,
+            endTime,
+            expDate,
+            limit,
+            cursor);
+    if (!deliveryRecord.isSuccess()) {
+      throw createBybitExceptionFromResult(deliveryRecord);
+    }
+    return deliveryRecord;
   }
 
   BybitResult<BybitCoinInfos> getCoinInfo(String coin) throws IOException {

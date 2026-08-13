@@ -10,6 +10,7 @@ import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistoryRaw;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
+import org.knowm.xchange.bybit.dto.marketdata.BybitDeliveryPrice;
 import org.knowm.xchange.bybit.dto.marketdata.BybitOpenInterest;
 import org.knowm.xchange.bybit.dto.marketdata.BybitOrderbook;
 import org.knowm.xchange.bybit.dto.marketdata.BybitPublicTrade;
@@ -104,6 +105,19 @@ public interface Bybit {
       @QueryParam("symbol") String symbol,
       @QueryParam("intervalTime") String intervalTime,
       @QueryParam("limit") String limit)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/market/delivery-price">API</a>
+   */
+  @GET
+  @Path("/delivery-price")
+  BybitResult<BybitCategorizedPayload<BybitDeliveryPrice>> getDeliveryPrice(
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("baseCoin") String baseCoin,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
       throws IOException, BybitException;
 
   /**

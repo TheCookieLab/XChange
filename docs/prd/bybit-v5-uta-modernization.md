@@ -10,8 +10,8 @@
 
 * **Lifecycle:** Ready for implementation
 * **Blocking state:** None
-* **Active phase:** Phase 6 — options/RFQ
-* **Overall checklist progress:** 5/9 phases complete
+* **Active phase:** Phase 7 — public streaming recovery
+* **Overall checklist progress:** 6/9 phases complete
 
 ## Execution Status
 
@@ -113,7 +113,7 @@ Not needed for this feature.
 3. [x] **Market/account assets:** complete public market data plus UTA wallet, account, fee, asset, transfer, collateral, borrowing/liability surfaces. **Verification:** exact-decimal DTO/adaptor and pagination fixtures.
 4. [x] **Positions/risk:** add category-aware position, leverage, margin-mode, risk-tier and PnL operations without discarding hedge/subposition identity. **Verification:** one-way/hedge and linear/inverse/option fixtures.
 5. [x] **Orders/executions:** complete create/amend/cancel/batch/pre-check/open/history/fill/transaction-log coverage and `orderLinkId` reconciliation. **Verification:** order-form matrix, partial batch results, unknown-outcome tests.
-6. [ ] **Options/RFQ:** expose lossless raw Option/RFQ workflows; map only common lossless data to XChange core. **Verification:** multi-leg/quote identity fixtures and explicit unsupported cases.
+6. [x] **Options/RFQ:** expose lossless raw Option/RFQ workflows; map only common lossless data to XChange core. **Verification:** multi-leg/quote identity fixtures and explicit unsupported cases. Note: V5 options are single-leg; OTC RFQ trading (`/v5/otc/rfq/*`) is deprecated/absent from current V5 docs and explicitly unsupported (guarded by test).
 7. [ ] **Public streaming recovery:** implement category-aware subscription identity, heartbeat, sequence validation, snapshot rebuild, and gap signaling. **Verification:** deterministic snapshot/delta/gap/reconnect tests.
 8. [ ] **Private/trade lifecycle:** add generation-scoped request correlation, auth/reauth, bounded reconnect, resubscription of the trade socket, private-event deduplication, and null-safe lifecycle observables. **Touchpoint:** `BybitStreamingExchange`. **Verification:** stale-generation, reconnect, resubscribe and no-credential tests.
 9. [ ] **Compatibility/ship:** document migration and capability matrix, run demo/testnet/read-only smoke tests where stable, then targeted and root build gates. **Verification:** `mvn -B -pl xchange-bybit,xchange-stream-bybit -am test`, repository quality checks, root `mvn -B clean install`.

@@ -49,10 +49,17 @@ REST services implement the XChange interfaces listed below. Categories:
 
 | Area | Service | Coverage |
 |---|---|---|
-| Market data | `BybitMarketDataService` / `Raw` | Tickers, order books, klines, instruments, funding rate, server time, meta |
-| Account | `BybitAccountService` / `Raw` | Balances, wallet, deposit/withdraw info, fee rate, API key info |
-| Trade | `BybitTradeService` / `Raw` | Place/cancel/amend orders (single and batch), open/closed orders, order history, position info and risk |
+| Market data | `BybitMarketDataService` / `Raw` | Tickers, order books, klines, instruments, funding rate, server time, meta, option/linear/inverse delivery price |
+| Account | `BybitAccountService` / `Raw` | Balances, wallet, deposit/withdraw info, fee rate, API key info, option delivery/settlement records |
+| Trade | `BybitTradeService` / `Raw` | Place/cancel/amend orders (single and batch), pre-check, open/closed orders, order history, executions, position info and risk |
 | Streaming | `xchange-stream-bybit` | Public order book/trade/ticker/klines streams; private order/position/execution streams; WebSocket order-entry |
+
+Options/RFQ: V5 options are single-leg; raw option workflows (catalog,
+tickers, trades, order entry, delivery price, delivery records) are lossless
+with string-preserved numerics. The OTC RFQ trading protocol
+(`/v5/otc/rfq/*`) is deprecated and absent from the current V5 docs, so it is
+explicitly unsupported; the V5 `otc` namespace (margin-loan helpers) is not
+exposed.
 
 Pagination: `BybitMarketDataServiceRaw.getInstrumentsInfo(...)` follows the
 V5 `nextPageCursor` contract. Position/order history endpoints accept `limit`
