@@ -238,7 +238,16 @@ public class GateioTradeServiceRaw extends GateioBaseService {
         amendRequest);
   }
 
-  public List<GateioOrder> cancelAllOrders(CurrencyPair currencyPair) throws IOException {
+  /**
+   * Cancels all matching open spot orders for the pair.
+   *
+   * <p>Gate's {@code OrderCancel} elements carry per-order outcome fields ({@code succeeded},
+   * {@code label}, {@code message}) next to the order fields: bulk cancellation succeeds
+   * partially, and callers must inspect {@link GateioCancelOrderResult#getSucceeded()} before
+   * treating an order as cancelled.
+   */
+  public List<GateioCancelOrderResult> cancelAllOrders(CurrencyPair currencyPair)
+      throws IOException {
     return gateioV4Authenticated.cancelAllOrders(
         apiKey,
         exchange.getNonceFactory(),

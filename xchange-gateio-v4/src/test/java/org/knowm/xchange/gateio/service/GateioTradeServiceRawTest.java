@@ -335,12 +335,16 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
   @Test
   void cancelAllOrders_valid() throws IOException {
-    List<GateioOrder> actual = gateioTradeServiceRaw.cancelAllOrders(CurrencyPair.BTC_USDT);
+    List<GateioCancelOrderResult> actual =
+        gateioTradeServiceRaw.cancelAllOrders(CurrencyPair.BTC_USDT);
 
     assertThat(actual).hasSize(2);
     assertThat(actual.get(0).getId()).isEqualTo("376835979523");
-    assertThat(actual.get(0).getStatus()).isEqualTo("cancelled");
+    assertThat(actual.get(0).getSucceeded()).isTrue();
     assertThat(actual.get(1).getId()).isEqualTo("376835979524");
+    assertThat(actual.get(1).getSucceeded()).isFalse();
+    assertThat(actual.get(1).getLabel()).isEqualTo("ORDER_NOT_FOUND");
+    assertThat(actual.get(1).getMessage()).isEqualTo("order not found");
   }
 
   @Test

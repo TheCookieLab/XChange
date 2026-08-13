@@ -9,10 +9,11 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.gateio.config.converter.StringToCurrencyPairConverter;
 
 /**
- * One element of a batch cancellation (POST /spot/cancel_batch_orders).
+ * One element of a cancellation response (POST /spot/cancel_batch_orders or DELETE /spot/orders).
  *
  * <p>Like placements, cancellations succeed partially; {@link #getSucceeded()} marks per-order
- * outcome and {@link #getLabel()}/{@link #getMessage()} carry failure classification.
+ * outcome and {@link #getLabel()}/{@link #getMessage()} carry failure classification. The element
+ * is flat: order fields (id, text, currency_pair, account) sit next to the outcome fields.
  */
 @Data
 @Builder

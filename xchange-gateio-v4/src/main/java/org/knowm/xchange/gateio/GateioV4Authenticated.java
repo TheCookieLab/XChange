@@ -146,10 +146,15 @@ public interface GateioV4Authenticated {
       GateioAmendOrderRequest amendRequest)
       throws IOException, GateioException;
 
-  /** Cancels all matching open spot orders, optionally filtered by pair, side, and account. */
+  /**
+   * Cancels all matching open spot orders, optionally filtered by pair, side, and account.
+   *
+   * <p>Each response element is a Gate {@code OrderCancel}: order fields plus {@code succeeded}/
+   * {@code label}/{@code message} outcome fields, since bulk cancellation succeeds partially.
+   */
   @DELETE
   @Path("spot/orders")
-  List<GateioOrder> cancelAllOrders(
+  List<GateioCancelOrderResult> cancelAllOrders(
       @HeaderParam("KEY") String apiKey,
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,

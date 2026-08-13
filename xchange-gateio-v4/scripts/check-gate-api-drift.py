@@ -89,9 +89,11 @@ def normalize_fresh(path):
                 continue
             name = str(p.get("Name", "")).strip()
             depth = 0
-            while name.startswith("» "):
+            while name.startswith("»"):
                 depth += 1
-                name = name[2:]
+                name = name[1:]
+            if name.startswith(" "):
+                name = name[1:]
             p_in = str(p.get("In", "")).strip().lower()
             if p_in == "body" and depth == 0:
                 continue

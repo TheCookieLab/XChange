@@ -33,10 +33,17 @@ EXTRA_ENDPOINTS = [
 
 
 def split_name(name):
+    """Split a docs name like '»» trigger_price' into (name, depth).
+
+    Nested fields are prefixed by one '»' per level with a single trailing
+    space; consume the complete leading run, not just a single marker.
+    """
     depth = 0
-    while name.startswith("» "):
+    while name.startswith("»"):
         depth += 1
-        name = name[2:]
+        name = name[1:]
+    if name.startswith(" "):
+        name = name[1:]
     return name, depth
 
 

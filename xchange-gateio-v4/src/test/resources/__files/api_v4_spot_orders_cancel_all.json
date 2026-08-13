@@ -3,6 +3,9 @@
     "id": "376835979523",
     "text": "t-valid-limit-sell-order",
     "amend_text": "-",
+    "succeeded": true,
+    "label": "",
+    "message": "",
     "create_time": "1691015713",
     "update_time": "1691016008",
     "create_time_ms": 1691015713247,
@@ -34,11 +37,14 @@
     "id": "376835979524",
     "text": "t-valid-limit-buy-order",
     "amend_text": "-",
+    "succeeded": false,
+    "label": "ORDER_NOT_FOUND",
+    "message": "order not found",
     "create_time": "1691015713",
     "update_time": "1691016200",
     "create_time_ms": 1691015713247,
     "update_time_ms": 1691016200216,
-    "status": "cancelled",
+    "status": "open",
     "currency_pair": "BTC_USDT",
     "type": "limit",
     "account": "spot",
@@ -59,6 +65,6 @@
     "gt_discount": false,
     "rebated_fee": "0",
     "rebated_fee_currency": "USDT",
-    "finish_as": "cancelled"
+    "finish_as": "open"
   }
 ]
