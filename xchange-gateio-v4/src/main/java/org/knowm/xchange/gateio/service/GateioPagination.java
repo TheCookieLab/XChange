@@ -2,6 +2,7 @@ package org.knowm.xchange.gateio.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,14 +27,15 @@ public final class GateioPagination {
   /**
    * Fetches one page of a Gate API v4 collection for the given cursor ({@code null} = first page).
    *
-   * <p>The fetcher receives the number of results the iteration can still
-   * accept; a well-behaved fetcher keeps its page size below that allowance so
-   * the caller ceiling is never exceeded and the returned continuation cursor
-   * remains lossless.
+   * <p>The fetcher must keep its page size constant for every page of a
+   * collection (Gate's page-number endpoints address records relative to the
+   * limit, so a changing limit shifts the grid and duplicates or skips
+   * records). It honors a cursor's {@link GateioPageCursor#getSkip()} by
+   * re-fetching the referenced page and dropping the consumed prefix.
    */
   @FunctionalInterface
   public interface PageFetcher<T> {
-    GateioPage<T> fetch(GateioPageCursor cursor, int remaining) throws IOException;
+    GateioPage<T> fetch(GateioPageCursor cursor) throws IOException;
   }
 
   /**
@@ -44,8 +46,9 @@ public final class GateioPagination {
    * @param maxResults caller result ceiling; must be {@code > 0}
    * @return accumulated items plus the stop reason; the result never exceeds {@code maxResults}.
    *     {@link GateioIterationStop#MAX_RESULTS} carries a resumable {@link
-   *     GateioContinuation#getNextCursor()}: the provider page after the last consumed one. When
-   *     the ceiling cuts a page, the unconsumed tail of that page is not re-fetched.
+   *     GateioContinuation#getNextCursor()}. When the ceiling cuts a page, the cursor's in-page
+   *     skip is advanced so the unconsumed tail of that page is returned by a resume instead of
+   *     being lost.
    * @throws IllegalArgumentException when {@code maxResults <= 0}
    * @throws IOException when a page fetch fails
    */
@@ -58,14 +61,17 @@ public final class GateioPagination {
     Set<GateioPageCursor> seenCursors = new HashSet<>();
     GateioPageCursor cursor = null;
     while (true) {
-      GateioPage<T> page = fetcher.fetch(cursor, maxResults - items.size());
-      if (page.getItems() != null) {
-        items.addAll(page.getItems());
-      }
+      GateioPage<T> page = fetcher.fetch(cursor);
+      List<T> pageItems = page.getItems() == null ? Collections.emptyList() : page.getItems();
+      items.addAll(pageItems);
       GateioPageCursor next = page.getNextCursor();
       if (items.size() > maxResults) {
+        // the page that crosses the ceiling is cut; resume mid-page so nothing is lost
+        int kept = maxResults - (items.size() - pageItems.size());
         return new GateioContinuation<>(
-            new ArrayList<>(items.subList(0, maxResults)), GateioIterationStop.MAX_RESULTS, next);
+            new ArrayList<>(items.subList(0, maxResults)),
+            GateioIterationStop.MAX_RESULTS,
+            resumeAfter(cursor, next, kept));
       }
       if (next == null) {
         return new GateioContinuation<>(items, GateioIterationStop.COMPLETED, null);
@@ -73,7 +79,7 @@ public final class GateioPagination {
       if (items.size() >= maxResults) {
         return new GateioContinuation<>(items, GateioIterationStop.MAX_RESULTS, next);
       }
-      if (page.getItems() == null || page.getItems().isEmpty()) {
+      if (pageItems.isEmpty()) {
         return new GateioContinuation<>(items, GateioIterationStop.NO_PROGRESS, null);
       }
       if (!seenCursors.add(next)) {
@@ -81,5 +87,23 @@ public final class GateioPagination {
       }
       cursor = next;
     }
+  }
+
+  /**
+   * Cursor that resumes after {@code kept} items of the current page.
+   *
+   * <p>Page-based collections record the in-page skip so the cut tail stays
+   * reachable. Other cursor styles cannot express mid-page state and fall back
+   * to the provider's next-page cursor, so a page cut there is not resumable.
+   */
+  private static GateioPageCursor resumeAfter(
+      GateioPageCursor cursor, GateioPageCursor next, int kept) {
+    if (cursor == null) {
+      return GateioPageCursor.page(1).withSkip(kept);
+    }
+    if (cursor.isPageBased()) {
+      return cursor.withSkip(cursor.getSkip() + kept);
+    }
+    return next;
   }
 }

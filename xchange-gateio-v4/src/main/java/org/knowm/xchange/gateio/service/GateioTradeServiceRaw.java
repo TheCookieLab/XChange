@@ -141,7 +141,8 @@ public class GateioTradeServiceRaw extends GateioBaseService {
       GateioPageCursor cursor, TradeHistoryParams params, int limit) throws IOException {
     TradeHistoryArgs args = new TradeHistoryArgs(params);
     int page = cursor == null ? 1 : cursor.getPage();
-    List<GateioUserTradeRaw> items =
+    int skip = cursor == null ? 0 : cursor.getSkip();
+    List<GateioUserTradeRaw> providerItems =
         gateioV4Authenticated.getTradingHistory(
             apiKey,
             exchange.getNonceFactory(),
@@ -153,7 +154,14 @@ public class GateioTradeServiceRaw extends GateioBaseService {
             null,
             args.from,
             args.to);
-    GateioPageCursor next = items.size() < limit ? null : GateioPageCursor.page(page + 1);
+    // resume state: drop the prefix already consumed by a previous bounded run
+    List<GateioUserTradeRaw> items =
+        skip == 0
+            ? providerItems
+            : providerItems.size() <= skip
+                ? List.of()
+                : new ArrayList<>(providerItems.subList(skip, providerItems.size()));
+    GateioPageCursor next = providerItems.size() < limit ? null : GateioPageCursor.page(page + 1);
     return GateioPage.<GateioUserTradeRaw>builder().items(items).nextCursor(next).build();
   }
 
@@ -164,22 +172,29 @@ public class GateioTradeServiceRaw extends GateioBaseService {
   public GateioContinuation<GateioUserTradeRaw> getGateioUserTradesBounded(
       TradeHistoryParams params, int maxResults) throws IOException {
     return GateioPagination.iterate(
-        (cursor, remaining) -> fetchUserTradesPage(cursor, params, Math.min(1000, remaining)),
-        maxResults);
+        cursor -> fetchUserTradesPage(cursor, params, 1000), maxResults);
   }
 
   /** Fetches one page of open spot orders; {@code null} cursor = first page. */
   public GateioPage<GateioOrder> getOpenOrdersPage(GateioPageCursor cursor, Integer limit)
       throws IOException {
     int page = cursor == null ? 1 : cursor.getPage();
+    int skip = cursor == null ? 0 : cursor.getSkip();
     List<GateioOpenOrders> groups =
         gateioV4Authenticated.getOpenOrders(
             apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, page, limit, null);
-    List<GateioOrder> items =
+    List<GateioOrder> providerItems =
         groups.stream()
             .filter(group -> group.getOrders() != null)
             .flatMap(group -> group.getOrders().stream())
             .collect(Collectors.toList());
+    // resume state: drop the prefix already consumed by a previous bounded run
+    List<GateioOrder> items =
+        skip == 0
+            ? providerItems
+            : providerItems.size() <= skip
+                ? List.of()
+                : new ArrayList<>(providerItems.subList(skip, providerItems.size()));
     int pageLimit = limit == null ? 100 : limit;
     boolean hasNext =
         groups.stream()
@@ -195,8 +210,7 @@ public class GateioTradeServiceRaw extends GateioBaseService {
    */
   public GateioContinuation<GateioOrder> getOpenOrdersBounded(Integer limit, int maxResults)
       throws IOException {
-    return GateioPagination.iterate(
-        (cursor, remaining) -> getOpenOrdersPage(cursor, limit), maxResults);
+    return GateioPagination.iterate(cursor -> getOpenOrdersPage(cursor, limit), maxResults);
   }
 
   public GateioOrder amendOrder(

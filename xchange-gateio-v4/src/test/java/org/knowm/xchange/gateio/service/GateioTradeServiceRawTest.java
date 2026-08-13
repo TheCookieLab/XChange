@@ -1,5 +1,9 @@
 package org.knowm.xchange.gateio.service;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -198,14 +202,57 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
     // the ceiling is a hard bound: never more than maxResults, even on a full page
     assertThat(bounded.getItems()).hasSize(1);
     assertThat(bounded.getItems().get(0).getId()).isEqualTo(6068816979L);
-    assertThat(bounded.getNextCursor().isPageBased()).isTrue();
-    assertThat(bounded.getNextCursor().getPage()).isEqualTo(2);
+    // the cut page is resumable: same page, skip advanced past the consumed item
+    assertThat(bounded.getNextCursor()).isEqualTo(GateioPageCursor.page(1).withSkip(1));
 
+    // resume re-fetches the cut page and drops the consumed prefix
     GateioPage<GateioUserTradeRaw> resumed =
         gateioTradeServiceRaw.getGateioUserTradesPage(bounded.getNextCursor(), params);
-    assertThat(resumed.getItems()).hasSize(1);
-    assertThat(resumed.getItems().get(0).getId()).isEqualTo(6068789000L);
-    assertThat(resumed.hasNext()).isFalse();
+    assertThat(resumed.getItems()).hasSize(999);
+    assertThat(resumed.getItems().get(0).getId()).isEqualTo(6068816978L);
+    assertThat(resumed.hasNext()).isTrue();
+
+    GateioPage<GateioUserTradeRaw> second =
+        gateioTradeServiceRaw.getGateioUserTradesPage(resumed.getNextCursor(), params);
+    assertThat(second.getItems()).hasSize(1);
+    assertThat(second.getItems().get(0).getId()).isEqualTo(6068789000L);
+    assertThat(second.hasNext()).isFalse();
+  }
+
+  @Test
+  void getUserTrades_bounded_largeCeiling_keepsConstantPageSize() throws IOException {
+    GateioTradeHistoryParams params =
+        GateioTradeHistoryParams.builder().currencyPair(CurrencyPair.BTC_USDT).build();
+
+    // a ceiling above the page size must not shrink the limit mid-iteration:
+    // page-number addressing is relative to the limit, so a variable limit
+    // would duplicate records and skip history
+    GateioContinuation<GateioUserTradeRaw> bounded =
+        gateioTradeServiceRaw.getGateioUserTradesBounded(params, 1500);
+
+    assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.COMPLETED);
+    assertThat(bounded.getItems()).hasSize(1001);
+    assertThat(bounded.getItems().get(1000).getId()).isEqualTo(6068789000L);
+
+    wireMockServer()
+        .verify(
+            1,
+            getRequestedFor(urlPathEqualTo("/api/v4/spot/my_trades"))
+                .withQueryParam("currency_pair", equalTo("BTC_USDT"))
+                .withQueryParam("limit", equalTo("1000"))
+                .withQueryParam("page", equalTo("1")));
+    wireMockServer()
+        .verify(
+            1,
+            getRequestedFor(urlPathEqualTo("/api/v4/spot/my_trades"))
+                .withQueryParam("currency_pair", equalTo("BTC_USDT"))
+                .withQueryParam("limit", equalTo("1000"))
+                .withQueryParam("page", equalTo("2")));
+    wireMockServer()
+        .verify(
+            0,
+            getRequestedFor(urlPathEqualTo("/api/v4/spot/my_trades"))
+                .withQueryParam("limit", notMatching("1000")));
   }
 
   @Test
@@ -242,7 +289,14 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
     // the ceiling is a hard bound: the first page is cut at maxResults
     assertThat(bounded.getItems()).hasSize(1);
     assertThat(bounded.getItems().get(0).getId()).isEqualTo("745504484392");
-    assertThat(bounded.getNextCursor().getPage()).isEqualTo(2);
+    // the second order of the cut page is not lost: resume drops the consumed prefix
+    assertThat(bounded.getNextCursor()).isEqualTo(GateioPageCursor.page(1).withSkip(1));
+
+    GateioPage<GateioOrder> resumed =
+        gateioTradeServiceRaw.getOpenOrdersPage(bounded.getNextCursor(), 2);
+    assertThat(resumed.getItems()).hasSize(1);
+    assertThat(resumed.getItems().get(0).getId()).isEqualTo("745504484393");
+    assertThat(resumed.getNextCursor()).isEqualTo(GateioPageCursor.page(2));
   }
   
   @Test

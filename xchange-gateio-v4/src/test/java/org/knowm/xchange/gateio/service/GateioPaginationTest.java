@@ -18,14 +18,22 @@ class GateioPaginationTest {
   /** Fetcher driven by an explicit page plan: items per page, then null cursor. */
   private static GateioPagination.PageFetcher<String> planFetcher(
       int pageSize, int totalPages) {
-    return (cursor, remaining) -> {
+    return cursor -> {
       int page = cursor == null ? 1 : cursor.getPage();
-      List<String> items = new ArrayList<>();
+      int skip = cursor == null ? 0 : cursor.getSkip();
+      List<String> providerItems = new ArrayList<>();
       if (page <= totalPages) {
         for (int i = 0; i < pageSize; i++) {
-          items.add("p" + page + "-" + i);
+          providerItems.add("p" + page + "-" + i);
         }
       }
+      // resume state: drop the prefix already consumed by a previous bounded run
+      List<String> items =
+          skip == 0
+              ? providerItems
+              : providerItems.size() <= skip
+                  ? List.of()
+                  : new ArrayList<>(providerItems.subList(skip, providerItems.size()));
       GateioPageCursor next = page < totalPages ? GateioPageCursor.page(page + 1) : null;
       return GateioPage.<String>builder().items(items).nextCursor(next).build();
     };
@@ -59,13 +67,17 @@ class GateioPaginationTest {
     assertThat(result.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
     // the ceiling is a hard bound: the page that crosses it is cut, never over-returned
     assertThat(result.getItems()).hasSize(7);
-    // resumable: cursor for the provider page after the last consumed one
-    assertThat(result.getNextCursor()).isNotNull();
-    assertThat(result.getNextCursor().getPage()).isEqualTo(4);
+    assertThat(result.getItems().get(6)).isEqualTo("p3-0");
+    // resumable: the cut page with the in-page skip advanced, so the tail is not lost
+    assertThat(result.getNextCursor()).isEqualTo(GateioPageCursor.page(3).withSkip(1));
+
+    // resume drops the consumed prefix of page 3, then continues page by page
+    GateioPage<String> resumedPage = planFetcher(3, 5).fetch(result.getNextCursor());
+    assertThat(resumedPage.getItems()).containsExactly("p3-1", "p3-2");
+    assertThat(resumedPage.getNextCursor()).isEqualTo(GateioPageCursor.page(4));
 
     GateioContinuation<String> resumed =
-        GateioPagination.iterate(
-            (cursor, remaining) -> planFetcher(3, 5).fetch(cursor, remaining), 100);
+        GateioPagination.iterate(planFetcher(3, 5), 100);
     assertThat(resumed.getItems()).hasSize(15);
   }
 
@@ -75,7 +87,13 @@ class GateioPaginationTest {
 
     assertThat(result.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
     assertThat(result.getItems()).hasSize(5);
-    assertThat(result.getNextCursor().getPage()).isEqualTo(2);
+    assertThat(result.getNextCursor()).isEqualTo(GateioPageCursor.page(1).withSkip(5));
+
+    // the cut tail of the first page remains reachable
+    GateioPage<String> resumedPage = planFetcher(10, 2).fetch(result.getNextCursor());
+    assertThat(resumedPage.getItems()).hasSize(5);
+    assertThat(resumedPage.getItems().get(0)).isEqualTo("p1-5");
+    assertThat(resumedPage.getNextCursor()).isEqualTo(GateioPageCursor.page(2));
   }
 
   @Test
@@ -84,14 +102,19 @@ class GateioPaginationTest {
 
     assertThat(result.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
     assertThat(result.getItems()).hasSize(5);
-    assertThat(result.getNextCursor()).isNull();
+    // the provider is exhausted, but the cut tail of the last page is still resumable
+    assertThat(result.getNextCursor()).isEqualTo(GateioPageCursor.page(1).withSkip(5));
+
+    GateioPage<String> resumedPage = planFetcher(10, 1).fetch(result.getNextCursor());
+    assertThat(resumedPage.getItems()).containsExactly("p1-5", "p1-6", "p1-7", "p1-8", "p1-9");
+    assertThat(resumedPage.getNextCursor()).isNull();
   }
 
   @Test
   void iterate_repeatedCursor_stopsInsteadOfLooping() throws IOException {
     // fetcher always returns the same next cursor after page 1
     GateioPagination.PageFetcher<String> looping =
-        (cursor, remaining) -> {
+        cursor -> {
           if (cursor == null) {
             return GateioPage.<String>builder()
                 .items(Arrays.asList("a", "b"))
@@ -114,7 +137,7 @@ class GateioPaginationTest {
   @Test
   void iterate_emptyPageWithNextCursor_stopsNoProgress() throws IOException {
     GateioPagination.PageFetcher<String> noProgress =
-        (cursor, remaining) -> GateioPage.<String>builder()
+        cursor -> GateioPage.<String>builder()
             .items(List.of())
             .nextCursor(GateioPageCursor.afterId("still-going"))
             .build();
@@ -128,7 +151,7 @@ class GateioPaginationTest {
   @Test
   void iterate_fetcherError_propagates() {
     GateioPagination.PageFetcher<String> failing =
-        (cursor, remaining) -> {
+        cursor -> {
           throw new IOException("boom");
         };
 
@@ -152,6 +175,11 @@ class GateioPaginationTest {
     assertThat(GateioPageCursor.afterId("x")).isNotEqualTo(GateioPageCursor.afterId("y"));
     assertThat(GateioPageCursor.since(100)).isEqualTo(GateioPageCursor.since(100));
     assertThat(GateioPageCursor.page(2)).isNotEqualTo(GateioPageCursor.since(2));
+    // the in-page skip participates in value semantics
+    assertThat(GateioPageCursor.page(3).withSkip(1))
+        .isEqualTo(GateioPageCursor.page(3).withSkip(1));
+    assertThat(GateioPageCursor.page(3)).isNotEqualTo(GateioPageCursor.page(3).withSkip(1));
+    assertThat(GateioPageCursor.page(3).withSkip(5).getSkip()).isEqualTo(5);
   }
 
   @Test
@@ -163,6 +191,8 @@ class GateioPaginationTest {
     assertThatThrownBy(() -> GateioPageCursor.afterId(""))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> GateioPageCursor.since(-1))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> GateioPageCursor.page(2).withSkip(-1))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

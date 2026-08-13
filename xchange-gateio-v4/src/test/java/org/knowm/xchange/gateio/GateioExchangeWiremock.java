@@ -20,8 +20,7 @@ public abstract class GateioExchangeWiremock {
   private static WireMockServer wireMockServer;
 
   @BeforeAll
-  public static void initExchange() {
-    wireMockServer = new WireMockServer(options().dynamicPort());
+  public static void initExchange() {    wireMockServer = new WireMockServer(options().dynamicPort());
     wireMockServer.start();
 
     ExchangeSpecification exSpec = new ExchangeSpecification(GateioExchange.class);
@@ -48,5 +47,10 @@ public abstract class GateioExchangeWiremock {
       wireMockServer.stopRecording();
     }
     wireMockServer.stop();
+  }
+
+  /** The running WireMock instance; subclasses verify request counts through it. */
+  protected static WireMockServer wireMockServer() {
+    return wireMockServer;
   }
 }

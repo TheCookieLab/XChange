@@ -20,6 +20,7 @@ import org.knowm.xchange.gateio.GateioExchangeWiremock;
 import org.knowm.xchange.gateio.dto.GateioContinuation;
 import org.knowm.xchange.gateio.dto.GateioIterationStop;
 import org.knowm.xchange.gateio.dto.GateioPage;
+import org.knowm.xchange.gateio.dto.GateioPageCursor;
 import org.knowm.xchange.gateio.dto.account.GateioAccountBookRecord;
 import org.knowm.xchange.gateio.dto.account.GateioAddressRecord;
 import org.knowm.xchange.gateio.dto.account.GateioDepositAddress;
@@ -309,12 +310,20 @@ public class GateioAccountServiceRawTest extends GateioExchangeWiremock {
     // the ceiling is a hard bound: never more than maxResults, even on a full page
     assertThat(bounded.getItems()).hasSize(1);
     assertThat(bounded.getItems().get(0).getId()).isEqualTo("40558668441");
-    assertThat(bounded.getNextCursor().getPage()).isEqualTo(2);
+    // the cut page is resumable: same page, skip advanced past the consumed record
+    assertThat(bounded.getNextCursor()).isEqualTo(GateioPageCursor.page(1).withSkip(1));
 
+    // resume re-fetches the cut page and drops the consumed prefix
     GateioPage<GateioAccountBookRecord> resumed =
         gateioAccountServiceRaw.getAccountBookRecordsPage(bounded.getNextCursor(), params);
-    assertThat(resumed.getItems()).hasSize(1);
-    assertThat(resumed.getItems().get(0).getId()).isEqualTo("40558668400");
-    assertThat(resumed.hasNext()).isFalse();
+    assertThat(resumed.getItems()).hasSize(999);
+    assertThat(resumed.getItems().get(0).getId()).isEqualTo("40558668440");
+    assertThat(resumed.hasNext()).isTrue();
+
+    GateioPage<GateioAccountBookRecord> second =
+        gateioAccountServiceRaw.getAccountBookRecordsPage(resumed.getNextCursor(), params);
+    assertThat(second.getItems()).hasSize(1);
+    assertThat(second.getItems().get(0).getId()).isEqualTo("40558668400");
+    assertThat(second.hasNext()).isFalse();
   }
 }

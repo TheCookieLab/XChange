@@ -1,6 +1,7 @@
 package org.knowm.xchange.gateio.service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.knowm.xchange.currency.Currency;
@@ -174,7 +175,8 @@ public class GateioAccountServiceRaw extends GateioBaseService {
     }
 
     int page = cursor == null ? 1 : cursor.getPage();
-    List<GateioAccountBookRecord> items =
+    int skip = cursor == null ? 0 : cursor.getSkip();
+    List<GateioAccountBookRecord> providerItems =
         gateioV4Authenticated.getAccountBookRecords(
             apiKey,
             exchange.getNonceFactory(),
@@ -185,7 +187,14 @@ public class GateioAccountServiceRaw extends GateioBaseService {
             limit,
             page,
             type);
-    GateioPageCursor next = items.size() < limit ? null : GateioPageCursor.page(page + 1);
+    // resume state: drop the prefix already consumed by a previous bounded run
+    List<GateioAccountBookRecord> items =
+        skip == 0
+            ? providerItems
+            : providerItems.size() <= skip
+                ? List.of()
+                : new ArrayList<>(providerItems.subList(skip, providerItems.size()));
+    GateioPageCursor next = providerItems.size() < limit ? null : GateioPageCursor.page(page + 1);
     return GateioPage.<GateioAccountBookRecord>builder()
         .items(items)
         .nextCursor(next)
@@ -199,8 +208,7 @@ public class GateioAccountServiceRaw extends GateioBaseService {
   public GateioContinuation<GateioAccountBookRecord> getAccountBookRecordsBounded(
       TradeHistoryParams params, int maxResults) throws IOException {
     return GateioPagination.iterate(
-        (cursor, remaining) -> fetchAccountBookPage(cursor, params, Math.min(1000, remaining)),
-        maxResults);
+        cursor -> fetchAccountBookPage(cursor, params, 1000), maxResults);
   }
 
   public List<GateioSubAccountTransfer> getSubAccountTransfers(
