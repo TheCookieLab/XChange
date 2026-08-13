@@ -17,6 +17,7 @@ import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinBalance;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
+import org.knowm.xchange.bybit.dto.account.position.BybitPosition;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitCoinWalletBalance;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKline;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
@@ -45,6 +46,7 @@ import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
@@ -427,6 +429,37 @@ public class BybitAdapters {
         .timestamp(new Date(Long.parseLong(publicTrade.getTime())))
         .type("Buy".equals(publicTrade.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK)
         .build();
+  }
+
+  /**
+   * Maps one Bybit position to the generic {@link OpenPosition} model. The hedge-mode subposition
+   * identity is preserved in the id ({@code symbol:positionIdx}) because the generic model has no
+   * dedicated field for it; {@code positionIdx} stays losslessly available on the raw DTO.
+   */
+  public static OpenPosition adaptBybitPosition(BybitPosition position, BybitCategory category) {
+    OpenPosition.OpenPositionBuilder builder =
+        OpenPosition.builder()
+            .id(position.getSymbol() + ":" + position.getPositionIdx())
+            .instrument(convertBybitSymbolToInstrument(position.getSymbol(), category))
+            .type("Buy".equals(position.getSide()) ? OpenPosition.Type.LONG : OpenPosition.Type.SHORT)
+            .size(new BigDecimal(position.getSize()))
+            .price(new BigDecimal(position.getAvgPrice()))
+            .unRealisedPnl(new BigDecimal(position.getUnrealisedPnl()));
+    if (position.getLiqPrice() != null && !position.getLiqPrice().isEmpty()) {
+      builder.liquidationPrice(new BigDecimal(position.getLiqPrice()));
+    }
+    if ("1".equals(position.getMarginMode())) {
+      builder.marginMode(OpenPosition.MarginMode.ISOLATED);
+    } else if ("0".equals(position.getMarginMode())) {
+      builder.marginMode(OpenPosition.MarginMode.CROSS);
+    }
+    if (position.getCreatedTime() != null && !position.getCreatedTime().isEmpty()) {
+      builder.createdAt(Instant.ofEpochMilli(Long.parseLong(position.getCreatedTime())));
+    }
+    if (position.getUpdatedTime() != null && !position.getUpdatedTime().isEmpty()) {
+      builder.updatedAt(Instant.ofEpochMilli(Long.parseLong(position.getUpdatedTime())));
+    }
+    return builder.build();
   }
 
   private static Builder adaptBybitTickerBuilder(

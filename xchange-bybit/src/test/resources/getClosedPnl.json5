@@ -1,0 +1,34 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "linear",
+    "list": [
+      {
+        "symbol": "BTCUSDT",
+        "orderId": "1111111111111111111",
+        "orderLinkId": "CLOSE-20260812",
+        "closedPnl": "-12.345678901234",
+        "avgEntryPrice": "33125.42",
+        "qty": "0.5",
+        "closedSize": "0.5",
+        "createdTime": "1672304894063",
+        "updatedTime": "1672304894163"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "orderId": "2222222222222222222",
+        "orderLinkId": "CLOSE-20260811",
+        "closedPnl": "88.88",
+        "avgEntryPrice": "2200",
+        "qty": "1.25",
+        "closedSize": "1.25",
+        "createdTime": "1672218494063",
+        "updatedTime": "1672218494163"
+      }
+    ],
+    "nextPageCursor": "0%3A2%3A2"
+  },
+  "retExtInfo": {},
+  "time": 1672304894063
+}

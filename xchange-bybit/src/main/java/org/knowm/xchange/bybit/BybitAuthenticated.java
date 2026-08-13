@@ -30,8 +30,21 @@ import org.knowm.xchange.bybit.dto.account.BybitTransferPayload;
 import org.knowm.xchange.bybit.dto.account.BybitTransferResponse;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
 import org.knowm.xchange.bybit.dto.account.feerates.BybitFeeRates;
+import org.knowm.xchange.bybit.dto.account.position.BybitAddMarginPayload;
+import org.knowm.xchange.bybit.dto.account.position.BybitClosedPnl;
+import org.knowm.xchange.bybit.dto.account.position.BybitLeverageInfo;
+import org.knowm.xchange.bybit.dto.account.position.BybitLeverageInfos;
+import org.knowm.xchange.bybit.dto.account.position.BybitPosition;
+import org.knowm.xchange.bybit.dto.account.position.BybitPositions;
+import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfo;
+import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfos;
+import org.knowm.xchange.bybit.dto.account.position.BybitSetAutoAddMarginPayload;
 import org.knowm.xchange.bybit.dto.account.position.BybitSetLeveragePayload;
+import org.knowm.xchange.bybit.dto.account.position.BybitSetRiskLimitPayload;
 import org.knowm.xchange.bybit.dto.account.position.BybitSwitchModePayload;
+import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopInfo;
+import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopInfos;
+import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopPayload;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitWalletBalance;
 import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
@@ -270,5 +283,135 @@ public interface BybitAuthenticated {
       @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
       @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
       @QueryParam("coin") String coin)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/list">API</a>
+   */
+  @GET
+  @Path("/position/list")
+  BybitResult<BybitPositions> getPositions(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("baseCoin") String baseCoin,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/closed-pnl">API</a>
+   */
+  @GET
+  @Path("/position/closed-pnl")
+  BybitResult<BybitCategorizedPayload<BybitClosedPnl>> getClosedPnl(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("startTime") String startTime,
+      @QueryParam("endTime") String endTime,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/leverage-info">API</a>
+   */
+  @GET
+  @Path("/position/limit")
+  BybitResult<BybitLeverageInfos> getLeverageInfo(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("baseCoin") String baseCoin,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/risk-limit">API</a>
+   */
+  @GET
+  @Path("/position/risk-limit")
+  BybitResult<BybitRiskLimitInfos> getRiskLimit(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("baseCoin") String baseCoin,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/trading-stop">API</a>
+   */
+  @GET
+  @Path("/position/trading-stop")
+  BybitResult<BybitTradingStopInfos> getTradingStop(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/trading-stop">API</a>
+   */
+  @POST
+  @Path("/position/trading-stop")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitResult<Object> setTradingStop(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitTradingStopPayload payload)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/set-risk-limit">API</a>
+   */
+  @POST
+  @Path("/position/set-risk-limit")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitResult<Object> setRiskLimit(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitSetRiskLimitPayload payload)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/add-margin">API</a>
+   */
+  @POST
+  @Path("/position/add-margin")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitResult<Object> addMargin(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitAddMarginPayload payload)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/set-auto-add-margin">API</a>
+   */
+  @POST
+  @Path("/position/set-auto-add-margin")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitResult<Object> setAutoAddMargin(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitSetAutoAddMarginPayload payload)
       throws IOException, BybitException;
 }

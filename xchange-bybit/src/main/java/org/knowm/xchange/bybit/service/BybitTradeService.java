@@ -1,6 +1,7 @@
 package org.knowm.xchange.bybit.service;
 
 import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitOrderDetails;
+import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitPosition;
 import static org.knowm.xchange.bybit.BybitAdapters.adaptChangeOrder;
 import static org.knowm.xchange.bybit.BybitAdapters.adaptLimitOrder;
 import static org.knowm.xchange.bybit.BybitAdapters.adaptMarketOrder;
@@ -17,6 +18,8 @@ import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.BybitCancelAllOrdersResponse;
+import org.knowm.xchange.bybit.dto.account.position.BybitPosition;
+import org.knowm.xchange.bybit.dto.account.position.BybitPositions;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelAllOrdersParams;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderParams;
 import org.knowm.xchange.bybit.dto.trade.BybitOpenOrdersParam;
@@ -25,12 +28,13 @@ import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetail;
 import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetails;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.instrument.Instrument;
-import org.knowm.xchange.service.trade.TradeService;
-import org.knowm.xchange.service.trade.params.CancelAllOrders;
+import org.knowm.xchange.service.trade.TradeService;import org.knowm.xchange.service.trade.params.CancelAllOrders;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByInstrument;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
@@ -49,6 +53,23 @@ public class BybitTradeService extends BybitTradeServiceRaw implements TradeServ
     BybitResult<BybitOrderResponse> orderResponseBybitResult =
         placeOrder(adaptMarketOrder(marketOrder, category), category);
     return orderResponseBybitResult.getResult().getOrderId();
+  }
+
+  @Override
+  public OpenPositions getOpenPositions() throws IOException {
+    List<OpenPosition> openPositions = new ArrayList<>();
+    for (BybitCategory category : BybitCategory.values()) {
+      if (category == BybitCategory.SPOT) {
+        continue; // spot has no position endpoint
+      }
+      BybitResult<BybitPositions> response = getPositions(category, null, null, null, null);
+      if (response.getResult().getList() != null) {
+        for (BybitPosition position : response.getResult().getList()) {
+          openPositions.add(adaptBybitPosition(position, category));
+        }
+      }
+    }
+    return new OpenPositions(openPositions);
   }
 
   @Override

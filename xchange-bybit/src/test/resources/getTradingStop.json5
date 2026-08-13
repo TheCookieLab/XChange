@@ -1,0 +1,26 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "list": [
+      {
+        "positionIdx": 1,
+        "symbol": "BTCUSDT",
+        "takeProfit": "35000",
+        "stopLoss": "31000",
+        "trailingStop": "0",
+        "tpTriggerBy": "LastPrice",
+        "slTriggerBy": "IndexPrice",
+        "tpslMode": "Full",
+        "tpLimitPrice": "0",
+        "slLimitPrice": "0",
+        "activePrice": "0",
+        "createdTime": "1672304894063",
+        "updatedTime": "1672304994063"
+      }
+    ],
+    "nextPageCursor": ""
+  },
+  "retExtInfo": {},
+  "time": 1672304894063
+}
