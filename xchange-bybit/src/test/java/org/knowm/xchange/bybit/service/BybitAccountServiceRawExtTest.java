@@ -53,17 +53,21 @@ public class BybitAccountServiceRawExtTest extends BaseWiremockTest {
     BybitTransactionLog trade = list.get(0);
     assertEquals("1111111111111111111", trade.getId());
     assertEquals("TRADE", trade.getType());
-    assertEquals("0.001", trade.getAmount());
+    assertEquals("0.001", trade.getQty());
+    assertEquals("0.001", trade.getSize());
     assertEquals("0.0000001", trade.getFee());
     assertEquals("1.23456789", trade.getCashBalance());
-    assertEquals("65432.1", trade.getExecPrice());
-    assertEquals("1672304894063", trade.getTradeTime());
-    assertEquals("10", trade.getLeverage());
+    assertEquals("65432.1", trade.getTradePrice());
+    assertEquals("1672304894063", trade.getTransactionTime());
+    assertEquals("2222222222222222222", trade.getTradeId());
+    assertEquals("order-1", trade.getOrderLinkId());
+    assertEquals("Buy", trade.getSide());
     assertEquals(
         new BigDecimal("0.0000001"), new BigDecimal(trade.getFee())); // exact string preserved
     BybitTransactionLog settlement = list.get(1);
     assertEquals("SETTLEMENT", settlement.getType());
-    assertEquals("12.345678901234", settlement.getClosedPnl());
+    assertEquals("12.345678901234", settlement.getFunding());
+    assertEquals("-0.5", settlement.getSize());
   }
 
   @Test
@@ -100,11 +104,13 @@ public class BybitAccountServiceRawExtTest extends BaseWiremockTest {
     BybitCollateralInfo info = list.get(0);
     assertEquals("BTC", info.getCurrency());
     assertEquals("0.00000667", info.getHourlyBorrowRate());
-    assertEquals("10.5", info.getMaxBorrowAmount());
+    assertEquals("10.5", info.getMaxBorrowingAmount());
     assertEquals("7.25", info.getAvailableToBorrow());
+    assertEquals("3.25", info.getBorrowAmount());
     assertEquals("0.95", info.getCollateralRatio());
-    assertEquals("0.0001", info.getMinCollateralAmount());
-    assertEquals("OK", info.getStatus());
+    assertTrue(info.isBorrowable());
+    assertTrue(info.isMarginCollateral());
+    assertEquals("0.3095238", info.getBorrowUsageRate());
   }
 
   @Test

@@ -71,6 +71,7 @@ public class BybitTradeService extends BybitTradeServiceRaw implements TradeServ
       }
       for (String settleCoin : settleCoinsFor(category)) {
         String cursor = null;
+        boolean paginationExhausted = false;
         for (int page = 0; page < MAX_POSITION_PAGES; page++) {
           BybitResult<BybitPositions> response =
               getPositions(category, null, null, settleCoin, "200", cursor);
@@ -82,9 +83,27 @@ public class BybitTradeService extends BybitTradeServiceRaw implements TradeServ
           }
           String nextCursor = response.getResult().getNextPageCursor();
           if (nextCursor == null || nextCursor.isEmpty()) {
+            paginationExhausted = true;
             break;
           }
+          if (nextCursor.equals(cursor)) {
+            throw new ExchangeException(
+                "Bybit position pagination repeated cursor '" + nextCursor + "' for category "
+                    + category + " settleCoin " + settleCoin
+                    + "; aborting to avoid an infinite loop");
+          }
+          if (positions == null || positions.isEmpty()) {
+            throw new ExchangeException(
+                "Bybit position pagination made no progress for category " + category
+                    + " settleCoin " + settleCoin + " (empty page with cursor '" + nextCursor
+                    + "'); aborting");
+          }
           cursor = nextCursor;
+        }
+        if (!paginationExhausted) {
+          throw new ExchangeException(
+              "Bybit position pagination exceeded " + MAX_POSITION_PAGES + " pages for category "
+                  + category + " settleCoin " + settleCoin + "; aborting");
         }
       }
     }

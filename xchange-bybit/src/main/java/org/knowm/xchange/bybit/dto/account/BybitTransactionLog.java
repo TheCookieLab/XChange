@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
-/** One transaction record from {@code /v5/account/transaction-log}. */
+/** One transaction record from {@code /v5/account/transaction-log}, bound to the documented wire keys. */
 @Builder
 @Jacksonized
 @Value
@@ -23,11 +23,33 @@ public class BybitTransactionLog {
   @JsonProperty("side")
   String side;
 
+  /** Transaction timestamp (ms). */
+  @JsonProperty("transactionTime")
+  String transactionTime;
+
   @JsonProperty("type")
   String type;
 
-  @JsonProperty("amount")
-  String amount;
+  /** Transaction sub type; {@code movePosition} for move-position logs, otherwise empty. */
+  @JsonProperty("transSubType")
+  String transSubType;
+
+  /** Quantity. For spot the sign carries direction; perps & futures have no direction. */
+  @JsonProperty("qty")
+  String qty;
+
+  /** Remaining position size after the trade; carries direction (short with "-"). */
+  @JsonProperty("size")
+  String size;
+
+  @JsonProperty("currency")
+  String currency;
+
+  @JsonProperty("tradePrice")
+  String tradePrice;
+
+  @JsonProperty("funding")
+  String funding;
 
   @JsonProperty("fee")
   String fee;
@@ -41,33 +63,21 @@ public class BybitTransactionLog {
   @JsonProperty("cashBalance")
   String cashBalance;
 
-  @JsonProperty("currency")
-  String currency;
-
-  @JsonProperty("execPrice")
-  String execPrice;
-
-  @JsonProperty("executionId")
-  String executionId;
-
-  @JsonProperty("tradeTime")
-  String tradeTime;
-
-  @JsonProperty("subType")
-  String subType;
-
   @JsonProperty("feeRate")
   String feeRate;
-
-  @JsonProperty("closedPnl")
-  String closedPnl;
 
   @JsonProperty("bonusChange")
   String bonusChange;
 
-  @JsonProperty("leverage")
-  String leverage;
+  @JsonProperty("tradeId")
+  String tradeId;
 
-  @JsonProperty("tradeIv")
-  String tradeIv;
+  @JsonProperty("orderId")
+  String orderId;
+
+  @JsonProperty("orderLinkId")
+  String orderLinkId;
+
+  @JsonProperty("extraFees")
+  String extraFees;
 }

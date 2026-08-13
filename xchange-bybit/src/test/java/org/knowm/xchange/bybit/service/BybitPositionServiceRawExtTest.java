@@ -3,6 +3,7 @@ package org.knowm.xchange.bybit.service;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ import org.knowm.xchange.bybit.dto.account.position.BybitPosition;
 import org.knowm.xchange.bybit.dto.account.position.BybitPositions;
 import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopPayload;
 import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.exceptions.ExchangeException;
 
 public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
 
@@ -114,6 +116,33 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
     assertEquals("SOLUSDT:2", hedgeShort.getId());
     assertEquals(OpenPosition.Type.SHORT, hedgeShort.getType());
     assertEquals(new BigDecimal("-80"), hedgeShort.getUnRealisedPnl());
+  }
+
+  @Test
+  public void openPositionsRepeatedCursorAborts() throws IOException {
+    initGetStub(
+        "/v5/market/instruments-info",
+        "/getInstrumentLinear.json5",
+        "category",
+        equalTo("linear"));
+    initGetStub(
+        "/v5/market/instruments-info",
+        "/getInstrumentInverse.json5",
+        "category",
+        equalTo("inverse"));
+    initGetStub(
+        "/v5/position/list", "/getPositions.json5", "category", equalTo("linear"));
+    // The follow-up page returns the SAME cursor as the first page: the loop must abort.
+    initGetStub(
+        "/v5/position/list",
+        "/getPositions.json5",
+        Map.of("category", equalTo("linear"), "cursor", equalTo("0%3A3%3A3")));
+
+    BybitTradeService tradeService = (BybitTradeService) createExchange().getTradeService();
+    ExchangeException thrown =
+        assertThrows(ExchangeException.class, tradeService::getOpenPositions);
+    assertTrue(thrown.getMessage().contains("repeated cursor"));
+    assertTrue(thrown.getMessage().contains("infinite loop"));
   }
 
   @Test

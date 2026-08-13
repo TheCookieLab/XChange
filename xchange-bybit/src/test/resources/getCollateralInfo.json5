@@ -6,15 +6,18 @@
       {
         "currency": "BTC",
         "hourlyBorrowRate": "0.00000667",
-        "maxBorrowAmount": "10.5",
-        "borrowableAmount": "10.5",
+        "maxBorrowingAmount": "10.5",
+        "freeBorrowingLimit": "5",
+        "freeBorrowAmount": "1.25",
+        "borrowAmount": "3.25",
+        "otherBorrowAmount": "0",
         "availableToBorrow": "7.25",
-        "borrowAmountUsd": "0",
+        "borrowable": true,
+        "borrowUsageRate": "0.3095238",
+        "marginCollateral": true,
+        "collateralSwitch": true,
         "collateralRatio": "0.95",
-        "collateralRate": "1",
-        "maxCollateralAmount": "0.5",
-        "minCollateralAmount": "0.0001",
-        "status": "OK"
+        "freeBorrowingAmount": ""
       }
     ]
   },
