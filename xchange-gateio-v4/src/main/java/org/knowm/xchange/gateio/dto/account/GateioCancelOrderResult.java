@@ -1,34 +1,21 @@
 package org.knowm.xchange.gateio.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import lombok.Builder;
 import lombok.Data;
-import lombok.extern.jackson.Jacksonized;
-import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.gateio.config.converter.StringToCurrencyPairConverter;
+import lombok.EqualsAndHashCode;
 
 /**
  * One element of a cancellation response (POST /spot/cancel_batch_orders or DELETE /spot/orders).
  *
- * <p>Like placements, cancellations succeed partially; {@link #getSucceeded()} marks per-order
- * outcome and {@link #getLabel()}/{@link #getMessage()} carry failure classification. The element
- * is flat: order fields (id, text, currency_pair, account) sit next to the outcome fields.
+ * <p>Gate's {@code OrderCancel} element is flat: the complete order (see {@link GateioOrder})
+ * alongside the outcome fields. {@code succeeded} marks the per-order result and {@code label}/
+ * {@code message} carry failure classification, so callers must inspect {@link #getSucceeded()}
+ * before treating an order as cancelled. Extends {@link GateioOrder} so order details stay
+ * available under the same accessors as a plain order.
  */
 @Data
-@Builder
-@Jacksonized
-public class GateioCancelOrderResult {
-
-  @JsonProperty("currency_pair")
-  @JsonDeserialize(converter = StringToCurrencyPairConverter.class)
-  CurrencyPair currencyPair;
-
-  @JsonProperty("id")
-  String id;
-
-  @JsonProperty("text")
-  String text;
+@EqualsAndHashCode(callSuper = true)
+public class GateioCancelOrderResult extends GateioOrder {
 
   @JsonProperty("succeeded")
   Boolean succeeded;
@@ -38,7 +25,4 @@ public class GateioCancelOrderResult {
 
   @JsonProperty("message")
   String message;
-
-  @JsonProperty("account")
-  String account;
 }

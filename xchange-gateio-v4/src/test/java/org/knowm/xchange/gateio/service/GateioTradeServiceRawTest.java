@@ -339,7 +339,12 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
         gateioTradeServiceRaw.cancelAllOrders(CurrencyPair.BTC_USDT);
 
     assertThat(actual).hasSize(2);
+    // full order data preserved next to the outcome fields
     assertThat(actual.get(0).getId()).isEqualTo("376835979523");
+    assertThat(actual.get(0).getStatus()).isEqualTo("cancelled");
+    assertThat(actual.get(0).getSide()).isEqualTo(OrderType.BID);
+    assertThat(actual.get(0).getAmount()).isEqualByComparingTo("0.00068");
+    assertThat(actual.get(0).getCurrencyPair()).isEqualTo(CurrencyPair.BTC_USDT);
     assertThat(actual.get(0).getSucceeded()).isTrue();
     assertThat(actual.get(1).getId()).isEqualTo("376835979524");
     assertThat(actual.get(1).getSucceeded()).isFalse();
