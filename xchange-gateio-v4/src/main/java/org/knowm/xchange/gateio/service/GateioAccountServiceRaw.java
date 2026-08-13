@@ -151,6 +151,11 @@ public class GateioAccountServiceRaw extends GateioBaseService {
   /** Fetches one page of account book records; {@code null} cursor = first page. */
   public GateioPage<GateioAccountBookRecord> getAccountBookRecordsPage(
       GateioPageCursor cursor, TradeHistoryParams params) throws IOException {
+    return fetchAccountBookPage(cursor, params, 1000);
+  }
+
+  private GateioPage<GateioAccountBookRecord> fetchAccountBookPage(
+      GateioPageCursor cursor, TradeHistoryParams params, int limit) throws IOException {
     Currency currency =
         params instanceof GateioFundingHistoryParams
             ? ((GateioFundingHistoryParams) params).getCurrency()
@@ -177,10 +182,10 @@ public class GateioAccountServiceRaw extends GateioBaseService {
             currencyCode,
             from,
             to,
-            1000,
+            limit,
             page,
             type);
-    GateioPageCursor next = items.size() < 1000 ? null : GateioPageCursor.page(page + 1);
+    GateioPageCursor next = items.size() < limit ? null : GateioPageCursor.page(page + 1);
     return GateioPage.<GateioAccountBookRecord>builder()
         .items(items)
         .nextCursor(next)
@@ -194,7 +199,8 @@ public class GateioAccountServiceRaw extends GateioBaseService {
   public GateioContinuation<GateioAccountBookRecord> getAccountBookRecordsBounded(
       TradeHistoryParams params, int maxResults) throws IOException {
     return GateioPagination.iterate(
-        cursor -> getAccountBookRecordsPage(cursor, params), maxResults);
+        (cursor, remaining) -> fetchAccountBookPage(cursor, params, Math.min(1000, remaining)),
+        maxResults);
   }
 
   public List<GateioSubAccountTransfer> getSubAccountTransfers(

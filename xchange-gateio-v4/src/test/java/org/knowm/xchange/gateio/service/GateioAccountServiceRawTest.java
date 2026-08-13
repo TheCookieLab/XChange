@@ -306,7 +306,9 @@ public class GateioAccountServiceRawTest extends GateioExchangeWiremock {
         gateioAccountServiceRaw.getAccountBookRecordsBounded(params, 1);
 
     assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
-    assertThat(bounded.getItems()).hasSize(1000);
+    // the ceiling is a hard bound: never more than maxResults, even on a full page
+    assertThat(bounded.getItems()).hasSize(1);
+    assertThat(bounded.getItems().get(0).getId()).isEqualTo("40558668441");
     assertThat(bounded.getNextCursor().getPage()).isEqualTo(2);
 
     GateioPage<GateioAccountBookRecord> resumed =

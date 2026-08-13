@@ -18,7 +18,7 @@ class GateioPaginationTest {
   /** Fetcher driven by an explicit page plan: items per page, then null cursor. */
   private static GateioPagination.PageFetcher<String> planFetcher(
       int pageSize, int totalPages) {
-    return cursor -> {
+    return (cursor, remaining) -> {
       int page = cursor == null ? 1 : cursor.getPage();
       List<String> items = new ArrayList<>();
       if (page <= totalPages) {
@@ -57,15 +57,15 @@ class GateioPaginationTest {
     GateioContinuation<String> result = GateioPagination.iterate(planFetcher(3, 5), 7);
 
     assertThat(result.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
-    // pages are atomic: the page that crosses the ceiling is fully consumed
-    assertThat(result.getItems()).hasSize(9);
-    // resumable: cursor for the page after the last consumed one
+    // the ceiling is a hard bound: the page that crosses it is cut, never over-returned
+    assertThat(result.getItems()).hasSize(7);
+    // resumable: cursor for the provider page after the last consumed one
     assertThat(result.getNextCursor()).isNotNull();
     assertThat(result.getNextCursor().getPage()).isEqualTo(4);
 
     GateioContinuation<String> resumed =
         GateioPagination.iterate(
-            cursor -> planFetcher(3, 5).fetch(cursor), 100);
+            (cursor, remaining) -> planFetcher(3, 5).fetch(cursor, remaining), 100);
     assertThat(resumed.getItems()).hasSize(15);
   }
 
@@ -74,16 +74,16 @@ class GateioPaginationTest {
     GateioContinuation<String> result = GateioPagination.iterate(planFetcher(10, 2), 5);
 
     assertThat(result.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
-    assertThat(result.getItems()).hasSize(10);
+    assertThat(result.getItems()).hasSize(5);
     assertThat(result.getNextCursor().getPage()).isEqualTo(2);
   }
 
   @Test
-  void iterate_exhaustedCollectionWinsOverCeiling() throws IOException {
+  void iterate_exhaustedPageStillHonorsCeiling() throws IOException {
     GateioContinuation<String> result = GateioPagination.iterate(planFetcher(10, 1), 5);
 
-    assertThat(result.getStop()).isEqualTo(GateioIterationStop.COMPLETED);
-    assertThat(result.getItems()).hasSize(10);
+    assertThat(result.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
+    assertThat(result.getItems()).hasSize(5);
     assertThat(result.getNextCursor()).isNull();
   }
 
@@ -91,7 +91,7 @@ class GateioPaginationTest {
   void iterate_repeatedCursor_stopsInsteadOfLooping() throws IOException {
     // fetcher always returns the same next cursor after page 1
     GateioPagination.PageFetcher<String> looping =
-        cursor -> {
+        (cursor, remaining) -> {
           if (cursor == null) {
             return GateioPage.<String>builder()
                 .items(Arrays.asList("a", "b"))
@@ -114,7 +114,7 @@ class GateioPaginationTest {
   @Test
   void iterate_emptyPageWithNextCursor_stopsNoProgress() throws IOException {
     GateioPagination.PageFetcher<String> noProgress =
-        cursor -> GateioPage.<String>builder()
+        (cursor, remaining) -> GateioPage.<String>builder()
             .items(List.of())
             .nextCursor(GateioPageCursor.afterId("still-going"))
             .build();
@@ -128,7 +128,7 @@ class GateioPaginationTest {
   @Test
   void iterate_fetcherError_propagates() {
     GateioPagination.PageFetcher<String> failing =
-        cursor -> {
+        (cursor, remaining) -> {
           throw new IOException("boom");
         };
 

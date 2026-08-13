@@ -21,7 +21,7 @@ import org.knowm.xchange.gateio.dto.account.GateioBatchOrderResult;
 import org.knowm.xchange.gateio.dto.account.GateioCancelBatchRequest;
 import org.knowm.xchange.gateio.dto.account.GateioCancelOrderResult;
 import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelRequest;
-import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelResult;
+import org.knowm.xchange.gateio.dto.account.GateioTriggerTime;
 import org.knowm.xchange.gateio.dto.account.GateioOrder;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
 import org.knowm.xchange.gateio.dto.trade.Role;
@@ -195,7 +195,9 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
         gateioTradeServiceRaw.getGateioUserTradesBounded(params, 1);
 
     assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
-    assertThat(bounded.getItems()).hasSize(1000);
+    // the ceiling is a hard bound: never more than maxResults, even on a full page
+    assertThat(bounded.getItems()).hasSize(1);
+    assertThat(bounded.getItems().get(0).getId()).isEqualTo(6068816979L);
     assertThat(bounded.getNextCursor().isPageBased()).isTrue();
     assertThat(bounded.getNextCursor().getPage()).isEqualTo(2);
 
@@ -237,7 +239,9 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
     GateioContinuation<GateioOrder> bounded = gateioTradeServiceRaw.getOpenOrdersBounded(2, 1);
 
     assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
-    assertThat(bounded.getItems()).hasSize(2);
+    // the ceiling is a hard bound: the first page is cut at maxResults
+    assertThat(bounded.getItems()).hasSize(1);
+    assertThat(bounded.getItems().get(0).getId()).isEqualTo("745504484392");
     assertThat(bounded.getNextCursor().getPage()).isEqualTo(2);
   }
   
@@ -310,14 +314,13 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
   @Test
   void countdownCancelAll_valid() throws IOException {
-    GateioCountdownCancelResult actual =
+    GateioTriggerTime actual =
         gateioTradeServiceRaw.countdownCancelAll(
             GateioCountdownCancelRequest.builder()
                 .timeout(300)
                 .currencyPair(CurrencyPair.BTC_USDT)
                 .build());
 
-    assertThat(actual.getTriggered()).isTrue();
-    assertThat(actual.getOrderIds()).containsExactly("745504484392", "745504484393");
+    assertThat(actual.getTriggerTime()).isEqualTo(1691781600000L);
   }
 }

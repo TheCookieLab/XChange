@@ -21,7 +21,7 @@ import org.knowm.xchange.gateio.dto.account.GateioBatchOrderResult;
 import org.knowm.xchange.gateio.dto.account.GateioCancelBatchRequest;
 import org.knowm.xchange.gateio.dto.account.GateioCancelOrderResult;
 import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelRequest;
-import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelResult;
+import org.knowm.xchange.gateio.dto.account.GateioTriggerTime;
 import org.knowm.xchange.gateio.dto.account.GateioCurrencyBalance;
 import org.knowm.xchange.gateio.dto.account.GateioDepositAddress;
 import org.knowm.xchange.gateio.dto.account.GateioDepositRecord;
@@ -185,7 +185,7 @@ public interface GateioV4Authenticated {
   @POST
   @Path("spot/countdown_cancel_all")
   @Consumes(MediaType.APPLICATION_JSON)
-  GateioCountdownCancelResult countdownCancelAll(
+  GateioTriggerTime countdownCancelAll(
       @HeaderParam("KEY") String apiKey,
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,

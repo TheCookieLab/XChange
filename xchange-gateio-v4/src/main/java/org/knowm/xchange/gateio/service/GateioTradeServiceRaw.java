@@ -21,7 +21,7 @@ import org.knowm.xchange.gateio.dto.account.GateioBatchOrderResult;
 import org.knowm.xchange.gateio.dto.account.GateioCancelBatchRequest;
 import org.knowm.xchange.gateio.dto.account.GateioCancelOrderResult;
 import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelRequest;
-import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelResult;
+import org.knowm.xchange.gateio.dto.account.GateioTriggerTime;
 import org.knowm.xchange.gateio.dto.account.GateioOrder;
 import org.knowm.xchange.gateio.dto.account.GateioOpenOrders;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
@@ -134,6 +134,11 @@ public class GateioTradeServiceRaw extends GateioBaseService {
   /** Fetches one page of the user's spot trade history; {@code null} cursor = first page. */
   public GateioPage<GateioUserTradeRaw> getGateioUserTradesPage(
       GateioPageCursor cursor, TradeHistoryParams params) throws IOException {
+    return fetchUserTradesPage(cursor, params, 1000);
+  }
+
+  private GateioPage<GateioUserTradeRaw> fetchUserTradesPage(
+      GateioPageCursor cursor, TradeHistoryParams params, int limit) throws IOException {
     TradeHistoryArgs args = new TradeHistoryArgs(params);
     int page = cursor == null ? 1 : cursor.getPage();
     List<GateioUserTradeRaw> items =
@@ -142,13 +147,13 @@ public class GateioTradeServiceRaw extends GateioBaseService {
             exchange.getNonceFactory(),
             gateioV4ParamsDigest,
             args.currencyPair,
-            1000,
+            limit,
             page,
             args.orderId,
             null,
             args.from,
             args.to);
-    GateioPageCursor next = items.size() < 1000 ? null : GateioPageCursor.page(page + 1);
+    GateioPageCursor next = items.size() < limit ? null : GateioPageCursor.page(page + 1);
     return GateioPage.<GateioUserTradeRaw>builder().items(items).nextCursor(next).build();
   }
 
@@ -158,7 +163,9 @@ public class GateioTradeServiceRaw extends GateioBaseService {
    */
   public GateioContinuation<GateioUserTradeRaw> getGateioUserTradesBounded(
       TradeHistoryParams params, int maxResults) throws IOException {
-    return GateioPagination.iterate(cursor -> getGateioUserTradesPage(cursor, params), maxResults);
+    return GateioPagination.iterate(
+        (cursor, remaining) -> fetchUserTradesPage(cursor, params, Math.min(1000, remaining)),
+        maxResults);
   }
 
   /** Fetches one page of open spot orders; {@code null} cursor = first page. */
@@ -188,7 +195,8 @@ public class GateioTradeServiceRaw extends GateioBaseService {
    */
   public GateioContinuation<GateioOrder> getOpenOrdersBounded(Integer limit, int maxResults)
       throws IOException {
-    return GateioPagination.iterate(cursor -> getOpenOrdersPage(cursor, limit), maxResults);
+    return GateioPagination.iterate(
+        (cursor, remaining) -> getOpenOrdersPage(cursor, limit), maxResults);
   }
 
   public GateioOrder amendOrder(
@@ -233,7 +241,7 @@ public class GateioTradeServiceRaw extends GateioBaseService {
         apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, cancelRequests);
   }
 
-  public GateioCountdownCancelResult countdownCancelAll(GateioCountdownCancelRequest request)
+  public GateioTriggerTime countdownCancelAll(GateioCountdownCancelRequest request)
       throws IOException {
     Objects.requireNonNull(request);
     return gateioV4Authenticated.countdownCancelAll(
