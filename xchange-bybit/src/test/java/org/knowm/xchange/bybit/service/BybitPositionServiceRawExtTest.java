@@ -45,14 +45,12 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
     assertEquals("-0.123456789012", oneWay.getUnrealisedPnl());
     assertEquals("3.141592653589", oneWay.getCumRealisedPnl());
     assertEquals("10", oneWay.getLeverage());
-    assertEquals("1", oneWay.getMarginMode());
 
     // hedge long subposition
     BybitPosition longLeg = list.get(1);
     assertEquals("1", longLeg.getPositionIdx());
     assertEquals("Buy", longLeg.getSide());
     assertEquals("2210.11", longLeg.getAvgPrice());
-    assertEquals("0", longLeg.getMarginMode());
 
     // hedge short subposition
     BybitPosition shortLeg = list.get(2);
@@ -100,7 +98,6 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
     OpenPosition oneWay = positions.get(0);
     assertEquals("BTCUSDT:0", oneWay.getId());
     assertEquals(OpenPosition.Type.LONG, oneWay.getType());
-    assertEquals(OpenPosition.MarginMode.ISOLATED, oneWay.getMarginMode());
     assertEquals(new BigDecimal("10.01"), oneWay.getSize());
     assertEquals(new BigDecimal("33125.42"), oneWay.getPrice());
     assertEquals(new BigDecimal("29797.88"), oneWay.getLiquidationPrice());
@@ -111,13 +108,11 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
     OpenPosition hedgeLong = positions.get(1);
     assertEquals("ETHUSDT:1", hedgeLong.getId());
     assertEquals(OpenPosition.Type.LONG, hedgeLong.getType());
-    assertEquals(OpenPosition.MarginMode.CROSS, hedgeLong.getMarginMode());
     assertEquals(new BigDecimal("6.105"), hedgeLong.getUnRealisedPnl());
 
     OpenPosition hedgeShort = positions.get(2);
     assertEquals("SOLUSDT:2", hedgeShort.getId());
     assertEquals(OpenPosition.Type.SHORT, hedgeShort.getType());
-    assertEquals(OpenPosition.MarginMode.ISOLATED, hedgeShort.getMarginMode());
     assertEquals(new BigDecimal("-80"), hedgeShort.getUnRealisedPnl());
   }
 
@@ -195,8 +190,8 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
                     .builder()
                     .category("linear")
                     .symbol("BTCUSDT")
-                    .autoAddMargin("1")
-                    .positionIdx("0")
+                    .autoAddMargin(1)
+                    .positionIdx(0)
                     .build())
             .isSuccess());
   }

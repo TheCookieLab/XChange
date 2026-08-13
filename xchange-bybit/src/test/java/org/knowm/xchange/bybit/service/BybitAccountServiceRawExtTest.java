@@ -159,9 +159,16 @@ public class BybitAccountServiceRawExtTest extends BaseWiremockTest {
     BybitCoinInfo.BybitCoinChain bsc = coin.getChains().get(1);
     assertEquals("BSC", bsc.getChain());
     assertEquals("BEP20", bsc.getChainType());
-    assertEquals("0.0001", bsc.getWithdrawalFee());
+    assertEquals("0.0001", bsc.getWithdrawFee());
+    assertEquals("0.0001", bsc.getDepositMin());
+    assertEquals("0.0001", bsc.getWithdrawMin());
+    assertEquals("8", bsc.getMinAccuracy());
+    assertEquals("1", bsc.getChainDeposit());
+    assertEquals("0", bsc.getChainWithdraw());
+    assertEquals("0.022", bsc.getWithdrawPercentageFee());
+    assertEquals("15", bsc.getSafeConfirmNumber());
+    assertEquals("-1", bsc.getWithdrawMax());
     assertEquals("15", bsc.getConfirmation());
-    assertEquals("MAINTENANCE", bsc.getWithdrawalStatus());
     assertEquals("0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c", bsc.getContractAddress());
   }
 }

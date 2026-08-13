@@ -92,9 +92,6 @@ public class BybitPosition {
   @JsonProperty("autoAddMargin")
   String autoAddMargin;
 
-  @JsonProperty("marginMode")
-  String marginMode;
-
   @JsonProperty("positionBalance")
   String positionBalance;
 

@@ -18,8 +18,8 @@ public class BybitSetAutoAddMarginPayload {
   String symbol;
 
   @JsonProperty("autoAddMargin")
-  String autoAddMargin;
+  int autoAddMargin;
 
   @JsonProperty("positionIdx")
-  String positionIdx;
+  int positionIdx;
 }

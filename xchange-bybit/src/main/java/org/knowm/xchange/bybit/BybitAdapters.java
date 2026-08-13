@@ -448,11 +448,6 @@ public class BybitAdapters {
     if (position.getLiqPrice() != null && !position.getLiqPrice().isEmpty()) {
       builder.liquidationPrice(new BigDecimal(position.getLiqPrice()));
     }
-    if ("1".equals(position.getMarginMode())) {
-      builder.marginMode(OpenPosition.MarginMode.ISOLATED);
-    } else if ("0".equals(position.getMarginMode())) {
-      builder.marginMode(OpenPosition.MarginMode.CROSS);
-    }
     if (position.getCreatedTime() != null && !position.getCreatedTime().isEmpty()) {
       builder.createdAt(Instant.ofEpochMilli(Long.parseLong(position.getCreatedTime())));
     }

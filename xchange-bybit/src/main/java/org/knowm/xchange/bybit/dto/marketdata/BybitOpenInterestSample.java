@@ -11,11 +11,11 @@ import lombok.extern.jackson.Jacksonized;
 @Value
 public class BybitOpenInterestSample {
 
-  @JsonProperty("symbol")
-  String symbol;
-
   @JsonProperty("openInterest")
   String openInterest;
+
+  @JsonProperty("singleOpenInterest")
+  String singleOpenInterest;
 
   @JsonProperty("timestamp")
   String timestamp;

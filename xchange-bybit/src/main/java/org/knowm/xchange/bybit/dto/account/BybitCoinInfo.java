@@ -34,20 +34,32 @@ public class BybitCoinInfo {
     @JsonProperty("chainType")
     String chainType;
 
-    @JsonProperty("withdrawalFee")
-    String withdrawalFee;
+    @JsonProperty("withdrawFee")
+    String withdrawFee;
 
-    @JsonProperty("minDeposit")
-    String minDeposit;
+    @JsonProperty("depositMin")
+    String depositMin;
 
-    @JsonProperty("minWithdrawal")
-    String minWithdrawal;
+    @JsonProperty("withdrawMin")
+    String withdrawMin;
 
-    @JsonProperty("depositStatus")
-    String depositStatus;
+    @JsonProperty("chainDeposit")
+    String chainDeposit;
 
-    @JsonProperty("withdrawalStatus")
-    String withdrawalStatus;
+    @JsonProperty("chainWithdraw")
+    String chainWithdraw;
+
+    @JsonProperty("minAccuracy")
+    String minAccuracy;
+
+    @JsonProperty("withdrawPercentageFee")
+    String withdrawPercentageFee;
+
+    @JsonProperty("safeConfirmNumber")
+    String safeConfirmNumber;
+
+    @JsonProperty("withdrawMax")
+    String withdrawMax;
 
     @JsonProperty("confirmation")
     String confirmation;

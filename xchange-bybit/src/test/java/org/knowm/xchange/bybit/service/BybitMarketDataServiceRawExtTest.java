@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import org.junit.Test;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.dto.BybitCategory;
@@ -114,12 +115,45 @@ public class BybitMarketDataServiceRawExtTest extends BaseWiremockTest {
     BybitMarketDataServiceRaw raw =
         (BybitMarketDataServiceRaw) createExchange().getMarketDataService();
     BybitOpenInterest openInterest =
-        raw.getOpenInterest(BybitCategory.LINEAR, "BTCUSDT", "5min", null);
+        raw.getOpenInterest(BybitCategory.LINEAR, "BTCUSDT", "5min", null, null, null, null);
 
+    assertEquals("BTCUSDT", openInterest.getSymbol());
+    assertEquals("linear", openInterest.getCategory());
     assertEquals(1, openInterest.getList().size());
-    assertEquals("BTCUSDT", openInterest.getList().get(0).getSymbol());
     assertEquals("190.937", openInterest.getList().get(0).getOpenInterest());
+    assertEquals("95.4685", openInterest.getList().get(0).getSingleOpenInterest());
     assertEquals("1672300000000", openInterest.getList().get(0).getTimestamp());
+    assertEquals("lastid%3D19408935%26lasttime%3D1780617600", openInterest.getNextPageCursor());
+  }
+
+  @Test
+  public void openInterestPassesHistoryAndCursorParams() throws IOException {
+    // The exact-params stub is the only one registered: the request only matches when
+    // startTime/endTime/cursor reach the wire, proving the full binding is exercised.
+    initGetStub(
+        "/v5/market/open-interest",
+        "/getOpenInterestCursor.json5",
+        Map.of(
+            "category", equalTo("linear"),
+            "symbol", equalTo("BTCUSDT"),
+            "intervalTime", equalTo("5min"),
+            "startTime", equalTo("1672300000000"),
+            "endTime", equalTo("1672386400000"),
+            "cursor", equalTo("lastid%3D19408935%26lasttime%3D1780617600")));
+
+    BybitMarketDataServiceRaw raw =
+        (BybitMarketDataServiceRaw) createExchange().getMarketDataService();
+    BybitOpenInterest openInterest =
+        raw.getOpenInterest(
+            BybitCategory.LINEAR,
+            "BTCUSDT",
+            "5min",
+            null,
+            1672300000000L,
+            1672386400000L,
+            "lastid%3D19408935%26lasttime%3D1780617600");
+
+    assertEquals("42", openInterest.getList().get(0).getSingleOpenInterest());
   }
 
   @Test

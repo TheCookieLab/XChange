@@ -104,7 +104,10 @@ public interface Bybit {
       @QueryParam("category") String category,
       @QueryParam("symbol") String symbol,
       @QueryParam("intervalTime") String intervalTime,
-      @QueryParam("limit") String limit)
+      @QueryParam("limit") String limit,
+      @QueryParam("startTime") String startTime,
+      @QueryParam("endTime") String endTime,
+      @QueryParam("cursor") String cursor)
       throws IOException, BybitException;
 
   /**

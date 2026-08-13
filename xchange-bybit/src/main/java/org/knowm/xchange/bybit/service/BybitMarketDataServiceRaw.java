@@ -141,11 +141,23 @@ public class BybitMarketDataServiceRaw extends BybitBaseService {
   }
 
   public BybitOpenInterest getOpenInterest(
-      BybitCategory category, String symbol, String intervalTime, Integer limit)
+      BybitCategory category,
+      String symbol,
+      String intervalTime,
+      Integer limit,
+      Long startTime,
+      Long endTime,
+      String cursor)
       throws IOException {
     BybitResult<BybitOpenInterest> result =
         bybit.getOpenInterest(
-            category.getValue(), symbol, intervalTime, limit == null ? null : limit.toString());
+            category.getValue(),
+            symbol,
+            intervalTime,
+            limit == null ? null : limit.toString(),
+            startTime == null ? null : startTime.toString(),
+            endTime == null ? null : endTime.toString(),
+            cursor);
     if (!result.isSuccess()) {
       throw BybitAdapters.createBybitExceptionFromResult(result);
     }
