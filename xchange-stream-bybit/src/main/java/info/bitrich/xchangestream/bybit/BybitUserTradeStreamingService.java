@@ -65,8 +65,6 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
   public static final String BATCH_ORDER_CANCEL = "order.cancel-batch";
   @Getter private boolean isAuthorized = false;
   private String connId;
-  /** Connection generation: bumped on every reconnect so stale responses can be dropped. */
-  private final java.util.concurrent.atomic.AtomicLong generation = new java.util.concurrent.atomic.AtomicLong();
 
   public BybitUserTradeStreamingService(String apiUrl, ExchangeSpecification spec) {
     super(
@@ -148,9 +146,9 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
           }
       }
     }
-    // Generation-scoped correlation: order-entry responses carry the connection id of the
-    // socket that processed them. A response from a previous generation (delivered after a
-    // reconnect) must not satisfy a pending request of the current generation.
+    // Connection-scoped correlation: order-entry responses carry the connection id of the
+    // socket that processed them. A response from a previous connection (delivered after a
+    // reconnect) must not satisfy a pending request of the current connection.
     if (jsonNode.has("connId") && !connId.equals(jsonNode.get("connId").asText())) {
       LOG.warn("Dropping stale order-entry response from a previous connection: {}", message);
       return;
@@ -166,7 +164,6 @@ public class BybitUserTradeStreamingService extends JsonNettyStreamingService {
    */
   @Override
   public void resubscribeChannels() {
-    generation.incrementAndGet();
     java.util.Map<String, Subscription> pending = new java.util.HashMap<>(channels);
     for (java.util.Map.Entry<String, Subscription> entry : pending.entrySet()) {
       handleChannelError(

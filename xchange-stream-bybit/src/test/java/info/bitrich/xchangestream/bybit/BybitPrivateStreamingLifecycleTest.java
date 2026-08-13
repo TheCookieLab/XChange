@@ -115,11 +115,16 @@ public class BybitPrivateStreamingLifecycleTest {
   }
 
   @Test
-  public void userDataReconnectWithoutSubscriptionsSkipsAuth() {
+  public void userDataReconnectWithoutSubscriptionsStillReauthenticates() throws Exception {
     RecordingUserDataService service =
         new RecordingUserDataService("wss://stream.bybit.com/v5/private", spec);
+    openSocket(service);
     service.resubscribeChannels();
-    assertThat(service.sent).isEmpty();
+    // Server-side auth dies with the connection; a later subscribe must never be sent
+    // unauthenticated, so reconnect always re-authenticates even with zero channels.
+    assertThat(service.sent).hasSize(1);
+    assertThat(service.sent.get(0)).contains("\"op\":\"auth\"");
+    assertThat(service.isAuthorized()).isFalse();
   }
 
   @Test

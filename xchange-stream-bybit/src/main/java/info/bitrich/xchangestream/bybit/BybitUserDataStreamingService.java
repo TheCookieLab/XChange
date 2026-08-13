@@ -186,11 +186,9 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
 
   @Override
   public void resubscribeChannels() {
-    if (channels.isEmpty()) {
-      return;
-    }
     // A reconnected socket has no server-side auth state and private subscriptions are
-    // rejected before auth. Re-authenticate first; the auth ack re-subscribes every
+    // rejected before auth. Re-authenticate on every reconnect — even with zero channels —
+    // so a later subscribe is never sent unauthenticated; the auth ack re-subscribes every
     // channel (resubscribeChannelsAfterLogin). Never replay raw subscribe messages here.
     isAuthorized = false;
     login();
