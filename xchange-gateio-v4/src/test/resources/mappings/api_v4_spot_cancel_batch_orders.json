@@ -3,7 +3,15 @@
   "name": "api_v4_spot_cancel_batch_orders.json",
   "request": {
     "url": "/api/v4/spot/cancel_batch_orders",
-    "method": "POST"
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[0].currency_pair"
+      },
+      {
+        "matchesJsonPath": "$[0].id"
+      }
+    ]
   },
   "response": {
     "status": 200,

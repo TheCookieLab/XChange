@@ -3,7 +3,18 @@
   "name": "api_v4_spot_batch_orders.json",
   "request": {
     "url": "/api/v4/spot/batch_orders",
-    "method": "POST"
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[0].currency_pair"
+      },
+      {
+        "matchesJsonPath": "$[0].amount"
+      },
+      {
+        "matchesJsonPath": "$[0].side"
+      }
+    ]
   },
   "response": {
     "status": 200,

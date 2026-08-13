@@ -3,7 +3,12 @@
   "name": "api_v4_spot_orders_patch.json",
   "request": {
     "url": "/api/v4/spot/orders/1?currency_pair=BTC_USDT",
-    "method": "PATCH"
+    "method": "PATCH",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.amount"
+      }
+    ]
   },
   "response": {
     "status": 200,

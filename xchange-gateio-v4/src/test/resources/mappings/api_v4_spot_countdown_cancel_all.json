@@ -3,7 +3,12 @@
   "name": "api_v4_spot_countdown_cancel_all.json",
   "request": {
     "url": "/api/v4/spot/countdown_cancel_all",
-    "method": "POST"
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.timeout"
+      }
+    ]
   },
   "response": {
     "status": 200,
