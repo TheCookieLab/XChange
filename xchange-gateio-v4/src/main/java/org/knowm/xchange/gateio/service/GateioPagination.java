@@ -61,10 +61,10 @@ public final class GateioPagination {
         return new GateioContinuation<>(items, GateioIterationStop.MAX_RESULTS, next);
       }
       if (page.getItems() == null || page.getItems().isEmpty()) {
-        return new GateioContinuation<>(items, GateioIterationStop.NO_PROGRESS, next);
+        return new GateioContinuation<>(items, GateioIterationStop.NO_PROGRESS, null);
       }
       if (!seenCursors.add(next)) {
-        return new GateioContinuation<>(items, GateioIterationStop.REPEATED_CURSOR, next);
+        return new GateioContinuation<>(items, GateioIterationStop.REPEATED_CURSOR, null);
       }
       cursor = next;
     }
