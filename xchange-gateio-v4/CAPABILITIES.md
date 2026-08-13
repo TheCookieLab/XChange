@@ -27,15 +27,14 @@ authenticated interface is not a dumping ground for unrelated product surfaces.
 | Operation | Endpoint | Level | Notes |
 |---|---|---|---|
 | Server time | `GET /spot/time` | generic | |
-| Currencies | `GET /spot/currencies` | generic | |
-| Currency pairs (list, one) | `GET /spot/currency_pairs`, `GET /spot/currency_pairs/{currency_pair}` | generic | |
+| Currencies and currency pairs (list, one) | `GET /spot/currencies`, `GET /spot/currencies/{currency}`, `GET /spot/currency_pairs`, `GET /spot/currency_pairs/{currency_pair}` | generic | |
 | Tickers | `GET /spot/tickers` | generic | |
 | Order book | `GET /spot/order_book` | generic | |
 | Account balances | `GET /spot/accounts` | raw | extra endpoint (docs-consolidated into `/unified/accounts`) |
 | Account book | `GET /spot/account_book` | raw | bounded pagination (page/limit) |
-| Orders (list/get/cancel/create) | `GET /spot/orders`, `GET /spot/orders/{order_id}`, `DELETE /spot/orders/{order_id}`, `POST /spot/orders` | raw | client `text` identity, partial-fill fields |
-| My trades | `GET /spot/my_trades` | raw | bounded pagination |
-| Candlesticks, trades, fee, batch orders, open orders, price/PoV orders, insurance, countdown cancel | spot domain endpoints | unsupported | planned (Phase 2) |
+| Orders (list/get/cancel/create/amend/cancel-all) | `GET /spot/orders`, `GET /spot/orders/{order_id}`, `DELETE /spot/orders/{order_id}`, `POST /spot/orders`, `PATCH /spot/orders/{order_id}`, `DELETE /spot/orders` | raw | client `text` identity, partial-fill fields |
+| Batch and open-order management | `GET /spot/open_orders`, `POST /spot/batch_orders`, `POST /spot/cancel_batch_orders`, `POST /spot/countdown_cancel_all` | raw | Gate-specific partial-success and countdown semantics |
+| Market trades and candlesticks | `GET /spot/trades`, `GET /spot/candlesticks` | generic | lossless mapping into XChange core DTOs |
 
 ## Margin + Unified Account
 
