@@ -1,20 +1,28 @@
 package org.knowm.xchange.bybit.service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.BybitExchange;
+import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
+import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfos;
+import org.knowm.xchange.bybit.dto.marketdata.BybitDeliveryPrice;
 import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistoryRaw;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
+import org.knowm.xchange.bybit.dto.marketdata.BybitOpenInterest;
 import org.knowm.xchange.bybit.dto.marketdata.BybitOrderbook;
+import org.knowm.xchange.bybit.dto.marketdata.BybitPublicTrade;
+import org.knowm.xchange.bybit.dto.marketdata.BybitServerTime;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentsInfo;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTickers;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 
 public class BybitMarketDataServiceRaw extends BybitBaseService {
@@ -34,11 +42,132 @@ public class BybitMarketDataServiceRaw extends BybitBaseService {
     return result;
   }
 
+  /** Hard ceiling for catalog pagination: 200 pages x 1000 instruments per category. */
+  private static final int MAX_INSTRUMENT_PAGES = 200;
+
   public BybitResult<BybitInstrumentsInfo<BybitInstrumentInfo>> getInstrumentsInfo(
       BybitCategory category) throws IOException {
-    BybitResult<BybitInstrumentsInfo<BybitInstrumentInfo>> result =
-        bybit.getInstrumentsInfo(category.getValue(), "1000");
+    return getInstrumentsInfo(category, null);
+  }
 
+  /**
+   * Fetches a single instruments-info page. Public so tests can exercise cursor chains one page at
+   * a time; use {@link #getAllInstrumentsInfo(BybitCategory)} for a complete catalog.
+   */
+  public BybitResult<BybitInstrumentsInfo<BybitInstrumentInfo>> getInstrumentsInfo(
+      BybitCategory category, String cursor) throws IOException {
+    BybitResult<BybitInstrumentsInfo<BybitInstrumentInfo>> result =
+        bybit.getInstrumentsInfo(category.getValue(), "1000", cursor);
+
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result;
+  }
+
+  /**
+   * Fetches the complete instrument catalog for a category by following the V5
+   * {@code nextPageCursor} contract. Guards against runaway pagination: a page ceiling, a repeated
+   * cursor, or a non-empty cursor with an empty page each abort with {@link
+   * org.knowm.xchange.exceptions.ExchangeException} instead of looping forever.
+   */
+  public List<BybitInstrumentInfo> getAllInstrumentsInfo(BybitCategory category)
+      throws IOException {
+    List<BybitInstrumentInfo> instruments = new ArrayList<>();
+    String cursor = null;
+    for (int page = 0; page < MAX_INSTRUMENT_PAGES; page++) {
+      BybitInstrumentsInfo<BybitInstrumentInfo> payload =
+          getInstrumentsInfo(category, cursor).getResult();
+      List<BybitInstrumentInfo> pageInstruments = payload.getList();
+      instruments.addAll(pageInstruments);
+      String nextCursor = payload.getNextPageCursor();
+      if (nextCursor == null || nextCursor.isEmpty()) {
+        return instruments;
+      }
+      if (nextCursor.equals(cursor)) {
+        throw new ExchangeException(
+            "Bybit instruments-info pagination repeated cursor '" + nextCursor + "' for category "
+                + category + "; aborting to avoid an infinite loop");
+      }
+      if (pageInstruments.isEmpty()) {
+        throw new ExchangeException(
+            "Bybit instruments-info pagination made no progress for category " + category
+                + " (empty page with cursor '" + nextCursor + "'); aborting");
+      }
+      cursor = nextCursor;
+    }
+    throw new ExchangeException(
+        "Bybit instruments-info pagination exceeded " + MAX_INSTRUMENT_PAGES + " pages for category "
+            + category + "; aborting");
+  }
+
+  public BybitResult<BybitCategorizedPayload<BybitPublicTrade>> getPublicTrades(
+      BybitCategory category, String symbol, Integer limit) throws IOException {
+    BybitResult<BybitCategorizedPayload<BybitPublicTrade>> result =
+        bybit.getPublicTrades(category.getValue(), symbol, limit == null ? null : limit.toString());
+
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result;
+  }
+
+  /**
+   * Option/linear/inverse delivery-price history. Cursor-complete via {@link
+   * BybitCategorizedPayload#getNextPageCursor()}.
+   */
+  public BybitResult<BybitCategorizedPayload<BybitDeliveryPrice>> getDeliveryPrice(
+      BybitCategory category, String symbol, String baseCoin, Integer limit, String cursor)
+      throws IOException {
+    BybitResult<BybitCategorizedPayload<BybitDeliveryPrice>> result =
+        bybit.getDeliveryPrice(
+            category.getValue(),
+            symbol,
+            baseCoin,
+            limit == null ? null : limit.toString(),
+            cursor);
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result;
+  }
+
+  public BybitServerTime getServerTime() throws IOException {
+    BybitResult<BybitServerTime> result = bybit.getServerTime();
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result.getResult();
+  }
+
+  public BybitOpenInterest getOpenInterest(
+      BybitCategory category,
+      String symbol,
+      String intervalTime,
+      Integer limit,
+      Long startTime,
+      Long endTime,
+      String cursor)
+      throws IOException {
+    BybitResult<BybitOpenInterest> result =
+        bybit.getOpenInterest(
+            category.getValue(),
+            symbol,
+            intervalTime,
+            limit == null ? null : limit.toString(),
+            startTime == null ? null : startTime.toString(),
+            endTime == null ? null : endTime.toString(),
+            cursor);
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result.getResult();
+  }
+
+  public BybitResult<BybitRiskLimitInfos> getRiskLimit(
+      BybitCategory category, String symbol, String cursor) throws IOException {
+    BybitResult<BybitRiskLimitInfos> result =
+        bybit.getRiskLimit(category.getValue(), symbol, cursor);
     if (!result.isSuccess()) {
       throw BybitAdapters.createBybitExceptionFromResult(result);
     }

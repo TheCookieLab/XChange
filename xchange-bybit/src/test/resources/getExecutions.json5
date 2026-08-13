@@ -1,0 +1,52 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "list": [
+      {
+        "symbol": "BTCUSDT",
+        "orderType": "Market",
+        "orderLinkId": "link-exec-001",
+        "orderId": "7f6d5c4b-3a2e-4f1d-9c8b-0a1b2c3d4e5f",
+        "execFee": "0.0000001",
+        "execId": "5d6e7f8a-9b0c-1d2e-3f4a-5b6c7d8e9f0a",
+        "execPrice": "60490.0000",
+        "execQty": "0.100000",
+        "execTime": "1691047611000",
+        "execType": "Trade",
+        "feeRate": "0.0001",
+        "closedPnl": "-0.0000001",
+        "side": "Sell",
+        "isMaker": false,
+        "seq": "194256583000",
+        "blockTradeId": "",
+        "createdTime": "1691047611000",
+        "updatedTime": "1691047611000"
+      },
+      {
+        "symbol": "BTCUSDT",
+        "orderType": "Limit",
+        "orderLinkId": "link-exec-002",
+        "orderId": "0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b",
+        "execFee": "0.0000002",
+        "execId": "6e7f8a9b-0c1d-2e3f-4a5b-6c7d8e9f0a1b",
+        "execPrice": "55100.0000",
+        "execQty": "0.010000",
+        "execTime": "1691047811000",
+        "execType": "Trade",
+        "feeRate": "0.0002",
+        "closedPnl": "0",
+        "side": "Buy",
+        "isMaker": true,
+        "seq": "194256583001",
+        "blockTradeId": "",
+        "createdTime": "1691047811000",
+        "updatedTime": "1691047811000"
+      }
+    ],
+    "nextPageCursor": "page_args%3D6e7f8a9b-0c1d-2e3f-4a5b-6c7d8e9f0a1b%26",
+    "category": "linear"
+  },
+  "retExtInfo": {},
+  "time": 1691047812000
+}

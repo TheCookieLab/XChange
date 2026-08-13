@@ -12,6 +12,7 @@ import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import jakarta.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.junit.Rule;
 import org.knowm.xchange.ExchangeFactory;
@@ -62,6 +63,20 @@ public class BaseWiremockTest {
     stubFor(
         get(urlPathEqualTo(baseUrl))
             .withQueryParam(queryParams, stringValuePattern)
+            .willReturn(
+                aResponse()
+                    .withStatus(Status.OK.getStatusCode())
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(IOUtils.resourceToString(responseBody, StandardCharsets.UTF_8))));
+  }
+
+  /** Stub with multiple declared query params; request must contain all of them. */
+  protected void initGetStub(
+      String baseUrl, String responseBody, Map<String, StringValuePattern> queryParams)
+      throws IOException {
+    stubFor(
+        get(urlPathEqualTo(baseUrl))
+            .withQueryParams(queryParams)
             .willReturn(
                 aResponse()
                     .withStatus(Status.OK.getStatusCode())

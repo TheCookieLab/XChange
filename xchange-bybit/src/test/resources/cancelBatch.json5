@@ -1,0 +1,33 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "list": [
+      {
+        "category": "linear",
+        "symbol": "BTCUSDT",
+        "orderId": "8e7d6c5b-4a3e-2f1d-0c9b-8a7b6c5d4e3f",
+        "orderLinkId": "link-batch-001"
+      },
+      {
+        "category": "linear",
+        "symbol": "ETHUSDT",
+        "orderId": "",
+        "orderLinkId": "link-batch-002"
+      }
+    ]
+  },
+  "retExtInfo": {
+    "list": [
+      {
+        "code": 0,
+        "msg": "OK"
+      },
+      {
+        "code": 20001,
+        "msg": "Order not exists"
+      }
+    ]
+  },
+  "time": 1691047612000
+}

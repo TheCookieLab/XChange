@@ -8,11 +8,15 @@ import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitResult;
+import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfos;
 import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistoryRaw;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
+import org.knowm.xchange.bybit.dto.marketdata.BybitDeliveryPrice;
+import org.knowm.xchange.bybit.dto.marketdata.BybitOpenInterest;
 import org.knowm.xchange.bybit.dto.marketdata.BybitOrderbook;
-import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
-import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentsInfo;
+import org.knowm.xchange.bybit.dto.marketdata.BybitPublicTrade;
+import org.knowm.xchange.bybit.dto.marketdata.BybitServerTime;
+import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentsInfo;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTickers;
 import org.knowm.xchange.bybit.service.BybitException;
@@ -47,7 +51,9 @@ public interface Bybit {
   @GET
   @Path("/instruments-info")
   BybitResult<BybitInstrumentsInfo<BybitInstrumentInfo>> getInstrumentsInfo(
-      @QueryParam("category") String category, @QueryParam("limit") String limit)
+      @QueryParam("category") String category,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
       throws IOException, BybitException;
 
   /**
@@ -69,6 +75,63 @@ public interface Bybit {
       @QueryParam("startTime") Long startTime,
       @QueryParam("endTime") Long endTime,
       @QueryParam("limit") Integer limit)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/market/recent-trade">API</a>
+   */
+  @GET
+  @Path("/public-trades")
+  BybitResult<BybitCategorizedPayload<BybitPublicTrade>> getPublicTrades(
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("limit") String limit)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/market/time">API</a>
+   */
+  @GET
+  @Path("/time")
+  BybitResult<BybitServerTime> getServerTime() throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/market/open-interest">API</a>
+   */
+  @GET
+  @Path("/open-interest")
+  BybitResult<BybitOpenInterest> getOpenInterest(
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("intervalTime") String intervalTime,
+      @QueryParam("limit") String limit,
+      @QueryParam("startTime") String startTime,
+      @QueryParam("endTime") String endTime,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/market/risk-limit">API</a>
+   */
+  @GET
+  @Path("/risk-limit")
+  BybitResult<BybitRiskLimitInfos> getRiskLimit(
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("cursor") String cursor)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/market/delivery-price">API</a>
+   */
+  @GET
+  @Path("/delivery-price")
+  BybitResult<BybitCategorizedPayload<BybitDeliveryPrice>> getDeliveryPrice(
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("baseCoin") String baseCoin,
+      @QueryParam("limit") String limit,
+      @QueryParam("cursor") String cursor)
       throws IOException, BybitException;
 
   /**

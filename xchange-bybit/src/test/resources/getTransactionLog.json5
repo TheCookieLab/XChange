@@ -1,0 +1,59 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "nextPageCursor": "",
+    "list": [
+      {
+        "id": "1111111111111111111",
+        "symbol": "BTCUSDT",
+        "category": "linear",
+        "side": "Buy",
+        "transactionTime": "1672304894063",
+        "type": "TRADE",
+        "transSubType": "",
+        "qty": "0.001",
+        "size": "0.001",
+        "currency": "USDT",
+        "tradePrice": "65432.1",
+        "funding": "0",
+        "fee": "0.0000001",
+        "cashFlow": "0",
+        "change": "0.0009999",
+        "cashBalance": "1.23456789",
+        "feeRate": "0.0001",
+        "bonusChange": "0",
+        "tradeId": "2222222222222222222",
+        "orderId": "5555555555555555555",
+        "orderLinkId": "order-1",
+        "extraFees": ""
+      },
+      {
+        "id": "3333333333333333333",
+        "symbol": "ETHUSDT",
+        "category": "linear",
+        "side": "Sell",
+        "transactionTime": "1672304895063",
+        "type": "SETTLEMENT",
+        "transSubType": "",
+        "qty": "0.5",
+        "size": "-0.5",
+        "currency": "USDT",
+        "tradePrice": "1234.567890123",
+        "funding": "12.345678901234",
+        "fee": "0",
+        "cashFlow": "0",
+        "change": "12.345678901234",
+        "cashBalance": "0.73456789",
+        "feeRate": "0",
+        "bonusChange": "0",
+        "tradeId": "",
+        "orderId": "",
+        "orderLinkId": "",
+        "extraFees": ""
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1672304894063
+}

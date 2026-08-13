@@ -1,0 +1,23 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "list": [
+      {
+        "category": "linear",
+        "symbol": "BTCUSDT",
+        "orderId": "8e7d6c5b-4a3e-2f1d-0c9b-8a7b6c5d4e3f",
+        "orderLinkId": "link-batch-001"
+      }
+    ]
+  },
+  "retExtInfo": {
+    "list": [
+      {
+        "code": 0,
+        "msg": "OK"
+      }
+    ]
+  },
+  "time": 1691047612000
+}

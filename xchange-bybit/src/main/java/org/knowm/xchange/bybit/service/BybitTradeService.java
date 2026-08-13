@@ -1,6 +1,7 @@
 package org.knowm.xchange.bybit.service;
 
 import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitOrderDetails;
+import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitPosition;
 import static org.knowm.xchange.bybit.BybitAdapters.adaptChangeOrder;
 import static org.knowm.xchange.bybit.BybitAdapters.adaptLimitOrder;
 import static org.knowm.xchange.bybit.BybitAdapters.adaptMarketOrder;
@@ -10,6 +11,7 @@ import static org.knowm.xchange.bybit.BybitAdapters.createBybitExceptionFromResu
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.knowm.xchange.bybit.BybitAdapters;
@@ -17,6 +19,9 @@ import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.BybitCancelAllOrdersResponse;
+import org.knowm.xchange.bybit.dto.account.position.BybitPosition;
+import org.knowm.xchange.bybit.dto.account.position.BybitPositions;
+import org.knowm.xchange.bybit.dto.marketdata.instruments.linear.BybitLinearInverseInstrumentInfo;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelAllOrdersParams;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderParams;
 import org.knowm.xchange.bybit.dto.trade.BybitOpenOrdersParam;
@@ -25,9 +30,12 @@ import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetail;
 import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetails;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.dto.account.OpenPositions;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelAllOrders;
@@ -49,6 +57,86 @@ public class BybitTradeService extends BybitTradeServiceRaw implements TradeServ
     BybitResult<BybitOrderResponse> orderResponseBybitResult =
         placeOrder(adaptMarketOrder(marketOrder, category), category);
     return orderResponseBybitResult.getResult().getOrderId();
+  }
+
+  /** Hard ceiling for per-settle-coin position pagination (200 positions per page). */
+  private static final int MAX_POSITION_PAGES = 20;
+
+  @Override
+  public OpenPositions getOpenPositions() throws IOException {
+    List<OpenPosition> openPositions = new ArrayList<>();
+    for (BybitCategory category : BybitCategory.values()) {
+      if (category == BybitCategory.SPOT) {
+        continue; // spot has no position endpoint
+      }
+      for (String settleCoin : settleCoinsFor(category)) {
+        String cursor = null;
+        boolean paginationExhausted = false;
+        for (int page = 0; page < MAX_POSITION_PAGES; page++) {
+          BybitResult<BybitPositions> response =
+              getPositions(category, null, null, settleCoin, "200", cursor);
+          List<BybitPosition> positions = response.getResult().getList();
+          if (positions != null) {
+            for (BybitPosition position : positions) {
+              openPositions.add(adaptBybitPosition(position, category));
+            }
+          }
+          String nextCursor = response.getResult().getNextPageCursor();
+          if (nextCursor == null || nextCursor.isEmpty()) {
+            paginationExhausted = true;
+            break;
+          }
+          if (nextCursor.equals(cursor)) {
+            throw new ExchangeException(
+                "Bybit position pagination repeated cursor '" + nextCursor + "' for category "
+                    + category + " settleCoin " + settleCoin
+                    + "; aborting to avoid an infinite loop");
+          }
+          if (positions == null || positions.isEmpty()) {
+            throw new ExchangeException(
+                "Bybit position pagination made no progress for category " + category
+                    + " settleCoin " + settleCoin + " (empty page with cursor '" + nextCursor
+                    + "'); aborting");
+          }
+          cursor = nextCursor;
+        }
+        if (!paginationExhausted) {
+          throw new ExchangeException(
+              "Bybit position pagination exceeded " + MAX_POSITION_PAGES + " pages for category "
+                  + category + " settleCoin " + settleCoin + "; aborting");
+        }
+      }
+    }
+    return new OpenPositions(openPositions);
+  }
+
+  /**
+   * Settlement coins to query per category. LINEAR/INVERSE require a selector (symbol or settleCoin)
+   * on {@code /v5/position/list}, so each distinct settle coin from the instrument catalog is
+   * queried once; OPTION accepts an unfiltered query.
+   */
+  private List<String> settleCoinsFor(BybitCategory category) throws IOException {
+    if (category == BybitCategory.OPTION) {
+      return Collections.singletonList(null);
+    }
+    BybitMarketDataServiceRaw marketData =
+        (BybitMarketDataServiceRaw) exchange.getMarketDataService();
+    List<String> settleCoins =
+        marketData.getAllInstrumentsInfo(category).stream()
+            .filter(BybitLinearInverseInstrumentInfo.class::isInstance)
+            .map(BybitLinearInverseInstrumentInfo.class::cast)
+            .map(BybitLinearInverseInstrumentInfo::getSettleCoin)
+            .distinct()
+            .collect(Collectors.toList());
+    if (settleCoins.isEmpty()) {
+      throw new ExchangeException(
+          "No "
+              + category.getValue()
+              + " instruments in the catalog; cannot enumerate settle coins for"
+              + " /v5/position/list. Call exchange.remoteInit() first or query positions per"
+              + " symbol via the raw service.");
+    }
+    return settleCoins;
   }
 
   @Override

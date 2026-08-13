@@ -17,9 +17,11 @@ import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinBalance;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
+import org.knowm.xchange.bybit.dto.account.position.BybitPosition;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitCoinWalletBalance;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKline;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
+import org.knowm.xchange.bybit.dto.marketdata.BybitPublicTrade;
 import org.knowm.xchange.bybit.dto.marketdata.candles.BybitCandleStickInterval;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.linear.BybitLinearInverseInstrumentInfo;
@@ -41,8 +43,10 @@ import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.IOrderFlags;
 import org.knowm.xchange.dto.Order.OrderStatus;
+import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Balance;
+import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
@@ -410,6 +414,47 @@ public class BybitAdapters {
   public static Ticker adaptBybitOptionTicker(
       Instrument instrument, Date time, BybitOptionTicker bybitTicker) {
     return adaptBybitTickerBuilder(instrument, time, bybitTicker).build();
+  }
+
+  /**
+   * Maps a public trade to the generic XChange model. Wire strings convert with exact precision;
+   * the millisecond epoch string becomes the trade timestamp.
+   */
+  public static Trade adaptPublicTrade(BybitPublicTrade publicTrade, Instrument instrument) {
+    return Trade.builder()
+        .id(publicTrade.getExecId())
+        .instrument(instrument)
+        .originalAmount(new BigDecimal(publicTrade.getSize()))
+        .price(new BigDecimal(publicTrade.getPrice()))
+        .timestamp(new Date(Long.parseLong(publicTrade.getTime())))
+        .type("Buy".equals(publicTrade.getSide()) ? Order.OrderType.BID : Order.OrderType.ASK)
+        .build();
+  }
+
+  /**
+   * Maps one Bybit position to the generic {@link OpenPosition} model. The hedge-mode subposition
+   * identity is preserved in the id ({@code symbol:positionIdx}) because the generic model has no
+   * dedicated field for it; {@code positionIdx} stays losslessly available on the raw DTO.
+   */
+  public static OpenPosition adaptBybitPosition(BybitPosition position, BybitCategory category) {
+    OpenPosition.OpenPositionBuilder builder =
+        OpenPosition.builder()
+            .id(position.getSymbol() + ":" + position.getPositionIdx())
+            .instrument(convertBybitSymbolToInstrument(position.getSymbol(), category))
+            .type("Buy".equals(position.getSide()) ? OpenPosition.Type.LONG : OpenPosition.Type.SHORT)
+            .size(new BigDecimal(position.getSize()))
+            .price(new BigDecimal(position.getAvgPrice()))
+            .unRealisedPnl(new BigDecimal(position.getUnrealisedPnl()));
+    if (position.getLiqPrice() != null && !position.getLiqPrice().isEmpty()) {
+      builder.liquidationPrice(new BigDecimal(position.getLiqPrice()));
+    }
+    if (position.getCreatedTime() != null && !position.getCreatedTime().isEmpty()) {
+      builder.createdAt(Instant.ofEpochMilli(Long.parseLong(position.getCreatedTime())));
+    }
+    if (position.getUpdatedTime() != null && !position.getUpdatedTime().isEmpty()) {
+      builder.updatedAt(Instant.ofEpochMilli(Long.parseLong(position.getUpdatedTime())));
+    }
+    return builder.build();
   }
 
   private static Builder adaptBybitTickerBuilder(

@@ -45,8 +45,23 @@ public class BybitStreamingTradeService extends BybitBaseService implements Stre
     this.userTradeService = userTradeService;
   }
 
+  /**
+   * The order-entry (trade) transport is not constructed in the demo environment, which does not
+   * support the WebSocket order-entry transport. Order/position change subscriptions keep working
+   * through the private user-data stream; only order operations are unavailable.
+   */
+  private BybitUserTradeStreamingService tradeService() {
+    if (userTradeService == null) {
+      throw new IllegalStateException(
+          "Bybit demo trading does not support the WebSocket order-entry (trade) transport; "
+              + "use the REST trade service for order operations in the demo environment.");
+    }
+    return userTradeService;
+  }
+
   @Override
   public Single<Integer> placeMarketOrder(MarketOrder order, Object... args) {
+    tradeService();
     BybitCategory category = BybitAdapters.getCategory(order.getInstrument());
     Observable<Integer> observable =
         userTradeService
@@ -70,6 +85,7 @@ public class BybitStreamingTradeService extends BybitBaseService implements Stre
 
   @Override
   public Single<Integer> placeLimitOrder(LimitOrder order, Object... args) {
+    tradeService();
     BybitCategory category = BybitAdapters.getCategory(order.getInstrument());
     Observable<Integer> observable =
         userTradeService
@@ -93,6 +109,7 @@ public class BybitStreamingTradeService extends BybitBaseService implements Stre
 
   @Override
   public Single<Integer> changeOrder(LimitOrder order, Object... args) {
+    tradeService();
     BybitCategory category = BybitAdapters.getCategory(order.getInstrument());
     Observable<Integer> observable =
         userTradeService
@@ -115,6 +132,7 @@ public class BybitStreamingTradeService extends BybitBaseService implements Stre
   }
 
   public Single<List<Integer>> batchChangeOrder(List<LimitOrder> orders) {
+    tradeService();
     BybitCategory category = BybitAdapters.getCategory(orders.get(0).getInstrument());
     try {
       Observable<List<Integer>> observable =
@@ -150,6 +168,7 @@ public class BybitStreamingTradeService extends BybitBaseService implements Stre
 
   @Override
   public Single<Integer> cancelOrder(CancelOrderParams params, Object... args) {
+    tradeService();
     BybitCancelOrderParams bybitParams = (BybitCancelOrderParams) params;
     BybitCategory category = BybitAdapters.getCategory(bybitParams.getInstrument());
     Observable<Integer> observable =
@@ -174,6 +193,7 @@ public class BybitStreamingTradeService extends BybitBaseService implements Stre
   }
 
   public Single<List<Integer>> batchCancelOrder(List<CancelOrderParams> params) {
+    tradeService();
     List<BybitCancelOrderParams> bybitParams = new ArrayList<>();
     params.forEach(d -> bybitParams.add((BybitCancelOrderParams) d));
     BybitCategory category = BybitAdapters.getCategory(bybitParams.get(0).getInstrument());

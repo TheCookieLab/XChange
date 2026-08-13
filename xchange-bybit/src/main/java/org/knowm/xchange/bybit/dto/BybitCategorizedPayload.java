@@ -12,4 +12,8 @@ public class BybitCategorizedPayload<T> {
 
   @JsonProperty("list")
   List<T> list;
+
+  /** V5 pagination cursor; absent or empty on the last page. */
+  @JsonProperty("nextPageCursor")
+  String nextPageCursor;
 }
