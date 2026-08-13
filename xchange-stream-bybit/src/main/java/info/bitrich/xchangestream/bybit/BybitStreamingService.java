@@ -1,6 +1,5 @@
 package info.bitrich.xchangestream.bybit;
 
-import static info.bitrich.xchangestream.bybit.BybitStreamingExchange.EXCHANGE_TYPE;
 import static info.bitrich.xchangestream.core.StreamingExchange.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -21,6 +20,7 @@ import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import lombok.Setter;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.bybit.config.BybitConfiguration;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,8 +41,7 @@ public class BybitStreamingService extends JsonNettyStreamingService {
         (Duration) spec.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
         (Duration) spec.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
         (Integer) spec.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
-    this.exchange_type =
-        ((BybitCategory) spec.getExchangeSpecificParametersItem(EXCHANGE_TYPE)).getValue();
+    this.exchange_type = BybitConfiguration.resolveStreamCategory(spec).getValue();
     this.spec = spec;
   }
 

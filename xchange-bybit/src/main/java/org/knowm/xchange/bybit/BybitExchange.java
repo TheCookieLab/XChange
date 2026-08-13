@@ -5,6 +5,8 @@ import lombok.Getter;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.bybit.config.BybitConfiguration;
+import org.knowm.xchange.bybit.config.BybitEnvironment;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitAccountType;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.linear.BybitLinearInverseInstrumentInfo;
@@ -23,8 +25,6 @@ public class BybitExchange extends BaseExchange implements Exchange {
 
   public static final String SPECIFIC_PARAM_ACCOUNT_TYPE = "accountType";
   private static final String BASE_URL = "https://api.bybit.com";
-  private static final String DEMO_URL = "https://api-demo.bybit.com";
-  private static final String TESTNET_URL = "https://api-testnet.bybit.com";
 
   // enable TEST_NET
   public static final String SPECIFIC_PARAM_TESTNET = "test_net";
@@ -33,17 +33,23 @@ public class BybitExchange extends BaseExchange implements Exchange {
 
   @Getter protected SynchronizedValueFactory<Long> timeStampFactory = new BybitTimeStampFactory();
 
+  /**
+   * Validated configuration resolved in {@link #applySpecification(ExchangeSpecification)} before
+   * any service or transport is constructed; shared by the REST and streaming modules.
+   */
+  @Getter private BybitConfiguration configuration;
+
   @Override
   protected void initServices() {
+    if (configuration == null) {
+      // Defensive fallback for applySpecification(null), which merges the default specification
+      // after initServices has already been invoked by the base class.
+      configuration = BybitConfiguration.from(getExchangeSpecification());
+    }
     marketDataService = new BybitMarketDataService(this, getResilienceRegistries());
     tradeService = new BybitTradeService(this, getResilienceRegistries());
     accountService =
-        new BybitAccountService(
-            this,
-            (BybitAccountType)
-                getExchangeSpecification()
-                    .getExchangeSpecificParametersItem(SPECIFIC_PARAM_ACCOUNT_TYPE),
-            getResilienceRegistries());
+        new BybitAccountService(this, configuration.getAccountType(), getResilienceRegistries());
   }
 
   @Override
@@ -120,19 +126,29 @@ public class BybitExchange extends BaseExchange implements Exchange {
 
   @Override
   public void applySpecification(ExchangeSpecification exchangeSpecification) {
-    if (exchangeSpecification
-        .getExchangeSpecificParametersItem(Exchange.USE_SANDBOX)
-        .equals(true)) {
-      exchangeSpecification.setSslUri(DEMO_URL);
-    }
-
-    if (exchangeSpecification.getExchangeSpecificParametersItem(SPECIFIC_PARAM_TESTNET) != null
-        && exchangeSpecification
-            .getExchangeSpecificParametersItem(SPECIFIC_PARAM_TESTNET)
-            .equals(true)) {
-      exchangeSpecification.setSslUri(TESTNET_URL);
+    if (exchangeSpecification != null) {
+      // Resolve and validate the environment before the base class constructs services: a
+      // contradictory demo/testnet combination or an unsupported account type fails here
+      // instead of silently rerouting traffic.
+      BybitConfiguration resolved = BybitConfiguration.from(exchangeSpecification);
+      this.configuration = resolved;
+      if (exchangeSpecification.getSslUri() == null
+          || isDefaultBybitRestUrl(exchangeSpecification.getSslUri())) {
+        // An explicitly configured sslUri (custom endpoint, test proxy) wins; otherwise the
+        // environment contract selects the REST base URL.
+        exchangeSpecification.setSslUri(resolved.getEnvironment().getRestBaseUrl());
+      }
     }
     super.applySpecification(exchangeSpecification);
+  }
+
+  private static boolean isDefaultBybitRestUrl(String sslUri) {
+    for (BybitEnvironment environment : BybitEnvironment.values()) {
+      if (environment.getRestBaseUrl().equals(sslUri)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

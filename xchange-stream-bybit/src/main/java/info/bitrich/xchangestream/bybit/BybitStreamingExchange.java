@@ -6,6 +6,8 @@ import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.bybit.BybitExchange;
+import org.knowm.xchange.bybit.config.BybitConfiguration;
+import org.knowm.xchange.bybit.config.BybitEnvironment;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +33,8 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
   public static final String TESTNET_TRADE_URI = "wss://stream-testnet.bybit.com/v5/trade";
 
   // spot, linear, inverse or option
-  public static final String EXCHANGE_TYPE = "Exchange_Type";
+  @Deprecated // use BybitConfiguration.EXCHANGE_TYPE
+  public static final String EXCHANGE_TYPE = BybitConfiguration.EXCHANGE_TYPE;
 
   private BybitStreamingService streamingService;
   private BybitStreamingMarketDataService streamingMarketDataService;
@@ -42,30 +45,36 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
   @Override
   protected void initServices() {
     super.initServices();
+    // One validated configuration contract resolves REST and all WebSocket transports.
+    BybitConfiguration configuration = BybitConfiguration.from(exchangeSpecification);
+    BybitEnvironment environment = configuration.getEnvironment();
+    BybitCategory category = BybitConfiguration.resolveStreamCategory(exchangeSpecification);
     applyWebsocketTimeouts(exchangeSpecification);
-    this.streamingService = new BybitStreamingService(getApiUrl(), exchangeSpecification);
+    this.streamingService =
+        new BybitStreamingService(
+            environment.getPublicWebsocketUrl(category), exchangeSpecification);
     applyStreamingSpecification(exchangeSpecification, streamingService);
     if (isApiKeyValid()) {
       this.streamingUserDataService =
-          new BybitUserDataStreamingService(getApiUrlWithAuth(), exchangeSpecification);
+          new BybitUserDataStreamingService(
+              environment.getPrivateWebsocketUrl(), exchangeSpecification);
       applyStreamingSpecification(exchangeSpecification, streamingUserDataService);
-      this.streamingUserTradeService =
-          new BybitUserTradeStreamingService(getTradeApiUrlWithAuth(), exchangeSpecification);
-      applyStreamingSpecification(exchangeSpecification, streamingUserTradeService);
+      if (environment.supportsTradeWebsocket()) {
+        this.streamingUserTradeService =
+            new BybitUserTradeStreamingService(
+                environment.getTradeWebsocketUrl(), exchangeSpecification);
+        applyStreamingSpecification(exchangeSpecification, streamingUserTradeService);
+      } else {
+        LOG.warn(
+            "Bybit demo trading does not support the WebSocket order-entry (trade) transport; "
+                + "order-entry streaming is disabled. Use the REST trade service for order "
+                + "operations in the demo environment.");
+      }
     }
     this.streamingMarketDataService = new BybitStreamingMarketDataService(streamingService);
     this.streamingTradeService =
         new BybitStreamingTradeService(
             streamingUserDataService, streamingUserTradeService, getResilienceRegistries(), this);
-  }
-
-  private String getTradeApiUrlWithAuth() {
-    if (Boolean.TRUE.equals(
-        exchangeSpecification.getExchangeSpecificParametersItem(SPECIFIC_PARAM_TESTNET))) {
-      return TESTNET_TRADE_URI;
-    } else {
-      return TRADE_URI;
-    }
   }
 
   private boolean isApiKeyValid() {
@@ -75,36 +84,6 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
         && !exchangeSpecification.getSecretKey().isEmpty();
   }
 
-  private String getApiUrl() {
-    String apiUrl;
-    if (Boolean.TRUE.equals(exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX))) {
-      apiUrl = TESTNET_URI;
-    } else {
-      apiUrl = URI;
-    }
-    apiUrl +=
-        "/"
-            + ((BybitCategory)
-                    exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE))
-                .getValue();
-    return apiUrl;
-  }
-
-  private String getApiUrlWithAuth() {
-    String apiUrl;
-    if (Boolean.TRUE.equals(exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX))) {
-      apiUrl = DEMO_AUTH_URI;
-    } else {
-      if (Boolean.TRUE.equals(
-          exchangeSpecification.getExchangeSpecificParametersItem(SPECIFIC_PARAM_TESTNET))) {
-        apiUrl = TESTNET_AUTH_URI;
-      } else {
-        apiUrl = AUTH_URI;
-      }
-    }
-    return apiUrl;
-  }
-
   @Override
   public Completable connect(ProductSubscription... args) {
     LOG.info("Connect to BybitStream");
@@ -112,7 +91,9 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
     completableList.add(streamingService.connect());
     if (isApiKeyValid()) {
       completableList.add(streamingUserDataService.connect());
-      completableList.add(streamingUserTradeService.connect());
+      if (streamingUserTradeService != null) {
+        completableList.add(streamingUserTradeService.connect());
+      }
     }
     return Completable.concat(completableList);
   }
@@ -146,6 +127,11 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
     }
   }
 
+  /** Whether the order-entry (trade) transport was constructed (absent in demo trading). */
+  boolean isTradeTransportEnabled() {
+    return streamingUserTradeService != null;
+  }
+
   @Override
   public boolean isAlive() {
     // In a normal situation - streamingService is always runs, userDataStreamingService - depends
@@ -154,8 +140,9 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
         return streamingService.isSocketOpen()
             && streamingUserDataService.isSocketOpen()
             && streamingUserDataService.isAuthorized()
-            && streamingUserTradeService.isSocketOpen()
-            && streamingUserTradeService.isAuthorized();
+            && (streamingUserTradeService == null
+                || (streamingUserTradeService.isSocketOpen()
+                    && streamingUserTradeService.isAuthorized()));
       } else {
         return streamingService.isSocketOpen();
       }
@@ -192,6 +179,10 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
   }
 
   public Observable<State> connectionStateObservableTradeChannel() {
+    if (streamingUserTradeService == null) {
+      // The demo environment has no order-entry (trade) transport.
+      return Observable.empty();
+    }
     return streamingUserTradeService.subscribeConnectionState();
   }
 
