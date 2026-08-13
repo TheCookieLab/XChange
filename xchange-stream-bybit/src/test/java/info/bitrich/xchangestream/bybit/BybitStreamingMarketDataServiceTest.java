@@ -175,9 +175,10 @@ public class BybitStreamingMarketDataServiceTest {
   @Test
   public void shallowDepthGapDoesNotTruncateDeepBook() throws Exception {
     // The 200-level book is authoritative: its snapshot rebuilds the shared book and its delta
-    // advances it. The 50-level channel then reconnects after a gap: orphan delta (continuity
-    // broken), its own fresh snapshot, and a valid delta. The shallow snapshot must NOT rebuild
-    // (truncate) the shared book; only its sequence is rebased and its deltas still apply.
+    // advances it. The 50-level channel then reconnects after a gap. The shallow snapshot must
+    // NOT rebuild (truncate) the shared book, and the shallow deltas must NOT mutate it: the
+    // 200-level delta stream already carries every change within the shallower range, so
+    // applying both would risk a delayed deeper update overwriting a newer shallow value.
     JsonNode depth200Snapshot = orderBook("snapshot", 100, "16493.50", "16611.00");
     JsonNode depth200Delta = orderBook("delta", 101, "16494.00", "16612.00");
     JsonNode depth50OrphanDelta = orderBook("delta", 101, "16494.00", "16612.00");
@@ -205,12 +206,12 @@ public class BybitStreamingMarketDataServiceTest {
     TestObserver<OrderBook> bookObserver =
         marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, "50,200").test();
 
-    assertThat(gapObserver.values()).hasSize(1);
-    // The shallow channel's own snapshot must NOT rebuild (and thereby truncate) the shared
-    // 200-level book; its deltas continue applying on top of the deep book.
+    // The shallow channel's own events are ignored entirely: no gap (its delta is redundant
+    // for the shared book) and no truncation; the deep book advances only via the deep channel.
+    assertThat(gapObserver.values()).isEmpty();
     OrderBook finalBook = bookObserver.values().get(bookObserver.values().size() - 1);
     assertThat(finalBook.getAsks())
-        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("16613.00")) == 0);
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("16612.00")) == 0);
   }
 
   @Test

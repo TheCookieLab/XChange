@@ -3,9 +3,8 @@
   "retMsg": "OK",
   "result": {
     "currency": "BTC",
-    "maxBorrowAmount": "10.5",
-    "borrowableAmount": "7.25"
+    "maxLoan": "17.54689892"
   },
   "retExtInfo": {},
-  "time": 1672304894063
+  "time": 1756261353733
 }

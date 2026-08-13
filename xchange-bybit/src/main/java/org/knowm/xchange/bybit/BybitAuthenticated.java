@@ -377,10 +377,10 @@ public interface BybitAuthenticated {
       throws IOException, BybitException;
 
   /**
-   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/account/borrowable-amount">API</a>
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/spot-margin-uta/max-borrowable">API</a>
    */
   @GET
-  @Path("/account/borrowable-amount")
+  @Path("/spot-margin-trade/max-borrowable")
   BybitResult<BybitBorrowableAmount> getBorrowableAmount(
       @HeaderParam(X_BAPI_API_KEY) String apiKey,
       @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,

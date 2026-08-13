@@ -121,6 +121,16 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                             orderBookMapId,
                             new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false));
                       } else if (type.equalsIgnoreCase("delta")) {
+                        // Only the governing (deepest) channel's deltas may mutate the shared
+                        // book. Its delta stream is a superset of every shallower channel's (all
+                        // level changes within the deeper range), so applying shallower deltas
+                        // too would be redundant AND could regress the book: the channels carry
+                        // independent u-sequences, so a delayed deeper-channel update could
+                        // overwrite a newer shallower-channel value for an overlapping price.
+                        if (!isDeepestChannel(bybitSymbol, depth)) {
+                          return new OrderBook(
+                              null, Lists.newArrayList(), Lists.newArrayList(), false);
+                        }
                         return applyOrderBookDeltaSnapshot(
                             orderBookMapId,
                             instrument,

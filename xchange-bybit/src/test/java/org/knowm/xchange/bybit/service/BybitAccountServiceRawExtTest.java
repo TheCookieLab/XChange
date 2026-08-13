@@ -130,7 +130,7 @@ public class BybitAccountServiceRawExtTest extends BaseWiremockTest {
   @Test
   public void borrowableAmountParses() throws IOException {
     initGetStub(
-        "/v5/account/borrowable-amount",
+        "/v5/spot-margin-trade/max-borrowable",
         "/getBorrowableAmount.json5",
         "currency",
         equalTo("BTC"));
@@ -140,8 +140,7 @@ public class BybitAccountServiceRawExtTest extends BaseWiremockTest {
 
     assertNotNull(amount);
     assertEquals("BTC", amount.getCurrency());
-    assertEquals("10.5", amount.getMaxBorrowAmount());
-    assertEquals("7.25", amount.getBorrowableAmount());
+    assertEquals("17.54689892", amount.getMaxLoan());
   }
 
   @Test

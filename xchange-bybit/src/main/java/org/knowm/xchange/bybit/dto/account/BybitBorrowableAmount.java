@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
-/** Borrowable amount from {@code /v5/account/borrowable-amount}. */
+/** Max borrowable amount from {@code GET /v5/spot-margin-trade/max-borrowable}. */
 @Builder
 @Jacksonized
 @Value
@@ -14,9 +14,6 @@ public class BybitBorrowableAmount {
   @JsonProperty("currency")
   String currency;
 
-  @JsonProperty("maxBorrowAmount")
-  String maxBorrowAmount;
-
-  @JsonProperty("borrowableAmount")
-  String borrowableAmount;
+  @JsonProperty("maxLoan")
+  String maxLoan;
 }
