@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
-/** Wrapper of {@code /v5/position/risk-limit}. */
+/** Wrapper of the public {@code /v5/market/risk-limit} endpoint. */
 @Builder
 @Jacksonized
 @Value

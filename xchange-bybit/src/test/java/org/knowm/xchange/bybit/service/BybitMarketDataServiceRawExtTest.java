@@ -9,9 +9,13 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.bybit.dto.BybitResult;
+import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfo;
+import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfos;
 import org.knowm.xchange.bybit.dto.marketdata.BybitOpenInterest;
 import org.knowm.xchange.bybit.dto.marketdata.BybitPublicTrade;
 import org.knowm.xchange.bybit.dto.marketdata.BybitServerTime;
@@ -112,10 +116,38 @@ public class BybitMarketDataServiceRawExtTest extends BaseWiremockTest {
     BybitOpenInterest openInterest =
         raw.getOpenInterest(BybitCategory.LINEAR, "BTCUSDT", "5min", null);
 
-    assertEquals("linear", openInterest.getCategory());
-    assertEquals("BTCUSDT", openInterest.getSymbol());
-    assertEquals("190.937", openInterest.getOpenInterest());
-    assertEquals("1672300000000", openInterest.getTimestamp());
+    assertEquals(1, openInterest.getList().size());
+    assertEquals("BTCUSDT", openInterest.getList().get(0).getSymbol());
+    assertEquals("190.937", openInterest.getList().get(0).getOpenInterest());
+    assertEquals("1672300000000", openInterest.getList().get(0).getTimestamp());
+  }
+
+  @Test
+  public void riskLimitParsesTiersFromPublicMarketEndpoint() throws IOException {
+    initGetStub(
+        "/v5/market/risk-limit", "/getRiskLimit.json5", "category", equalTo("linear"));
+    initGetStub(
+        "/v5/market/risk-limit", "/getRiskLimit.json5", "symbol", equalTo("BTCUSDT"));
+
+    BybitMarketDataServiceRaw raw =
+        (BybitMarketDataServiceRaw) createExchange().getMarketDataService();
+    BybitResult<BybitRiskLimitInfos> result = raw.getRiskLimit(BybitCategory.LINEAR, "BTCUSDT", null);
+
+    assertTrue(result.isSuccess());
+    List<BybitRiskLimitInfo> list = result.getResult().getList();
+    assertEquals(2, list.size());
+    BybitRiskLimitInfo lowest = list.get(0);
+    assertEquals("1", lowest.getId());
+    assertEquals("BTCUSDT", lowest.getSymbol());
+    assertEquals("1000000", lowest.getRiskLimitValue());
+    assertEquals("0.005", lowest.getMaintenanceMargin());
+    assertEquals("0.01", lowest.getInitialMargin());
+    assertEquals("1", lowest.getIsLowestRisk());
+    assertEquals("100.00", lowest.getMaxLeverage());
+    assertEquals("", lowest.getMmDeduction());
+    assertEquals("0%3A2%3A2", result.getResult().getNextPageCursor());
+    assertEquals("2", list.get(1).getId());
+    assertEquals("0.01", list.get(1).getMaintenanceMargin());
   }
 
   @Test

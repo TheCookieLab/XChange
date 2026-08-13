@@ -8,6 +8,7 @@ import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitResult;
+import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfos;
 import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistoryRaw;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
 import org.knowm.xchange.bybit.dto.marketdata.BybitDeliveryPrice;
@@ -15,8 +16,7 @@ import org.knowm.xchange.bybit.dto.marketdata.BybitOpenInterest;
 import org.knowm.xchange.bybit.dto.marketdata.BybitOrderbook;
 import org.knowm.xchange.bybit.dto.marketdata.BybitPublicTrade;
 import org.knowm.xchange.bybit.dto.marketdata.BybitServerTime;
-import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
-import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentsInfo;
+import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentsInfo;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTickers;
 import org.knowm.xchange.bybit.service.BybitException;
@@ -105,6 +105,17 @@ public interface Bybit {
       @QueryParam("symbol") String symbol,
       @QueryParam("intervalTime") String intervalTime,
       @QueryParam("limit") String limit)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/market/risk-limit">API</a>
+   */
+  @GET
+  @Path("/risk-limit")
+  BybitResult<BybitRiskLimitInfos> getRiskLimit(
+      @QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("cursor") String cursor)
       throws IOException, BybitException;
 
   /**

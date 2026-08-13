@@ -171,10 +171,13 @@ public class BybitStreamingMarketDataServiceTest {
   }
 
   @Test
-  public void shallowDepthGapRebuildsBookFromItsOwnSnapshot() throws Exception {
+  public void shallowDepthGapDoesNotTruncateDeepBook() throws Exception {
+    // The 200-level book is authoritative: its snapshot rebuilds the shared book and its delta
+    // advances it. The 50-level channel then reconnects after a gap: orphan delta (continuity
+    // broken), its own fresh snapshot, and a valid delta. The shallow snapshot must NOT rebuild
+    // (truncate) the shared book; only its sequence is rebased and its deltas still apply.
     JsonNode depth200Snapshot = orderBook("snapshot", 100, "16493.50", "16611.00");
-    // The 50-level stream reconnects after a gap: its first messages are an orphan delta
-    // (continuity broken) followed by its own fresh snapshot and a valid delta.
+    JsonNode depth200Delta = orderBook("delta", 101, "16494.00", "16612.00");
     JsonNode depth50OrphanDelta = orderBook("delta", 101, "16494.00", "16612.00");
     JsonNode depth50Snapshot = orderBook("snapshot", 200, "16494.00", "16612.00");
     JsonNode depth50Delta = orderBook("delta", 201, "16495.00", "16613.00");
@@ -184,7 +187,7 @@ public class BybitStreamingMarketDataServiceTest {
             invocation -> {
               String channel = invocation.getArgument(0);
               if (channel.equals("orderbook.200.BTCUSDT")) {
-                return Observable.fromIterable(List.of(depth200Snapshot));
+                return Observable.fromIterable(List.of(depth200Snapshot, depth200Delta));
               }
               return Observable.fromIterable(
                   List.of(depth50OrphanDelta, depth50Snapshot, depth50Delta));
@@ -201,7 +204,8 @@ public class BybitStreamingMarketDataServiceTest {
         marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, "50,200").test();
 
     assertThat(gapObserver.values()).hasSize(1);
-    // The shallow depth's own snapshot must rebuild the shared book (any-depth snapshot).
+    // The shallow channel's own snapshot must NOT rebuild (and thereby truncate) the shared
+    // 200-level book; its deltas continue applying on top of the deep book.
     OrderBook finalBook = bookObserver.values().get(bookObserver.values().size() - 1);
     assertThat(finalBook.getAsks())
         .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("16613.00")) == 0);

@@ -14,12 +14,9 @@ import org.knowm.xchange.bybit.dto.account.BybitCancelAllOrdersPayload;
 import org.knowm.xchange.bybit.dto.account.BybitCancelAllOrdersResponse;
 import org.knowm.xchange.bybit.dto.account.position.BybitAddMarginPayload;
 import org.knowm.xchange.bybit.dto.account.position.BybitClosedPnl;
-import org.knowm.xchange.bybit.dto.account.position.BybitLeverageInfos;
 import org.knowm.xchange.bybit.dto.account.position.BybitPositions;
-import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfos;
 import org.knowm.xchange.bybit.dto.account.position.BybitSetAutoAddMarginPayload;
 import org.knowm.xchange.bybit.dto.account.position.BybitSetRiskLimitPayload;
-import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopInfos;
 import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitPreCheckPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitPreCheckResult;
@@ -137,7 +134,12 @@ public class BybitTradeServiceRaw extends BybitBaseService {
   }
 
   BybitResult<BybitPositions> getPositions(
-      BybitCategory category, String symbol, String baseCoin, String limit, String cursor)
+      BybitCategory category,
+      String symbol,
+      String baseCoin,
+      String settleCoin,
+      String limit,
+      String cursor)
       throws IOException {
     BybitResult<BybitPositions> response =
         bybitAuthenticated.getPositions(
@@ -147,6 +149,7 @@ public class BybitTradeServiceRaw extends BybitBaseService {
             category.getValue(),
             symbol,
             baseCoin,
+            settleCoin,
             limit,
             cursor);
     if (!response.isSuccess()) {
@@ -174,55 +177,6 @@ public class BybitTradeServiceRaw extends BybitBaseService {
             endTime,
             limit,
             cursor);
-    if (!response.isSuccess()) {
-      throw createBybitExceptionFromResult(response);
-    }
-    return response;
-  }
-
-  BybitResult<BybitLeverageInfos> getLeverageInfo(
-      BybitCategory category, String symbol, String baseCoin, String limit, String cursor)
-      throws IOException {
-    BybitResult<BybitLeverageInfos> response =
-        bybitAuthenticated.getLeverageInfo(
-            apiKey,
-            signatureCreator,
-            exchange.getTimeStampFactory(),
-            category.getValue(),
-            symbol,
-            baseCoin,
-            limit,
-            cursor);
-    if (!response.isSuccess()) {
-      throw createBybitExceptionFromResult(response);
-    }
-    return response;
-  }
-
-  BybitResult<BybitRiskLimitInfos> getRiskLimit(
-      BybitCategory category, String symbol, String baseCoin, String limit, String cursor)
-      throws IOException {
-    BybitResult<BybitRiskLimitInfos> response =
-        bybitAuthenticated.getRiskLimit(
-            apiKey,
-            signatureCreator,
-            exchange.getTimeStampFactory(),
-            category.getValue(),
-            symbol,
-            baseCoin,
-            limit,
-            cursor);
-    if (!response.isSuccess()) {
-      throw createBybitExceptionFromResult(response);
-    }
-    return response;
-  }
-
-  BybitResult<BybitTradingStopInfos> getTradingStop(BybitCategory category, String symbol)
-      throws IOException {
-    BybitResult<BybitTradingStopInfos> response =
-        bybitAuthenticated.getTradingStop(
-            apiKey, signatureCreator, exchange.getTimeStampFactory(), category.getValue(), symbol);
     if (!response.isSuccess()) {
       throw createBybitExceptionFromResult(response);
     }

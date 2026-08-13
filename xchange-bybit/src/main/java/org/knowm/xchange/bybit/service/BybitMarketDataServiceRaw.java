@@ -8,6 +8,7 @@ import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
+import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfos;
 import org.knowm.xchange.bybit.dto.marketdata.BybitDeliveryPrice;
 import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistoryRaw;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
@@ -149,6 +150,16 @@ public class BybitMarketDataServiceRaw extends BybitBaseService {
       throw BybitAdapters.createBybitExceptionFromResult(result);
     }
     return result.getResult();
+  }
+
+  public BybitResult<BybitRiskLimitInfos> getRiskLimit(
+      BybitCategory category, String symbol, String cursor) throws IOException {
+    BybitResult<BybitRiskLimitInfos> result =
+        bybit.getRiskLimit(category.getValue(), symbol, cursor);
+    if (!result.isSuccess()) {
+      throw BybitAdapters.createBybitExceptionFromResult(result);
+    }
+    return result;
   }
 
   public BybitResult<BybitTickers<BybitTicker>> getTickers(BybitCategory category)

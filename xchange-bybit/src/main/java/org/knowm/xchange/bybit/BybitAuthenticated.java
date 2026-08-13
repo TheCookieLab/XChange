@@ -33,18 +33,12 @@ import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
 import org.knowm.xchange.bybit.dto.account.feerates.BybitFeeRates;
 import org.knowm.xchange.bybit.dto.account.position.BybitAddMarginPayload;
 import org.knowm.xchange.bybit.dto.account.position.BybitClosedPnl;
-import org.knowm.xchange.bybit.dto.account.position.BybitLeverageInfo;
-import org.knowm.xchange.bybit.dto.account.position.BybitLeverageInfos;
 import org.knowm.xchange.bybit.dto.account.position.BybitPosition;
 import org.knowm.xchange.bybit.dto.account.position.BybitPositions;
-import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfo;
-import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfos;
 import org.knowm.xchange.bybit.dto.account.position.BybitSetAutoAddMarginPayload;
 import org.knowm.xchange.bybit.dto.account.position.BybitSetLeveragePayload;
 import org.knowm.xchange.bybit.dto.account.position.BybitSetRiskLimitPayload;
 import org.knowm.xchange.bybit.dto.account.position.BybitSwitchModePayload;
-import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopInfo;
-import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopInfos;
 import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopPayload;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitWalletBalance;
 import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
@@ -418,6 +412,7 @@ public interface BybitAuthenticated {
       @QueryParam("category") String category,
       @QueryParam("symbol") String symbol,
       @QueryParam("baseCoin") String baseCoin,
+      @QueryParam("settleCoin") String settleCoin,
       @QueryParam("limit") String limit,
       @QueryParam("cursor") String cursor)
       throws IOException, BybitException;
@@ -437,51 +432,6 @@ public interface BybitAuthenticated {
       @QueryParam("endTime") String endTime,
       @QueryParam("limit") String limit,
       @QueryParam("cursor") String cursor)
-      throws IOException, BybitException;
-
-  /**
-   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/leverage-info">API</a>
-   */
-  @GET
-  @Path("/position/limit")
-  BybitResult<BybitLeverageInfos> getLeverageInfo(
-      @HeaderParam(X_BAPI_API_KEY) String apiKey,
-      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
-      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
-      @QueryParam("category") String category,
-      @QueryParam("symbol") String symbol,
-      @QueryParam("baseCoin") String baseCoin,
-      @QueryParam("limit") String limit,
-      @QueryParam("cursor") String cursor)
-      throws IOException, BybitException;
-
-  /**
-   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/risk-limit">API</a>
-   */
-  @GET
-  @Path("/position/risk-limit")
-  BybitResult<BybitRiskLimitInfos> getRiskLimit(
-      @HeaderParam(X_BAPI_API_KEY) String apiKey,
-      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
-      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
-      @QueryParam("category") String category,
-      @QueryParam("symbol") String symbol,
-      @QueryParam("baseCoin") String baseCoin,
-      @QueryParam("limit") String limit,
-      @QueryParam("cursor") String cursor)
-      throws IOException, BybitException;
-
-  /**
-   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/position/trading-stop">API</a>
-   */
-  @GET
-  @Path("/position/trading-stop")
-  BybitResult<BybitTradingStopInfos> getTradingStop(
-      @HeaderParam(X_BAPI_API_KEY) String apiKey,
-      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
-      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
-      @QueryParam("category") String category,
-      @QueryParam("symbol") String symbol)
       throws IOException, BybitException;
 
   /**

@@ -9,16 +9,14 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.Test;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.position.BybitClosedPnl;
-import org.knowm.xchange.bybit.dto.account.position.BybitLeverageInfo;
 import org.knowm.xchange.bybit.dto.account.position.BybitPosition;
 import org.knowm.xchange.bybit.dto.account.position.BybitPositions;
-import org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfo;
-import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopInfo;
 import org.knowm.xchange.bybit.dto.account.position.BybitTradingStopPayload;
 import org.knowm.xchange.dto.account.OpenPosition;
 
@@ -30,7 +28,7 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
 
     BybitTradeServiceRaw raw = (BybitTradeServiceRaw) createExchange().getTradeService();
     BybitResult<BybitPositions> result =
-        raw.getPositions(BybitCategory.LINEAR, null, null, null, null);
+        raw.getPositions(BybitCategory.LINEAR, null, null, null, null, null);
 
     assertTrue(result.isSuccess());
     assertEquals("linear", result.getResult().getCategory());
@@ -71,8 +69,24 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
 
   @Test
   public void openPositionsGenericMappingKeepsHedgeSubpositions() throws IOException {
+    // LINEAR/INVERSE position queries are enumerated per settle coin from the instrument catalog.
+    initGetStub(
+        "/v5/market/instruments-info",
+        "/getInstrumentLinear.json5",
+        "category",
+        equalTo("linear"));
+    initGetStub(
+        "/v5/market/instruments-info",
+        "/getInstrumentInverse.json5",
+        "category",
+        equalTo("inverse"));
     initGetStub(
         "/v5/position/list", "/getPositions.json5", "category", equalTo("linear"));
+    // First page has a non-empty nextPageCursor; the paginated follow-up must hit the empty page.
+    initGetStub(
+        "/v5/position/list",
+        "/getPositionsEmpty.json5",
+        Map.of("category", equalTo("linear"), "cursor", equalTo("0%3A3%3A3")));
     initGetStub(
         "/v5/position/list", "/getPositionsEmpty.json5", "category", equalTo("inverse"));
     initGetStub(
@@ -132,67 +146,10 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
   }
 
   @Test
-  public void leverageInfoParsesAndKeepsPositionIdx() throws IOException {
-    initGetStub("/v5/position/limit", "/getLeverageInfo.json5");
-
-    BybitTradeServiceRaw raw = (BybitTradeServiceRaw) createExchange().getTradeService();
-    BybitResult<org.knowm.xchange.bybit.dto.account.position.BybitLeverageInfos> result =
-        raw.getLeverageInfo(BybitCategory.LINEAR, "BTCUSDT", null, null, null);
-
-    assertTrue(result.isSuccess());
-    List<BybitLeverageInfo> list = result.getResult().getList();
-    assertEquals(2, list.size());
-    assertEquals("1", list.get(0).getPositionIdx());
-    assertEquals("10", list.get(0).getLeverage());
-    assertEquals("100", list.get(0).getMaxLeverage());
-    assertEquals("2", list.get(1).getPositionIdx());
-    assertEquals("15", list.get(1).getLeverage());
-  }
-
-  @Test
-  public void riskLimitParsesTiers() throws IOException {
-    initGetStub("/v5/position/risk-limit", "/getRiskLimit.json5");
-
-    BybitTradeServiceRaw raw = (BybitTradeServiceRaw) createExchange().getTradeService();
-    BybitResult<org.knowm.xchange.bybit.dto.account.position.BybitRiskLimitInfos> result =
-        raw.getRiskLimit(BybitCategory.LINEAR, "BTCUSDT", null, null, null);
-
-    assertTrue(result.isSuccess());
-    List<BybitRiskLimitInfo> list = result.getResult().getList();
-    assertEquals(2, list.size());
-    BybitRiskLimitInfo lowest = list.get(0);
-    assertEquals("1", lowest.getId());
-    assertEquals("1000000", lowest.getRiskLimitValue());
-    assertEquals("0.005", lowest.getMaintainMargin());
-    assertEquals("0.01", lowest.getInitialMargin());
-    assertEquals("1", lowest.getIsLowestRisk());
-    assertEquals(2, lowest.getSection().size());
-    assertEquals("1", lowest.getSection().get(0));
-    assertEquals("1000000", lowest.getSection().get(1));
-    assertEquals("100", lowest.getMaxLeverage());
-    assertEquals("2", list.get(1).getId());
-    assertEquals("0.01", list.get(1).getMaintainMargin());
-  }
-
-  @Test
-  public void tradingStopParsesAndSets() throws IOException {
-    initGetStub("/v5/position/trading-stop", "/getTradingStop.json5");
+  public void tradingStopSetsTakeProfitAndStopLoss() throws IOException {
     initPostStub("/v5/position/trading-stop", "/setTradingStop.json5");
 
     BybitTradeServiceRaw raw = (BybitTradeServiceRaw) createExchange().getTradeService();
-    BybitResult<org.knowm.xchange.bybit.dto.account.position.BybitTradingStopInfos> query =
-        raw.getTradingStop(BybitCategory.LINEAR, "BTCUSDT");
-
-    assertTrue(query.isSuccess());
-    List<BybitTradingStopInfo> list = query.getResult().getList();
-    assertEquals(1, list.size());
-    BybitTradingStopInfo info = list.get(0);
-    assertEquals("1", info.getPositionIdx());
-    assertEquals("35000", info.getTakeProfit());
-    assertEquals("31000", info.getStopLoss());
-    assertEquals("Full", info.getTpslMode());
-    assertEquals("IndexPrice", info.getSlTriggerBy());
-
     BybitResult<Object> set =
         raw.setTradingStop(
             BybitTradingStopPayload.builder()

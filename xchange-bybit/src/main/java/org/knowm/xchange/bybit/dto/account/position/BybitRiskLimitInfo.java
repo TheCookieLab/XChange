@@ -1,12 +1,11 @@
 package org.knowm.xchange.bybit.dto.account.position;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
-/** One risk-limit tier from {@code /v5/position/risk-limit}. */
+/** One risk-limit tier from the public {@code /v5/market/risk-limit} endpoint. */
 @Builder
 @Jacksonized
 @Value
@@ -21,8 +20,8 @@ public class BybitRiskLimitInfo {
   @JsonProperty("riskLimitValue")
   String riskLimitValue;
 
-  @JsonProperty("maintainMargin")
-  String maintainMargin;
+  @JsonProperty("maintenanceMargin")
+  String maintenanceMargin;
 
   @JsonProperty("initialMargin")
   String initialMargin;
@@ -30,16 +29,9 @@ public class BybitRiskLimitInfo {
   @JsonProperty("isLowestRisk")
   String isLowestRisk;
 
-  @JsonProperty("section")
-  List<String> section;
-
   @JsonProperty("maxLeverage")
   String maxLeverage;
 
-  @JsonProperty("positionIdx")
-  String positionIdx;
-
-  @JsonProperty("marginMode")
-  String marginMode;
-
+  @JsonProperty("mmDeduction")
+  String mmDeduction;
 }

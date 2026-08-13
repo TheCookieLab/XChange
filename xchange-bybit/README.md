@@ -49,9 +49,9 @@ REST services implement the XChange interfaces listed below. Categories:
 
 | Area | Service | Coverage |
 |---|---|---|
-| Market data | `BybitMarketDataService` / `Raw` | Tickers, order books, klines, instruments, funding rate, server time, meta, option/linear/inverse delivery price |
+| Market data | `BybitMarketDataService` / `Raw` | Tickers, order books, klines, instruments, funding rate, server time, meta, option/linear/inverse delivery price, open interest, public risk-limit tiers |
 | Account | `BybitAccountService` / `Raw` | Balances, wallet, deposit/withdraw info, fee rate, API key info, option delivery/settlement records |
-| Trade | `BybitTradeService` / `Raw` | Place/cancel/amend orders (single and batch), pre-check, open/closed orders, order history, executions, position info and risk |
+| Trade | `BybitTradeService` / `Raw` | Place/cancel/amend orders (single and batch), pre-check, open/closed orders, order history, executions, positions (enumerated per settle coin), risk/margin mutations |
 | Streaming | `xchange-stream-bybit` | Public order book/trade/ticker/klines streams; private order/position/execution streams; WebSocket order-entry |
 
 Options/RFQ: V5 options are single-leg; raw option workflows (catalog,

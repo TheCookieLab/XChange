@@ -39,7 +39,7 @@ public class BybitBatchPlaceOrderRequest {
   String reduceOnly;
 
   @JsonProperty("positionIdx")
-  String positionIdx;
+  int positionIdx;
 
   @JsonProperty("orderIv")
   String orderIv;

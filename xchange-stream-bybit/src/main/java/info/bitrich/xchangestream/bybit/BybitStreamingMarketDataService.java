@@ -42,6 +42,9 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   public static final String CANDLE = "kline.";
 
   private final Map<String, OrderBook> orderBookMap = new HashMap<>();
+  /** Subscribed depths per instrument; the deepest channel's snapshot governs the shared book. */
+  private final Map<String, TreeSet<Integer>> orderBookDepthsByInstrument =
+      new ConcurrentHashMap<>();
   private final Map<Instrument, PublishSubject<List<OrderBookUpdate>>>
       orderBookUpdatesSubscriptions;
 
@@ -78,15 +81,31 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
     } else {
       depths.add(50);
     }
-    String orderBookMapId = ORDERBOOK + convertToBybitSymbol(instrument);
+    String bybitSymbol = convertToBybitSymbol(instrument);
+    String orderBookMapId = ORDERBOOK + bybitSymbol;
+    orderBookDepthsByInstrument
+        .computeIfAbsent(bybitSymbol, key -> new TreeSet<>())
+        .addAll(depths);
     List<Observable<OrderBook>> observableList = new ArrayList<>();
     for (int i = 0; i < depths.size(); i++) {
       orderBookUpdateIdPrev.add(new AtomicLong());
-      String channelUniqueId = ORDERBOOK + depths.get(i) + "." + convertToBybitSymbol(instrument);
+      int depth = depths.get(i);
+      String channelUniqueId = ORDERBOOK + depth + "." + bybitSymbol;
       int finalI = i;
       observableList.add(
           streamingService
               .subscribeChannel(channelUniqueId)
+              .doOnDispose(
+                  () -> {
+                    TreeSet<Integer> registeredDepths = orderBookDepthsByInstrument.get(bybitSymbol);
+                    if (registeredDepths != null) {
+                      registeredDepths.remove(depth);
+                      if (registeredDepths.isEmpty()) {
+                        orderBookDepthsByInstrument.remove(bybitSymbol);
+                        orderBookMap.remove(orderBookMapId);
+                      }
+                    }
+                  })
               .map(
                   jsonNode -> {
                     try {
@@ -95,13 +114,19 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                       String type = bybitOrderBooks.getDataType();
                       if (type.equalsIgnoreCase("snapshot")) {
                         orderBookUpdateIdPrev.get(finalI).set(bybitOrderBooks.getData().getU());
-                        // Every depth's snapshot is a complete book; rebuild regardless of which
-                        // depth delivered it so a resubscribed shallow stream cannot strand the
-                        // shared book in a removed state.
-                        OrderBook orderBook =
-                            BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
-                        orderBookMap.put(orderBookMapId, orderBook);
-                        return orderBook;
+                        if (isDeepestChannel(bybitSymbol, depth)) {
+                          // The deepest channel's snapshot is the authoritative full book;
+                          // rebuilding from a shallower snapshot would truncate it.
+                          OrderBook orderBook =
+                              BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
+                          orderBookMap.put(orderBookMapId, orderBook);
+                          return orderBook;
+                        }
+                        // Shallower channel: its snapshot only rebases its own sequence; the
+                        // deepest channel's book keeps governing the shared book.
+                        return orderBookMap.getOrDefault(
+                            orderBookMapId,
+                            new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false));
                       } else if (type.equalsIgnoreCase("delta")) {
                         return applyOrderBookDeltaSnapshot(
                             orderBookMapId,
@@ -116,8 +141,11 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                           "Resubscribing {} channel after order book recovery {}",
                           channelUniqueId,
                           e.getMessage());
-                      // Rebuild from a fresh snapshot: drop the book and re-subscribe the channel.
-                      orderBookMap.remove(orderBookMapId);
+                      // Rebuild from a fresh snapshot: only a gap on the deepest channel drops the
+                      // shared book; a shallower channel resubscribes without truncating it.
+                      if (isDeepestChannel(bybitSymbol, depth)) {
+                        orderBookMap.remove(orderBookMapId);
+                      }
                       if (streamingService.isSocketOpen()) {
                         streamingService.sendMessage(
                             streamingService.getUnsubscribeMessage(channelUniqueId, args));
@@ -131,6 +159,12 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                   orderBook -> !orderBook.getBids().isEmpty() && !orderBook.getAsks().isEmpty()));
     }
     return Observable.merge(observableList);
+  }
+
+  /** True when this channel carries the deepest subscribed snapshot for the instrument. */
+  private boolean isDeepestChannel(String bybitSymbol, int depth) {
+    TreeSet<Integer> registeredDepths = orderBookDepthsByInstrument.get(bybitSymbol);
+    return registeredDepths == null || depth >= registeredDepths.last();
   }
 
   private OrderBook applyOrderBookDeltaSnapshot(
