@@ -162,5 +162,7 @@ class GateioPaginationTest {
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> GateioPageCursor.afterId(""))
         .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> GateioPageCursor.since(-1))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }
