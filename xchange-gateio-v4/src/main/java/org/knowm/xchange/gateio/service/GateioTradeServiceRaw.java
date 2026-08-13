@@ -111,6 +111,16 @@ public class GateioTradeServiceRaw extends GateioBaseService {
       GateioContinuation<GateioUserTradeRaw> continuation =
           getGateioUserTradesBounded(params, DEFAULT_HISTORY_CEILING);
       if (continuation.getStop() != GateioIterationStop.COMPLETED) {
+        // a full first page stops the bounded run at MAX_RESULTS even when the
+        // history ends exactly at the ceiling; confirm with one more page
+        // fetch before rejecting
+        GateioPageCursor next = continuation.getNextCursor();
+        if (next != null) {
+          GateioPage<GateioUserTradeRaw> confirmation = getGateioUserTradesPage(next, params);
+          if (confirmation.getItems().isEmpty() && !confirmation.hasNext()) {
+            return continuation.getItems();
+          }
+        }
         throw new IllegalStateException(
             "Trade history exceeds the default result ceiling; use bounded pagination");
       }

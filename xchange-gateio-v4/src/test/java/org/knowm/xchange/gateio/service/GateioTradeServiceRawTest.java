@@ -167,6 +167,18 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
   }
 
   @Test
+  void getUserTrades_no_page_exactCeiling_returnsAll() throws IOException {
+    // a history that ends exactly at the ceiling must not be rejected: the
+    // confirmation page fetch proves there is nothing beyond page 1
+    List<GateioUserTradeRaw> all =
+        gateioTradeServiceRaw.getGateioUserTrades(
+            new DefaultTradeHistoryParamCurrencyPair(CurrencyPair.ETH_USDT));
+
+    assertThat(all).hasSize(1000);
+    assertThat(all.get(0).getId()).isEqualTo(6068816979L);
+  }
+
+  @Test
   void getUserTrades_page_and_resume() throws IOException {
     GateioTradeHistoryParams params =
         GateioTradeHistoryParams.builder()
@@ -338,8 +350,10 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
     assertThat(actual).hasSize(2);
     assertThat(actual.get(0).getSucceeded()).isTrue();
-    assertThat(actual.get(0).getId()).isEqualTo("745504484399");
-    assertThat(actual.get(0).getOrder().getId()).isEqualTo("745504484392");
+    // Gate returns each element flat: the order fields sit at the response root
+    assertThat(actual.get(0).getId()).isEqualTo("745504484392");
+    assertThat(actual.get(0).getCurrencyPair()).isEqualTo(CurrencyPair.BTC_USDT);
+    assertThat(actual.get(0).getStatus()).isEqualTo("open");
     assertThat(actual.get(1).getSucceeded()).isFalse();
     assertThat(actual.get(1).getLabel()).isEqualTo("ORDER_NOT_FOUND");
     assertThat(actual.get(1).getMessage()).isEqualTo("order not found");
