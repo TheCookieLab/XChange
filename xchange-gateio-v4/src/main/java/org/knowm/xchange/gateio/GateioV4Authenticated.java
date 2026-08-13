@@ -25,6 +25,7 @@ import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelResult;
 import org.knowm.xchange.gateio.dto.account.GateioCurrencyBalance;
 import org.knowm.xchange.gateio.dto.account.GateioDepositAddress;
 import org.knowm.xchange.gateio.dto.account.GateioDepositRecord;
+import org.knowm.xchange.gateio.dto.account.GateioOpenOrders;
 import org.knowm.xchange.gateio.dto.account.GateioOrder;
 import org.knowm.xchange.gateio.dto.account.GateioSubAccountTransfer;
 import org.knowm.xchange.gateio.dto.account.GateioWithdrawStatus;
@@ -121,7 +122,7 @@ public interface GateioV4Authenticated {
 
   @GET
   @Path("spot/open_orders")
-  List<GateioOrder> getOpenOrders(
+  List<GateioOpenOrders> getOpenOrders(
       @HeaderParam("KEY") String apiKey,
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,

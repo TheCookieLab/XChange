@@ -23,7 +23,9 @@ import org.knowm.xchange.gateio.dto.account.GateioCancelOrderResult;
 import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelRequest;
 import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelResult;
 import org.knowm.xchange.gateio.dto.account.GateioOrder;
+import org.knowm.xchange.gateio.dto.account.GateioOpenOrders;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
+import java.util.stream.Collectors;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.CurrencyPairParam;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
@@ -163,10 +165,20 @@ public class GateioTradeServiceRaw extends GateioBaseService {
   public GateioPage<GateioOrder> getOpenOrdersPage(GateioPageCursor cursor, Integer limit)
       throws IOException {
     int page = cursor == null ? 1 : cursor.getPage();
-    List<GateioOrder> items =
+    List<GateioOpenOrders> groups =
         gateioV4Authenticated.getOpenOrders(
             apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, page, limit, null);
-    GateioPageCursor next = items.size() < (limit == null ? 100 : limit) ? null : GateioPageCursor.page(page + 1);
+    List<GateioOrder> items =
+        groups.stream()
+            .filter(group -> group.getOrders() != null)
+            .flatMap(group -> group.getOrders().stream())
+            .collect(Collectors.toList());
+    int pageLimit = limit == null ? 100 : limit;
+    boolean hasNext =
+        groups.stream()
+            .filter(group -> group.getOrders() != null)
+            .anyMatch(group -> group.getOrders().size() >= pageLimit);
+    GateioPageCursor next = hasNext ? GateioPageCursor.page(page + 1) : null;
     return GateioPage.<GateioOrder>builder().items(items).nextCursor(next).build();
   }
 
