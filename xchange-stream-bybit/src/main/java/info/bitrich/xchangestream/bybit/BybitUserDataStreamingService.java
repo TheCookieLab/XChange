@@ -65,7 +65,10 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
         (CompletableSource)
             (completable) -> {
               LOG.info("Connect to BybitUserDataStream with auth");
-              login();
+              // Authentication happens exactly once per socket: NettyStreamingService's
+              // openConnection() completion hook calls resubscribeChannels(), which sends the
+              // auth request. Sending a second auth here would make Bybit reject the repeated
+              // authentication and disrupt the otherwise successful connection.
               pingPongDisconnectIfConnected();
               pingPongSubscription =
                   pingPongSrc.subscribe(o -> this.sendMessage("{\"op\":\"ping\"}"));

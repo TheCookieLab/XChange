@@ -14,8 +14,10 @@ import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderBookGap;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.observers.TestObserver;
+import io.reactivex.rxjava3.subjects.PublishSubject;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
 import org.junit.Test;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -209,5 +211,62 @@ public class BybitStreamingMarketDataServiceTest {
     OrderBook finalBook = bookObserver.values().get(bookObserver.values().size() - 1);
     assertThat(finalBook.getAsks())
         .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("16613.00")) == 0);
+  }
+
+  @Test
+  public void unsubscribedDepthObservableDoesNotGovernTheBook() throws Exception {
+    // An observable created but never subscribed must not register its depth: the phantom
+    // 200-level entry would otherwise discard the real 50-level snapshot and starve its deltas.
+    JsonNode depth200Snapshot = orderBook("snapshot", 100, "16493.50", "16611.00");
+    JsonNode depth50Snapshot = orderBook("snapshot", 100, "16493.50", "16611.00");
+    JsonNode depth50Delta = orderBook("delta", 101, "16494.00", "16612.00");
+
+    when(streamingService.subscribeChannel("orderbook.200.BTCUSDT"))
+        .thenReturn(Observable.just(depth200Snapshot));
+    when(streamingService.subscribeChannel("orderbook.50.BTCUSDT"))
+        .thenReturn(Observable.fromIterable(List.of(depth50Snapshot, depth50Delta)));
+
+    TestObserver<BybitOrderBookGap> gapObserver =
+        marketDataService.getOrderBookGapEvents().test();
+    // Cold observable obtained but never subscribed: no depth may be registered.
+    marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, "200");
+    TestObserver<OrderBook> bookObserver =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, "50").test();
+
+    assertThat(gapObserver.values()).isEmpty();
+    OrderBook finalBook = bookObserver.values().get(bookObserver.values().size() - 1);
+    assertThat(finalBook.getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("16612.00")) == 0);
+  }
+
+  @Test
+  public void duplicateDepthSubscriberDisposalKeepsDepthRegistered() throws Exception {
+    // Two subscribers to the same depth share one registration: disposing one subscriber must
+    // release one reference, not unregister the depth while the other subscriber is active.
+    JsonNode snapshot = orderBook("snapshot", 100, "16493.50", "16611.00");
+    JsonNode delta = orderBook("delta", 101, "16494.00", "16612.00");
+    PublishSubject<JsonNode> channel = PublishSubject.create();
+    when(streamingService.subscribeChannel("orderbook.50.BTCUSDT")).thenReturn(channel);
+    when(streamingService.isSocketOpen()).thenReturn(true);
+    when(streamingService.getUnsubscribeMessage(anyString(), any(Object[].class)))
+        .thenReturn("{\"op\":\"unsubscribe\"}");
+    when(streamingService.getSubscribeMessage(anyString(), any(Object[].class)))
+        .thenReturn("{\"op\":\"subscribe\"}");
+
+    TestObserver<BybitOrderBookGap> gapObserver =
+        marketDataService.getOrderBookGapEvents().test();
+    TestObserver<OrderBook> firstSubscriber =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT).test();
+    TestObserver<OrderBook> secondSubscriber =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT).test();
+    channel.onNext(snapshot);
+    firstSubscriber.dispose();
+    // The surviving subscriber's delta still applies: its depth stayed registered.
+    channel.onNext(delta);
+
+    assertThat(gapObserver.values()).isEmpty();
+    OrderBook finalBook = secondSubscriber.values().get(secondSubscriber.values().size() - 1);
+    assertThat(finalBook.getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("16612.00")) == 0);
   }
 }

@@ -21,5 +21,5 @@ public class BybitAddMarginPayload {
   String margin;
 
   @JsonProperty("positionIdx")
-  String positionIdx;
+  int positionIdx;
 }

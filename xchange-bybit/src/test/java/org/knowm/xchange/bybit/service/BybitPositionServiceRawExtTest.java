@@ -150,7 +150,7 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
             BybitTradingStopPayload.builder()
                 .category("linear")
                 .symbol("BTCUSDT")
-                .positionIdx("1")
+                .positionIdx(1)
                 .takeProfit("36000")
                 .stopLoss("30000")
                 .build());
@@ -172,7 +172,7 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
                     .category("linear")
                     .symbol("BTCUSDT")
                     .riskId("2")
-                    .positionIdx("0")
+                    .positionIdx(0)
                     .build())
             .isSuccess());
     assertTrue(
@@ -181,7 +181,7 @@ public class BybitPositionServiceRawExtTest extends BaseWiremockTest {
                     .category("linear")
                     .symbol("BTCUSDT")
                     .margin("100")
-                    .positionIdx("0")
+                    .positionIdx(0)
                     .build())
             .isSuccess());
     assertTrue(

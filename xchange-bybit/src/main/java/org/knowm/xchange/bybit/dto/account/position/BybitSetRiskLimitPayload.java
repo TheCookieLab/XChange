@@ -21,5 +21,5 @@ public class BybitSetRiskLimitPayload {
   String riskId;
 
   @JsonProperty("positionIdx")
-  String positionIdx;
+  int positionIdx;
 }

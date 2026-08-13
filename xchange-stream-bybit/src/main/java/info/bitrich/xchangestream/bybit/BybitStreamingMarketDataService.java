@@ -20,6 +20,7 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.knowm.xchange.bybit.BybitAdapters;
@@ -42,8 +43,12 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   public static final String CANDLE = "kline.";
 
   private final Map<String, OrderBook> orderBookMap = new HashMap<>();
-  /** Subscribed depths per instrument; the deepest channel's snapshot governs the shared book. */
-  private final Map<String, TreeSet<Integer>> orderBookDepthsByInstrument =
+  /**
+   * Active subscriber counts per instrument and depth, registered on subscription and released on
+   * disposal. The deepest subscribed depth governs the shared book; reference counting keeps a
+   * depth registered while any of its duplicate subscribers remains active.
+   */
+  private final Map<String, Map<Integer, AtomicInteger>> orderBookDepthSubscribersByInstrument =
       new ConcurrentHashMap<>();
   private final Map<Instrument, PublishSubject<List<OrderBookUpdate>>>
       orderBookUpdatesSubscriptions;
@@ -83,9 +88,6 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
     }
     String bybitSymbol = convertToBybitSymbol(instrument);
     String orderBookMapId = ORDERBOOK + bybitSymbol;
-    orderBookDepthsByInstrument
-        .computeIfAbsent(bybitSymbol, key -> new TreeSet<>())
-        .addAll(depths);
     List<Observable<OrderBook>> observableList = new ArrayList<>();
     for (int i = 0; i < depths.size(); i++) {
       orderBookUpdateIdPrev.add(new AtomicLong());
@@ -95,17 +97,8 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
       observableList.add(
           streamingService
               .subscribeChannel(channelUniqueId)
-              .doOnDispose(
-                  () -> {
-                    TreeSet<Integer> registeredDepths = orderBookDepthsByInstrument.get(bybitSymbol);
-                    if (registeredDepths != null) {
-                      registeredDepths.remove(depth);
-                      if (registeredDepths.isEmpty()) {
-                        orderBookDepthsByInstrument.remove(bybitSymbol);
-                        orderBookMap.remove(orderBookMapId);
-                      }
-                    }
-                  })
+              .doOnSubscribe(disposable -> registerOrderBookDepth(bybitSymbol, depth))
+              .doOnDispose(() -> unregisterOrderBookDepth(bybitSymbol, depth, orderBookMapId))
               .map(
                   jsonNode -> {
                     try {
@@ -163,8 +156,39 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
 
   /** True when this channel carries the deepest subscribed snapshot for the instrument. */
   private boolean isDeepestChannel(String bybitSymbol, int depth) {
-    TreeSet<Integer> registeredDepths = orderBookDepthsByInstrument.get(bybitSymbol);
-    return registeredDepths == null || depth >= registeredDepths.last();
+    Map<Integer, AtomicInteger> registeredDepths =
+        orderBookDepthSubscribersByInstrument.get(bybitSymbol);
+    if (registeredDepths == null || registeredDepths.isEmpty()) {
+      return true;
+    }
+    int maxSubscribedDepth = 0;
+    for (Integer subscribedDepth : registeredDepths.keySet()) {
+      maxSubscribedDepth = Math.max(maxSubscribedDepth, subscribedDepth);
+    }
+    return depth >= maxSubscribedDepth;
+  }
+
+  private void registerOrderBookDepth(String bybitSymbol, int depth) {
+    orderBookDepthSubscribersByInstrument
+        .computeIfAbsent(bybitSymbol, key -> new ConcurrentHashMap<>())
+        .computeIfAbsent(depth, key -> new AtomicInteger())
+        .incrementAndGet();
+  }
+
+  private void unregisterOrderBookDepth(String bybitSymbol, int depth, String orderBookMapId) {
+    Map<Integer, AtomicInteger> registeredDepths =
+        orderBookDepthSubscribersByInstrument.get(bybitSymbol);
+    if (registeredDepths == null) {
+      return;
+    }
+    AtomicInteger subscriberCount = registeredDepths.get(depth);
+    if (subscriberCount != null && subscriberCount.decrementAndGet() <= 0) {
+      registeredDepths.remove(depth);
+      if (registeredDepths.isEmpty()) {
+        orderBookDepthSubscribersByInstrument.remove(bybitSymbol);
+        orderBookMap.remove(orderBookMapId);
+      }
+    }
   }
 
   private OrderBook applyOrderBookDeltaSnapshot(

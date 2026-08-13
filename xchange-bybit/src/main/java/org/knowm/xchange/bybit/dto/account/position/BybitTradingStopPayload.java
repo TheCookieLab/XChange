@@ -18,7 +18,7 @@ public class BybitTradingStopPayload {
   String symbol;
 
   @JsonProperty("positionIdx")
-  String positionIdx;
+  int positionIdx;
 
   @JsonProperty("takeProfit")
   String takeProfit;
