@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.trade;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
 
 /**
@@ -10,8 +11,14 @@ public class OkexOrderDetails {
 
   private final OkxOrderDetails delegate;
 
+  @JsonCreator
   public OkexOrderDetails(OkxOrderDetails delegate) {
     this.delegate = delegate;
+  }
+
+  /** Returns the wrapped canonical DTO. */
+  public OkxOrderDetails to() {
+    return delegate;
   }
 
   public String getInstrumentType() {
