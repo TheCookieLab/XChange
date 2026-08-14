@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Test;
@@ -535,9 +535,9 @@ public class OkexCompatibilityTest {
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     ExchangeMetaData meta = adaptExchangeMetaData(mapper);
 
-    Map<Instrument, Long> original = new HashMap<>(instrumentIdMap());
-    instrumentIdMap().clear();
-    instrumentIdMap().put(new CurrencyPair("BTC/USDT"), 1234567890L);
+    Map<Instrument, Long> original = OkxAdapters.snapshotInstrumentToInstrumentIdMapForTesting();
+    OkxAdapters.replaceInstrumentToInstrumentIdMapForTesting(
+        Collections.singletonMap(new CurrencyPair("BTC/USDT"), 1234567890L));
     try {
       OkexOrderDetails order =
           mapper.readValue(
@@ -572,13 +572,8 @@ public class OkexCompatibilityTest {
       OkexAmendOrderRequest amend = OkexAdapters.adaptAmendOrder(input, meta);
       assertThat(amend.getInstrumentId()).isEqualTo("BTC-USDT");
     } finally {
-      instrumentIdMap().clear();
-      instrumentIdMap().putAll(original);
+      OkxAdapters.replaceInstrumentToInstrumentIdMapForTesting(original);
     }
-  }
-
-  private static Map<Instrument, Long> instrumentIdMap() {
-    return OkxAdapters.instrumentToInstrumentIdMapForTesting();
   }
 
   private static ExchangeMetaData adaptExchangeMetaData(ObjectMapper mapper) throws Exception {

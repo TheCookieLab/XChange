@@ -45,14 +45,26 @@ public class OkxAdapters {
   static final Map<Instrument, Long> instrumentToInstrumentIdMap = new HashMap<>();
 
   /**
-   * Internal test seam exposing the mutable instrument-to-instrument-id map so tests can snapshot,
-   * clear, and restore it without reflection. Not part of the adapter contract; prefer {@link
-   * #instrumentCode(Instrument)} in production code.
+   * Internal test seam returning a copy of the instrument-to-instrument-id map so tests can
+   * snapshot state without ever holding the live map. Not part of the adapter contract; prefer
+   * {@link #instrumentCode(Instrument)} in production code.
    *
-   * @return the mutable instrument-to-instrument-id map
+   * @return a copy of the instrument-to-instrument-id map
    */
-  public static Map<Instrument, Long> instrumentToInstrumentIdMapForTesting() {
-    return instrumentToInstrumentIdMap;
+  public static Map<Instrument, Long> snapshotInstrumentToInstrumentIdMapForTesting() {
+    return new HashMap<>(instrumentToInstrumentIdMap);
+  }
+
+  /**
+   * Internal test seam replacing the instrument-to-instrument-id map contents with the given
+   * entries (copy semantics; the live map is never exposed or retained). Not part of the adapter
+   * contract; prefer {@link #instrumentCode(Instrument)} in production code.
+   *
+   * @param entries the entries the map should contain afterwards
+   */
+  public static void replaceInstrumentToInstrumentIdMapForTesting(Map<Instrument, Long> entries) {
+    instrumentToInstrumentIdMap.clear();
+    instrumentToInstrumentIdMap.putAll(entries);
   }
 
   /**
