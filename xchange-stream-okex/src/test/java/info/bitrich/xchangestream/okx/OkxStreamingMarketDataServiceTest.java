@@ -1,6 +1,7 @@
 package info.bitrich.xchangestream.okx;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -17,6 +18,7 @@ import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.CandleStickInterval;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.instrument.Instrument;
+import info.bitrich.xchangestream.service.exception.NotConnectedException;
 
 public class OkxStreamingMarketDataServiceTest {
 
@@ -66,5 +68,18 @@ public class OkxStreamingMarketDataServiceTest {
         .isEqualByComparingTo(new BigDecimal("34666.4005"));
     assertThat(candleStickData.getCandleSticks().get(0).getTimestamp().toEpochMilli())
         .isEqualTo(1672324988882L);
+  }
+
+  @Test
+  public void candleStickWithoutBusinessTransportReportsNotConnected() {
+    OkxStreamingMarketDataService publicOnlyMarketDataService =
+        new OkxStreamingMarketDataService(streamingService, null, null);
+
+    assertThatThrownBy(
+            () ->
+                publicOnlyMarketDataService
+                    .getCandleStick(CurrencyPair.BTC_USDT, CandleStickInterval.m5)
+                    .blockingFirst())
+        .isInstanceOf(NotConnectedException.class);
   }
 }
