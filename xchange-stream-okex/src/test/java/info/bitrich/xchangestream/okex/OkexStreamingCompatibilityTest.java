@@ -3,6 +3,7 @@ package info.bitrich.xchangestream.okex;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.okex.dto.OkexLoginMessage;
@@ -15,6 +16,8 @@ import info.bitrich.xchangestream.okx.OkxStreamingExchange;
 import info.bitrich.xchangestream.okx.OkxStreamingMarketDataService;
 import info.bitrich.xchangestream.okx.OkxStreamingService;
 import info.bitrich.xchangestream.okx.OkxStreamingTradeService;
+import info.bitrich.xchangestream.okx.TransportRole;
+import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,9 +43,45 @@ public class OkexStreamingCompatibilityTest {
   }
 
   @Test
-  public void exchangeExtendsCanonicalOkxStreamingExchange() {
-    assertThat(OkxStreamingExchange.class.isAssignableFrom(OkexStreamingExchange.class)).isTrue();
-    assertThat(OkexStreamingExchange.class.getSuperclass()).isEqualTo(OkxStreamingExchange.class);
+  public void exchangeRemainsInLegacyHierarchy() {
+    assertThat(OkexExchange.class.isAssignableFrom(OkexStreamingExchange.class)).isTrue();
+    assertThat(OkexStreamingExchange.class.getSuperclass()).isEqualTo(OkexExchange.class);
+    assertThat(StreamingExchange.class.isAssignableFrom(OkexStreamingExchange.class)).isTrue();
+
+    assertThat(OkexStreamingExchange.WS_PUBLIC_CHANNEL_URI)
+        .isEqualTo(OkxStreamingExchange.WS_PUBLIC_CHANNEL_URI);
+    assertThat(OkexStreamingExchange.WS_PRIVATE_CHANNEL_URI)
+        .isEqualTo(OkxStreamingExchange.WS_PRIVATE_CHANNEL_URI);
+    assertThat(OkexStreamingExchange.WS_BUSINESS_CHANNEL_URI)
+        .isEqualTo(OkxStreamingExchange.WS_BUSINESS_CHANNEL_URI);
+    assertThat(OkexStreamingExchange.SANDBOX_WS_PUBLIC_CHANNEL_URI)
+        .isEqualTo(OkxStreamingExchange.SANDBOX_WS_PUBLIC_CHANNEL_URI);
+    assertThat(OkexStreamingExchange.SANDBOX_WS_PRIVATE_CHANNEL_URI)
+        .isEqualTo(OkxStreamingExchange.SANDBOX_WS_PRIVATE_CHANNEL_URI);
+    assertThat(OkexStreamingExchange.SANDBOX_WS_BUSINESS_CHANNEL_URI)
+        .isEqualTo(OkxStreamingExchange.SANDBOX_WS_BUSINESS_CHANNEL_URI);
+  }
+
+  @Test
+  public void exchangeSurfaceStillCoversCanonicalStreamingExchange() {
+    assertSurfaceCovered(OkxStreamingExchange.class, OkexStreamingExchange.class);
+  }
+
+  @Test
+  public void exchangeDelegatesLifecycleCallsBeforeConnect() {
+    OkexStreamingExchange exchange = new OkexStreamingExchange();
+
+    assertThat(exchange.isAlive()).isFalse();
+    exchange.disconnect().blockingAwait();
+    assertThat(exchange.connectionStateObservable().blockingFirst()).isEqualTo(State.CLOSED);
+    assertThat(exchange.connectionStateObservablePrivateChannel().blockingFirst())
+        .isEqualTo(State.CLOSED);
+    assertThat(exchange.connectionStateObservableBusinessChannel().blockingFirst())
+        .isEqualTo(State.CLOSED);
+    assertThat(exchange.getConnectionGeneration()).isZero();
+    assertThat(exchange.getRequiredTransports())
+        .containsExactlyInAnyOrder(TransportRole.PUBLIC, TransportRole.BUSINESS);
+    exchange.resubscribeChannels();
   }
 
   @Test

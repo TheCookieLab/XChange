@@ -586,6 +586,46 @@ public class OkexCompatibilityTest {
     assertThat(positionRisk.getTimestamp()).isEqualTo(new Date(4000));
   }
 
+  @Test
+  public void legacyOrderRequestRetainsThirteenArgumentConstructor() {
+    OkexOrderRequest request =
+        new OkexOrderRequest(
+            "BTC-USDT",
+            "BTC-USDT",
+            "cash",
+            "USDT",
+            "clOrd-1",
+            "tag1",
+            "buy",
+            "net",
+            "limit",
+            "1",
+            "100",
+            true,
+            "USDT");
+
+    assertThat(request.getInstrumentId()).isEqualTo("BTC-USDT");
+    assertThat(request.getInstIdCode()).isEqualTo("BTC-USDT");
+    assertThat(request.getTradeMode()).isEqualTo("cash");
+    assertThat(request.getMarginCurrency()).isEqualTo("USDT");
+    assertThat(request.getClientOrderId()).isEqualTo("clOrd-1");
+    assertThat(request.getTag()).isEqualTo("tag1");
+    assertThat(request.getSide()).isEqualTo("buy");
+    assertThat(request.getPosSide()).isEqualTo("net");
+    assertThat(request.getOrderType()).isEqualTo("limit");
+    assertThat(request.getAmount()).isEqualTo("1");
+    assertThat(request.getPrice()).isEqualTo("100");
+    assertThat(request.isReducePosition()).isTrue();
+    assertThat(request.getTradeQuoteCcy()).isEqualTo("USDT");
+    assertThat(request.getTakeProfitTriggerPrice()).isNull();
+    assertThat(request.getStopLossTriggerPrice()).isNull();
+    assertThat(request.getAttachAlgoOrds()).isNull();
+
+    OkexOrderRequest noArgs = new OkexOrderRequest();
+    assertThat(noArgs.getInstrumentId()).isNull();
+    assertThat(noArgs.isReducePosition()).isFalse();
+  }
+
   /**
    * Asserts that every public method declared on the canonical Okx raw service (including inherited
    * publics) has a same-name, same-parameter-type public method on the Okex shim raw service, with

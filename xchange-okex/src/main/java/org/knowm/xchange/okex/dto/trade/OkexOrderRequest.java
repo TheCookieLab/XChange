@@ -79,6 +79,52 @@ public class OkexOrderRequest {
   @JsonProperty("attachAlgoOrds")
   private List<OkexAttachAlgoOrder> attachAlgoOrds;
 
+  /**
+   * Restores the pre-rename all-arguments constructor (13 parameters, original order).
+   *
+   * @param instrumentId instrument id
+   * @param instIdCode instrument id code
+   * @param tradeMode trade mode
+   * @param marginCurrency margin currency
+   * @param clientOrderId client order id
+   * @param tag order tag
+   * @param side order side
+   * @param posSide position side
+   * @param orderType order type
+   * @param amount order amount
+   * @param price order price
+   * @param reducePosition reduce-only flag
+   * @param tradeQuoteCcy quote currency for the trade
+   */
+  public OkexOrderRequest(
+      String instrumentId,
+      String instIdCode,
+      String tradeMode,
+      String marginCurrency,
+      String clientOrderId,
+      String tag,
+      String side,
+      String posSide,
+      String orderType,
+      String amount,
+      String price,
+      boolean reducePosition,
+      String tradeQuoteCcy) {
+    this.instrumentId = instrumentId;
+    this.instIdCode = instIdCode;
+    this.tradeMode = tradeMode;
+    this.marginCurrency = marginCurrency;
+    this.clientOrderId = clientOrderId;
+    this.tag = tag;
+    this.side = side;
+    this.posSide = posSide;
+    this.orderType = orderType;
+    this.amount = amount;
+    this.price = price;
+    this.reducePosition = reducePosition;
+    this.tradeQuoteCcy = tradeQuoteCcy;
+  }
+
   /** Compatibility constructor wrapping the canonical DTO. */
   public OkexOrderRequest(OkxOrderRequest delegate) {
     this.instrumentId = delegate.getInstrumentId();
