@@ -31,14 +31,17 @@ import org.knowm.xchange.mexc.v3.service.MexcV3MarketDataServiceRaw;
  * /api/v3/depth}:
  *
  * <ul>
- *   <li>First push (or a version gap, {@code fromVersion != lastUpdateId + 1}) triggers a REST
+ *   <li>First push (or a version gap, {@code fromVersion > lastUpdateId + 1}) triggers a REST
  *       snapshot fetch on the IO scheduler; the snapshot's {@code lastUpdateId} becomes the local
- *       reference point.
- *   <li>After a re-snapshot the still-misaligned push is dropped; the next push that continues
- *       from {@code lastUpdateId + 1} is applied.
+ *       reference point. A push whose version window contains that snapshot is applied immediately.
+ *   <li>After a re-snapshot, a push that starts after the snapshot is dropped; the next push that
+ *       continues from the snapshot's version is applied.
  *   <li>Pushes whose {@code toVersion} is at or below the local {@code lastUpdateId} are stale and
  *       dropped.
  * </ul>
+ *
+ * <p>When a push overlaps a snapshot, its {@code fromVersion} may be below the snapshot version;
+ * it is valid as long as its {@code toVersion} reaches the snapshot version.
  *
  * <p>This instance is not thread-safe; subscribe one {@link #onDelta(String)} stream per book.
  */
