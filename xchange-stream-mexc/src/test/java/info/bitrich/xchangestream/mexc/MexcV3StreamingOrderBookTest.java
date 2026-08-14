@@ -206,6 +206,25 @@ class MexcV3StreamingOrderBookTest {
   }
 
   @Test
+  void staleSnapshotCannotRewindSequenceAfterGap() {
+    stubSnapshot(wireMock, 100L);
+
+    orderBook.onDelta(depthPushJson(101L, 101L, 1L)).blockingFirst();
+
+    long gapEmissions =
+        orderBook.onDelta(depthPushJson(105L, 106L, 2L)).count().blockingGet();
+    assertEquals(0, gapEmissions, "a gap push must be dropped while the snapshot is reconciled");
+
+    long staleEmissions =
+        orderBook.onDelta(depthPushJson(101L, 101L, 3L)).count().blockingGet();
+    assertEquals(
+        0,
+        staleEmissions,
+        "a stale REST snapshot must not rewind the local sequence and re-apply an old push");
+    wireMock.verify(2, getRequestedFor(urlEqualTo(DEPTH_PATH)));
+  }
+
+  @Test
   void wrongBodyFailsTheStream() {
     PushDataV3ApiWrapper dealsWrapper =
         PushDataV3ApiWrapper.newBuilder()
