@@ -7,11 +7,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * An attached take-profit / stop-loss (TP/SL) order embedded in a place-order request via {@code
- * attachAlgoOrs} or {@code attachAlgoCls}.
+ * An attached take-profit / stop-loss (TP/SL) order embedded in a place-order request via the
+ * single top-level {@code attachAlgoOrds} list.
  *
- * <p>{@code attachAlgoOrs} attaches TP/SL to a new position (and includes {@code sz}); {@code
- * attachAlgoCls} attaches TP/SL to close an existing position (without {@code sz}).
+ * <p>Items attach TP/SL to a new position and then include {@code sz}; items that attach TP/SL to
+ * close an existing position omit {@code sz}. OKX accepts both kinds in the same {@code
+ * attachAlgoOrds} array.
  */
 @Builder
 @AllArgsConstructor

@@ -239,7 +239,8 @@ public class OkxAdapters {
   private static String convertVolumeToContractSize(
       Order order, ExchangeMetaData exchangeMetaData) {
     InstrumentMetaData metaData = exchangeMetaData.getInstruments().get(order.getInstrument());
-    return (order.getInstrument() instanceof FuturesContract)
+    return (order.getInstrument() instanceof FuturesContract
+            || order.getInstrument() instanceof OptionsContract)
         ? order
             .getOriginalAmount()
             .divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN)
@@ -250,7 +251,7 @@ public class OkxAdapters {
 
   private static BigDecimal convertContractSizeToVolume(
       BigDecimal okxSize, Instrument instrument, BigDecimal contractValue) {
-    return (instrument instanceof FuturesContract)
+    return (instrument instanceof FuturesContract || instrument instanceof OptionsContract)
         ? okxSize.multiply(contractValue).stripTrailingZeros()
         : okxSize.stripTrailingZeros();
   }
@@ -510,10 +511,12 @@ public class OkxAdapters {
     return new CurrencyPair(tokens[0], tokens[1]);
   }
 
-  /** True for instruments whose size is expressed in contracts (SWAP and FUTURES). */
+  /** True for instruments whose size is expressed in contracts (SWAP, FUTURES and OPTION). */
   private static boolean isContractDerivative(OkxInstrument instrument) {
     String instType = instrument.getInstrumentType();
-    return OkxInstType.SWAP.name().equals(instType) || OkxInstType.FUTURES.name().equals(instType);
+    return OkxInstType.SWAP.name().equals(instType)
+        || OkxInstType.FUTURES.name().equals(instType)
+        || OkxInstType.OPTION.name().equals(instType);
   }
 
   public static Trades adaptTrades(
@@ -577,37 +580,36 @@ public class OkxAdapters {
           && !pair.getCounter().equals(Currency.USDT)) {
         continue;
       }
+      // Contract sizes convert by ctVal (SWAP/FUTURES) or ctMult (OPTION); spot/margin leave
+      // those fields empty so only build the multiplier for contract derivatives.
+      BigDecimal contractValue =
+          isContractDerivative(instrument)
+              ? (OkxInstType.OPTION.name().equals(instrument.getInstrumentType())
+                  ? new BigDecimal(instrument.getContractMultiplier())
+                  : new BigDecimal(instrument.getContractValue()))
+              : null;
       instrumentMetaData.put(
           pair,
           InstrumentMetaData.builder()
               .minimumAmount(
                   (isContractDerivative(instrument))
                       ? convertContractSizeToVolume(
-                          new BigDecimal(instrument.getMinSize()),
-                          pair,
-                          new BigDecimal(instrument.getContractValue()))
+                          new BigDecimal(instrument.getMinSize()), pair, contractValue)
                       : new BigDecimal(instrument.getMinSize()))
               .volumeScale(
                   (isContractDerivative(instrument))
                       ? convertContractSizeToVolume(
-                              new BigDecimal(instrument.getMinSize()),
-                              pair,
-                              new BigDecimal(instrument.getContractValue()))
+                              new BigDecimal(instrument.getMinSize()), pair, contractValue)
                           .scale()
                       : Math.max(numberOfDecimals(new BigDecimal(instrument.getMinSize())), 0))
               .amountStepSize(
                   BigDecimal.ONE.movePointLeft(
                       (isContractDerivative(instrument))
                           ? convertContractSizeToVolume(
-                                  new BigDecimal(instrument.getLotSize()),
-                                  pair,
-                                  new BigDecimal(instrument.getContractValue()))
+                                  new BigDecimal(instrument.getLotSize()), pair, contractValue)
                               .scale()
                           : Math.max(numberOfDecimals(new BigDecimal(instrument.getLotSize())), 0)))
-              .contractValue(
-                  (isContractDerivative(instrument))
-                      ? new BigDecimal(instrument.getContractValue())
-                      : null)
+              .contractValue((isContractDerivative(instrument)) ? contractValue : null)
               .priceScale(numberOfDecimals(new BigDecimal(instrument.getTickSize())))
               .priceStepSize(
                   BigDecimal.ONE.movePointLeft(

@@ -76,11 +76,8 @@ public class OkexOrderRequest {
   @JsonProperty("slTriggerPxType")
   private String stopLossTriggerPriceType;
 
-  @JsonProperty("attachAlgoOrs")
-  private List<OkexAttachAlgoOrder> attachAlgoOrs;
-
-  @JsonProperty("attachAlgoCls")
-  private List<OkexAttachAlgoOrder> attachAlgoCls;
+  @JsonProperty("attachAlgoOrds")
+  private List<OkexAttachAlgoOrder> attachAlgoOrds;
 
   public OkxOrderRequest to() {
     return OkxOrderRequest.builder()
@@ -103,8 +100,7 @@ public class OkexOrderRequest {
         .stopLossOrderPrice(stopLossOrderPrice)
         .takeProfitTriggerPriceType(takeProfitTriggerPriceType)
         .stopLossTriggerPriceType(stopLossTriggerPriceType)
-        .attachAlgoOrs(toAttachAlgoOrders(attachAlgoOrs))
-        .attachAlgoCls(toAttachAlgoOrders(attachAlgoCls))
+        .attachAlgoOrds(toAttachAlgoOrders(attachAlgoOrds))
         .build();
   }
 

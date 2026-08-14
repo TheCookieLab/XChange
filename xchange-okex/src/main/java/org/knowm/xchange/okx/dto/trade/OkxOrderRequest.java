@@ -71,9 +71,6 @@ public class OkxOrderRequest {
   @JsonProperty("slTriggerPxType")
   private String stopLossTriggerPriceType;
 
-  @JsonProperty("attachAlgoOrs")
-  private List<OkxAttachAlgoOrder> attachAlgoOrs;
-
-  @JsonProperty("attachAlgoCls")
-  private List<OkxAttachAlgoOrder> attachAlgoCls;
+  @JsonProperty("attachAlgoOrds")
+  private List<OkxAttachAlgoOrder> attachAlgoOrds;
 }

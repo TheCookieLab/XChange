@@ -22,16 +22,12 @@ public class OkexAccountPositionRisk {
     return delegate.getAdjustEquity();
   }
 
-  public List<OkexBalanceData> getBalanceData() {
-    return delegate.getBalanceData().stream()
-        .map(OkexBalanceData::new)
-        .collect(Collectors.toList());
+  public List<BalanceData> getBalanceData() {
+    return delegate.getBalanceData().stream().map(BalanceData::new).collect(Collectors.toList());
   }
 
-  public List<OkexPositionData> getPositionData() {
-    return delegate.getPositionData().stream()
-        .map(OkexPositionData::new)
-        .collect(Collectors.toList());
+  public List<PositionData> getPositionData() {
+    return delegate.getPositionData().stream().map(PositionData::new).collect(Collectors.toList());
   }
 
   public Date getTimestamp() {
@@ -43,11 +39,11 @@ public class OkexAccountPositionRisk {
    *     instead.
    */
   @Deprecated
-  public static class OkexBalanceData {
+  public static class BalanceData {
 
     private final OkxAccountPositionRisk.BalanceData delegate;
 
-    public OkexBalanceData(OkxAccountPositionRisk.BalanceData delegate) {
+    public BalanceData(OkxAccountPositionRisk.BalanceData delegate) {
       this.delegate = delegate;
     }
 
@@ -69,11 +65,11 @@ public class OkexAccountPositionRisk {
    *     instead.
    */
   @Deprecated
-  public static class OkexPositionData {
+  public static class PositionData {
 
     private final OkxAccountPositionRisk.PositionData delegate;
 
-    public OkexPositionData(OkxAccountPositionRisk.PositionData delegate) {
+    public PositionData(OkxAccountPositionRisk.PositionData delegate) {
       this.delegate = delegate;
     }
 
