@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.okx.OkxAuthenticated;
 import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.dto.OkxException;
@@ -626,7 +627,20 @@ public class OkxTradeServiceRaw extends OkxBaseService {
     }
 
     if (!toPlace.isEmpty()) {
-      List<OkxOrderResponse> placed = doPlaceBatchOkxOrder(toPlace).getData();
+      OkxResponse<List<OkxOrderResponse>> batchResponse = doPlaceBatchOkxOrder(toPlace);
+      if (!batchResponse.isSuccess()) {
+        throw handleError(OkxException.fromResponse(batchResponse, apiKey, secretKey, passphrase));
+      }
+      List<OkxOrderResponse> placed = batchResponse.getData();
+      if (placed == null || placed.size() < toPlaceIndexes.size()) {
+        throw new ExchangeException(
+            "OKX batch order placement returned "
+                + (placed == null ? 0 : placed.size())
+                + " results for "
+                + toPlaceIndexes.size()
+                + " submitted orders: "
+                + batchResponse.getMsg());
+      }
       for (int index = 0; index < toPlaceIndexes.size(); index++) {
         responses.set(toPlaceIndexes.get(index), placed.get(index));
       }

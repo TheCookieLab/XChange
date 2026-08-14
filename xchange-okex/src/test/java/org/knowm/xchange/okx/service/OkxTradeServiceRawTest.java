@@ -1,6 +1,7 @@
 package org.knowm.xchange.okx.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -14,6 +15,7 @@ import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
@@ -461,5 +463,34 @@ public class OkxTradeServiceRawTest {
     assertThat(result.getData())
         .extracting(OkxOrderResponse::getOrderId)
         .containsExactly("ord-new-1", "ord-existing", "ord-new-3");
+  }
+
+  @Test
+  public void testPlaceBatchPropagatesTopLevelBusinessFailure() {
+    // A top-level failure (non-zero code, empty data) must surface the provider error instead of
+    // an IndexOutOfBoundsException from indexing an empty result list.
+    service.placeBatchResponse =
+        new OkxResponse<>(null, "51000", "Service temporarily unavailable", List.of());
+
+    assertThatThrownBy(
+            () -> service.placeOkxOrder(List.of(orderRequest("cl-1"), orderRequest("cl-2"))))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("Service temporarily unavailable");
+    assertThat(service.placeBatchCalls).isEqualTo(1);
+  }
+
+  @Test
+  public void testPlaceBatchPropagatesShortResultResponse() {
+    // A success code with fewer results than submitted orders must not fabricate a success
+    // response; the partial payload is a provider-side failure.
+    service.placeBatchResponse =
+        new OkxResponse<>(
+            null, "0", "partial failure", List.of(OkxOrderResponse.replay("ord-1", "cl-1")));
+
+    assertThatThrownBy(
+            () -> service.placeOkxOrder(List.of(orderRequest("cl-1"), orderRequest("cl-2"))))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("returned 1 results for 2 submitted orders");
+    assertThat(service.placeBatchCalls).isEqualTo(1);
   }
 }
