@@ -29,6 +29,7 @@ import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
 import org.knowm.xchange.okex.dto.marketdata.OkexInstrument;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
+import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
 import org.knowm.xchange.okex.dto.trade.OkexAmendOrderRequest;
 import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
 import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
@@ -182,6 +183,22 @@ public class OkexCompatibilityTest {
             OkexTicker.class);
     assertThat(ticker.getInstrumentId()).isEqualTo("BTC-USDT");
     assertThat(ticker.getLast()).isEqualByComparingTo("1.5");
+  }
+
+  @Test
+  public void legacyTradeRemainsJacksonConstructible() throws Exception {
+    // The retained Okex#getTrades REST path must be able to deserialize a trade payload directly
+    // as OkexTrade (delegating creator mirroring the OkexOrderDetails repair).
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkexTrade trade =
+        mapper.readValue(
+            "{\"instId\":\"BTC-USDT\",\"tradeId\":\"t-1\",\"px\":\"50000\","
+                + "\"sz\":\"0.001\",\"side\":\"buy\",\"ts\":\"1610000000000\"}",
+            OkexTrade.class);
+    assertThat(trade.getTradeId()).isEqualTo("t-1");
+    assertThat(trade.getPx()).isEqualByComparingTo("50000");
+    assertThat(trade.to().getInstId()).isEqualTo("BTC-USDT");
   }
 
   @Test
