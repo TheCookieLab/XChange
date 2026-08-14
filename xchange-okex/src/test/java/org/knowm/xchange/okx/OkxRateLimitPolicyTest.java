@@ -136,6 +136,12 @@ public class OkxRateLimitPolicyTest {
   }
 
   @Test
+  public void testAuthenticatedEndpointPathsAreAbsolute() {
+    assertThat(OkxAuthenticated.amendBatchOrderPath).startsWith("/");
+    assertThat(OkxAuthenticated.amendOrderPath).startsWith("/");
+  }
+
+  @Test
   public void testExtensionPointRegistersLimiter() {
     OkxRateLimitPolicy policy =
         OkxRateLimitPolicy.builder().limit("/phase/4/endpoint", 20, 2).build();
