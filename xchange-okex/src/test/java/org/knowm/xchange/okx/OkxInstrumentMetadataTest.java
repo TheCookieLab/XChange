@@ -411,4 +411,15 @@ public class OkxInstrumentMetadataTest {
     assertThat(exchange.getExchangeMetaData().getInstruments())
         .containsKey(OkxAdapters.adaptOkxInstrumentId("BTC-USD-260828-110000-C"));
   }
+
+  @Test
+  public void canonicalExchangeRetainsOfflineMetadataWhenRemoteInitIsDisabled() {
+    ExchangeSpecification spec = new OkxExchange().getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+
+    OkxExchange exchange = new OkxExchange();
+    exchange.applySpecification(spec);
+
+    assertThat(exchange.getExchangeMetaData()).isNotNull();
+  }
 }
