@@ -6,8 +6,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.mxc.push.common.protobuf.PublicAggreDealsV3Api;
@@ -123,6 +121,7 @@ class MexcV3StreamingOrderBookTest {
     }
   }
 
+
   @Test
   void firstPushFetchesSnapshotAndAppliesDelta() {
     stubSnapshot(wireMock, 100L);
@@ -156,6 +155,19 @@ class MexcV3StreamingOrderBookTest {
   }
 
   @Test
+  void snapshotWithinPushWindowIsApplied() {
+    stubSnapshot(wireMock, 102L);
+
+    OrderBook book =
+        orderBook
+            .onDelta(depthPushJson(101L, 103L, 1_712_345_678_901L))
+            .blockingFirst();
+
+    assertBook(book, 1_712_345_678_901L);
+    wireMock.verify(1, getRequestedFor(urlEqualTo(DEPTH_PATH)));
+  }
+
+  @Test
   void stalePushIsDropped() {
     stubSnapshot(wireMock, 100L);
     orderBook.onDelta(depthPushJson(101L, 101L, 1L)).blockingFirst();
@@ -165,6 +177,8 @@ class MexcV3StreamingOrderBookTest {
     assertEquals(0, emissions, "push whose toVersion is behind the snapshot must be dropped");
     wireMock.verify(1, getRequestedFor(urlEqualTo(DEPTH_PATH)));
   }
+
+
 
   @Test
   void versionGapRefetchesAndDropsMisalignedPush() {
