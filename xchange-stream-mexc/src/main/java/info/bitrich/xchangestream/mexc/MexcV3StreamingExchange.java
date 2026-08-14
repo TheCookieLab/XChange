@@ -57,7 +57,7 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     ExchangeSpecification specification = getExchangeSpecification();
     String uri = (String) specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_URI);
     if (uri == null || uri.isBlank()) {
-      uri = DEFAULT_WEBSOCKET_URI;
+      uri = getConfiguration().getStreamBaseUrl();
     }
     final String resolvedUri = uri;
     if (specification.getApiKey() != null && !uri.contains("listenKey=")) {
