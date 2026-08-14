@@ -167,6 +167,16 @@ public class OkxException extends HttpStatusExceptionSupport {
     return message;
   }
 
+  /**
+   * Returns the OKX business error code ({@code 0} when unknown or absent), so callers can branch
+   * on structured provider errors without parsing the message.
+   *
+   * @return the provider error code
+   */
+  public int getCode() {
+    return code;
+  }
+
   @Override
   public String toString() {
     return code + ":" + message;

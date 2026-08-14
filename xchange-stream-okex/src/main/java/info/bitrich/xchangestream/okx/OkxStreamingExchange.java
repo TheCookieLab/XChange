@@ -48,6 +48,14 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
   private OkxBusinessStreamingService businessStreamingService;
 
   /**
+   * Transport availability snapshot captured when each facade was last built, so {@link
+   * #connect()} can rebuild a facade when the transport set changes while a reconnect with
+   * unchanged transports keeps the active subscriptions.
+   */
+  private volatile boolean marketDataFacadeHasBusinessTransport;
+  private volatile boolean tradeServiceFacadeHasPrivateTransport;
+
+  /**
    * Explicit transport configuration; {@code null} selects the default model (public + business,
    * plus private when credentials are present). An empty (non-null) set means "public only".
    */
@@ -85,15 +93,20 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
           new OkxBusinessStreamingService(getBusinessApiUrl(), exchangeSpecification);
       applyStreamingSpecification(exchangeSpecification, businessStreamingService);
     }
-    if (streamingMarketDataService == null) {
+    boolean businessAvailable = businessStreamingService != null;
+    if (streamingMarketDataService == null
+        || marketDataFacadeHasBusinessTransport != businessAvailable) {
       streamingMarketDataService =
           new OkxStreamingMarketDataService(
               streamingService, businessStreamingService, exchangeMetaData);
+      marketDataFacadeHasBusinessTransport = businessAvailable;
     }
-    if (streamingTradeService == null) {
+    boolean privateAvailable = privateStreamingService != null;
+    if (streamingTradeService == null || tradeServiceFacadeHasPrivateTransport != privateAvailable) {
       streamingTradeService =
           new OkxStreamingTradeService(
               privateStreamingService, exchangeMetaData, getResilienceRegistries());
+      tradeServiceFacadeHasPrivateTransport = privateAvailable;
     }
     List<Completable> completableList = new ArrayList<>();
     completableList.add(streamingService.connect());

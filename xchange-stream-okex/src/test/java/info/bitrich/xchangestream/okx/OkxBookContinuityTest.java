@@ -198,12 +198,13 @@ public class OkxBookContinuityTest {
     String[][] asks = {{"103", "3"}, {"105", "4"}};
     JsonNode snapshot = data(1, 0, bids, asks);
 
-    // OKX orders the checksum input bid1, ask1, bid2, ask2 (top 25 on each side).
+    // OKX orders the checksum input bid1, ask1, bid2, ask2 (top 25 on each side); the full token
+    // stream is "102:2:103:3:100:1:105:4".
     assertThat(OkxBookContinuity.checksum(snapshot.get("bids"), snapshot.get("asks")))
-        .isEqualTo(546959751L);
+        .isEqualTo(2334835581L);
     continuity.snapshot(INST_ID, snapshot);
 
-    assertThat(continuity.gateUpdate(INST_ID, data(2, 546959751L, EMPTY, EMPTY)))
+    assertThat(continuity.gateUpdate(INST_ID, data(2, 2334835581L, EMPTY, EMPTY)))
         .isEqualTo(OkxBookContinuity.Gate.ACCEPT);
   }
 }

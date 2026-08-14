@@ -25,6 +25,10 @@ import org.knowm.xchange.okx.dto.trade.OkxPageParams;
 
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkxTradeServiceRaw extends OkxBaseService {
+
+  /** OKX business error for the order lookup when the order does not exist. */
+  private static final int ORDER_NOT_FOUND_CODE = 51603;
+
   public OkxTradeServiceRaw(OkxExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
   }
@@ -92,11 +96,13 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   }
 
   /**
-   * Looks up an order by its client order id.
+   * Looks up an order by its client order id. OKX reports a missing order as error {@code 51603}
+   * ("Order does not exist"); that result is returned as an empty lookup so replay-safe placement
+   * can distinguish "never placed" from a real failure.
    *
    * @param instrumentId the instrument id, e.g. {@code BTC-USDT}
    * @param clientOrderId the client-supplied order id ({@code clOrdId})
-   * @return the order details
+   * @return the order details, or an empty data list when no order exists
    */
   OkxResponse<List<OkxOrderDetails>> getOkxOrderByClientOrderId(
       String instrumentId, String clientOrderId) throws IOException {
@@ -106,23 +112,43 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   private OkxResponse<List<OkxOrderDetails>> getOkxOrderByClientOrderId(
       String instrumentId, String orderId, String clientOrderId) throws IOException {
     try {
-      OkxAuthParams auth = authParams();
-      return decorateApiCall(
-              () ->
-                  okxAuthenticated.getOrderDetails(
-                      auth.apiKey(),
-                      auth.signature(),
-                      auth.timestamp(),
-                      auth.passphrase(),
-                      auth.simulatedTrading(),
-                      instrumentId,
-                      orderId,
-                      clientOrderId))
-          .withRateLimiter((rateLimiter(OkxAuthenticated.orderDetailsPath)))
-          .call();
+      return fetchOrderDetails(instrumentId, orderId, clientOrderId);
     } catch (OkxException e) {
+      if (e.getCode() == ORDER_NOT_FOUND_CODE) {
+        return new OkxResponse<>(null, "0", null, Collections.emptyList());
+      }
       throw handleError(e);
     }
+  }
+
+  /**
+   * HTTP seam for the order lookup ({@code GET /api/v5/trade/order}) so offline tests can stub the
+   * response and the not-found handling can be exercised without a live account.
+   *
+   * @param instrumentId the instrument id, e.g. {@code BTC-USDT}
+   * @param orderId the exchange order id ({@code ordId}), or {@code null} when looking up by client
+   *     order id
+   * @param clientOrderId the client-supplied order id ({@code clOrdId}), or {@code null} when
+   *     looking up by exchange order id
+   * @return the raw order lookup response
+   * @throws IOException on transport failure
+   */
+  OkxResponse<List<OkxOrderDetails>> fetchOrderDetails(
+      String instrumentId, String orderId, String clientOrderId) throws IOException {
+    OkxAuthParams auth = authParams();
+    return decorateApiCall(
+            () ->
+                okxAuthenticated.getOrderDetails(
+                    auth.apiKey(),
+                    auth.signature(),
+                    auth.timestamp(),
+                    auth.passphrase(),
+                    auth.simulatedTrading(),
+                    instrumentId,
+                    orderId,
+                    clientOrderId))
+        .withRateLimiter((rateLimiter(OkxAuthenticated.orderDetailsPath)))
+        .call();
   }
 
   public OkxResponse<List<OkxOrderDetails>> getOrderHistory(

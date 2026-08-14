@@ -188,22 +188,24 @@ final class OkxBookContinuity {
 
   /**
    * Computes the OKX book checksum for the first 25 raw bid/ask levels, interleaved as {@code
-   * bid1,ask1,bid2,ask2,...}: CRC32 over {@code price:size} with no separator between levels.
+   * bid1,ask1,bid2,ask2,...}: CRC32 over {@code bidPx:bidSz:askPx:askSz:...}, with a {@code ':'}
+   * separator between every price/size token.
    *
    * @return unsigned CRC32 value in the range {@code [0, 2^32-1]}
    */
   static long checksum(JsonNode bids, JsonNode asks) {
     CRC32 crc = new CRC32();
+    boolean firstToken = true;
     int bidCount = arraySize(bids);
     int askCount = arraySize(asks);
     for (int index = 0;
         index < CHECKSUM_LEVEL_LIMIT && (index < bidCount || index < askCount);
         index++) {
       if (index < bidCount) {
-        appendLevel(crc, bids.get(index));
+        firstToken = appendLevel(crc, bids.get(index), firstToken);
       }
       if (index < askCount) {
-        appendLevel(crc, asks.get(index));
+        firstToken = appendLevel(crc, asks.get(index), firstToken);
       }
     }
     return crc.getValue();
@@ -213,30 +215,36 @@ final class OkxBookContinuity {
     return levels != null && levels.isArray() ? levels.size() : 0;
   }
 
-  private static void appendLevel(CRC32 crc, JsonNode level) {
+  private static boolean appendLevel(CRC32 crc, JsonNode level, boolean firstToken) {
     if (level == null || !level.isArray() || level.size() < 2) {
-      return;
+      return firstToken;
     }
-    crc.update(
-        (level.get(0).asText() + ":" + level.get(1).asText()).getBytes(StandardCharsets.UTF_8));
+    return appendLevel(crc, new RawLevel(level.get(0).asText(), level.get(1).asText()), firstToken);
   }
 
-  private static void appendLevel(CRC32 crc, RawLevel level) {
-    crc.update((level.price + ":" + level.size).getBytes(StandardCharsets.UTF_8));
+  private static boolean appendLevel(CRC32 crc, RawLevel level, boolean firstToken) {
+    if (!firstToken) {
+      crc.update((int) ':');
+    }
+    crc.update(level.price.getBytes(StandardCharsets.UTF_8));
+    crc.update((int) ':');
+    crc.update(level.size.getBytes(StandardCharsets.UTF_8));
+    return false;
   }
 
   private static long checksum(BookState state) {
     CRC32 crc = new CRC32();
+    boolean firstToken = true;
     Iterator<RawLevel> bidLevels = state.bids.values().iterator();
     Iterator<RawLevel> askLevels = state.asks.values().iterator();
     for (int index = 0; index < CHECKSUM_LEVEL_LIMIT; index++) {
       boolean appended = false;
       if (bidLevels.hasNext()) {
-        appendLevel(crc, bidLevels.next());
+        firstToken = appendLevel(crc, bidLevels.next(), firstToken);
         appended = true;
       }
       if (askLevels.hasNext()) {
-        appendLevel(crc, askLevels.next());
+        firstToken = appendLevel(crc, askLevels.next(), firstToken);
         appended = true;
       }
       if (!appended) {
