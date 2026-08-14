@@ -45,10 +45,12 @@ exchange.getStreamingAccountService().getBalanceChanges().subscribe(System.out::
 * **Sequence-safe depth** — `getOrderBook` subscribes to
   `spot@public.aggre.depth.v3.api.pb@100ms@<symbol>` and reconciles with a REST
   `/api/v3/depth?limit=5000` snapshot on the first push or any version gap.
-  Deltas apply only when `fromVersion == lastUpdateId + 1`; stale and
-  overlapping pushes are dropped, a gap refetches the authoritative snapshot,
-  and a quantity of `0` removes the price level. No path continues on unproved
-  sequence state.
+  Deltas apply when their version window reaches `lastUpdateId + 1`
+  (`fromVersion <= lastUpdateId + 1 <= toVersion`), so pushes that overlap the
+  snapshot are applied; only a true gap refetches the authoritative snapshot,
+  stale pushes (`toVersion <= lastUpdateId`) are dropped, a snapshot older than
+  the local sequence is ignored (never rewinds the book), and a quantity of `0`
+  removes the price level. No path continues on unproved sequence state.
 * **Private channels** — account (`spot@private.account.v3.api.pb`), orders
   (`spot@private.orders.v3.api.pb`), and deals (`spot@private.deals.v3.api.pb`)
   map to `Balance`, `Order`, and `UserTrade`; order status codes 1–5 map to
