@@ -17,9 +17,9 @@
       does not manage protobuf versions or the protoc plugin.
     -->
     <properties>
+        <version.os-maven-plugin>1.7.1</version.os-maven-plugin>
         <version.protobuf>3.25.5</version.protobuf>
         <version.protobuf-maven-plugin>0.6.1</version.protobuf-maven-plugin>
-        <version.os-maven-plugin>1.7.1</version.os-maven-plugin>
     </properties>
 
     <dependencies>
@@ -81,13 +81,6 @@
     </dependencies>
 
     <build>
-        <extensions>
-            <extension>
-                <groupId>kr.motd.maven</groupId>
-                <artifactId>os-maven-plugin</artifactId>
-                <version>${version.os-maven-plugin}</version>
-            </extension>
-        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
@@ -106,5 +99,12 @@
                 </executions>
             </plugin>
         </plugins>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>${version.os-maven-plugin}</version>
+            </extension>
+        </extensions>
     </build>
 </project>
