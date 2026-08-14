@@ -18,13 +18,18 @@ import java.util.Map;
 import org.junit.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.okex.dto.trade.OkexAttachAlgoOrder;
+import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
+import org.knowm.xchange.okx.dto.trade.OkxAttachAlgoOrder;
 import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 
 public class OkxAdapterTest {
@@ -121,5 +126,76 @@ public class OkxAdapterTest {
       OkxAdapters.instrumentToInstrumentIdMap.clear();
       OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
     }
+  }
+
+  @Test
+  public void testAdaptLimitOrderConvertsOptionVolumeToContractSize() {
+    // Options trade in contracts: sz = volume / ctMult (0.01 in the instrument fixture), so a
+    // 0.01 BTC trade is one contract, not 0.01.
+    OptionsContract option = new OptionsContract("BTC/USD/260828/110000/C");
+    Map<Instrument, Long> original = new HashMap<>(OkxAdapters.instrumentToInstrumentIdMap);
+    OkxAdapters.instrumentToInstrumentIdMap.clear();
+    try {
+      OkxAdapters.instrumentToInstrumentIdMap.put(
+          OkxAdapters.adaptOkxInstrumentId("BTC-USD-260828-110000-C"), 273778L);
+      LimitOrder order =
+          new LimitOrder(
+              Order.OrderType.BID,
+              new BigDecimal("0.01"),
+              option,
+              "order-1",
+              new Date(),
+              new BigDecimal("0.05"));
+      OkxOrderRequest request =
+          OkxAdapters.adaptOrder(
+              order,
+              new ExchangeMetaData(
+                  Map.of(
+                      option,
+                      InstrumentMetaData.builder().contractValue(new BigDecimal("0.01")).build()),
+                  Collections.emptyMap(),
+                  null,
+                  null,
+                  null),
+              "1");
+      assertThat(request.getInstrumentId()).isEqualTo("BTC-USD-260828-110000-C");
+      assertThat(request.getInstIdCode()).isEqualTo("273778");
+      assertThat(request.getAmount()).isEqualTo("1");
+    } finally {
+      OkxAdapters.instrumentToInstrumentIdMap.clear();
+      OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
+    }
+  }
+
+  @Test
+  public void testOrderRequestUsesSingleAttachAlgoOrdsWireKey() throws IOException {
+    // OKX place-order accepts one top-level attachAlgoOrds array; attachAlgoOrs/attachAlgoCls
+    // do not exist on the wire and must never be emitted.
+    OkxOrderRequest request =
+        OkxOrderRequest.builder()
+            .instrumentId("BTC-USDT")
+            .clientOrderId("cl-1")
+            .attachAlgoOrds(
+                List.of(
+                    OkxAttachAlgoOrder.builder()
+                        .takeProfitTriggerPrice("60000")
+                        .takeProfitOrderPrice("60000")
+                        .amount("1")
+                        .build()))
+            .build();
+    String json = new ObjectMapper().writeValueAsString(request);
+    assertThat(json).contains("\"attachAlgoOrds\"");
+    assertThat(json).doesNotContain("attachAlgoOrs", "attachAlgoCls");
+
+    // The legacy shim exposes the same single list and maps it onto the canonical request.
+    OkexOrderRequest legacy =
+        OkexOrderRequest.builder()
+            .instrumentId("BTC-USDT")
+            .attachAlgoOrds(
+                List.of(OkexAttachAlgoOrder.builder().takeProfitTriggerPrice("60000").build()))
+            .build();
+    OkxOrderRequest converted = legacy.to();
+    assertThat(converted.getAttachAlgoOrds()).hasSize(1);
+    assertThat(converted.getAttachAlgoOrds().get(0).getTakeProfitTriggerPrice()).isEqualTo("60000");
   }
 }

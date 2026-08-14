@@ -6,12 +6,17 @@ import static org.assertj.core.api.Assertions.fail;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
+import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
 import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.okex.service.OkexAccountService;
@@ -24,6 +29,7 @@ import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxInstType;
 import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk;
 import org.knowm.xchange.okx.service.OkxAccountServiceRaw;
 import org.knowm.xchange.okx.service.OkxMarketDataServiceRaw;
 import org.knowm.xchange.okx.service.OkxTradeServiceRaw;
@@ -164,6 +170,35 @@ public class OkexCompatibilityTest {
         new OkexTradeParams.OkexCancelOrderParams(instrument, "order-456");
     assertThat(paramsWithoutRef.userReference).isNull();
     assertThat(paramsWithoutRef.orderId).isEqualTo("order-456");
+  }
+
+  @Test
+  public void legacyPositionRiskRetainsNestedDtoNames() {
+    // Pre-rename clients reference OkexAccountPositionRisk.BalanceData / .PositionData (nested),
+    // so the shim must keep those exact names and the wrapper getters must return them.
+    OkxAccountPositionRisk.BalanceData canonicalBalance =
+        new OkxAccountPositionRisk.BalanceData(
+            Currency.BTC, new BigDecimal("1"), new BigDecimal("2"));
+    OkexAccountPositionRisk.BalanceData balance =
+        new OkexAccountPositionRisk.BalanceData(canonicalBalance);
+    assertThat(balance.getCurrency()).isEqualTo(Currency.BTC);
+    assertThat(balance.getEquityOfCurrency()).isEqualByComparingTo("1");
+    assertThat(balance.getDiscountEquityOfCurrency()).isEqualByComparingTo("2");
+
+    OkxAccountPositionRisk.PositionData canonicalPosition =
+        new OkxAccountPositionRisk.PositionData(
+            "BTC-USDT", new BigDecimal("3"), new BigDecimal("4"), "cross", "net");
+    OkexAccountPositionRisk.PositionData position =
+        new OkexAccountPositionRisk.PositionData(canonicalPosition);
+    assertThat(position.getInstrumentId()).isEqualTo("BTC-USDT");
+    assertThat(position.getPositionSize()).isEqualByComparingTo("3");
+
+    OkxAccountPositionRisk canonical =
+        new OkxAccountPositionRisk(
+            null, List.of(canonicalBalance), List.of(canonicalPosition), new Date());
+    OkexAccountPositionRisk shim = new OkexAccountPositionRisk(canonical);
+    assertThat(shim.getBalanceData()).hasSize(1);
+    assertThat(shim.getPositionData()).hasSize(1);
   }
 
   /**

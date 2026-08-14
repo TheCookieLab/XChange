@@ -354,8 +354,9 @@ public class OkxInstrumentMetadataTest {
     InstrumentMetaData option =
         metadata.get(OkxAdapters.adaptOkxInstrumentId("BTC-USD-260828-110000-C"));
     assertThat(option).isNotNull();
-    assertThat(option.getContractValue()).isNull();
-    assertThat(option.getMinimumAmount()).isEqualByComparingTo("1");
+    // Option sizes convert by ctMult (0.01): minSz of 1 contract = 0.01 BTC
+    assertThat(option.getContractValue()).isEqualByComparingTo("0.01");
+    assertThat(option.getMinimumAmount()).isEqualByComparingTo("0.01");
   }
 
   @Test
