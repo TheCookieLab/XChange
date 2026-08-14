@@ -86,7 +86,8 @@ public class OkxAdapterTest {
       OkxOrderRequest request =
           OkxAdapters.adaptOrder(
               order,
-              new ExchangeMetaData(Collections.emptyMap(), Collections.emptyMap(), null, null, null),
+              new ExchangeMetaData(
+                  Collections.emptyMap(), Collections.emptyMap(), null, null, null),
               "1");
       assertThat(request.getInstrumentId()).isEqualTo("BTC-USD");
       assertThat(request.getInstIdCode()).isEqualTo("1234567890");
