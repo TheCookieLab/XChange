@@ -7,7 +7,7 @@ import si.mazi.rescu.RestInvocation;
 
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkxDigest extends BaseParamsDigest {
-  private OkxDigest(String secretKeyBase64) {
+  protected OkxDigest(String secretKeyBase64) {
     super(secretKeyBase64, HMAC_SHA_256);
   }
 
