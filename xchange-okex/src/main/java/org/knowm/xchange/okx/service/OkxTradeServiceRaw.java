@@ -100,7 +100,9 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   /**
    * Looks up an order by its client order id. OKX reports a missing order as error {@code 51603}
    * ("Order does not exist"); that result is returned as an empty lookup so replay-safe placement
-   * can distinguish "never placed" from a real failure.
+   * can distinguish "never placed" from a real failure. Every other business failure in the lookup
+   * response is propagated as an exception so a transient lookup error never looks like "order not
+   * found".
    *
    * @param instrumentId the instrument id, e.g. {@code BTC-USDT}
    * @param clientOrderId the client-supplied order id ({@code clOrdId})
@@ -114,7 +116,19 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   private OkxResponse<List<OkxOrderDetails>> getOkxOrderByClientOrderId(
       String instrumentId, String orderId, String clientOrderId) throws IOException {
     try {
-      return fetchOrderDetails(instrumentId, orderId, clientOrderId);
+      OkxResponse<List<OkxOrderDetails>> response =
+          fetchOrderDetails(instrumentId, orderId, clientOrderId);
+      if (response == null || !response.isSuccess()) {
+        if (response != null
+            && OkxException.parseCode(response.getCode()) == ORDER_NOT_FOUND_CODE) {
+          return new OkxResponse<>(null, "0", null, Collections.emptyList());
+        }
+        throw handleError(
+            response == null
+                ? new OkxException("Empty response from OKX order lookup", 0)
+                : OkxException.fromResponse(response, apiKey, secretKey, passphrase));
+      }
+      return response;
     } catch (OkxException e) {
       if (e.getCode() == ORDER_NOT_FOUND_CODE) {
         return new OkxResponse<>(null, "0", null, Collections.emptyList());

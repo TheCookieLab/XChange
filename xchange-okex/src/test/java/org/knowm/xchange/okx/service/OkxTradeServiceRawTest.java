@@ -159,10 +159,18 @@ public class OkxTradeServiceRawTest {
      */
     String notFoundClientOrderId;
 
+    /**
+     * When non-null, the lookup seam returns this non-success envelope instead of an empty lookup.
+     */
+    OkxResponse<List<OkxOrderDetails>> lookupBusinessFailure;
+
     @Override
     OkxResponse<List<OkxOrderDetails>> fetchOrderDetails(
         String instrumentId, String orderId, String clientOrderId) throws IOException {
       orderLookups.add(clientOrderId);
+      if (lookupBusinessFailure != null) {
+        return lookupBusinessFailure;
+      }
       if (clientOrderId != null && clientOrderId.equals(notFoundClientOrderId)) {
         throw new OkxException("Order does not exist", 51603);
       }
@@ -421,6 +429,38 @@ public class OkxTradeServiceRawTest {
     assertThat(service.placeSingleCalls).isEqualTo(1);
     assertThat(result.getData()).hasSize(1);
     assertThat(result.getData().get(0).getOrderId()).isEqualTo("ord-new");
+  }
+
+  @Test
+  public void testPlaceOrderTreatsEnvelope51603LookupAsNotFound() throws Exception {
+    // The same "order does not exist" semantics arrive as a non-success envelope; that must also
+    // be treated as an empty lookup so placement proceeds.
+    service.lookupBusinessFailure =
+        new OkxResponse<>(null, "51603", "Order does not exist", Collections.emptyList());
+    service.placeSingleResponse =
+        new OkxResponse<>(null, "0", null, List.of(OkxOrderResponse.replay("ord-new", "cl-fresh")));
+
+    OkxResponse<List<OkxOrderResponse>> result = service.placeOkxOrder(orderRequest("cl-fresh"));
+
+    assertThat(service.orderLookups).containsExactly("cl-fresh");
+    assertThat(service.placeSingleCalls).isEqualTo(1);
+    assertThat(result.getData()).hasSize(1);
+    assertThat(result.getData().get(0).getOrderId()).isEqualTo("ord-new");
+  }
+
+  @Test
+  public void testPlaceOrderPropagatesLookupBusinessFailure() throws Exception {
+    // A transient lookup failure must not look like "order not found": no placement happens and
+    // the business error surfaces to the caller.
+    service.lookupBusinessFailure =
+        new OkxResponse<>(null, "50000", "Something went wrong", Collections.emptyList());
+
+    assertThatThrownBy(() -> service.placeOkxOrder(orderRequest("cl-fresh")))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("Something went wrong")
+        .hasCauseInstanceOf(OkxException.class)
+        .satisfies(e -> assertThat(((OkxException) e.getCause()).getCode()).isEqualTo(50000));
+    assertThat(service.placeSingleCalls).isZero();
   }
 
   @Test
