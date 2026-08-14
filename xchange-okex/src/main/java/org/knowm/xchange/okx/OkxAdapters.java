@@ -82,7 +82,8 @@ public class OkxAdapters {
     if (metaData == null && instrument instanceof CurrencyPair) {
       CurrencyPair pair = (CurrencyPair) instrument;
       if (pair.getCounter().equals(Currency.USDC)) {
-        metaData = exchangeMetaData.getInstruments().get(new CurrencyPair(pair.getBase(), Currency.USD));
+        metaData =
+            exchangeMetaData.getInstruments().get(new CurrencyPair(pair.getBase(), Currency.USD));
       }
     }
     return metaData;

@@ -336,8 +336,7 @@ public class OkxAdapterTest {
             "{\"tradeId\":\"t1\",\"instId\":\"BTC-USD\",\"px\":50000,\"side\":\"buy\","
                 + "\"sz\":1,\"ts\":1690000000000}",
             OkxTrade.class);
-    Trades trades =
-        OkxAdapters.adaptTrades(List.of(trade), new CurrencyPair("BTC/USDC"), metaData);
+    Trades trades = OkxAdapters.adaptTrades(List.of(trade), new CurrencyPair("BTC/USDC"), metaData);
     assertThat(trades.getTrades().get(0).getOriginalAmount()).isEqualByComparingTo("1");
   }
 
@@ -396,8 +395,7 @@ public class OkxAdapterTest {
     assertThat(OkxTradeServiceRaw.class.getMethod("amendOkxAlgoOrder", OkxAmendAlgoRequest.class))
         .isNotNull();
     assertThat(
-            OkexTradeServiceRaw.class.getMethod(
-                "amendOkexAlgoOrder", OkexAmendAlgoRequest.class))
+            OkexTradeServiceRaw.class.getMethod("amendOkexAlgoOrder", OkexAmendAlgoRequest.class))
         .isNotNull();
   }
 
