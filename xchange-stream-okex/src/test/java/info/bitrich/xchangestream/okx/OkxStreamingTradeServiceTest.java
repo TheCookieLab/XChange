@@ -266,6 +266,39 @@ public class OkxStreamingTradeServiceTest {
   }
 
   @Test
+  public void testUserTradeUsesFillFieldsForPartialFills() {
+    JsonNode partialFill =
+        orderEvent(
+            "123", "client-1", "1699999999999", "T-1", "99.0", "0.5", "1699999999000", "0.1");
+    // The whole-order amount and average price differ from the fill-level fields; avgPx is
+    // empty on live partial-fill events, which must not break the stream.
+    ((ObjectNode) partialFill.get("data").get(0)).put("sz", "10");
+    ((ObjectNode) partialFill.get("data").get(0)).put("avgPx", "");
+
+    when(privateStreamingService.subscribeChannel(ORDER_CHANNEL))
+        .thenReturn(Observable.just(partialFill));
+
+    UserTrade trade = tradeService.getUserTrades(SPOT).blockingFirst();
+
+    assertThat(trade.getOriginalAmount()).isEqualByComparingTo("0.5"); // fillSz, not sz
+    assertThat(trade.getPrice()).isEqualByComparingTo("99.0"); // fillPx, not avgPx
+    assertThat(trade.getId()).isEqualTo("T-1");
+  }
+
+  @Test
+  public void testUserTradeSkipsNonFillOrderStateEvents() {
+    JsonNode stateChange =
+        orderEvent("123", "client-1", "1699999999999", "", "", "", "1699999999000", "0.1");
+
+    when(privateStreamingService.subscribeChannel(ORDER_CHANNEL))
+        .thenReturn(Observable.just(stateChange));
+
+    TestObserver<UserTrade> observer = tradeService.getUserTrades(SPOT).test();
+
+    observer.assertNoErrors().assertValueCount(0);
+  }
+
+  @Test
   public void testPlaceLimitOrderSucceedsWithMatchingClOrdId() {
     when(privateStreamingService.isLoginDone()).thenReturn(true);
     when(privateStreamingService.subscribeChannel(anyString(), eq(PLACE_ORDER), any()))

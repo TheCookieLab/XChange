@@ -121,6 +121,50 @@ public class OkxAdapters {
     return new UserTrades(userTradeList, TradeSortType.SortByTimestamp);
   }
 
+  /**
+   * Adapts one fill event from the private orders channel into a {@link UserTrade}.
+   *
+   * <p>Unlike {@link #adaptUserTrades(List, ExchangeMetaData)}, which reads the whole-order {@code
+   * sz}/{@code avgPx}, this reads the fill-level {@code fillSz}/{@code fillPx} fields so partial
+   * fills are reported at their executed quantity and price. Non-fill order-state events must be
+   * filtered out by the caller: a {@code null}, empty, or zero {@code fillSz} means no fill
+   * occurred in this event.
+   *
+   * @param details the order event carrying at least one fill
+   * @param exchangeMetaData the exchange metadata used for contract-size conversion
+   * @return the executed trade for this event's last fill
+   */
+  public static UserTrade adaptUserTradeFromFill(
+      OkxOrderDetails details, ExchangeMetaData exchangeMetaData) {
+    Instrument instrument = adaptOkxInstrumentId(details.getInstrumentId());
+    BigDecimal fillPrice = new BigDecimal(details.getLastFilledPrice());
+    return UserTrade.builder()
+        .originalAmount(
+            convertContractSizeToVolume(
+                new BigDecimal(details.getLastFilledQuantity()),
+                instrument,
+                exchangeMetaData.getInstruments().get(instrument).getContractValue(),
+                fillPrice))
+        .instrument(instrument)
+        .price(fillPrice)
+        .type(adaptOkxOrderSideToOrderType(details.getSide()))
+        .id(details.getLastTradeId())
+        .orderId(details.getOrderId())
+        .timestamp(fillTimestamp(details))
+        .feeAmount(new BigDecimal(details.getFee()))
+        .feeCurrency(new Currency(details.getFeeCurrency()))
+        .orderUserReference(details.getClientOrderId())
+        .build();
+  }
+
+  private static Date fillTimestamp(OkxOrderDetails details) {
+    String millis = details.getLastFilledTime();
+    if (millis == null || millis.isEmpty()) {
+      millis = details.getUpdateTime();
+    }
+    return Date.from(Instant.ofEpochMilli(Long.parseLong(millis)));
+  }
+
   public static LimitOrder adaptOrder(OkxOrderDetails order, ExchangeMetaData exchangeMetaData) {
     Instrument instrument = adaptOkxInstrumentId(order.getInstrumentId());
     return new LimitOrder(

@@ -13,8 +13,8 @@ import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.github.resilience4j.rxjava3.ratelimiter.operator.RateLimiterOperator;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
+import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.knowm.xchange.client.ResilienceRegistries;
@@ -124,19 +124,11 @@ public class OkxStreamingTradeService implements StreamingTradeService {
                             .collect(Collectors.toList());
                     List<UserTrade> userTrades = new ArrayList<>(freshOrderDetails.size());
                     for (OkxOrderDetails details : freshOrderDetails) {
-                      UserTrade userTrade =
-                          OkxAdapters.adaptUserTrades(
-                                  Collections.singletonList(details), exchangeMetaData)
-                              .getUserTrades()
-                              .get(0);
-                      // Surface the fill-level tradeId (the wire "tradeId") so callers can
-                      // correlate
-                      // the streamed fill with REST fills and order history.
-                      String tradeId = details.getLastTradeId();
-                      if (tradeId != null && !tradeId.isEmpty()) {
-                        userTrade.setId(tradeId);
+                      if (!isFillEvent(details)) {
+                        // Order-state event without a fill: nothing executed, emit nothing.
+                        continue;
                       }
-                      userTrades.add(userTrade);
+                      userTrades.add(OkxAdapters.adaptUserTradeFromFill(details, exchangeMetaData));
                     }
                     return Observable.fromIterable(userTrades);
                   });
@@ -282,6 +274,20 @@ public class OkxStreamingTradeService implements StreamingTradeService {
         + details.getLastFilledTime()
         + "|"
         + details.getFee();
+  }
+
+  /**
+   * Whether an order event carries an actual fill: the fill-level quantity must be present,
+   * non-empty, and non-zero, and the fill price must be present.
+   */
+  private static boolean isFillEvent(OkxOrderDetails details) {
+    String fillSize = details.getLastFilledQuantity();
+    String fillPrice = details.getLastFilledPrice();
+    return fillSize != null
+        && !fillSize.isEmpty()
+        && new BigDecimal(fillSize).signum() != 0
+        && fillPrice != null
+        && !fillPrice.isEmpty();
   }
 
   /** Canonical dedupe key for one position event. */
