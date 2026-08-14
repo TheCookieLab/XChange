@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
+import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.trade.OkxPageParams;
 
 /**
@@ -41,6 +42,18 @@ public final class OkxPageIterator {
   @FunctionalInterface
   public interface ThrowingPageFetcher<T> {
     List<T> apply(OkxPageParams params) throws IOException;
+  }
+
+  /**
+   * Page-fetch function returning the full page {@link OkxResponse} so callers can validate the
+   * business code before accumulating items; may throw a checked {@link IOException} as the OKX
+   * HTTP call it wraps does.
+   *
+   * @param <T> the item type of a page
+   */
+  @FunctionalInterface
+  public interface ThrowingPageResponseFetcher<T> {
+    OkxResponse<List<T>> apply(OkxPageParams params) throws IOException;
   }
 
   /**

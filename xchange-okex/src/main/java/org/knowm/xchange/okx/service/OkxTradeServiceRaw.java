@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.okx.OkxAuthenticated;
@@ -179,16 +180,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
       String instrumentType, String instrumentId, String orderType, OkxPageParams pagination)
       throws IOException {
     List<OkxOrderDetails> items =
-        OkxPageIterator.fetchAll(
+        fetchAllHistoryPages(
             page ->
                 fetchOrderHistoryPage(
-                        instrumentType,
-                        instrumentId,
-                        orderType,
-                        page.getAfter(),
-                        page.getBefore(),
-                        String.valueOf(page.getLimit()))
-                    .getData(),
+                    instrumentType,
+                    instrumentId,
+                    orderType,
+                    page.getAfter(),
+                    page.getBefore(),
+                    String.valueOf(page.getLimit())),
             OkxOrderDetails::getOrderId,
             pagination);
     return new OkxResponse<>(null, "0", null, items);
@@ -292,16 +292,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
       String instrumentType, String instrumentId, String orderId, OkxPageParams pagination)
       throws IOException {
     List<OkxFill> items =
-        OkxPageIterator.fetchAll(
+        fetchAllHistoryPages(
             page ->
                 fetchFillsHistoryPage(
-                        instrumentType,
-                        instrumentId,
-                        orderId,
-                        page.getAfter(),
-                        page.getBefore(),
-                        String.valueOf(page.getLimit()))
-                    .getData(),
+                    instrumentType,
+                    instrumentId,
+                    orderId,
+                    page.getAfter(),
+                    page.getBefore(),
+                    String.valueOf(page.getLimit())),
             OkxFill::getBillId,
             pagination);
     return new OkxResponse<>(null, "0", null, items);
@@ -336,6 +335,31 @@ public class OkxTradeServiceRaw extends OkxBaseService {
     } catch (OkxException e) {
       throw handleError(e);
     }
+  }
+
+  /**
+   * Fetches all pages of a cursor-paginated history endpoint, propagating a top-level business
+   * failure from any page instead of treating a failed (or empty) payload as the end of the
+   * history.
+   */
+  private <T> List<T> fetchAllHistoryPages(
+      OkxPageIterator.ThrowingPageResponseFetcher<T> pageFetcher,
+      Function<T, String> idExtractor,
+      OkxPageParams pagination)
+      throws IOException {
+    return OkxPageIterator.fetchAll(
+        page -> {
+          OkxResponse<List<T>> response = pageFetcher.apply(page);
+          if (response == null || !response.isSuccess()) {
+            throw handleError(
+                response == null
+                    ? new OkxException("Empty response from OKX history endpoint", 0)
+                    : OkxException.fromResponse(response, apiKey, secretKey, passphrase));
+          }
+          return response.getData();
+        },
+        idExtractor,
+        pagination);
   }
 
   /** <a href="https://www.okx.com/docs-v5/en/#rest-api-trade-place-algo-order">...</a> */
@@ -422,16 +446,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
       String instrumentType, String instrumentId, String orderType, OkxPageParams pagination)
       throws IOException {
     List<OkxAlgoOrderDetails> items =
-        OkxPageIterator.fetchAll(
+        fetchAllHistoryPages(
             page ->
                 fetchAlgoOrdersPendingPage(
-                        instrumentType,
-                        instrumentId,
-                        orderType,
-                        page.getAfter(),
-                        page.getBefore(),
-                        String.valueOf(page.getLimit()))
-                    .getData(),
+                    instrumentType,
+                    instrumentId,
+                    orderType,
+                    page.getAfter(),
+                    page.getBefore(),
+                    String.valueOf(page.getLimit())),
             OkxAlgoOrderDetails::getAlgoId,
             pagination);
     return new OkxResponse<>(null, "0", null, items);
@@ -486,17 +509,16 @@ public class OkxTradeServiceRaw extends OkxBaseService {
       OkxPageParams pagination)
       throws IOException {
     List<OkxAlgoOrderDetails> items =
-        OkxPageIterator.fetchAll(
+        fetchAllHistoryPages(
             page ->
                 fetchAlgoOrdersHistoryPage(
-                        instrumentType,
-                        instrumentId,
-                        orderType,
-                        state,
-                        page.getAfter(),
-                        page.getBefore(),
-                        String.valueOf(page.getLimit()))
-                    .getData(),
+                    instrumentType,
+                    instrumentId,
+                    orderType,
+                    state,
+                    page.getAfter(),
+                    page.getBefore(),
+                    String.valueOf(page.getLimit())),
             OkxAlgoOrderDetails::getAlgoId,
             pagination);
     return new OkxResponse<>(null, "0", null, items);

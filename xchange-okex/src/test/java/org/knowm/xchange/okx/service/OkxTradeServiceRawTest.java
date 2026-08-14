@@ -54,6 +54,13 @@ public class OkxTradeServiceRawTest {
     Map<String, List<OkxAlgoOrderDetails>> algoPendingPages = new HashMap<>();
     Map<String, List<OkxAlgoOrderDetails>> algoHistoryPages = new HashMap<>();
 
+    /** When non-null, the endpoint's first page fails with this business response. */
+    OkxResponse<List<OkxOrderDetails>> orderHistoryFailure;
+
+    OkxResponse<List<OkxFill>> fillHistoryFailure;
+    OkxResponse<List<OkxAlgoOrderDetails>> algoPendingFailure;
+    OkxResponse<List<OkxAlgoOrderDetails>> algoHistoryFailure;
+
     OkxResponse<List<OkxOrderDetails>> existingOrderResponse =
         new OkxResponse<>(null, "0", null, Collections.emptyList());
 
@@ -78,6 +85,9 @@ public class OkxTradeServiceRawTest {
         String before,
         String limit) {
       orderHistoryCursors.add(after);
+      if (orderHistoryFailure != null) {
+        return orderHistoryFailure;
+      }
       return new OkxResponse<>(
           null, "0", null, orderHistoryPages.getOrDefault(after, Collections.emptyList()));
     }
@@ -104,6 +114,9 @@ public class OkxTradeServiceRawTest {
         String before,
         String limit) {
       fillHistoryCursors.add(after);
+      if (fillHistoryFailure != null) {
+        return fillHistoryFailure;
+      }
       return new OkxResponse<>(
           null, "0", null, fillHistoryPages.getOrDefault(after, Collections.emptyList()));
     }
@@ -117,6 +130,9 @@ public class OkxTradeServiceRawTest {
         String before,
         String limit) {
       algoPendingCursors.add(after);
+      if (algoPendingFailure != null) {
+        return algoPendingFailure;
+      }
       return new OkxResponse<>(
           null, "0", null, algoPendingPages.getOrDefault(after, Collections.emptyList()));
     }
@@ -131,6 +147,9 @@ public class OkxTradeServiceRawTest {
         String before,
         String limit) {
       algoHistoryCursors.add(after);
+      if (algoHistoryFailure != null) {
+        return algoHistoryFailure;
+      }
       return new OkxResponse<>(
           null, "0", null, algoHistoryPages.getOrDefault(after, Collections.emptyList()));
     }
@@ -265,6 +284,31 @@ public class OkxTradeServiceRawTest {
 
     assertThat(result.getData()).extracting(OkxFill::getBillId).containsExactly("b1", "b2", "b3");
     assertThat(service.fillHistoryCursors).containsExactly(null, "b2");
+  }
+
+  @Test
+  public void testGetOkxFillsHistoryPropagatesFailedPage() throws Exception {
+    service.fillHistoryFailure =
+        new OkxResponse<>(null, "51001", "order not found", Collections.emptyList());
+
+    assertThatThrownBy(
+            () -> service.getOkxFillsHistory("SPOT", "BTC-USDT", null, OkxPageParams.of(2)))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("order not found")
+        .hasCauseInstanceOf(OkxException.class)
+        .satisfies(e -> assertThat(((OkxException) e.getCause()).getCode()).isEqualTo(51001));
+  }
+
+  @Test
+  public void testGetOrderHistoryPropagatesFailedPage() throws Exception {
+    service.orderHistoryFailure =
+        new OkxResponse<>(null, "51001", "order not found", Collections.emptyList());
+
+    assertThatThrownBy(() -> service.getOrderHistory("SPOT", "BTC-USDT", null, OkxPageParams.of(2)))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("order not found")
+        .hasCauseInstanceOf(OkxException.class)
+        .satisfies(e -> assertThat(((OkxException) e.getCause()).getCode()).isEqualTo(51001));
   }
 
   // ---------- Algo order history pagination ----------
