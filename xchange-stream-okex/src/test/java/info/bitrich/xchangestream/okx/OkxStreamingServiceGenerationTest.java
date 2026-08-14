@@ -82,6 +82,19 @@ public class OkxStreamingServiceGenerationTest {
   }
 
   @Test
+  public void failedLoginEventClearsPrivateAuthorization() {
+    OkxPrivateStreamingService service =
+        new OkxPrivateStreamingService("wss://localhost/ws", spec, mock(OkxExchange.class));
+
+    service.messageHandler("{\"event\":\"login\",\"code\":\"0\",\"msg\":\"\"}");
+    assertThat(service.isLoginDone()).isTrue();
+
+    service.messageHandler(
+        "{\"event\":\"login\",\"code\":\"60009\",\"msg\":\"Login failed\"}");
+    assertThat(service.isLoginDone()).isFalse();
+  }
+
+  @Test
   public void staleGenerationMessageIsDroppedOnBusinessService() {
     OkxBusinessStreamingService service =
         spy(new OkxBusinessStreamingService("wss://localhost/ws", spec));
