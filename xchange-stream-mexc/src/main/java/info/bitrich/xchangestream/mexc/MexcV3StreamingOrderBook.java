@@ -84,13 +84,13 @@ final class MexcV3StreamingOrderBook {
       if (initialized && toVersion <= lastUpdateId) {
         return Observable.empty(); // stale push; the local book is already ahead of it
       }
-      if (!initialized || fromVersion != lastUpdateId + 1) {
+      if (!initialized || !coversNextVersion(fromVersion, toVersion, lastUpdateId)) {
         return refetchSnapshot()
             .concatMap(
                 snapshot -> {
                   initialize(snapshot);
-                  if (fromVersion != lastUpdateId + 1) {
-                    return Observable.empty(); // still not aligned; wait for the next push
+                  if (!coversNextVersion(fromVersion, toVersion, lastUpdateId)) {
+                    return Observable.empty(); // snapshot is outside this push's version window
                   }
                   applyDelta(delta);
                   lastUpdateId = toVersion;
@@ -103,6 +103,11 @@ final class MexcV3StreamingOrderBook {
     } catch (InvalidProtocolBufferException | RuntimeException e) {
       return Observable.error(e);
     }
+  }
+
+  private static boolean coversNextVersion(long fromVersion, long toVersion, long lastUpdateId) {
+    long nextVersion = lastUpdateId + 1;
+    return fromVersion <= nextVersion && nextVersion <= toVersion;
   }
 
   private Observable<MexcV3Depth> refetchSnapshot() {
