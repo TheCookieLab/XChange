@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.knowm.xchange.okx.dto.account.OkxSetLeverageResponse;
 
 /**
@@ -10,6 +11,7 @@ public class OkexSetLeverageResponse {
 
   private final OkxSetLeverageResponse delegate;
 
+  @JsonCreator
   public OkexSetLeverageResponse(OkxSetLeverageResponse delegate) {
     this.delegate = delegate;
   }

@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import java.math.BigDecimal;
 import org.knowm.xchange.okx.dto.account.OkxPosition;
 
@@ -11,6 +12,7 @@ public class OkexPosition {
 
   private final OkxPosition delegate;
 
+  @JsonCreator
   public OkexPosition(OkxPosition delegate) {
     this.delegate = delegate;
   }

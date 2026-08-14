@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.trade;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
 
 /**
@@ -10,6 +11,7 @@ public class OkexOrderResponse {
 
   private final OkxOrderResponse delegate;
 
+  @JsonCreator
   public OkexOrderResponse(OkxOrderResponse delegate) {
     this.delegate = delegate;
   }

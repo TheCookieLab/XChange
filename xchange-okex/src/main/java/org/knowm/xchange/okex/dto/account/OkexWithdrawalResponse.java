@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.knowm.xchange.okx.dto.account.OkxWithdrawalResponse;
 
 /**
@@ -10,6 +11,7 @@ public class OkexWithdrawalResponse {
 
   private final OkxWithdrawalResponse delegate;
 
+  @JsonCreator
   public OkexWithdrawalResponse(OkxWithdrawalResponse delegate) {
     this.delegate = delegate;
   }

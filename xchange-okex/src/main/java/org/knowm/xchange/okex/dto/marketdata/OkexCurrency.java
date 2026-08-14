@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 
 /**
@@ -10,6 +11,7 @@ public class OkexCurrency {
 
   private final OkxCurrency delegate;
 
+  @JsonCreator
   public OkexCurrency(OkxCurrency delegate) {
     this.delegate = delegate;
   }

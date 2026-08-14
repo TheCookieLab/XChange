@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.knowm.xchange.okx.dto.marketdata.OkxOrderbook;
@@ -12,6 +13,7 @@ public class OkexOrderbook {
 
   private final OkxOrderbook delegate;
 
+  @JsonCreator
   public OkexOrderbook(OkxOrderbook delegate) {
     this.delegate = delegate;
   }

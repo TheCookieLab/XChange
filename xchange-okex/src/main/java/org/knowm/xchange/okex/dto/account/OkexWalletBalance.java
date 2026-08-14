@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.knowm.xchange.okx.dto.account.OkxWalletBalance;
 
 /**
@@ -10,6 +11,7 @@ public class OkexWalletBalance {
 
   private final OkxWalletBalance delegate;
 
+  @JsonCreator
   public OkexWalletBalance(OkxWalletBalance delegate) {
     this.delegate = delegate;
   }

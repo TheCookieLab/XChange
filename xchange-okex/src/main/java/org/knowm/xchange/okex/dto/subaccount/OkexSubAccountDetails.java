@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.subaccount;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.knowm.xchange.okx.dto.subaccount.OkxSubAccountDetails;
 
 /**
@@ -10,6 +11,7 @@ public class OkexSubAccountDetails {
 
   private final OkxSubAccountDetails delegate;
 
+  @JsonCreator
   public OkexSubAccountDetails(OkxSubAccountDetails delegate) {
     this.delegate = delegate;
   }

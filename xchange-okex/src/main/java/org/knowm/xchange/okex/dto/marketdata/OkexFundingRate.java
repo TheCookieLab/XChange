@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import java.math.BigDecimal;
 import java.util.Date;
 import org.knowm.xchange.okx.dto.marketdata.OkxFundingRate;
@@ -12,6 +13,7 @@ public class OkexFundingRate {
 
   private final OkxFundingRate delegate;
 
+  @JsonCreator
   public OkexFundingRate(OkxFundingRate delegate) {
     this.delegate = delegate;
   }

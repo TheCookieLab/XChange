@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -16,6 +17,7 @@ public class OkexChangeMarginResponse {
 
   private final OkxChangeMarginResponse delegate;
 
+  @JsonCreator
   public OkexChangeMarginResponse(OkxChangeMarginResponse delegate) {
     this.delegate = delegate;
   }

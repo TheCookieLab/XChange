@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
@@ -14,6 +15,7 @@ public class OkexAccountPositionRisk {
 
   private final OkxAccountPositionRisk delegate;
 
+  @JsonCreator
   public OkexAccountPositionRisk(OkxAccountPositionRisk delegate) {
     this.delegate = delegate;
   }

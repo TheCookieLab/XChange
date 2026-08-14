@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
@@ -12,6 +13,7 @@ public class OkexTradeFee {
 
   private final OkxTradeFee delegate;
 
+  @JsonCreator
   public OkexTradeFee(OkxTradeFee delegate) {
     this.delegate = delegate;
   }

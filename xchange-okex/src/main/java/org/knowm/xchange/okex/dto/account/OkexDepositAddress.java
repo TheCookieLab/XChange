@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.knowm.xchange.okx.dto.account.OkxDepositAddress;
 
 /**
@@ -10,6 +11,7 @@ public class OkexDepositAddress {
 
   private final OkxDepositAddress delegate;
 
+  @JsonCreator
   public OkexDepositAddress(OkxDepositAddress delegate) {
     this.delegate = delegate;
   }
