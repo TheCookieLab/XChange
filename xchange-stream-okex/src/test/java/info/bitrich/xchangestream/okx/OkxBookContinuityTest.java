@@ -55,6 +55,13 @@ public class OkxBookContinuityTest {
     return data;
   }
 
+  private JsonNode dataWithPrevSeqId(
+      long seqId, long prevSeqId, long checksum, String[][] bids, String[][] asks) {
+    ObjectNode data = (ObjectNode) data(seqId, checksum, bids, asks);
+    data.put("prevSeqId", prevSeqId);
+    return data;
+  }
+
   @Test
   public void testChecksumAlgorithmMatchesDocumentedVector() {
     // Bids "100.0:10" + asks "101.0:5" concatenate to "100.0:10101.0:5" (no separator).
@@ -111,10 +118,20 @@ public class OkxBookContinuityTest {
         .isEqualTo(OkxBookContinuity.Gate.DROP_STALE);
 
     continuity.snapshot(INST_ID, data(100, expectedChecksum(BID_99, ASK_101), BID_99, ASK_101));
+
     assertThat(continuity.isRebuilding(INST_ID)).isFalse();
     assertThat(continuity.levelCount(INST_ID)).isEqualTo(2);
 
     assertThat(continuity.gateUpdate(INST_ID, data(101, 0, EMPTY, ASK_101)))
+        .isEqualTo(OkxBookContinuity.Gate.ACCEPT);
+  }
+
+  @Test
+  public void testSequenceJumpWithMatchingPrevSeqIdIsAccepted() {
+    continuity.snapshot(INST_ID, data(1, 0, BID_100, ASK_101));
+
+    // OKX sequence IDs can jump when prevSeqId links the update to the applied book.
+    assertThat(continuity.gateUpdate(INST_ID, dataWithPrevSeqId(5, 1, 0, BID_99, EMPTY)))
         .isEqualTo(OkxBookContinuity.Gate.ACCEPT);
   }
 
