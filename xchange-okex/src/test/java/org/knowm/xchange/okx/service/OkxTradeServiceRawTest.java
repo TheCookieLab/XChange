@@ -349,6 +349,8 @@ public class OkxTradeServiceRawTest {
     assertThat(result.getData())
         .extracting(OkxOrderResponse::getClientOrderId)
         .containsExactly("cl-new", "cl-existing");
+  }
+
   @Test
   public void testPlaceBatchKeepsResponsesAlignedWhenExistingOrderIsInTheMiddle() throws Exception {
     service.existingClientOrderId = "cl-2";
