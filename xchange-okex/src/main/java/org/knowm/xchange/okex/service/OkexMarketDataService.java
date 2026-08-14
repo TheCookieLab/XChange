@@ -13,7 +13,7 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.OkexExchange;
 import org.knowm.xchange.okex.dto.OkexInstType;
-import org.knowm.xchange.okex.dto.marketdata.OkexFundingRateHistory;
+import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.okx.service.OkxMarketDataService;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
@@ -81,10 +81,15 @@ public class OkexMarketDataService extends OkexMarketDataServiceRaw implements M
     return params instanceof OkexInstType ? ((OkexInstType) params).to() : params;
   }
 
-  public List<OkexFundingRateHistory> getFundingRateHistory(
+  /**
+   * Legacy-signature accessor returning the pre-rename element type {@link OkxFundingRateHistory}
+   * (in the legacy {@code okex} package), so already-compiled callers keep receiving elements of
+   * the original class.
+   */
+  public List<OkxFundingRateHistory> getFundingRateHistory(
       Instrument instrument, Long startTime, Long endTime, Integer limit) throws IOException {
     return delegate.getFundingRateHistory(instrument, startTime, endTime, limit).stream()
-        .map(OkexFundingRateHistory::new)
+        .map(OkexMarketDataServiceRaw::toLegacyFundingRateHistory)
         .collect(Collectors.toList());
   }
 }

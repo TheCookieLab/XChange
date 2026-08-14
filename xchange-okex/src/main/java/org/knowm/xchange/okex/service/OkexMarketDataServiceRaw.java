@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.okex.OkexAdapters;
 import org.knowm.xchange.okex.OkexExchange;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexInstType;
@@ -18,9 +19,9 @@ import org.knowm.xchange.okex.dto.marketdata.OkexInstrument;
 import org.knowm.xchange.okex.dto.marketdata.OkexOrderbook;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
 import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
+import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
-import org.knowm.xchange.okx.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.okx.service.OkxBaseService;
 import org.knowm.xchange.okx.service.OkxMarketDataServiceRaw;
 
@@ -158,8 +159,27 @@ public class OkexMarketDataServiceRaw extends OkxBaseService {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Legacy-signature accessor returning the pre-rename element type {@link OkxFundingRateHistory}
+   * (in the legacy {@code okex} package), so already-compiled callers keep receiving elements of
+   * the original class.
+   */
   public List<OkxFundingRateHistory> getOkxFundingRateHistoryRaw(
       String instrument, Long startTime, Long endTime, Integer limit) throws IOException {
-    return delegate.getOkxFundingRateHistoryRaw(instrument, startTime, endTime, limit);
+    return delegate.getOkxFundingRateHistoryRaw(instrument, startTime, endTime, limit).stream()
+        .map(OkexMarketDataServiceRaw::toLegacyFundingRateHistory)
+        .collect(Collectors.toList());
+  }
+
+  /** Maps a canonical history record back to the legacy element type. */
+  static OkxFundingRateHistory toLegacyFundingRateHistory(
+      org.knowm.xchange.okx.dto.marketdata.OkxFundingRateHistory record) {
+    return new OkxFundingRateHistory(
+        record.getInstType(),
+        OkexAdapters.adaptInstrument(record.getInstrument()),
+        record.getPredictedFundingRate(),
+        record.getFundingRate(),
+        record.getFundingTime().toEpochMilli(),
+        record.getMethod());
   }
 }
