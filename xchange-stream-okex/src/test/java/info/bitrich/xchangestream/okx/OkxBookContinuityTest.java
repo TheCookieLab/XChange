@@ -97,6 +97,34 @@ public class OkxBookContinuityTest {
   }
 
   @Test
+  public void testSnapshotChecksumMismatchRejectedAndNotStored() {
+    // Corrupted snapshot: nonzero checksum that does not match the reconstructed book.
+    long wrongChecksum = expectedChecksum(BID_100, ASK_101) + 1;
+    assertThat(continuity.snapshot(INST_ID, data(1, wrongChecksum, BID_100, ASK_101))).isFalse();
+    assertThat(continuity.isRebuilding(INST_ID)).isTrue();
+    assertThat(continuity.levelCount(INST_ID)).isZero();
+
+    // Rebuilding drops updates until a verified snapshot resets the state.
+    assertThat(continuity.gateUpdate(INST_ID, data(2, 0, BID_99, EMPTY)))
+        .isEqualTo(OkxBookContinuity.Gate.DROP_STALE);
+
+    assertThat(
+            continuity.snapshot(
+                INST_ID, data(100, expectedChecksum(BID_99, ASK_101), BID_99, ASK_101)))
+        .isTrue();
+    assertThat(continuity.isRebuilding(INST_ID)).isFalse();
+    assertThat(continuity.levelCount(INST_ID)).isEqualTo(2);
+  }
+
+  @Test
+  public void testSnapshotWithZeroChecksumAccepted() {
+    // Zero checksum means "not provided": store without verification.
+    assertThat(continuity.snapshot(INST_ID, data(1, 0, BID_100, ASK_101))).isTrue();
+    assertThat(continuity.isRebuilding(INST_ID)).isFalse();
+    assertThat(continuity.levelCount(INST_ID)).isEqualTo(2);
+  }
+
+  @Test
   public void testDuplicateUpdateDropped() {
     continuity.snapshot(INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
     String[][] bidsAfter = {{"100.0", "10"}, {"99.0", "1"}};

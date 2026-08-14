@@ -121,7 +121,13 @@ public class OkxStreamingMarketDataService implements StreamingMarketDataService
                 String action =
                     channelName.equals(ORDERBOOK5) ? "snapshot" : jsonNode.get("action").asText();
                 if ("snapshot".equalsIgnoreCase(action)) {
-                  bookContinuity.snapshot(channelUniqueId, jsonNode.get("data").get(0));
+                  if (!bookContinuity.snapshot(channelUniqueId, jsonNode.get("data").get(0))) {
+                    LOG.warn(
+                        "Order book snapshot failed checksum for channel={}, requesting a fresh snapshot.",
+                        channelUniqueId);
+                    service.resubscribeChannel(channelUniqueId);
+                    return Observable.fromIterable(new LinkedList<>());
+                  }
                   OrderBook orderBook =
                       OkxAdapters.adaptOrderBook(okxOrderbooks, instrument, exchangeMetaData);
                   orderBookMap.put(channelUniqueId, orderBook);

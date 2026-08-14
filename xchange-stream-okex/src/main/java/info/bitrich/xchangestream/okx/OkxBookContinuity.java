@@ -87,12 +87,32 @@ final class OkxBookContinuity {
 
   private final ConcurrentMap<String, BookState> states = new ConcurrentHashMap<>();
 
-  /** Resets the instrument state from a freshly received snapshot and stores its levels. */
-  void snapshot(String instId, JsonNode dataElement) {
+  /**
+   * Resets the instrument state from a freshly received snapshot and stores its levels.
+   *
+   * @param instId channel instrument id
+   * @param dataElement the snapshot data entry of the books-channel message
+   * @return {@code true} when the snapshot passed verification and was stored; {@code false} when
+   *     the message carried a nonzero checksum that does not match the reconstructed book — the
+   *     snapshot is not stored and the instrument is marked for rebuild so the caller can request a
+   *     fresh snapshot instead of committing corrupted levels
+   */
+  boolean snapshot(String instId, JsonNode dataElement) {
     BookState state = new BookState();
     state.lastSeqId = sequenceOf(dataElement);
     applyLevels(state, dataElement);
+    long checksum = checksumOf(dataElement);
+    if (checksum != 0 && checksum != checksum(state)) {
+      LOG.warn(
+          "Book snapshot checksum mismatch for {}: message {} != computed {}, requesting rebuild.",
+          instId,
+          checksum,
+          checksum(state));
+      markRebuilding(instId);
+      return false;
+    }
     states.put(instId, state);
+    return true;
   }
 
   /**
@@ -167,9 +187,11 @@ final class OkxBookContinuity {
   /** Marks the instrument as rebuilding; subsequent updates are dropped until a new snapshot. */
   void markRebuilding(String instId) {
     BookState state = states.get(instId);
-    if (state != null) {
-      state.rebuilding = true;
+    if (state == null) {
+      state = new BookState();
+      states.put(instId, state);
     }
+    state.rebuilding = true;
   }
 
   boolean isRebuilding(String instId) {
