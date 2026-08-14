@@ -5,6 +5,7 @@ import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.CandleStickInterval;
+import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.instrument.Instrument;
@@ -15,9 +16,10 @@ import org.knowm.xchange.mexc.v3.service.MexcV3MarketDataServiceRaw;
  * Streaming market data for MEXC Spot v3.
  *
  * <p>Channels: {@code aggre.bookTicker} for {@link #getTicker(CurrencyPair, Object...)}, {@code
- * aggre.deals} for {@link #getTrades(CurrencyPair, Object...)}, and {@code kline} for {@link
- * #getCandleStick(Instrument, CandleStickInterval)}. Each emitted value is a decoded binary push
- * adapted from its protobuf body.
+ * aggre.deals} for {@link #getTrades(CurrencyPair, Object...)}, {@code kline} for {@link
+ * #getCandleStick(Instrument, CandleStickInterval)}, and {@code aggre.depth} for {@link
+ * #getOrderBook(CurrencyPair, Object...)}. Each emitted value is a decoded binary push adapted
+ * from its protobuf body.
  */
 public class MexcV3StreamingMarketDataService implements StreamingMarketDataService {
 
@@ -25,9 +27,12 @@ public class MexcV3StreamingMarketDataService implements StreamingMarketDataServ
       "spot@public.aggre.deals.v3.api.pb@100ms@%s";
   private static final String CHANNEL_TEMPLATE_AGGRE_BOOK_TICKER =
       "spot@public.aggre.bookTicker.v3.api.pb@100ms@%s";
+  private static final String CHANNEL_TEMPLATE_AGGRE_DEPTH =
+      "spot@public.aggre.depth.v3.api.pb@100ms@%s";
   private static final String CHANNEL_TEMPLATE_KLINE = "spot@public.kline.v3.api.pb@%s@%s";
 
   private final MexcV3StreamingService streamingService;
+  private final MexcV3MarketDataServiceRaw rawMarketDataService;
 
   /**
    * @param streamingService the MEXC v3 WebSocket transport
@@ -36,6 +41,7 @@ public class MexcV3StreamingMarketDataService implements StreamingMarketDataServ
   public MexcV3StreamingMarketDataService(
       MexcV3StreamingService streamingService, MexcV3MarketDataServiceRaw rawMarketDataService) {
     this.streamingService = streamingService;
+    this.rawMarketDataService = rawMarketDataService;
   }
 
   @Override
@@ -52,6 +58,24 @@ public class MexcV3StreamingMarketDataService implements StreamingMarketDataServ
     return streamingService
         .subscribeChannel(String.format(CHANNEL_TEMPLATE_AGGRE_DEALS, symbol))
         .flatMapIterable(json -> MexcV3StreamingAdapters.adaptAggreDeals(json, currencyPair));
+  }
+
+  /**
+   * Streams an incremental order book for {@code spot@public.aggre.depth.v3.api.pb@100ms@<symbol>}.
+   *
+   * <p>Each push carries price-level deltas ({@code quantity == 0} removes a level) plus a
+   * version window; {@link MexcV3StreamingOrderBook} reconciles them against a REST depth snapshot
+   * on the first push and on any version gap. The emitted book's timestamp is the push's wrapper
+   * {@code createTime}.
+   */
+  @Override
+  public Observable<OrderBook> getOrderBook(CurrencyPair currencyPair, Object... args) {
+    String symbol = MexcV3Symbols.toMexcSymbol(currencyPair);
+    MexcV3StreamingOrderBook orderBook =
+        new MexcV3StreamingOrderBook(currencyPair, rawMarketDataService);
+    return streamingService
+        .subscribeChannel(String.format(CHANNEL_TEMPLATE_AGGRE_DEPTH, symbol))
+        .concatMap(orderBook::onDelta);
   }
 
   @Override

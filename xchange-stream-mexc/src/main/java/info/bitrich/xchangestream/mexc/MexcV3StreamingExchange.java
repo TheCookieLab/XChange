@@ -7,43 +7,66 @@ import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.mexc.v3.MexcV3Exchange;
+import org.knowm.xchange.mexc.v3.client.MexcV3Redactor;
+import org.knowm.xchange.mexc.v3.service.MexcV3AccountService;
 import org.knowm.xchange.mexc.v3.service.MexcV3MarketDataServiceRaw;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Streaming exchange for MEXC Spot v3.
  *
- * <p>Public market data streams connect to {@value #DEFAULT_WEBSOCKET_URI}. Private streams
- * (account/deals/orders) require a listen key and are wired in a follow-up change; until then
- * {@link #getStreamingAccountService()} and {@link #getStreamingTradeService()} return {@code
- * null}.
+ * <p>Public market data streams connect to {@value #DEFAULT_WEBSOCKET_URI}. When the exchange
+ * specification carries an API key, {@link #connect(ProductSubscription...)} first opens a
+ * user-data stream via {@code POST /api/v3/userDataStream} and appends the listen key to the
+ * WebSocket URI ({@code ?listenKey=...}) so private channels (account/orders/deals) are
+ * authorized; the key is kept alive every 30 minutes ({@code PUT /api/v3/userDataStream}, keys
+ * expire after 60 minutes) and closed on {@link #disconnect()} ({@code DELETE
+ * /api/v3/userDataStream}).
  */
 public class MexcV3StreamingExchange extends MexcV3Exchange implements StreamingExchange {
+
+  private static final Logger LOG = LoggerFactory.getLogger(MexcV3StreamingExchange.class);
 
   /** MEXC Spot v3 public WebSocket endpoint. */
   public static final String DEFAULT_WEBSOCKET_URI = "wss://wbs-api.mexc.com/ws";
   /** Exchange-specific parameter key to override the WebSocket URI. */
   public static final String PARAM_WEBSOCKET_URI = "WebsocketUri";
+  /** MEXC documents a 60-minute listen-key lifetime; refresh at half that to keep a full retry window. */
+  private static final long KEEPALIVE_INTERVAL_MINUTES = 30L;
 
   private MexcV3StreamingService streamingService;
   private MexcV3StreamingMarketDataService streamingMarketDataService;
+  private MexcV3StreamingAccountService streamingAccountService;
+  private MexcV3StreamingTradeService streamingTradeService;
+  private String listenKey;
+  private Disposable keepAliveDisposable;
 
   @Override
   public Completable connect(ProductSubscription... args) {
-    if (streamingService == null) {
-      ExchangeSpecification specification = getExchangeSpecification();
-      String uri =
-          (String) specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_URI);
-      if (uri == null || uri.isBlank()) {
-        uri = DEFAULT_WEBSOCKET_URI;
-      }
-      streamingService = new MexcV3StreamingService(uri);
-      applyStreamingSpecification(specification, streamingService);
-      streamingMarketDataService =
-          new MexcV3StreamingMarketDataService(
-              streamingService, (MexcV3MarketDataServiceRaw) getMarketDataService());
+    if (isAlive()) {
+      return Completable.complete();
     }
+    ExchangeSpecification specification = getExchangeSpecification();
+    String uri = (String) specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_URI);
+    if (uri == null || uri.isBlank()) {
+      uri = DEFAULT_WEBSOCKET_URI;
+    }
+    final String resolvedUri = uri;
+    if (specification.getApiKey() != null && !uri.contains("listenKey=")) {
+      // Private connection: create a listen key, attach it to the URI, and keep it alive.
+      return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
+          .subscribeOn(Schedulers.io())
+          .andThen(Completable.defer(() -> streamingService.connect()));
+    }
+    buildStreamingService(uri);
     return streamingService.connect();
   }
 
@@ -52,7 +75,17 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     if (streamingService == null) {
       return Completable.complete();
     }
-    return streamingService.disconnect();
+    stopKeepAlive();
+    Completable closeKey = Completable.complete();
+    if (listenKey != null) {
+      String key = listenKey;
+      listenKey = null;
+      closeKey =
+          Completable.fromAction(() -> closeListenKey(key))
+              .subscribeOn(Schedulers.io())
+              .onErrorComplete();
+    }
+    return closeKey.andThen(streamingService.disconnect());
   }
 
   @Override
@@ -88,12 +121,12 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
 
   @Override
   public StreamingAccountService getStreamingAccountService() {
-    return null;
+    return streamingAccountService;
   }
 
   @Override
   public StreamingTradeService getStreamingTradeService() {
-    return null;
+    return streamingTradeService;
   }
 
   @Override
@@ -101,5 +134,78 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     if (streamingService != null) {
       streamingService.useCompressedMessages(compressedMessages);
     }
+  }
+
+  private void openPrivateConnection(String uri) {
+    try {
+      MexcV3AccountService accountService = (MexcV3AccountService) getAccountService();
+      listenKey = accountService.createListenKey().getListenKey();
+      buildStreamingService(
+          uri + (uri.contains("?") ? "&" : "?") + "listenKey=" + listenKey);
+      startKeepAlive(accountService);
+    } catch (IOException e) {
+      throw new ExchangeException(
+          "Failed to open MEXC Spot v3 private stream: "
+              + MexcV3Redactor.sanitize(e.getMessage()),
+          e);
+    }
+  }
+
+  private void startKeepAlive(MexcV3AccountService accountService) {
+    stopKeepAlive();
+    keepAliveDisposable =
+        Observable.interval(KEEPALIVE_INTERVAL_MINUTES, TimeUnit.MINUTES)
+            .flatMapCompletable(
+                tick ->
+                    Completable.fromAction(() -> keepAliveListenKey(accountService))
+                        .subscribeOn(Schedulers.io()))
+            .subscribe(
+                () -> {},
+                e ->
+                    LOG.warn(
+                        "MEXC Spot v3 listenKey keepalive stopped: {}",
+                        String.valueOf(e.getMessage())));
+  }
+
+  private void keepAliveListenKey(MexcV3AccountService accountService) throws IOException {
+    try {
+      accountService.keepAliveListenKey(listenKey);
+    } catch (IOException e) {
+      throw new ExchangeException(
+          "MEXC Spot v3 listenKey keepalive failed: "
+              + MexcV3Redactor.sanitize(e.getMessage()),
+          e);
+    }
+  }
+
+  private void closeListenKey(String key) {
+    try {
+      ((MexcV3AccountService) getAccountService()).closeListenKey(key);
+    } catch (IOException e) {
+      LOG.debug(
+          "MEXC Spot v3 listenKey close failed; the key expires in 60 minutes anyway: {}",
+          MexcV3Redactor.sanitize(e.getMessage()));
+    }
+  }
+
+  private void stopKeepAlive() {
+    if (keepAliveDisposable != null) {
+      keepAliveDisposable.dispose();
+      keepAliveDisposable = null;
+    }
+  }
+
+  private void buildStreamingService(String uri) {
+    if (streamingService != null) {
+      // Releasing a previous transport (e.g. a failed connect) before replacing it.
+      streamingService.disconnect().onErrorComplete().subscribe();
+    }
+    streamingService = new MexcV3StreamingService(uri);
+    applyStreamingSpecification(getExchangeSpecification(), streamingService);
+    streamingMarketDataService =
+        new MexcV3StreamingMarketDataService(
+            streamingService, (MexcV3MarketDataServiceRaw) getMarketDataService());
+    streamingAccountService = new MexcV3StreamingAccountService(streamingService);
+    streamingTradeService = new MexcV3StreamingTradeService(streamingService);
   }
 }
