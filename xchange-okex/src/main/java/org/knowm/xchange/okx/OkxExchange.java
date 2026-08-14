@@ -12,7 +12,9 @@ import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxInstType;
+import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 import org.knowm.xchange.okx.service.OkxAccountService;
@@ -142,7 +144,13 @@ public class OkxExchange extends BaseExchange {
    */
   private static List<OkxInstrument> fetchOptionInstruments(
       OkxMarketDataServiceRaw marketDataServiceRaw) throws IOException {
-    List<String> underlyings = marketDataServiceRaw.getOkxUnderlyings(OkxInstType.OPTION).getData();
+    OkxResponse<List<String>> response = marketDataServiceRaw.getOkxUnderlyings(OkxInstType.OPTION);
+    if (response == null || !response.isSuccess()) {
+      throw response == null
+          ? new OkxException("Empty response from OKX underlying endpoint", 0)
+          : OkxException.fromResponse(response);
+    }
+    List<String> underlyings = response.getData();
     if (underlyings == null || underlyings.isEmpty()) {
       return Collections.emptyList();
     }

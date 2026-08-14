@@ -1,6 +1,7 @@
 package org.knowm.xchange.okx;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -25,6 +26,7 @@ import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxInstType;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
@@ -443,6 +445,37 @@ public class OkxInstrumentMetadataTest {
         .containsKey(new CurrencyPair("BTC", "USDT"));
     assertThat(exchange.getExchangeMetaData().getInstruments())
         .containsKey(OkxAdapters.adaptOkxInstrumentId("BTC-USD-260828-110000-C"));
+  }
+
+  @Test
+  public void testRemoteInitPropagatesFailedUnderlyingsLookup() throws Exception {
+    // A non-success underlying response must not be interpreted as "no options": remoteInit fails
+    // instead of silently omitting the whole OPTION family from metadata.
+    OkxExchange exchange = new OkxExchange();
+    ExchangeSpecification specification = new ExchangeSpecification(OkxExchange.class);
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
+
+    OkxMarketDataService raw = mock(OkxMarketDataService.class);
+    when(raw.getOkxInstruments("SPOT", null, null))
+        .thenReturn(new OkxResponse<>(null, "0", "", loadInstruments("instrumentsSpot.json5")));
+    when(raw.getOkxInstruments("SWAP", null, null))
+        .thenReturn(new OkxResponse<>(null, "0", "", loadInstruments("instrumentsSwap.json5")));
+    when(raw.getOkxInstruments("MARGIN", null, null))
+        .thenReturn(new OkxResponse<>(null, "0", "", loadInstruments("instrumentsMargin.json5")));
+    when(raw.getOkxInstruments("FUTURES", null, null))
+        .thenReturn(new OkxResponse<>(null, "0", "", loadInstruments("instrumentsFutures.json5")));
+    when(raw.getOkxUnderlyings(OkxInstType.OPTION))
+        .thenReturn(new OkxResponse<>(null, "51000", "Something went wrong", null));
+
+    Field marketDataService =
+        org.knowm.xchange.BaseExchange.class.getDeclaredField("marketDataService");
+    marketDataService.setAccessible(true);
+    marketDataService.set(exchange, raw);
+
+    assertThatThrownBy(exchange::remoteInit)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Something went wrong");
   }
 
   @Test
