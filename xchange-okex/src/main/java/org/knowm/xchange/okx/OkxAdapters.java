@@ -78,7 +78,8 @@ public class OkxAdapters {
                       convertContractSizeToVolume(
                           new BigDecimal(okxOrderDetails.getAmount()),
                           instrument,
-                          exchangeMetaData.getInstruments().get(instrument).getContractValue()))
+                          exchangeMetaData.getInstruments().get(instrument).getContractValue(),
+                          orderPrice(okxOrderDetails)))
                   .instrument(instrument)
                   .price(new BigDecimal(okxOrderDetails.getAverageFilledPrice()))
                   .type(adaptOkxOrderSideToOrderType(okxOrderDetails.getSide()))
@@ -103,7 +104,8 @@ public class OkxAdapters {
         convertContractSizeToVolume(
             new BigDecimal(order.getAmount()),
             instrument,
-            exchangeMetaData.getInstruments().get(instrument).getContractValue()),
+            exchangeMetaData.getInstruments().get(instrument).getContractValue(),
+            orderPrice(order)),
         instrument,
         order.getOrderId(),
         new Date(Long.parseLong(order.getCreationTime())),
@@ -131,12 +133,14 @@ public class OkxAdapters {
                   convertContractSizeToVolume(
                       new BigDecimal(okxOrder.getAmount()),
                       instrument,
-                      exchangeMetaData.getInstruments().get(instrument).getContractValue()))
+                      exchangeMetaData.getInstruments().get(instrument).getContractValue(),
+                      orderPrice(okxOrder)))
               .cumulativeAmount(
                   convertContractSizeToVolume(
                       new BigDecimal(okxOrder.getAccumulatedFill()),
                       instrument,
-                      exchangeMetaData.getInstruments().get(instrument).getContractValue()))
+                      exchangeMetaData.getInstruments().get(instrument).getContractValue(),
+                      orderPrice(okxOrder)))
               .id(okxOrder.getOrderId())
               .timestamp(new Date(Long.parseLong(okxOrder.getUpdateTime())))
               .averagePrice(new BigDecimal(okxOrder.getAverageFilledPrice()))
@@ -154,12 +158,14 @@ public class OkxAdapters {
                   convertContractSizeToVolume(
                       new BigDecimal(okxOrder.getAmount()),
                       instrument,
-                      exchangeMetaData.getInstruments().get(instrument).getContractValue()))
+                      exchangeMetaData.getInstruments().get(instrument).getContractValue(),
+                      orderPrice(okxOrder)))
               .cumulativeAmount(
                   convertContractSizeToVolume(
                       new BigDecimal(okxOrder.getAccumulatedFill()),
                       instrument,
-                      exchangeMetaData.getInstruments().get(instrument).getContractValue()))
+                      exchangeMetaData.getInstruments().get(instrument).getContractValue(),
+                      orderPrice(okxOrder)))
               .id(okxOrder.getOrderId())
               .timestamp(new Date(Long.parseLong(okxOrder.getUpdateTime())))
               .limitPrice(
@@ -239,21 +245,53 @@ public class OkxAdapters {
   private static String convertVolumeToContractSize(
       Order order, ExchangeMetaData exchangeMetaData) {
     InstrumentMetaData metaData = exchangeMetaData.getInstruments().get(order.getInstrument());
-    return (order.getInstrument() instanceof FuturesContract
-            || order.getInstrument() instanceof OptionsContract)
-        ? order
-            .getOriginalAmount()
-            .divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN)
-            .stripTrailingZeros()
-            .toPlainString()
-        : order.getOriginalAmount().toString();
+    if (!(order.getInstrument() instanceof FuturesContract
+        || order.getInstrument() instanceof OptionsContract)) {
+      return order.getOriginalAmount().toString();
+    }
+    BigDecimal size = order.getOriginalAmount();
+    if (isInverseContract(order.getInstrument())) {
+      BigDecimal price = order instanceof LimitOrder ? ((LimitOrder) order).getLimitPrice() : null;
+      if (price != null && price.signum() > 0) {
+        size = size.multiply(price).divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN);
+      } else {
+        // Market orders carry no price, so the price-dependent inverse conversion cannot run; keep
+        // the plain contract divide as the documented fallback.
+        size = size.divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN);
+      }
+    } else {
+      size = size.divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN);
+    }
+    return size.stripTrailingZeros().toPlainString();
   }
 
   private static BigDecimal convertContractSizeToVolume(
-      BigDecimal okxSize, Instrument instrument, BigDecimal contractValue) {
-    return (instrument instanceof FuturesContract || instrument instanceof OptionsContract)
-        ? okxSize.multiply(contractValue).stripTrailingZeros()
-        : okxSize.stripTrailingZeros();
+      BigDecimal okxSize, Instrument instrument, BigDecimal contractValue, BigDecimal price) {
+    if (!(instrument instanceof FuturesContract || instrument instanceof OptionsContract)) {
+      return okxSize.stripTrailingZeros();
+    }
+    BigDecimal volume = okxSize.multiply(contractValue);
+    if (isInverseContract(instrument) && price != null && price.signum() > 0) {
+      volume = volume.divide(price, 20, RoundingMode.HALF_DOWN);
+    }
+    return volume.stripTrailingZeros();
+  }
+
+  /**
+   * Returns the price to use when converting an OKX order-details record between contract size and
+   * base volume: the average fill price when filled, otherwise the order price, or {@code null}
+   * when neither is present.
+   */
+  private static BigDecimal orderPrice(OkxOrderDetails order) {
+    String averageFilledPrice = order.getAverageFilledPrice();
+    String price = !averageFilledPrice.isEmpty() ? averageFilledPrice : order.getPrice();
+    return (price == null || price.isEmpty()) ? null : new BigDecimal(price);
+  }
+
+  /** True for inverse (crypto-margined) contracts, quoted against USD rather than USDT/USDC. */
+  private static boolean isInverseContract(Instrument instrument) {
+    return instrument instanceof FuturesContract
+        && instrument.getCounter().equals(Currency.USD);
   }
 
   public static String adaptTradeMode(Instrument instrument, String accountLevel) {
@@ -317,7 +355,8 @@ public class OkxAdapters {
       Date timestamp,
       BigDecimal contractValue) {
     return adaptOrderbookOrder(
-        convertContractSizeToVolume(okxPublicOrder.getVolume(), instrument, contractValue),
+        convertContractSizeToVolume(
+            okxPublicOrder.getVolume(), instrument, contractValue, okxPublicOrder.getPrice()),
         okxPublicOrder.getPrice(),
         instrument,
         orderType,
@@ -533,7 +572,8 @@ public class OkxAdapters {
                         convertContractSizeToVolume(
                             okxTrade.getSz(),
                             instrument,
-                            exchangeMetaData.getInstruments().get(instrument).getContractValue()))
+                            exchangeMetaData.getInstruments().get(instrument).getContractValue(),
+                            okxTrade.getPx()))
                     .price(okxTrade.getPx())
                     .timestamp(okxTrade.getTs())
                     .type(adaptOkxOrderSideToOrderType(okxTrade.getSide()))
@@ -569,11 +609,11 @@ public class OkxAdapters {
 
       Instrument pair = adaptOkxInstrumentId(instrument.getInstrumentId());
       /*
-       TODO The Okx swap contracts with USD or USDC as counter currency
-       have issue with the volume conversion (from contractSize to volumeInBaseCurrency and reverse)
-       In order to fix the issue we need to change the convertContractSizeToVolume and convertVolumeToContractSize
-       functions. Probably we need to add price on the function but it is not possible when we place a MarketOrder
-       Because of that i think is best to leave this implementation in the future. (Critical)
+       The price-dependent inverse-contract conversion (sz*ctVal/price) needs a price, which does
+       not exist at metadata time and not for MarketOrders; conversion call sites with a price
+       divide by it, while metadata minimums and market-order placement keep the plain ctVal
+       multiply/divide. USD- or USDC-counter perpetual swaps are skipped entirely because their
+       minimum amounts cannot be expressed in base volume without a price.
       */
       if (pair instanceof FuturesContract
           && ((FuturesContract) pair).isPerpetual()
@@ -594,19 +634,19 @@ public class OkxAdapters {
               .minimumAmount(
                   (isContractDerivative(instrument))
                       ? convertContractSizeToVolume(
-                          new BigDecimal(instrument.getMinSize()), pair, contractValue)
+                          new BigDecimal(instrument.getMinSize()), pair, contractValue, null)
                       : new BigDecimal(instrument.getMinSize()))
               .volumeScale(
                   (isContractDerivative(instrument))
                       ? convertContractSizeToVolume(
-                              new BigDecimal(instrument.getMinSize()), pair, contractValue)
+                              new BigDecimal(instrument.getMinSize()), pair, contractValue, null)
                           .scale()
                       : Math.max(numberOfDecimals(new BigDecimal(instrument.getMinSize())), 0))
               .amountStepSize(
                   BigDecimal.ONE.movePointLeft(
                       (isContractDerivative(instrument))
                           ? convertContractSizeToVolume(
-                                  new BigDecimal(instrument.getLotSize()), pair, contractValue)
+                                  new BigDecimal(instrument.getLotSize()), pair, contractValue, null)
                               .scale()
                           : Math.max(numberOfDecimals(new BigDecimal(instrument.getLotSize())), 0)))
               .contractValue((isContractDerivative(instrument)) ? contractValue : null)
@@ -725,14 +765,14 @@ public class OkxAdapters {
                     .price(okxPosition.getAverageOpenPrice())
                     .type(adaptOpenPositionType(okxPosition))
                     .size(
-                        okxPosition
-                            .getPosition()
-                            .abs()
-                            .multiply(
-                                exchangeMetaData
-                                    .getInstruments()
-                                    .get(adaptOkxInstrumentId(okxPosition.getInstrumentId()))
-                                    .getContractValue()))
+                        convertContractSizeToVolume(
+                            okxPosition.getPosition().abs(),
+                            adaptOkxInstrumentId(okxPosition.getInstrumentId()),
+                            exchangeMetaData
+                                .getInstruments()
+                                .get(adaptOkxInstrumentId(okxPosition.getInstrumentId()))
+                                .getContractValue(),
+                            okxPosition.getAverageOpenPrice()))
                     .unRealisedPnl(okxPosition.getUnrealizedPnL())
                     .build()));
     return new OpenPositions(openPositions);
@@ -941,13 +981,17 @@ public class OkxAdapters {
       Date date) {
     List<OrderBookUpdate> orderBookUpdates = new ArrayList<>();
     for (OkxPublicOrder ask : asks) {
-      BigDecimal volume = convertContractSizeToVolume(ask.getVolume(), instrument, contractValue);
+      BigDecimal volume =
+          convertContractSizeToVolume(
+              ask.getVolume(), instrument, contractValue, ask.getPrice());
       OrderBookUpdate o =
           new OrderBookUpdate(OrderType.ASK, volume, instrument, ask.getPrice(), date, volume);
       orderBookUpdates.add(o);
     }
     for (OkxPublicOrder bid : bids) {
-      BigDecimal volume = convertContractSizeToVolume(bid.getVolume(), instrument, contractValue);
+      BigDecimal volume =
+          convertContractSizeToVolume(
+              bid.getVolume(), instrument, contractValue, bid.getPrice());
       OrderBookUpdate o =
           new OrderBookUpdate(OrderType.BID, volume, instrument, bid.getPrice(), date, volume);
       orderBookUpdates.add(o);
