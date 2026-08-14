@@ -28,6 +28,7 @@ import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.account.OkexAccountConfig;
 import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
+import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
 import org.knowm.xchange.okex.dto.marketdata.OkexInstrument;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
 import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
@@ -221,6 +222,23 @@ public class OkexCompatibilityTest {
   public void legacyResilienceFacadeDelegates() {
     // The pre-rename public OkexResilience class must stay available for the grace period.
     assertThat(OkexResilience.createRegistries()).isNotNull();
+  }
+
+  @Test
+  public void legacyCandleDeserializesFromWireArray() throws Exception {
+    // OKX candle responses are JSON arrays; Rescu maps them straight into OkexCandleStick.
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkexCandleStick candle =
+        mapper.readValue(
+            "[\"1597026383085\",\"3901.5\",\"3901.5\",\"3901.5\",\"3901.5\","
+                + "\"0.01191779\",\"46.48\",\"0\",\"0\"]",
+            OkexCandleStick.class);
+    assertThat(candle.getTimestamp()).isEqualTo(1597026383085L);
+    assertThat(candle.getOpenPrice()).isEqualTo("3901.5");
+    assertThat(candle.getClosePrice()).isEqualTo("3901.5");
+    assertThat(candle.getVolume()).isEqualTo("0.01191779");
+    assertThat(candle.to()).isNotNull();
   }
 
   @Test

@@ -1,6 +1,7 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.knowm.xchange.okx.dto.marketdata.OkxCandleStick;
 
 /**
@@ -12,6 +13,11 @@ public class OkexCandleStick {
   private final OkxCandleStick delegate;
 
   @JsonCreator
+  public OkexCandleStick(JsonNode node) {
+    this.delegate = new OkxCandleStick(node);
+  }
+
+  /** Plain delegating constructor for adapter mapping of already-parsed candles. */
   public OkexCandleStick(OkxCandleStick delegate) {
     this.delegate = delegate;
   }
