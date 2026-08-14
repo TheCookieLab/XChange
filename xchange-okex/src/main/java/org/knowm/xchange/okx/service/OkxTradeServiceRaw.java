@@ -219,7 +219,7 @@ public class OkxTradeServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter((rateLimiter(OkxAuthenticated.orderDetailsPath)))
+          .withRateLimiter((rateLimiter(OkxAuthenticated.ordersHistoryPath)))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
