@@ -34,6 +34,8 @@ import org.knowm.xchange.mexc.v3.service.MexcV3MarketDataServiceRaw;
  *   <li>First push (or a version gap, {@code fromVersion > lastUpdateId + 1}) triggers a REST
  *       snapshot fetch on the IO scheduler; the snapshot's {@code lastUpdateId} becomes the local
  *       reference point. A push whose version window contains that snapshot is applied immediately.
+ *       A snapshot older than the current local reference is ignored so a delayed REST response
+ *       cannot rewind sequence state.
  *   <li>After a re-snapshot, a push that starts after the snapshot is dropped; the next push that
  *       continues from the snapshot's version is applied.
  *   <li>Pushes whose {@code toVersion} is at or below the local {@code lastUpdateId} are stale and
@@ -88,9 +90,14 @@ final class MexcV3StreamingOrderBook {
         return Observable.empty(); // stale push; the local book is already ahead of it
       }
       if (!initialized || !coversNextVersion(fromVersion, toVersion, lastUpdateId)) {
+        boolean wasInitialized = initialized;
+        long previousLastUpdateId = lastUpdateId;
         return refetchSnapshot()
             .concatMap(
                 snapshot -> {
+                  if (wasInitialized && snapshot.getLastUpdateId() < previousLastUpdateId) {
+                    return Observable.empty(); // never rewind a book to a stale REST snapshot
+                  }
                   initialize(snapshot);
                   if (!coversNextVersion(fromVersion, toVersion, lastUpdateId)) {
                     return Observable.empty(); // snapshot is outside this push's version window
