@@ -179,12 +179,13 @@ public class OkxPrivateStreamingService extends JsonNettyStreamingService {
       LOG.error("Error parsing incoming message to JSON: {}", message);
       return;
     }
-    // Retry after a successful login
+    // Retry after a successful login.
     if (jsonNode.has("event")) {
       String event = jsonNode.get("event").asText();
       if ("login".equals(event)) {
-        loginDone = true;
-        if (needToResubscribeChannels) {
+        String code = jsonNode.path("code").asText();
+        loginDone = code.isEmpty() || "0".equals(code);
+        if (loginDone && needToResubscribeChannels) {
           this.resubscribeChannels();
           needToResubscribeChannels = false;
         }
