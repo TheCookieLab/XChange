@@ -45,6 +45,17 @@ public class OkxAdapters {
   static final Map<Instrument, Long> instrumentToInstrumentIdMap = new HashMap<>();
 
   /**
+   * Internal test seam exposing the mutable instrument-to-instrument-id map so tests can snapshot,
+   * clear, and restore it without reflection. Not part of the adapter contract; prefer {@link
+   * #instrumentCode(Instrument)} in production code.
+   *
+   * @return the mutable instrument-to-instrument-id map
+   */
+  public static Map<Instrument, Long> instrumentToInstrumentIdMapForTesting() {
+    return instrumentToInstrumentIdMap;
+  }
+
+  /**
    * Resolves the OKX numeric instrument code for an instrument, preferring the adapted wire
    * instrument and falling back to the direct key. After the unified USD orderbook revamp, remote
    * init registers the server's {@code BTC/USD} code while legacy callers still trade {@code
