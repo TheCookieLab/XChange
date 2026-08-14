@@ -1,7 +1,9 @@
 package info.bitrich.xchangestream.okx;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -137,5 +139,18 @@ public class OkxStreamingServiceGenerationTest {
     assertThat(service.hasActiveChannels()).isFalse();
     service.subscribeChannel("candle-BTC-USDT").test();
     assertThat(service.hasActiveChannels()).isTrue();
+  }
+
+  @Test
+  public void loginWithoutPassphraseRaisesExchangeException() {
+    when(spec.getApiKey()).thenReturn("api-key");
+    when(spec.getSecretKey()).thenReturn("secret-key");
+    when(spec.getExchangeSpecificParametersItem("passphrase")).thenReturn(null);
+    OkxPrivateStreamingService service =
+        new OkxPrivateStreamingService("wss://localhost/ws", spec, mock(OkxExchange.class));
+
+    assertThatThrownBy(service::login)
+        .isInstanceOf(org.knowm.xchange.exceptions.ExchangeException.class)
+        .hasMessageContaining("passphrase");
   }
 }
