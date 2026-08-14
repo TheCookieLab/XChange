@@ -26,6 +26,7 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
+import org.knowm.xchange.okex.dto.account.OkexAccountConfig;
 import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
 import org.knowm.xchange.okex.dto.marketdata.OkexInstrument;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
@@ -199,6 +200,96 @@ public class OkexCompatibilityTest {
     assertThat(trade.getTradeId()).isEqualTo("t-1");
     assertThat(trade.getPx()).isEqualByComparingTo("50000");
     assertThat(trade.to().getInstId()).isEqualTo("BTC-USDT");
+  }
+
+  @Test
+  public void legacyAccountConfigRemainsJacksonConstructible() throws Exception {
+    // OkexAuthenticated#getAccountConfiguration deserializes directly into OkexAccountConfig.
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkexAccountConfig config =
+        mapper.readValue(
+            "{\"uid\":\"123\",\"acctLv\":\"1\",\"posMode\":\"net_mode\","
+                + "\"autoLoan\":true,\"greeksType\":\"PA\",\"level\":\"Lv1\",\"levelTmp\":\"Lv1\"}",
+            OkexAccountConfig.class);
+    assertThat(config.getUid()).isEqualTo("123");
+    assertThat(config.getAccountLevel()).isEqualTo("1");
+    assertThat(config.getAutoLoan()).isTrue();
+  }
+
+  @Test
+  public void legacyResilienceFacadeDelegates() {
+    // The pre-rename public OkexResilience class must stay available for the grace period.
+    assertThat(OkexResilience.createRegistries()).isNotNull();
+  }
+
+  @Test
+  public void everyLegacyRestResponseDtoIsJacksonConstructible() throws Exception {
+    // Rescu deserializes the legacy REST interfaces' response payloads directly into the Okex*
+    // wrappers, so every wrapper reachable as a return type must expose a Jackson creator (a
+    // public no-arg constructor, like OkexTicker, or a delegating @JsonCreator constructor).
+    for (Class<?> restInterface : new Class<?>[] {Okex.class, OkexAuthenticated.class}) {
+      for (java.lang.reflect.Method method : restInterface.getMethods()) {
+        for (Class<?> responseType : responseTypesOf(method.getGenericReturnType())) {
+          if (!responseType.getName().startsWith("org.knowm.xchange.okex.")) {
+            continue;
+          }
+          boolean noArg = hasPublicNoArgConstructor(responseType);
+          boolean jsonCreator =
+              Arrays.stream(responseType.getConstructors())
+                  .anyMatch(
+                      c ->
+                          c.isAnnotationPresent(
+                              com.fasterxml.jackson.annotation.JsonCreator.class));
+          // Jackson also accepts an implicit creator: a constructor whose parameters are all
+          // @JsonProperty-annotated (used by the legacy OkxFundingRateHistory wrapper).
+          boolean implicitCreator =
+              Arrays.stream(responseType.getConstructors())
+                  .anyMatch(
+                      c ->
+                          c.getParameterCount() > 0
+                              && Arrays.stream(c.getParameters())
+                                  .allMatch(
+                                      p ->
+                                          p.isAnnotationPresent(
+                                              com.fasterxml.jackson.annotation.JsonProperty
+                                                  .class)));
+          assertThat(noArg || jsonCreator || implicitCreator)
+              .as(
+                  "legacy REST response type %s must stay Jackson-constructible",
+                  responseType.getName())
+              .isTrue();
+        }
+      }
+    }
+  }
+
+  private static List<Class<?>> responseTypesOf(java.lang.reflect.Type returnType) {
+    java.lang.reflect.Type current = returnType;
+    // Unwrap OkexResponse<...> and List<...> layers (legacy responses are flat or list-shaped).
+    while (current instanceof java.lang.reflect.ParameterizedType) {
+      java.lang.reflect.ParameterizedType parameterized =
+          (java.lang.reflect.ParameterizedType) current;
+      java.lang.reflect.Type[] args = parameterized.getActualTypeArguments();
+      if (args.length == 1 && args[0] instanceof Class<?>) {
+        return java.util.Collections.singletonList((Class<?>) args[0]);
+      }
+      if (args.length == 1 && args[0] instanceof java.lang.reflect.ParameterizedType) {
+        current = args[0];
+        continue;
+      }
+      break;
+    }
+    return java.util.Collections.emptyList();
+  }
+
+  private static boolean hasPublicNoArgConstructor(Class<?> type) {
+    try {
+      type.getConstructor();
+      return true;
+    } catch (NoSuchMethodException e) {
+      return false;
+    }
   }
 
   @Test
