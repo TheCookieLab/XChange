@@ -38,7 +38,9 @@ import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
 import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.okex.service.OkexAccountService;
 import org.knowm.xchange.okex.service.OkexAccountServiceRaw;
+import org.knowm.xchange.okex.service.OkexBaseService;
 import org.knowm.xchange.okex.service.OkexCandleStickPeriodType;
+import org.knowm.xchange.okex.service.OkexDigest;
 import org.knowm.xchange.okex.service.OkexMarketDataService;
 import org.knowm.xchange.okex.service.OkexMarketDataServiceRaw;
 import org.knowm.xchange.okex.service.OkexTradeService;
@@ -120,6 +122,44 @@ public class OkexCompatibilityTest {
     // Delegation must mirror the canonical period set (seconds, not minutes).
     assertThat(OkexCandleStickPeriodType.getSupportedPeriodsInSecs())
         .isEqualTo(OkxCandleStickPeriodType.getSupportedPeriodsInSecs());
+  }
+
+  @Test
+  public void legacyDigestFacadeDelegatesToCanonicalDigest() {
+    assertThat(OkexDigest.class.getAnnotation(Deprecated.class)).isNotNull();
+    assertThat(OkexDigest.class.getSuperclass())
+        .isEqualTo(org.knowm.xchange.okx.service.OkxDigest.class);
+    assertThat(OkexDigest.createInstance(null)).isNull();
+    assertThat(OkexDigest.createInstance("c2VjcmV0")).isInstanceOf(OkexDigest.class);
+  }
+
+  @Test
+  public void legacyBaseServiceRemainsExtendable() throws Exception {
+    assertThat(OkexBaseService.class.getAnnotation(Deprecated.class)).isNotNull();
+    assertThat(OkexBaseService.class.getSuperclass()).isNotNull();
+
+    ExchangeSpecification spec = new OkexExchange().getDefaultExchangeSpecification();
+    spec.setApiKey("api-key");
+    spec.setSecretKey("secret-key");
+    spec.setExchangeSpecificParametersItem(OkxExchange.PARAM_PASSPHRASE, "passphrase");
+    spec.setShouldLoadRemoteMetaData(false);
+
+    OkexExchange exchange = new OkexExchange();
+    exchange.applySpecification(spec);
+
+    OkexBaseService service =
+        new OkexBaseService(exchange, new org.knowm.xchange.client.ResilienceRegistries());
+    assertThat(serviceField(service, "signatureCreator")).isInstanceOf(OkexDigest.class);
+    assertThat(serviceField(service, "apiKey")).isEqualTo("api-key");
+    assertThat(serviceField(service, "passphrase")).isEqualTo("passphrase");
+    assertThat(serviceField(service, "okex")).isNotNull();
+    assertThat(serviceField(service, "okexAuthenticated")).isNotNull();
+  }
+
+  private static Object serviceField(OkexBaseService service, String name) throws Exception {
+    java.lang.reflect.Field field = OkexBaseService.class.getDeclaredField(name);
+    field.setAccessible(true);
+    return field.get(service);
   }
 
   @Test

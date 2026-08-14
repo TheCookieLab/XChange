@@ -1,6 +1,7 @@
 package org.knowm.xchange.okex.service;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -39,14 +40,14 @@ public class OkexTradeServiceRaw extends OkxBaseService {
     this.delegate = new OkxTradeServiceRaw(exchange, resilienceRegistries);
   }
 
-  private static <S, T> OkexResponse<List<T>> wrap(
-      OkxResponse<List<S>> response, Function<S, T> mapper) {
+  /** Testable seam backing legacy response wrapping (see {@link OkexRawWrapTest}). */
+  static <S, T> OkexResponse<List<T>> wrap(OkxResponse<List<S>> response, Function<S, T> mapper) {
+    List<T> data =
+        response.getData() == null
+            ? Collections.emptyList()
+            : response.getData().stream().map(mapper).collect(Collectors.toList());
     return new OkexResponse<>(
-        new OkxResponse<>(
-            response.getId(),
-            response.getCode(),
-            response.getMsg(),
-            response.getData().stream().map(mapper).collect(Collectors.toList())));
+        new OkxResponse<>(response.getId(), response.getCode(), response.getMsg(), data));
   }
 
   public OkexResponse<List<OkexOrderDetails>> getOkexPendingOrder(
