@@ -312,6 +312,24 @@ public class OkxStreamingTradeServiceTest {
   }
 
   @Test
+  public void testPlaceOrderThrowsExchangeExceptionWhenPrivateTransportUnavailable() {
+    OkxStreamingTradeService publicOnlyTradeService =
+        new OkxStreamingTradeService(
+            null,
+            new ExchangeMetaData(
+                Collections.singletonMap(SPOT, InstrumentMetaData.builder().build()),
+                Collections.emptyMap(),
+                null,
+                null,
+                null),
+            OkxResilience.createRegistries());
+
+    assertThatThrownBy(() -> publicOnlyTradeService.placeLimitOrder(limitOrder("client-1")))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("not authorized");
+  }
+
+  @Test
   public void testPlaceOrderThrowsExchangeExceptionWhenNotAuthorized() {
     when(privateStreamingService.isLoginDone()).thenReturn(false);
 
