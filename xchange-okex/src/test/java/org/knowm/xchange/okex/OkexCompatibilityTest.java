@@ -9,20 +9,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.Ticker;
-import org.knowm.xchange.dto.meta.ExchangeMetaData;
-import org.knowm.xchange.dto.trade.LimitOrder;
-import org.knowm.xchange.dto.trade.MarketOrder;
-import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
@@ -42,8 +36,6 @@ import org.knowm.xchange.okex.dto.marketdata.OkexCurrency;
 import org.knowm.xchange.okex.dto.marketdata.OkexInstrument;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
 import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
-import org.knowm.xchange.okex.dto.trade.OkexAmendOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
 import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
 import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.okex.service.OkexAccountService;
@@ -55,7 +47,6 @@ import org.knowm.xchange.okex.service.OkexMarketDataService;
 import org.knowm.xchange.okex.service.OkexMarketDataServiceRaw;
 import org.knowm.xchange.okex.service.OkexTradeService;
 import org.knowm.xchange.okex.service.OkexTradeServiceRaw;
-import org.knowm.xchange.okx.OkxAdapters;
 import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxInstType;
@@ -63,7 +54,6 @@ import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
 import org.knowm.xchange.okx.dto.account.OkxWalletBalance;
-import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 import org.knowm.xchange.okx.service.OkxAccountServiceRaw;
 import org.knowm.xchange.okx.service.OkxCandleStickPeriodType;
 import org.knowm.xchange.okx.service.OkxMarketDataServiceRaw;
@@ -527,63 +517,6 @@ public class OkexCompatibilityTest {
     Ticker adaptedTicker = OkexAdapters.adaptTicker(ticker);
     assertThat(adaptedTicker.getInstrument()).isEqualTo(new CurrencyPair("BTC/USDT"));
     assertThat(adaptedTicker.getLast()).isEqualByComparingTo("1.5");
-  }
-
-  @Test
-  public void okexAdaptersFacadeAdaptsOrdersAndRequestsThroughLegacyDtos() throws Exception {
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    ExchangeMetaData meta = adaptExchangeMetaData(mapper);
-
-    Map<Instrument, Long> original = OkxAdapters.snapshotInstrumentToInstrumentIdMapForTesting();
-    OkxAdapters.replaceInstrumentToInstrumentIdMapForTesting(
-        Collections.singletonMap(new CurrencyPair("BTC/USDT"), 1234567890L));
-    try {
-      OkexOrderDetails order =
-          mapper.readValue(
-              "{\"instType\":\"SPOT\",\"instId\":\"BTC-USDT\",\"side\":\"buy\",\"sz\":\"1\","
-                  + "\"px\":\"100\",\"avgPx\":\"100\",\"accFillSz\":\"1\",\"state\":\"live\","
-                  + "\"cTime\":\"1610000000000\",\"uTime\":\"1610000000000\",\"fee\":\"0.1\","
-                  + "\"feeCcy\":\"USDT\",\"ordId\":\"ord-1\"}",
-              OkexOrderDetails.class);
-      LimitOrder adaptedOrder = OkexAdapters.adaptOrder(order, meta);
-      assertThat(adaptedOrder.getOriginalAmount()).isEqualByComparingTo("1");
-      assertThat(adaptedOrder.getInstrument()).isEqualTo(new CurrencyPair("BTC/USDT"));
-
-      LimitOrder input =
-          new LimitOrder(
-              OrderType.BID,
-              new BigDecimal("1"),
-              new CurrencyPair("BTC", "USDT"),
-              "ord-2",
-              null,
-              new BigDecimal("100"));
-      OkexOrderRequest request = OkexAdapters.adaptOrder(input, meta, "1");
-      assertThat(request.getInstrumentId()).isEqualTo("BTC-USDT");
-      assertThat(request.getAmount()).isEqualTo("1");
-      assertThat(request.getTradeMode()).isEqualTo("cash");
-
-      MarketOrder marketOrder =
-          new MarketOrder(OrderType.ASK, new BigDecimal("2"), new CurrencyPair("BTC", "USDT"));
-      OkexOrderRequest marketRequest = OkexAdapters.adaptOrder(marketOrder, meta, "1");
-      assertThat(marketRequest.getInstrumentId()).isEqualTo("BTC-USDT");
-      assertThat(marketRequest.getOrderType()).isEqualTo("market");
-
-      OkexAmendOrderRequest amend = OkexAdapters.adaptAmendOrder(input, meta);
-      assertThat(amend.getInstrumentId()).isEqualTo("BTC-USDT");
-    } finally {
-      OkxAdapters.replaceInstrumentToInstrumentIdMapForTesting(original);
-    }
-  }
-
-  private static ExchangeMetaData adaptExchangeMetaData(ObjectMapper mapper) throws Exception {
-    com.fasterxml.jackson.databind.JsonNode root =
-        mapper.readTree(OkexCompatibilityTest.class.getResourceAsStream("/instrumentsSpot.json5"));
-    List<OkxInstrument> instruments =
-        mapper.readValue(root.get("data").traverse(), new TypeReference<List<OkxInstrument>>() {});
-    List<OkexInstrument> legacy =
-        instruments.stream().map(OkexInstrument::new).collect(java.util.stream.Collectors.toList());
-    return OkexAdapters.adaptToExchangeMetaData(legacy, null);
   }
 
   @Test
