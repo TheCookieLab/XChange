@@ -136,6 +136,16 @@ class MexcV3StreamingOrderBookTest {
   }
 
   @Test
+  void overlappingSnapshotDeltaIsApplied() {
+    stubSnapshot(wireMock, 100L);
+
+    OrderBook book =
+        orderBook.onDelta(depthPushJson(95L, 105L, 1_712_345_678_901L)).blockingFirst();
+    assertBook(book, 1_712_345_678_901L);
+    wireMock.verify(1, getRequestedFor(urlEqualTo(DEPTH_PATH)));
+  }
+
+  @Test
   void quantityZeroRemovesLevel() {
     stubSnapshot(wireMock, 100L);
     orderBook.onDelta(depthPushJson(101L, 101L, 1L)).blockingFirst();
