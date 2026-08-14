@@ -115,8 +115,7 @@ public class OkxStreamingExchangeLifecycleTest {
     injectAllServices();
     exchange.setRequiredTransports(TransportRole.PUBLIC);
 
-    assertThat(exchange.getRequiredTransports())
-        .containsExactlyInAnyOrder(TransportRole.PUBLIC);
+    assertThat(exchange.getRequiredTransports()).containsExactlyInAnyOrder(TransportRole.PUBLIC);
   }
 
   @Test

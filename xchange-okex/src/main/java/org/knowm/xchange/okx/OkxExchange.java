@@ -73,8 +73,7 @@ public class OkxExchange extends BaseExchange {
 
   @Override
   public SynchronizedValueFactory<Long> getNonceFactory() {
-    throw new UnsupportedOperationException(
-        "Okx uses timestamp rather than a nonce"); // TODO: This
+    throw new UnsupportedOperationException("Okx uses timestamp rather than a nonce"); // TODO: This
   }
 
   @Override
@@ -125,14 +124,13 @@ public class OkxExchange extends BaseExchange {
   }
 
   /**
-   * Fetches all option instruments. OKX requires an underlying (or instrument family) when
-   * querying OPTION, so every family reported by the public underlying endpoint is fetched in
-   * turn. Uses only public market data and requires no credentials.
+   * Fetches all option instruments. OKX requires an underlying (or instrument family) when querying
+   * OPTION, so every family reported by the public underlying endpoint is fetched in turn. Uses
+   * only public market data and requires no credentials.
    */
   private static List<OkxInstrument> fetchOptionInstruments(
       OkxMarketDataServiceRaw marketDataServiceRaw) throws IOException {
-    List<String> underlyings =
-        marketDataServiceRaw.getOkxUnderlyings(OkxInstType.OPTION).getData();
+    List<String> underlyings = marketDataServiceRaw.getOkxUnderlyings(OkxInstType.OPTION).getData();
     if (underlyings == null || underlyings.isEmpty()) {
       return Collections.emptyList();
     }

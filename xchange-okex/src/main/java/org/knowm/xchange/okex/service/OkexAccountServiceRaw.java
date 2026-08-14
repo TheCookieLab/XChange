@@ -248,7 +248,8 @@ public class OkexAccountServiceRaw extends OkxBaseService {
       throws OkexException, IOException {
     try {
       return wrap(
-          delegate.changeMargin(instrumentId, positionSide, type, amount, currency, auto, loadTrans),
+          delegate.changeMargin(
+              instrumentId, positionSide, type, amount, currency, auto, loadTrans),
           OkexChangeMarginResponse::new);
     } catch (OkxException e) {
       throw new OkexException(e);
@@ -266,7 +267,8 @@ public class OkexAccountServiceRaw extends OkxBaseService {
       throws OkexException, IOException {
     try {
       return wrap(
-          delegate.getPositionsHistory(instrumentType, instrumentId, marginMode, type, after, before, limit),
+          delegate.getPositionsHistory(
+              instrumentType, instrumentId, marginMode, type, after, before, limit),
           OkexPosition::new);
     } catch (OkxException e) {
       throw new OkexException(e);

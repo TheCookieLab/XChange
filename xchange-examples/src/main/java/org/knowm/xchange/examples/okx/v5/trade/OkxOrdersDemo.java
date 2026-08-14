@@ -57,8 +57,7 @@ public class OkxOrdersDemo {
                   new BigDecimal("200")));
       System.out.println(placeLimitOrder);
 
-      OkxCancelOrderParams req =
-          new OkxTradeParams.OkxCancelOrderParams(contract, placeLimitOrder);
+      OkxCancelOrderParams req = new OkxTradeParams.OkxCancelOrderParams(contract, placeLimitOrder);
 
       boolean cancelOrder = tradeService.cancelOrder(req);
       System.out.println("Cancelled " + cancelOrder);

@@ -62,8 +62,7 @@ public class OkxExceptionTest {
     assertThat(exception.getCode()).isEqualTo(50011);
     assertThat(exception.getRequestId()).isEqualTo("req-42");
     assertThat(exception.getTransportState()).isEqualTo(TransportState.BUSINESS_ERROR);
-    assertThat(exception.getRetryClassification())
-        .isEqualTo(RetryClassification.NON_RETRYABLE);
+    assertThat(exception.getRetryClassification()).isEqualTo(RetryClassification.NON_RETRYABLE);
     assertThat(exception.getMessage()).doesNotContain("secret-key-123");
     assertThat(exception.toString()).doesNotContain("secret-key-123");
   }
@@ -110,8 +109,7 @@ public class OkxExceptionTest {
 
     OkxException redacted = original.withRedactedMessage("passphrase-hunter2", "api-key-abcdefgh");
 
-    assertThat(redacted.getMessage())
-        .isEqualTo("failed with *** and ***");
+    assertThat(redacted.getMessage()).isEqualTo("failed with *** and ***");
     assertThat(redacted.getCode()).isEqualTo(50111);
     assertThat(redacted.getDomain()).isEqualTo("account");
     assertThat(redacted.getEndpoint()).isEqualTo("/api/v5/account/config");
@@ -122,8 +120,7 @@ public class OkxExceptionTest {
 
   @Test
   public void testWithRedactedMessageReturnsSameInstanceWhenNothingChanges() {
-    OkxException original =
-        OkxException.builder().message("clean message").code(1).build();
+    OkxException original = OkxException.builder().message("clean message").code(1).build();
 
     assertThat(original.withRedactedMessage("unrelated-secret")).isSameAs(original);
   }

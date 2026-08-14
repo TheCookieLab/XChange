@@ -70,9 +70,7 @@ public class OkexMarketDataService extends OkexMarketDataServiceRaw implements M
 
   public List<OkexFundingRateHistory> getFundingRateHistory(
       Instrument instrument, Long startTime, Long endTime, Integer limit) throws IOException {
-    return delegate
-        .getFundingRateHistory(instrument, startTime, endTime, limit)
-        .stream()
+    return delegate.getFundingRateHistory(instrument, startTime, endTime, limit).stream()
         .map(OkexFundingRateHistory::new)
         .collect(Collectors.toList());
   }

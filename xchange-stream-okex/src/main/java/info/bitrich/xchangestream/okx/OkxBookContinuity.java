@@ -29,8 +29,8 @@ import org.slf4j.LoggerFactory;
  *
  * <p>The checksum algorithm follows the OKX v5 documentation: concatenate every level as {@code
  * price:size} — bids in descending price order followed by asks in ascending price order, with no
- * separator between levels — and compute the CRC32 (java.util.zip) of the UTF-8 encoded string.
- * The checksum in an update message covers the book as it stands after applying that update. OKX
+ * separator between levels — and compute the CRC32 (java.util.zip) of the UTF-8 encoded string. The
+ * checksum in an update message covers the book as it stands after applying that update. OKX
  * deprecated the checksum field on 2026-06-23 and now always sends {@code 0}; a zero or absent
  * checksum disables verification and the sequence gate becomes the sole integrity check.
  *
@@ -52,7 +52,9 @@ final class OkxBookContinuity {
   enum Gate {
     /** The message is the next expected update and passes checksum verification: apply it. */
     ACCEPT,
-    /** Duplicate/out-of-order update ({@code seqId <=} last applied) or rebuilding: drop silently. */
+    /**
+     * Duplicate/out-of-order update ({@code seqId <=} last applied) or rebuilding: drop silently.
+     */
     DROP_STALE,
     /** Sequence gap or checksum mismatch: drop the message and trigger a channel rebuild. */
     REBUILD
@@ -190,8 +192,7 @@ final class OkxBookContinuity {
         continue;
       }
       crc.update(
-          (level.get(0).asText() + ":" + level.get(1).asText())
-              .getBytes(StandardCharsets.UTF_8));
+          (level.get(0).asText() + ":" + level.get(1).asText()).getBytes(StandardCharsets.UTF_8));
     }
   }
 

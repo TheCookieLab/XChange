@@ -41,8 +41,7 @@ public class OkxBaseService extends BaseResilientExchangeService<OkxExchange>
         ExchangeRestProxyBuilder.forInterface(
                 OkxAuthenticated.class, exchange.getExchangeSpecification())
             .build();
-    signatureCreator =
-        OkxDigest.createInstance(exchange.getExchangeSpecification().getSecretKey());
+    signatureCreator = OkxDigest.createInstance(exchange.getExchangeSpecification().getSecretKey());
     apiKey = exchange.getExchangeSpecification().getApiKey();
     secretKey = exchange.getExchangeSpecification().getSecretKey();
     passphrase =

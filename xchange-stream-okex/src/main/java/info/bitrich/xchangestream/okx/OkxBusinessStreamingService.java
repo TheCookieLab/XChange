@@ -118,8 +118,7 @@ public class OkxBusinessStreamingService extends JsonNettyStreamingService {
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
     return objectMapper.writeValueAsString(
-        new OkxSubscribeMessage<>(
-            "", SUBSCRIBE, Collections.singletonList(getTopic(channelName))));
+        new OkxSubscribeMessage<>("", SUBSCRIBE, Collections.singletonList(getTopic(channelName))));
   }
 
   @Override
@@ -173,8 +172,8 @@ public class OkxBusinessStreamingService extends JsonNettyStreamingService {
   }
 
   /**
-   * @return whether any business channel subscription is currently active (for example
-   *     candle-stick channels)
+   * @return whether any business channel subscription is currently active (for example candle-stick
+   *     channels)
    */
   public boolean hasActiveChannels() {
     return !channels.isEmpty();

@@ -13,11 +13,11 @@ import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.marketdata.OkxCandleStick;
 import org.knowm.xchange.okx.dto.marketdata.OkxFundingRate;
+import org.knowm.xchange.okx.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 import org.knowm.xchange.okx.dto.marketdata.OkxOrderbook;
 import org.knowm.xchange.okx.dto.marketdata.OkxTicker;
 import org.knowm.xchange.okx.dto.marketdata.OkxTrade;
-import org.knowm.xchange.okx.dto.marketdata.OkxFundingRateHistory;
 
 @Path("/api/v5")
 @Produces(APPLICATION_JSON)

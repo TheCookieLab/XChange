@@ -17,8 +17,7 @@ public class OkxRateLimitPolicyTest {
             .limit("/trade/order", 60, 2)
             .build();
 
-    assertThat(policy.asMap())
-        .containsOnlyKeys("/account/balance", "/trade/order");
+    assertThat(policy.asMap()).containsOnlyKeys("/account/balance", "/trade/order");
     assertThat(policy.rateLimitFor("/account/balance"))
         .contains(new OkxRateLimitPolicy.OkxRateLimit(5, 1));
     assertThat(policy.rateLimitFor("/trade/order"))

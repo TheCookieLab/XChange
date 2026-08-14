@@ -11,7 +11,6 @@ import info.bitrich.xchangestream.okx.dto.OkxSubscribeMessage;
 import info.bitrich.xchangestream.okx.dto.OkxSubscriptionTopic;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableSource;
@@ -64,9 +63,7 @@ public class OkxPrivateStreamingService extends JsonNettyStreamingService {
   private final OkxExchange okxExchange;
 
   public OkxPrivateStreamingService(
-      String privateApiUrl,
-      ExchangeSpecification exchangeSpecification,
-      OkxExchange okxExchange) {
+      String privateApiUrl, ExchangeSpecification exchangeSpecification, OkxExchange okxExchange) {
     super(
         privateApiUrl,
         65536,
@@ -273,8 +270,7 @@ public class OkxPrivateStreamingService extends JsonNettyStreamingService {
       }
     }
     return objectMapper.writeValueAsString(
-        new OkxSubscribeMessage<>(
-            "", SUBSCRIBE, Collections.singletonList(getTopic(channelName))));
+        new OkxSubscribeMessage<>("", SUBSCRIBE, Collections.singletonList(getTopic(channelName))));
   }
 
   @Override
@@ -282,8 +278,7 @@ public class OkxPrivateStreamingService extends JsonNettyStreamingService {
     OkxSubscriptionTopic subscriptionTopic = getTopic(channelName);
     if (subscriptionTopic != null) {
       return objectMapper.writeValueAsString(
-          new OkxSubscribeMessage<>(
-              "", UNSUBSCRIBE, Collections.singletonList(subscriptionTopic)));
+          new OkxSubscribeMessage<>("", UNSUBSCRIBE, Collections.singletonList(subscriptionTopic)));
     }
     return null;
   }

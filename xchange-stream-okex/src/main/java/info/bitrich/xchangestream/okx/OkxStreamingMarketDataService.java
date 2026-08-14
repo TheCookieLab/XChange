@@ -57,9 +57,7 @@ public class OkxStreamingMarketDataService implements StreamingMarketDataService
               List<OkxTicker> okxTickers =
                   mapper.treeToValue(
                       jsonNode.get("data"),
-                      mapper
-                          .getTypeFactory()
-                          .constructCollectionType(List.class, OkxTicker.class));
+                      mapper.getTypeFactory().constructCollectionType(List.class, OkxTicker.class));
               return Observable.fromIterable(okxTickers).map(OkxAdapters::adaptTicker);
             });
   }
@@ -78,8 +76,7 @@ public class OkxStreamingMarketDataService implements StreamingMarketDataService
                       jsonNode.get("data"),
                       mapper.getTypeFactory().constructCollectionType(List.class, OkxTrade.class));
               return Observable.fromIterable(
-                  OkxAdapters.adaptTrades(okxTradeList, instrument, exchangeMetaData)
-                      .getTrades());
+                  OkxAdapters.adaptTrades(okxTradeList, instrument, exchangeMetaData).getTrades());
             });
   }
 

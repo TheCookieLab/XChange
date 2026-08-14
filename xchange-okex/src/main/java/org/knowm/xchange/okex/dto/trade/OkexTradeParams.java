@@ -3,7 +3,6 @@ package org.knowm.xchange.okex.dto.trade;
 import lombok.Getter;
 import lombok.ToString;
 import org.knowm.xchange.instrument.Instrument;
-import org.knowm.xchange.okx.dto.trade.OkxTradeParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByInstrument;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;

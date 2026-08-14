@@ -3,7 +3,6 @@ package org.knowm.xchange.okx;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
-import org.knowm.xchange.okx.OkxRateLimitPolicy;
 
 /**
  * Offline wiring test: every Phase 4 trade endpoint must be registered in the private rate-limit
@@ -13,8 +12,7 @@ import org.knowm.xchange.okx.OkxRateLimitPolicy;
 public class OkxTradeEndpointWiringTest {
 
   private static OkxRateLimitPolicy.OkxRateLimit limit(String path) {
-    OkxRateLimitPolicy.OkxRateLimit rate =
-        OkxAuthenticated.privatePathRateLimits.asMap().get(path);
+    OkxRateLimitPolicy.OkxRateLimit rate = OkxAuthenticated.privatePathRateLimits.asMap().get(path);
     assertThat(rate).as("private rate limit for %s", path).isNotNull();
     return rate;
   }

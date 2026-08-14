@@ -15,14 +15,17 @@ public class OkxRedactionTest {
 
   @Test
   public void testMaskReplacesMultipleSecrets() {
-    assertThat(OkxRedaction.mask("a secret-abcdefgh and passphrase-12345678", "secret-abcdefgh", "passphrase-12345678"))
+    assertThat(
+            OkxRedaction.mask(
+                "a secret-abcdefgh and passphrase-12345678",
+                "secret-abcdefgh",
+                "passphrase-12345678"))
         .isEqualTo("a *** and ***");
   }
 
   @Test
   public void testMaskReplacesAllOccurrences() {
-    assertThat(OkxRedaction.mask("x-abcdefgh y-abcdefgh", "abcdefgh"))
-        .isEqualTo("x-*** y-***");
+    assertThat(OkxRedaction.mask("x-abcdefgh y-abcdefgh", "abcdefgh")).isEqualTo("x-*** y-***");
   }
 
   @Test
@@ -50,13 +53,14 @@ public class OkxRedactionTest {
 
   @Test
   public void testMaskNormalizesOkxAccessHeaders() {
-    assertThat(OkxRedaction.mask("OK-ACCESS-KEY: realApiKeyValue OK-ACCESS-SIGN=abc123 OK-ACCESS-PASSPHRASE: hunter2"))
+    assertThat(
+            OkxRedaction.mask(
+                "OK-ACCESS-KEY: realApiKeyValue OK-ACCESS-SIGN=abc123 OK-ACCESS-PASSPHRASE: hunter2"))
         .isEqualTo("OK-ACCESS-KEY: *** OK-ACCESS-SIGN: *** OK-ACCESS-PASSPHRASE: ***");
   }
 
   @Test
   public void testMaskHeaderNormalizationIsCaseInsensitive() {
-    assertThat(OkxRedaction.mask("ok-access-key: realApiKeyValue"))
-        .isEqualTo("ok-access-key: ***");
+    assertThat(OkxRedaction.mask("ok-access-key: realApiKeyValue")).isEqualTo("ok-access-key: ***");
   }
 }

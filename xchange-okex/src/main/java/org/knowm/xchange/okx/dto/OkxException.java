@@ -13,8 +13,8 @@ import si.mazi.rescu.HttpStatusExceptionSupport;
  * <p>Besides the provider {@code code} and {@code message}, an exception may carry optional
  * structured context that raw services fill in when constructing errors from {@link OkxResponse}
  * payloads: the API {@link #getDomain()} and {@link #getEndpoint()}, a safe request identity
- * ({@link #getRequestId()}, e.g. an order's {@code clOrdId}/{@code ordId} or the OKX request
- * {@code id}), the {@link #getTransportState()}, and a {@link #getRetryClassification()}.
+ * ({@link #getRequestId()}, e.g. an order's {@code clOrdId}/{@code ordId} or the OKX request {@code
+ * id}), the {@link #getTransportState()}, and a {@link #getRetryClassification()}.
  *
  * <p>Backward compatibility: the {@link #OkxException(String, int)} constructor (used by the
  * deprecated {@code org.knowm.xchange.okex} shim and by rescu error-body deserialization) is
@@ -56,7 +56,14 @@ public class OkxException extends HttpStatusExceptionSupport {
   private final RetryClassification retryClassification;
 
   public OkxException(@JsonProperty("msg") String message, @JsonProperty("code") int code) {
-    this(OkxRedaction.mask(message), code, null, null, null, TransportState.UNKNOWN, RetryClassification.UNKNOWN);
+    this(
+        OkxRedaction.mask(message),
+        code,
+        null,
+        null,
+        null,
+        TransportState.UNKNOWN,
+        RetryClassification.UNKNOWN);
   }
 
   private OkxException(
@@ -84,8 +91,8 @@ public class OkxException extends HttpStatusExceptionSupport {
    *
    * @param response the failed OKX response (non-success {@code code})
    * @param secrets credential values (API key, secret key, passphrase) to mask from the message
-   * @return a structured exception carrying the provider code, a conservative retry
-   *     classification, and the OKX request {@code id} when present
+   * @return a structured exception carrying the provider code, a conservative retry classification,
+   *     and the OKX request {@code id} when present
    */
   public static OkxException fromResponse(OkxResponse<?> response, String... secrets) {
     String message = OkxRedaction.mask(response.getMsg(), secrets);
@@ -141,8 +148,8 @@ public class OkxException extends HttpStatusExceptionSupport {
   }
 
   /**
-   * Returns a copy of this exception with the message redacted against the given secrets, or
-   * {@code this} when nothing changed. The copy keeps all structured fields.
+   * Returns a copy of this exception with the message redacted against the given secrets, or {@code
+   * this} when nothing changed. The copy keeps all structured fields.
    *
    * @param secrets credential values (API key, secret key, passphrase) to mask from the message
    */
@@ -151,7 +158,8 @@ public class OkxException extends HttpStatusExceptionSupport {
     if (Objects.equals(redacted, message)) {
       return this;
     }
-    return new OkxException(redacted, code, domain, endpoint, requestId, transportState, retryClassification);
+    return new OkxException(
+        redacted, code, domain, endpoint, requestId, transportState, retryClassification);
   }
 
   @Override

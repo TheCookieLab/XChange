@@ -38,7 +38,8 @@ public class OkxStreamingServiceGenerationTest {
     OkxStreamingService service = spy(new OkxStreamingService("wss://localhost/ws", spec));
     doReturn(42L).when(service).getGeneration();
 
-    boolean accepted = service.handleMessageWithGeneration(41L, "{\"arg\":{\"channel\":\"tickers\"}}");
+    boolean accepted =
+        service.handleMessageWithGeneration(41L, "{\"arg\":{\"channel\":\"tickers\"}}");
 
     assertThat(accepted).isFalse();
     verify(service, never()).messageHandler(anyString());
@@ -61,7 +62,8 @@ public class OkxStreamingServiceGenerationTest {
         spy(new OkxPrivateStreamingService("wss://localhost/ws", spec, mock(OkxExchange.class)));
     doReturn(7L).when(service).getGeneration();
 
-    boolean accepted = service.handleMessageWithGeneration(6L, "{\"arg\":{\"channel\":\"orders\"}}");
+    boolean accepted =
+        service.handleMessageWithGeneration(6L, "{\"arg\":{\"channel\":\"orders\"}}");
 
     assertThat(accepted).isFalse();
     verify(service, never()).messageHandler(anyString());
@@ -85,7 +87,8 @@ public class OkxStreamingServiceGenerationTest {
         spy(new OkxBusinessStreamingService("wss://localhost/ws", spec));
     doReturn(3L).when(service).getGeneration();
 
-    boolean accepted = service.handleMessageWithGeneration(2L, "{\"arg\":{\"channel\":\"candle\"}}");
+    boolean accepted =
+        service.handleMessageWithGeneration(2L, "{\"arg\":{\"channel\":\"candle\"}}");
 
     assertThat(accepted).isFalse();
     verify(service, never()).messageHandler(anyString());

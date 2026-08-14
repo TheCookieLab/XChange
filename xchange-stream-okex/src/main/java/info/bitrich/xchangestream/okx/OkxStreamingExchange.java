@@ -113,9 +113,9 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
    * always connected, and the private socket is connected when API credentials are configured. An
    * explicit configuration replaces the business/private defaults (the public socket is always
    * connected, so it does not need to be listed; an empty configuration means "public only").
-   * {@link TransportRole#PRIVATE} is only effective when API credentials are configured, and
-   * {@link TransportRole#BUSINESS} is additionally required whenever business subscriptions are
-   * active regardless of the configuration.
+   * {@link TransportRole#PRIVATE} is only effective when API credentials are configured, and {@link
+   * TransportRole#BUSINESS} is additionally required whenever business subscriptions are active
+   * regardless of the configuration.
    *
    * @param transports the transports to require; {@code null} restores the default model
    */
@@ -146,10 +146,10 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
 
   /**
    * @return the transports that must currently be healthy for {@link #isAlive()} to return {@code
-   *     true}. The public transport is always required; the default model additionally requires
-   *     the business transport and the private transport once credentials are configured and
-   *     private subscriptions are active. Explicit configuration replaces the defaults, while
-   *     active business subscriptions always keep the business transport required.
+   *     true}. The public transport is always required; the default model additionally requires the
+   *     business transport and the private transport once credentials are configured and private
+   *     subscriptions are active. Explicit configuration replaces the defaults, while active
+   *     business subscriptions always keep the business transport required.
    */
   public Set<TransportRole> getRequiredTransports() {
     Set<TransportRole> required = new HashSet<>();

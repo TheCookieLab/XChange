@@ -303,9 +303,7 @@ public class OkxAdapters {
   }
 
   public static OrderBook adaptOrderBook(
-      List<OkxOrderbook> okxOrderbooks,
-      Instrument instrument,
-      ExchangeMetaData exchangeMetaData) {
+      List<OkxOrderbook> okxOrderbooks, Instrument instrument, ExchangeMetaData exchangeMetaData) {
     List<LimitOrder> asks = new ArrayList<>();
     List<LimitOrder> bids = new ArrayList<>();
     Date timeStamp = new Date(Long.parseLong(okxOrderbooks.get(0).getTs()));
@@ -724,9 +722,7 @@ public class OkxAdapters {
       case "short":
         return Type.SHORT;
       case "net":
-        return (okxPosition.getPosition().compareTo(BigDecimal.ZERO) >= 0)
-            ? Type.LONG
-            : Type.SHORT;
+        return (okxPosition.getPosition().compareTo(BigDecimal.ZERO) >= 0) ? Type.LONG : Type.SHORT;
       default:
         throw new UnsupportedOperationException();
     }

@@ -16,9 +16,8 @@ public class OkxPageIteratorTest {
   record Item(String id) {}
 
   /**
-   * Builds a page fetcher that serves {@code pages} in order and records every {@code after}
-   * cursor it is invoked with. Fetching past the supplied pages fails the test (an unexpected
-   * extra page).
+   * Builds a page fetcher that serves {@code pages} in order and records every {@code after} cursor
+   * it is invoked with. Fetching past the supplied pages fails the test (an unexpected extra page).
    */
   private static OkxPageIterator.ThrowingPageFetcher<Item> recordingFetcher(
       List<String> cursors, List<List<Item>> pages) {
@@ -43,8 +42,7 @@ public class OkxPageIteratorTest {
     OkxPageIterator.ThrowingPageFetcher<Item> fetcher =
         recordingFetcher(cursors, Arrays.asList(page1, page2, page3));
 
-    List<Item> result =
-        OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3));
+    List<Item> result = OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3));
 
     assertThat(result).extracting(Item::id).containsExactly("a", "b", "c", "d", "e", "f", "g");
     // Cursor advanced after each full page; the partial page was fetched with the last cursor.
@@ -58,8 +56,7 @@ public class OkxPageIteratorTest {
     OkxPageIterator.ThrowingPageFetcher<Item> fetcher =
         recordingFetcher(cursors, Arrays.asList(page1, Collections.emptyList()));
 
-    List<Item> result =
-        OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3));
+    List<Item> result = OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3));
 
     assertThat(result).extracting(Item::id).containsExactly("a", "b", "c");
     assertThat(cursors).containsExactly(null, "c");
@@ -74,8 +71,7 @@ public class OkxPageIteratorTest {
     OkxPageIterator.ThrowingPageFetcher<Item> fetcher =
         recordingFetcher(cursors, Arrays.asList(page1, page2));
 
-    List<Item> result =
-        OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3));
+    List<Item> result = OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3));
 
     assertThat(result).extracting(Item::id).containsExactly("a", "b", "c");
     assertThat(cursors).containsExactly(null, "c");
@@ -88,8 +84,7 @@ public class OkxPageIteratorTest {
     OkxPageIterator.ThrowingPageFetcher<Item> fetcher =
         recordingFetcher(cursors, Collections.singletonList(page1));
 
-    List<Item> result =
-        OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3));
+    List<Item> result = OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3));
 
     assertThat(result).extracting(Item::id).containsExactly("a", (String) null);
     assertThat(cursors).containsExactly((String) null);
@@ -113,8 +108,7 @@ public class OkxPageIteratorTest {
     OkxPageIterator.ThrowingPageFetcher<Item> fetcher =
         recordingFetcher(cursors, Arrays.asList(page1, page2, page3));
 
-    List<Item> result =
-        OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3), 2);
+    List<Item> result = OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3), 2);
 
     assertThat(result).extracting(Item::id).containsExactly("a", "b", "c", "d", "e", "f");
     assertThat(cursors).containsExactly(null, "c");

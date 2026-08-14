@@ -6,9 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Request body entry for amending algorithmic orders via {@code /api/v5/trade/amend-algos}.
- */
+/** Request body entry for amending algorithmic orders via {@code /api/v5/trade/amend-algos}. */
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor

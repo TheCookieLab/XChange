@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import java.lang.reflect.Method;
-import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -109,11 +108,10 @@ public class OkexCompatibilityTest {
   }
 
   /**
-   * Asserts that every public method declared on the canonical Okx raw service (including
-   * inherited publics) has a same-name, same-parameter-type public method on the Okex shim raw
-   * service, with {@code okx} parameter types substituted by their {@code okex} counterparts. Where
-   * the canonical method returns {@code OkxResponse}, the shim method must return {@code
-   * OkexResponse}.
+   * Asserts that every public method declared on the canonical Okx raw service (including inherited
+   * publics) has a same-name, same-parameter-type public method on the Okex shim raw service, with
+   * {@code okx} parameter types substituted by their {@code okex} counterparts. Where the canonical
+   * method returns {@code OkxResponse}, the shim method must return {@code OkexResponse}.
    */
   private static void assertRawServiceSurface(Class<?> canonicalRaw, Class<?> shimRaw) {
     for (Method method : canonicalRaw.getMethods()) {
@@ -149,9 +147,7 @@ public class OkexCompatibilityTest {
 
       if (method.getReturnType() == OkxResponse.class) {
         assertThat(shimMethod.getReturnType())
-            .as(
-                "Shim return type of %s.%s",
-                shimRaw.getSimpleName(), method.getName())
+            .as("Shim return type of %s.%s", shimRaw.getSimpleName(), method.getName())
             .isEqualTo(OkexResponse.class);
       }
     }
@@ -160,7 +156,9 @@ public class OkexCompatibilityTest {
   private static Class<?> substituteOkxType(Class<?> type) {
     if (type.getName().startsWith("org.knowm.xchange.okx")) {
       String shimName =
-          type.getName().replace("org.knowm.xchange.okx", "org.knowm.xchange.okex").replace("Okx", "Okex");
+          type.getName()
+              .replace("org.knowm.xchange.okx", "org.knowm.xchange.okex")
+              .replace("Okx", "Okex");
       try {
         return Class.forName(shimName);
       } catch (ClassNotFoundException e) {

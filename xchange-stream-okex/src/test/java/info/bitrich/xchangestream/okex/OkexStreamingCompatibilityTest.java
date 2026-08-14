@@ -33,7 +33,8 @@ public class OkexStreamingCompatibilityTest {
 
   @Test
   public void serviceShimsImplementCoreStreamingInterfaces() {
-    assertThat(StreamingMarketDataService.class.isAssignableFrom(OkexStreamingMarketDataService.class))
+    assertThat(
+            StreamingMarketDataService.class.isAssignableFrom(OkexStreamingMarketDataService.class))
         .isTrue();
     assertThat(StreamingTradeService.class.isAssignableFrom(OkexStreamingTradeService.class))
         .isTrue();

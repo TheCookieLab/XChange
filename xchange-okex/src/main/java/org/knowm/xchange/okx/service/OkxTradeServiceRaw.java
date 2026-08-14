@@ -149,10 +149,7 @@ public class OkxTradeServiceRaw extends OkxBaseService {
    * @param pagination typed pagination bounds (the limit is capped at 100)
    */
   public OkxResponse<List<OkxOrderDetails>> getOrderHistory(
-      String instrumentType,
-      String instrumentId,
-      String orderType,
-      OkxPageParams pagination)
+      String instrumentType, String instrumentId, String orderType, OkxPageParams pagination)
       throws IOException {
     List<OkxOrderDetails> items =
         OkxPageIterator.fetchAll(
@@ -265,10 +262,7 @@ public class OkxTradeServiceRaw extends OkxBaseService {
    * @param pagination typed pagination bounds (the limit is capped at 100)
    */
   public OkxResponse<List<OkxFill>> getOkxFillsHistory(
-      String instrumentType,
-      String instrumentId,
-      String orderId,
-      OkxPageParams pagination)
+      String instrumentType, String instrumentId, String orderId, OkxPageParams pagination)
       throws IOException {
     List<OkxFill> items =
         OkxPageIterator.fetchAll(
@@ -360,8 +354,8 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   }
 
   /** <a href="https://www.okx.com/docs-v5/en/#rest-api-trade-amend-algo-order">...</a> */
-  public OkxResponse<List<OkxAlgoOrderResponse>> amendOkxAlgoOrder(
-      List<OkxAmendAlgoRequest> orders) throws IOException {
+  public OkxResponse<List<OkxAlgoOrderResponse>> amendOkxAlgoOrder(List<OkxAmendAlgoRequest> orders)
+      throws IOException {
     try {
       OkxAuthParams auth = authParams();
       return decorateApiCall(
@@ -390,10 +384,7 @@ public class OkxTradeServiceRaw extends OkxBaseService {
    * @param pagination typed pagination bounds (the limit is capped at 100)
    */
   public OkxResponse<List<OkxAlgoOrderDetails>> getAlgoOrdersPending(
-      String instrumentType,
-      String instrumentId,
-      String orderType,
-      OkxPageParams pagination)
+      String instrumentType, String instrumentId, String orderType, OkxPageParams pagination)
       throws IOException {
     List<OkxAlgoOrderDetails> items =
         OkxPageIterator.fetchAll(
@@ -589,8 +580,7 @@ public class OkxTradeServiceRaw extends OkxBaseService {
             getOkxOrderByClientOrderId(order.getInstrumentId(), clOrdId).getData();
         if (existing != null && !existing.isEmpty()) {
           OkxOrderDetails found = existing.get(0);
-          responses.add(
-              OkxOrderResponse.replay(found.getOrderId(), found.getClientOrderId()));
+          responses.add(OkxOrderResponse.replay(found.getOrderId(), found.getClientOrderId()));
           continue;
         }
       }

@@ -102,8 +102,7 @@ public class OkxStreamingOrderBookTest {
     JsonNode snapshot =
         bookMessage("snapshot", 1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101);
     String[][] bidsAfter = {{"100.0", "10"}, {"99.0", "1"}};
-    JsonNode update =
-        bookMessage("update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
+    JsonNode update = bookMessage("update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
 
     when(streamingService.subscribeChannel(CHANNEL_UNIQUE_ID))
         .thenReturn(Observable.just(snapshot, update));
@@ -126,8 +125,7 @@ public class OkxStreamingOrderBookTest {
     JsonNode snapshot =
         bookMessage("snapshot", 1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101);
     String[][] bidsAfter = {{"100.0", "10"}, {"99.0", "1"}};
-    JsonNode update =
-        bookMessage("update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
+    JsonNode update = bookMessage("update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
 
     when(streamingService.subscribeChannel(CHANNEL_UNIQUE_ID))
         .thenReturn(Observable.just(snapshot, update, update));
@@ -143,8 +141,7 @@ public class OkxStreamingOrderBookTest {
     JsonNode snapshot =
         bookMessage("snapshot", 1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101);
     String[][] bidsAfter = {{"100.0", "10"}, {"99.0", "1"}};
-    JsonNode update =
-        bookMessage("update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
+    JsonNode update = bookMessage("update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
     JsonNode gapUpdate = bookMessage("update", 5, 0, BID_99, EMPTY);
     JsonNode snapshotAfterGap =
         bookMessage("snapshot", 100, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101);
@@ -201,8 +198,7 @@ public class OkxStreamingOrderBookTest {
     JsonNode snapshot =
         bookMessage("snapshot", 1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101);
     String[][] bidsAfter = {{"100.0", "10"}, {"99.0", "1"}};
-    JsonNode update =
-        bookMessage("update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
+    JsonNode update = bookMessage("update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
 
     TestObserver<List<OrderBookUpdate>> updatesObserver =
         marketDataService.getOrderBookUpdates(INSTRUMENT).test();

@@ -122,8 +122,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
           getOkxPendingOrder(
                   null,
                   null,
-                  OkxAdapters.adaptInstrument(
-                      ((OpenOrdersParamInstrument) params).getInstrument()),
+                  OkxAdapters.adaptInstrument(((OpenOrdersParamInstrument) params).getInstrument()),
                   null,
                   null,
                   null,

@@ -11,8 +11,8 @@ import org.junit.Test;
 import org.knowm.xchange.okx.dto.OkxResponse;
 
 /**
- * Offline deserialization/serialization tests for the DTOs backing the new OKX v5 endpoints
- * (asset transfer, positions history, bills archive, set position mode).
+ * Offline deserialization/serialization tests for the DTOs backing the new OKX v5 endpoints (asset
+ * transfer, positions history, bills archive, set position mode).
  */
 public class OkxEndpointDtoTest {
 

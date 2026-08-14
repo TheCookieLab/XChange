@@ -5,7 +5,8 @@ import lombok.Getter;
 
 /**
  * Response DTO returned from placing, cancelling, and amending algorithmic orders ({@code
- * /api/v5/trade/order-algo}, {@code /api/v5/trade/cancel-algos}, {@code /api/v5/trade/amend-algos}).
+ * /api/v5/trade/order-algo}, {@code /api/v5/trade/cancel-algos}, {@code
+ * /api/v5/trade/amend-algos}).
  *
  * <p>{@code ordId} is present for placement responses; {@code algoId} is present for cancel/amend
  * responses.

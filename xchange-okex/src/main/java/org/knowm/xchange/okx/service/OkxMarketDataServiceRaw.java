@@ -22,8 +22,7 @@ import org.knowm.xchange.okx.dto.marketdata.OkxTrade;
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkxMarketDataServiceRaw extends OkxBaseService {
 
-  public OkxMarketDataServiceRaw(
-      OkxExchange exchange, ResilienceRegistries resilienceRegistries) {
+  public OkxMarketDataServiceRaw(OkxExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
   }
 
@@ -33,8 +32,7 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
     try {
       return decorateApiCall(
               () ->
-                  okx.getInstruments(
-                      instrumentType, underlying, instrumentId, simulatedTrading()))
+                  okx.getInstruments(instrumentType, underlying, instrumentId, simulatedTrading()))
           .withRateLimiter(rateLimiter(Okx.instrumentsPath))
           .call();
     } catch (OkxException e) {
@@ -75,8 +73,7 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxTicker>> getOkxTicker(String instrumentId)
       throws OkxException, IOException {
     try {
-      return decorateApiCall(
-              () -> okx.getTicker(instrumentId, simulatedTrading()))
+      return decorateApiCall(() -> okx.getTicker(instrumentId, simulatedTrading()))
           .withRateLimiter(rateLimiter(Okx.tickerPath))
           .call();
     } catch (OkxException e) {
@@ -87,8 +84,7 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxTicker>> getOkxTickers(OkxInstType instType)
       throws OkxException, IOException {
     try {
-      return decorateApiCall(
-              () -> okx.getTickers(instType.toString(), simulatedTrading()))
+      return decorateApiCall(() -> okx.getTickers(instType.toString(), simulatedTrading()))
           .withRateLimiter(rateLimiter(Okx.tickersPath))
           .call();
     } catch (OkxException e) {
@@ -99,8 +95,7 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxFundingRate>> getOkxFundingRate(String instrumentId)
       throws OkxException, IOException {
     try {
-      return decorateApiCall(
-              () -> okx.getFundingRate(instrumentId, simulatedTrading()))
+      return decorateApiCall(() -> okx.getFundingRate(instrumentId, simulatedTrading()))
           .withRateLimiter(rateLimiter(Okx.instrumentsPath))
           .call();
     } catch (OkxException e) {
@@ -141,9 +136,7 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
       String instrument, String after, String before, String bar, String limit)
       throws OkxException, IOException {
     return decorateApiCall(
-            () ->
-                okx.getHistoryCandles(
-                    instrument, after, before, bar, limit, simulatedTrading()))
+            () -> okx.getHistoryCandles(instrument, after, before, bar, limit, simulatedTrading()))
         .withRateLimiter(rateLimiter(Okx.candlesHistoryPath))
         .call();
   }

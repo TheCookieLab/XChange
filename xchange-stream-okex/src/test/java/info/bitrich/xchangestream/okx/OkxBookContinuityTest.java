@@ -25,8 +25,8 @@ public class OkxBookContinuityTest {
 
   /**
    * Independent re-implementation of the OKX checksum spec used to build expected fixtures: CRC32
-   * of {@code price:size} for every bid (highest first) then every ask (lowest first), no
-   * separator between levels.
+   * of {@code price:size} for every bid (highest first) then every ask (lowest first), no separator
+   * between levels.
    */
   private static long expectedChecksum(String[][] bids, String[][] asks) {
     CRC32 crc = new CRC32();
@@ -65,37 +65,32 @@ public class OkxBookContinuityTest {
 
   @Test
   public void testSnapshotThenConsecutiveUpdateAccepted() {
-    continuity.snapshot(
-        INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
+    continuity.snapshot(INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
 
     // Checksum covers the full book after applying the update: bids 100.0 and 99.0, ask 101.0.
     String[][] bidsAfter = {{"100.0", "10"}, {"99.0", "1"}};
     JsonNode update = data(2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
 
-    assertThat(continuity.gateUpdate(INST_ID, update))
-        .isEqualTo(OkxBookContinuity.Gate.ACCEPT);
+    assertThat(continuity.gateUpdate(INST_ID, update)).isEqualTo(OkxBookContinuity.Gate.ACCEPT);
     assertThat(continuity.isRebuilding(INST_ID)).isFalse();
     assertThat(continuity.levelCount(INST_ID)).isEqualTo(3);
   }
 
   @Test
   public void testDuplicateUpdateDropped() {
-    continuity.snapshot(
-        INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
+    continuity.snapshot(INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
     String[][] bidsAfter = {{"100.0", "10"}, {"99.0", "1"}};
     JsonNode update = data(2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
     assertThat(continuity.gateUpdate(INST_ID, update)).isEqualTo(OkxBookContinuity.Gate.ACCEPT);
 
     // Same seqId re-delivered: dropped, state untouched.
-    assertThat(continuity.gateUpdate(INST_ID, update))
-        .isEqualTo(OkxBookContinuity.Gate.DROP_STALE);
+    assertThat(continuity.gateUpdate(INST_ID, update)).isEqualTo(OkxBookContinuity.Gate.DROP_STALE);
     assertThat(continuity.levelCount(INST_ID)).isEqualTo(3);
   }
 
   @Test
   public void testOutOfOrderUpdateDropped() {
-    continuity.snapshot(
-        INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
+    continuity.snapshot(INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
 
     // Update with seqId <= snapshot seqId.
     assertThat(continuity.gateUpdate(INST_ID, data(1, 0, BID_99, EMPTY)))
@@ -105,8 +100,7 @@ public class OkxBookContinuityTest {
 
   @Test
   public void testSequenceGapTriggersRebuildAndRecoversOnSnapshot() {
-    continuity.snapshot(
-        INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
+    continuity.snapshot(INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
 
     assertThat(continuity.gateUpdate(INST_ID, data(5, 0, BID_99, EMPTY)))
         .isEqualTo(OkxBookContinuity.Gate.REBUILD);
@@ -116,8 +110,7 @@ public class OkxBookContinuityTest {
     assertThat(continuity.gateUpdate(INST_ID, data(6, 0, BID_99, EMPTY)))
         .isEqualTo(OkxBookContinuity.Gate.DROP_STALE);
 
-    continuity.snapshot(
-        INST_ID, data(100, expectedChecksum(BID_99, ASK_101), BID_99, ASK_101));
+    continuity.snapshot(INST_ID, data(100, expectedChecksum(BID_99, ASK_101), BID_99, ASK_101));
     assertThat(continuity.isRebuilding(INST_ID)).isFalse();
     assertThat(continuity.levelCount(INST_ID)).isEqualTo(2);
 
@@ -127,8 +120,7 @@ public class OkxBookContinuityTest {
 
   @Test
   public void testChecksumMismatchTriggersRebuild() {
-    continuity.snapshot(
-        INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
+    continuity.snapshot(INST_ID, data(1, expectedChecksum(BID_100, ASK_101), BID_100, ASK_101));
 
     // Correct sequence but wrong checksum.
     assertThat(continuity.gateUpdate(INST_ID, data(2, 12345L, BID_99, EMPTY)))

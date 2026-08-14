@@ -9,8 +9,8 @@ import java.util.Map;
  * <p>OKX may re-deliver private channel events (orders, positions, fills) on reconnect or on
  * subscription overlap. This cache records a canonical key per event and reports whether the same
  * event was already seen. Keys are evicted in insertion order once the configured cap is exceeded,
- * so the memory footprint stays bounded while long-lived streams can still detect repeats of
- * recent events.
+ * so the memory footprint stays bounded while long-lived streams can still detect repeats of recent
+ * events.
  *
  * <p>Thread-safe; the per-key dedupe decision is atomic with the recording of the key.
  *
@@ -18,14 +18,12 @@ import java.util.Map;
  */
 final class OkxEventDeduplicator {
 
-  private final int maxSize;
   private final LinkedHashMap<String, Boolean> seen;
 
   OkxEventDeduplicator(int maxSize) {
     if (maxSize <= 0) {
       throw new IllegalArgumentException("maxSize must be positive, got " + maxSize);
     }
-    this.maxSize = maxSize;
     this.seen =
         new LinkedHashMap<String, Boolean>(maxSize, 0.75f, false) {
           @Override

@@ -55,15 +55,12 @@ public class OkxStreamingTradeServiceTest {
     privateStreamingService = mock(OkxPrivateStreamingService.class);
     Map<Instrument, InstrumentMetaData> instruments = new HashMap<>();
     instruments.put(SPOT, InstrumentMetaData.builder().build());
-    instruments.put(
-        SWAP, InstrumentMetaData.builder().contractValue(BigDecimal.ONE).build());
+    instruments.put(SWAP, InstrumentMetaData.builder().contractValue(BigDecimal.ONE).build());
     ExchangeMetaData exchangeMetaData =
         new ExchangeMetaData(instruments, Collections.emptyMap(), null, null, null);
     tradeService =
         new OkxStreamingTradeService(
-            privateStreamingService,
-            exchangeMetaData,
-            OkxResilience.createRegistries());
+            privateStreamingService, exchangeMetaData, OkxResilience.createRegistries());
   }
 
   private ObjectNode orderEvent(
@@ -151,9 +148,12 @@ public class OkxStreamingTradeServiceTest {
 
   @Test
   public void testGetUserTradesDeduplicatesRedeliveredEvents() {
-    JsonNode first = orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
-    JsonNode duplicate = orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
-    JsonNode second = orderEvent("124", "client-2", "1699999999998", "T-2", "99.5", "2", "1699999998000", "0.2");
+    JsonNode first =
+        orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
+    JsonNode duplicate =
+        orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
+    JsonNode second =
+        orderEvent("124", "client-2", "1699999999998", "T-2", "99.5", "2", "1699999998000", "0.2");
 
     when(privateStreamingService.subscribeChannel(ORDER_CHANNEL))
         .thenReturn(Observable.just(first, duplicate, second));
@@ -168,14 +168,15 @@ public class OkxStreamingTradeServiceTest {
 
   @Test
   public void testGetOrderChangesDeduplicatesRedeliveredEvents() {
-    JsonNode first = orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
-    JsonNode duplicate = orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
+    JsonNode first =
+        orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
+    JsonNode duplicate =
+        orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
 
     when(privateStreamingService.subscribeChannel(ORDER_CHANNEL))
         .thenReturn(Observable.just(first, duplicate));
 
-    TestObserver<org.knowm.xchange.dto.Order> observer =
-        tradeService.getOrderChanges(SPOT).test();
+    TestObserver<org.knowm.xchange.dto.Order> observer = tradeService.getOrderChanges(SPOT).test();
 
     observer.assertNoErrors().assertValueCount(1);
     assertThat(observer.values().get(0).getId()).isEqualTo("123");
@@ -202,8 +203,7 @@ public class OkxStreamingTradeServiceTest {
         new OkxStreamingTradeService(
             privateStreamingService,
             new ExchangeMetaData(
-                Collections.singletonMap(
-                    SPOT, InstrumentMetaData.builder().build()),
+                Collections.singletonMap(SPOT, InstrumentMetaData.builder().build()),
                 Collections.emptyMap(),
                 null,
                 null,
@@ -211,10 +211,14 @@ public class OkxStreamingTradeServiceTest {
             OkxResilience.createRegistries(),
             2);
 
-    JsonNode e1 = orderEvent("1", "c1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
-    JsonNode e2 = orderEvent("2", "c2", "1699999999998", "T-2", "99.5", "2", "1699999998000", "0.2");
-    JsonNode e3 = orderEvent("3", "c3", "1699999999997", "T-3", "99.0", "3", "1699999997000", "0.3");
-    JsonNode e4 = orderEvent("4", "c4", "1699999999996", "T-4", "98.5", "4", "1699999996000", "0.4");
+    JsonNode e1 =
+        orderEvent("1", "c1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
+    JsonNode e2 =
+        orderEvent("2", "c2", "1699999999998", "T-2", "99.5", "2", "1699999998000", "0.2");
+    JsonNode e3 =
+        orderEvent("3", "c3", "1699999999997", "T-3", "99.0", "3", "1699999997000", "0.3");
+    JsonNode e4 =
+        orderEvent("4", "c4", "1699999999996", "T-4", "98.5", "4", "1699999996000", "0.4");
 
     when(privateStreamingService.subscribeChannel(ORDER_CHANNEL))
         .thenReturn(Observable.just(e1, e2, e3, e4, e1));
@@ -229,7 +233,8 @@ public class OkxStreamingTradeServiceTest {
 
   @Test
   public void testUserTradeCarriesFillLevelCorrelationFields() {
-    JsonNode first = orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
+    JsonNode first =
+        orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
 
     when(privateStreamingService.subscribeChannel(ORDER_CHANNEL))
         .thenReturn(Observable.just(first));
@@ -273,7 +278,8 @@ public class OkxStreamingTradeServiceTest {
   public void testPlaceMarketOrderSurfacesPerOrderRejection() {
     when(privateStreamingService.isLoginDone()).thenReturn(true);
     when(privateStreamingService.subscribeChannel(anyString(), eq(PLACE_ORDER), any()))
-        .thenReturn(Observable.just(orderOpResponse("0", "client-1", "51000", "Insufficient balance")));
+        .thenReturn(
+            Observable.just(orderOpResponse("0", "client-1", "51000", "Insufficient balance")));
 
     MarketOrder marketOrder =
         new MarketOrder.Builder(OrderType.BID, SPOT)
@@ -292,7 +298,8 @@ public class OkxStreamingTradeServiceTest {
   @Test
   public void testCancelOrderSurfacesResponseLevelFailure() {
     when(privateStreamingService.isLoginDone()).thenReturn(true);
-    when(privateStreamingService.subscribeChannel(anyString(), eq(OkxPrivateStreamingService.CANCEL_ORDER), any()))
+    when(privateStreamingService.subscribeChannel(
+            anyString(), eq(OkxPrivateStreamingService.CANCEL_ORDER), any()))
         .thenReturn(Observable.just(orderOpResponse("1", null, null, "Operation failed")));
 
     OkxCancelOrderParams params = new OkxCancelOrderParams(SPOT, "o-123", "client-1");

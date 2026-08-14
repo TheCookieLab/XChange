@@ -54,7 +54,8 @@ public class OkxStreamingTradeService implements StreamingTradeService {
       OkxPrivateStreamingService privateStreamingService,
       ExchangeMetaData exchangeMetaData,
       ResilienceRegistries resilienceRegistries) {
-    this(privateStreamingService, exchangeMetaData, resilienceRegistries, DEFAULT_DEDUPE_CACHE_SIZE);
+    this(
+        privateStreamingService, exchangeMetaData, resilienceRegistries, DEFAULT_DEDUPE_CACHE_SIZE);
   }
 
   /**
@@ -193,7 +194,8 @@ public class OkxStreamingTradeService implements StreamingTradeService {
         params instanceof OkxCancelOrderParams
             ? ((OkxCancelOrderParams) params).getUserReference()
             : null;
-    return submitOrderRequest(CANCEL_ORDER, params, clientOrderId, OkxAuthenticated.cancelOrderPath);
+    return submitOrderRequest(
+        CANCEL_ORDER, params, clientOrderId, OkxAuthenticated.cancelOrderPath);
   }
 
   /**

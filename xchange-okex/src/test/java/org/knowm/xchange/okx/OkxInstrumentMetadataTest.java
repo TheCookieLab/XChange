@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -245,8 +244,7 @@ public class OkxInstrumentMetadataTest {
     assertThat(aggregated.get(0).getInstrumentType()).isEqualTo("SPOT");
     assertThat(aggregated.get(1).getInstrumentType()).isEqualTo("SPOT");
     // null/empty families are tolerated
-    assertThat(OkxExchange.aggregateInstrumentFamilies(Arrays.asList(null, List.of())))
-        .isEmpty();
+    assertThat(OkxExchange.aggregateInstrumentFamilies(Arrays.asList(null, List.of()))).isEmpty();
   }
 
   @Test
@@ -264,20 +262,14 @@ public class OkxInstrumentMetadataTest {
     assertThat(idMap)
         .containsEntry(new CurrencyPair("BTC", "USDT"), 3L)
         .containsEntry(new CurrencyPair("ETH", "USDT"), 12L)
-        .containsEntry(
-            new FuturesContract(new CurrencyPair("BTC", "USDT"), "SWAP"), 10459L)
-        .containsEntry(
-            new FuturesContract(new CurrencyPair("ETH", "USDT"), "SWAP"), 12345L)
-        .containsEntry(
-            new FuturesContract(new CurrencyPair("BTC", "USD"), "260814"), 388286L)
-        .containsEntry(
-            new FuturesContract(new CurrencyPair("ETH", "USDT"), "260829"), 388287L)
+        .containsEntry(new FuturesContract(new CurrencyPair("BTC", "USDT"), "SWAP"), 10459L)
+        .containsEntry(new FuturesContract(new CurrencyPair("ETH", "USDT"), "SWAP"), 12345L)
+        .containsEntry(new FuturesContract(new CurrencyPair("BTC", "USD"), "260814"), 388286L)
+        .containsEntry(new FuturesContract(new CurrencyPair("ETH", "USDT"), "260829"), 388287L)
         // options keys are built with the same TZ-sensitive parsing as the map population, so
         // derive the expected key the same way instead of constructing a Date here
-        .containsEntry(
-            OkxAdapters.adaptOkxInstrumentId("BTC-USD-260828-110000-C"), 273778L)
-        .containsEntry(
-            OkxAdapters.adaptOkxInstrumentId("ETH-USD-260828-2000-P"), 273779L);
+        .containsEntry(OkxAdapters.adaptOkxInstrumentId("BTC-USD-260828-110000-C"), 273778L)
+        .containsEntry(OkxAdapters.adaptOkxInstrumentId("ETH-USD-260828-2000-P"), 273779L);
   }
 
   @Test
@@ -339,7 +331,8 @@ public class OkxInstrumentMetadataTest {
     assertThat(spot.getMinimumAmount()).isEqualByComparingTo("0.00001");
     assertThat(spot.getContractValue()).isNull();
 
-    InstrumentMetaData swap = metadata.get(new FuturesContract(new CurrencyPair("BTC", "USDT"), "SWAP"));
+    InstrumentMetaData swap =
+        metadata.get(new FuturesContract(new CurrencyPair("BTC", "USDT"), "SWAP"));
     assertThat(swap).isNotNull();
     assertThat(swap.getContractValue()).isEqualByComparingTo("0.01");
     assertThat(swap.getMinimumAmount()).isEqualByComparingTo("0.0001");
@@ -396,7 +389,8 @@ public class OkxInstrumentMetadataTest {
     when(raw.getOkxInstruments("OPTION", "ETH-USD", null))
         .thenReturn(new OkxResponse<>(null, "0", "", loadInstruments("instrumentsOption.json5")));
 
-    Field marketDataService = org.knowm.xchange.BaseExchange.class.getDeclaredField("marketDataService");
+    Field marketDataService =
+        org.knowm.xchange.BaseExchange.class.getDeclaredField("marketDataService");
     marketDataService.setAccessible(true);
     marketDataService.set(exchange, raw);
 

@@ -15,6 +15,8 @@ public enum TransportRole {
   /** The authenticated websocket ({@code /ws/v5/private}) carrying trading and account streams. */
   PRIVATE,
 
-  /** The business websocket ({@code /ws/v5/business}) carrying business channels such as candles. */
+  /**
+   * The business websocket ({@code /ws/v5/business}) carrying business channels such as candles.
+   */
   BUSINESS
 }

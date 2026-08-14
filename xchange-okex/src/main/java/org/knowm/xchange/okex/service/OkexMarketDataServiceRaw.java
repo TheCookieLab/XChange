@@ -52,7 +52,8 @@ public class OkexMarketDataServiceRaw extends OkxBaseService {
       throws OkexException, IOException {
     try {
       return wrap(
-          delegate.getOkxInstruments(instrumentType, underlying, instrumentId), OkexInstrument::new);
+          delegate.getOkxInstruments(instrumentType, underlying, instrumentId),
+          OkexInstrument::new);
     } catch (OkxException e) {
       throw new OkexException(e);
     }
@@ -143,9 +144,7 @@ public class OkexMarketDataServiceRaw extends OkxBaseService {
 
   public List<OkexFundingRateHistory> getOkexFundingRateHistoryRaw(
       String instrument, Long startTime, Long endTime, Integer limit) throws IOException {
-    return delegate
-        .getOkxFundingRateHistoryRaw(instrument, startTime, endTime, limit)
-        .stream()
+    return delegate.getOkxFundingRateHistoryRaw(instrument, startTime, endTime, limit).stream()
         .map(OkexFundingRateHistory::new)
         .collect(Collectors.toList());
   }

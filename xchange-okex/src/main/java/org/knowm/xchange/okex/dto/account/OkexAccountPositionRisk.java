@@ -39,8 +39,8 @@ public class OkexAccountPositionRisk {
   }
 
   /**
-   * @deprecated use {@link
-   *     org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk.BalanceData} instead.
+   * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk.BalanceData}
+   *     instead.
    */
   @Deprecated
   public static class OkexBalanceData {
@@ -65,8 +65,8 @@ public class OkexAccountPositionRisk {
   }
 
   /**
-   * @deprecated use {@link
-   *     org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk.PositionData} instead.
+   * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk.PositionData}
+   *     instead.
    */
   @Deprecated
   public static class OkexPositionData {

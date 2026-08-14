@@ -19,38 +19,40 @@ public class OkxResilienceTest {
 
   @Test
   public void testCreateRegistriesRegistersEveryPublicPolicyEntry() {
-    Map<String, RateLimiter> limiters =
-        limitersByPath(OkxResilience.createRegistries());
+    Map<String, RateLimiter> limiters = limitersByPath(OkxResilience.createRegistries());
 
-    Okx.publicPathRateLimits.asMap().forEach(
-        (path, limit) -> {
-          RateLimiter limiter = limiters.get(path);
-          assertThat(limiter).as("public limiter for %s", path).isNotNull();
-          assertThat(limiter.getRateLimiterConfig().getLimitForPeriod())
-              .as("public limit for %s", path)
-              .isEqualTo(limit.limitForPeriod());
-          assertThat(limiter.getRateLimiterConfig().getLimitRefreshPeriod())
-              .as("public refresh for %s", path)
-              .isEqualTo(Duration.ofSeconds(limit.refreshPeriodSeconds()));
-        });
+    Okx.publicPathRateLimits
+        .asMap()
+        .forEach(
+            (path, limit) -> {
+              RateLimiter limiter = limiters.get(path);
+              assertThat(limiter).as("public limiter for %s", path).isNotNull();
+              assertThat(limiter.getRateLimiterConfig().getLimitForPeriod())
+                  .as("public limit for %s", path)
+                  .isEqualTo(limit.limitForPeriod());
+              assertThat(limiter.getRateLimiterConfig().getLimitRefreshPeriod())
+                  .as("public refresh for %s", path)
+                  .isEqualTo(Duration.ofSeconds(limit.refreshPeriodSeconds()));
+            });
   }
 
   @Test
   public void testCreateRegistriesRegistersEveryPrivatePolicyEntry() {
-    Map<String, RateLimiter> limiters =
-        limitersByPath(OkxResilience.createRegistries());
+    Map<String, RateLimiter> limiters = limitersByPath(OkxResilience.createRegistries());
 
-    OkxAuthenticated.privatePathRateLimits.asMap().forEach(
-        (path, limit) -> {
-          RateLimiter limiter = limiters.get(path);
-          assertThat(limiter).as("private limiter for %s", path).isNotNull();
-          assertThat(limiter.getRateLimiterConfig().getLimitForPeriod())
-              .as("private limit for %s", path)
-              .isEqualTo(limit.limitForPeriod());
-          assertThat(limiter.getRateLimiterConfig().getLimitRefreshPeriod())
-              .as("private refresh for %s", path)
-              .isEqualTo(Duration.ofSeconds(limit.refreshPeriodSeconds()));
-        });
+    OkxAuthenticated.privatePathRateLimits
+        .asMap()
+        .forEach(
+            (path, limit) -> {
+              RateLimiter limiter = limiters.get(path);
+              assertThat(limiter).as("private limiter for %s", path).isNotNull();
+              assertThat(limiter.getRateLimiterConfig().getLimitForPeriod())
+                  .as("private limit for %s", path)
+                  .isEqualTo(limit.limitForPeriod());
+              assertThat(limiter.getRateLimiterConfig().getLimitRefreshPeriod())
+                  .as("private refresh for %s", path)
+                  .isEqualTo(Duration.ofSeconds(limit.refreshPeriodSeconds()));
+            });
   }
 
   @Test

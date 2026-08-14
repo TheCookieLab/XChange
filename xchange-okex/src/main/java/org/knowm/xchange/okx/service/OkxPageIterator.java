@@ -22,8 +22,8 @@ import org.knowm.xchange.okx.dto.trade.OkxPageParams;
  * </ul>
  *
  * <p>The caller supplies the per-item ID extractor matching the endpoint's pagination key (for
- * example {@code OkxOrderDetails::getOrderId} or {@code OkxFill::getBillId}); the cursor is advanced
- * with {@link OkxPageParams#advanceAfter(String)}.
+ * example {@code OkxOrderDetails::getOrderId} or {@code OkxFill::getBillId}); the cursor is
+ * advanced with {@link OkxPageParams#advanceAfter(String)}.
  */
 public final class OkxPageIterator {
 
@@ -33,8 +33,8 @@ public final class OkxPageIterator {
   private OkxPageIterator() {}
 
   /**
-   * Page-fetch function that may throw a checked {@link IOException}, as the OKX HTTP call it
-   * wraps does.
+   * Page-fetch function that may throw a checked {@link IOException}, as the OKX HTTP call it wraps
+   * does.
    *
    * @param <T> the item type of a page
    */
@@ -52,9 +52,7 @@ public final class OkxPageIterator {
    * @throws IOException if the page fetcher throws
    */
   public static <T> List<T> fetchAll(
-      ThrowingPageFetcher<T> pageFetcher,
-      Function<T, String> idExtractor,
-      OkxPageParams initial)
+      ThrowingPageFetcher<T> pageFetcher, Function<T, String> idExtractor, OkxPageParams initial)
       throws IOException {
     return fetchAll(pageFetcher, idExtractor, initial, DEFAULT_MAX_PAGES);
   }

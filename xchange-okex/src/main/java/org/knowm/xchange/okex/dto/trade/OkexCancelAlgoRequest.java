@@ -24,9 +24,6 @@ public class OkexCancelAlgoRequest {
   private String instrumentId;
 
   public OkxCancelAlgoRequest to() {
-    return OkxCancelAlgoRequest.builder()
-        .algoId(algoId)
-        .instrumentId(instrumentId)
-        .build();
+    return OkxCancelAlgoRequest.builder().algoId(algoId).instrumentId(instrumentId).build();
   }
 }
