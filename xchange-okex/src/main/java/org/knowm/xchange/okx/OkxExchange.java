@@ -134,7 +134,15 @@ public class OkxExchange extends BaseExchange {
   private static List<OkxInstrument> fetchInstruments(
       OkxMarketDataServiceRaw marketDataServiceRaw, OkxInstType instType, String underlying)
       throws IOException {
-    return marketDataServiceRaw.getOkxInstruments(instType.name(), underlying, null).getData();
+    OkxResponse<List<OkxInstrument>> response =
+        marketDataServiceRaw.getOkxInstruments(instType.name(), underlying, null);
+    if (response == null || !response.isSuccess()) {
+      throw response == null
+          ? new OkxException("Empty response from OKX instruments endpoint", 0)
+          : OkxException.fromResponse(response);
+    }
+    List<OkxInstrument> data = response.getData();
+    return data == null ? Collections.emptyList() : data;
   }
 
   /**
