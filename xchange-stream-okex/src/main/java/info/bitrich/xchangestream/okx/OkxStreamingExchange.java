@@ -48,11 +48,12 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
   private OkxBusinessStreamingService businessStreamingService;
 
   /**
-   * Transport availability snapshot captured when each facade was last built, so {@link
-   * #connect()} can rebuild a facade when the transport set changes while a reconnect with
-   * unchanged transports keeps the active subscriptions.
+   * Transport availability snapshot captured when each facade was last built, so {@link #connect()}
+   * can rebuild a facade when the transport set changes while a reconnect with unchanged transports
+   * keeps the active subscriptions.
    */
   private volatile boolean marketDataFacadeHasBusinessTransport;
+
   private volatile boolean tradeServiceFacadeHasPrivateTransport;
 
   /**
@@ -102,7 +103,8 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
       marketDataFacadeHasBusinessTransport = businessAvailable;
     }
     boolean privateAvailable = privateStreamingService != null;
-    if (streamingTradeService == null || tradeServiceFacadeHasPrivateTransport != privateAvailable) {
+    if (streamingTradeService == null
+        || tradeServiceFacadeHasPrivateTransport != privateAvailable) {
       streamingTradeService =
           new OkxStreamingTradeService(
               privateStreamingService, exchangeMetaData, getResilienceRegistries());
