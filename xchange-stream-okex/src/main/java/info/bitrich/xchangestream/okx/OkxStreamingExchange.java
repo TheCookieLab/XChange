@@ -199,10 +199,13 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
   }
 
   private boolean isApiKeyValid() {
+    Object passphrase = exchangeSpecification.getExchangeSpecificParametersItem("passphrase");
     return exchangeSpecification.getApiKey() != null
         && !exchangeSpecification.getApiKey().isEmpty()
         && exchangeSpecification.getSecretKey() != null
-        && !exchangeSpecification.getSecretKey().isEmpty();
+        && !exchangeSpecification.getSecretKey().isEmpty()
+        && passphrase != null
+        && !passphrase.toString().isEmpty();
   }
 
   private String getPublicApiUrl() {
