@@ -1,10 +1,6 @@
 package org.knowm.xchange.okx.service;
 
-import static org.knowm.xchange.okx.OkxExchange.PARAM_PASSPHRASE;
-import static org.knowm.xchange.okx.OkxExchange.PARAM_SIMULATED;
-
 import java.io.IOException;
-import java.util.Date;
 import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.okx.OkxAuthenticated;
@@ -17,7 +13,6 @@ import org.knowm.xchange.okx.dto.trade.OkxCancelOrderRequest;
 import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
 import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
-import org.knowm.xchange.utils.DateUtils;
 
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkxTradeServiceRaw extends OkxBaseService {
@@ -36,20 +31,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
       String limit)
       throws IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.getPendingOrders(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading(),
                       instrumentType,
                       underlying,
                       instrumentId,
@@ -68,23 +58,18 @@ public class OkxTradeServiceRaw extends OkxBaseService {
       String instrumentType, String instrumentId, String positionId)
       throws OkxException, IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.getPositions(
                       instrumentType,
                       instrumentId,
                       positionId,
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading()))
           .withRateLimiter(rateLimiter(OkxAuthenticated.positionsPath))
           .call();
     } catch (OkxException e) {
@@ -95,20 +80,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxOrderDetails>> getOkxOrder(String instrumentId, String orderId)
       throws IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.getOrderDetails(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading(),
                       instrumentId,
                       orderId,
                       null))
@@ -128,6 +108,7 @@ public class OkxTradeServiceRaw extends OkxBaseService {
       String limit)
       throws IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.getOrderHistory(
@@ -138,17 +119,11 @@ public class OkxTradeServiceRaw extends OkxBaseService {
                       after,
                       before,
                       limit,
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading()))
           .withRateLimiter((rateLimiter(OkxAuthenticated.orderDetailsPath)))
           .call();
     } catch (OkxException e) {
@@ -160,20 +135,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxOrderResponse>> placeOkxOrder(OkxOrderRequest order)
       throws IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.placeOrder(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading(),
                       order))
           .withRateLimiter(rateLimiter(OkxAuthenticated.placeOrderPath))
           .call();
@@ -186,20 +156,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxOrderResponse>> placeOkxOrder(List<OkxOrderRequest> orders)
       throws IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.placeBatchOrder(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading(),
                       orders))
           .withRateLimiter(rateLimiter(OkxAuthenticated.placeBatchOrderPath))
           .call();
@@ -212,20 +177,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxOrderResponse>> cancelOkxOrder(OkxCancelOrderRequest order)
       throws IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.cancelOrder(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading(),
                       order))
           .withRateLimiter(rateLimiter(OkxAuthenticated.cancelOrderPath))
           .call();
@@ -238,20 +198,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxOrderResponse>> cancelOkxOrder(List<OkxCancelOrderRequest> orders)
       throws IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.cancelBatchOrder(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading(),
                       orders))
           .withRateLimiter(rateLimiter(OkxAuthenticated.cancelBatchOrderPath))
           .call();
@@ -264,20 +219,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxOrderResponse>> amendOkxOrder(OkxAmendOrderRequest order)
       throws IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.amendOrder(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading(),
                       order))
           .withRateLimiter(rateLimiter(OkxAuthenticated.amendOrderPath))
           .call();
@@ -290,20 +240,15 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxOrderResponse>> amendOkxOrder(List<OkxAmendOrderRequest> orders)
       throws IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.amendBatchOrder(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading(),
                       orders))
           .withRateLimiter(rateLimiter(OkxAuthenticated.amendBatchOrderPath))
           .call();

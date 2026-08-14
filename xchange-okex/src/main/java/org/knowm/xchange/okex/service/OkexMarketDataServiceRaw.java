@@ -93,6 +93,15 @@ public class OkexMarketDataServiceRaw extends OkxBaseService {
     }
   }
 
+  public OkexResponse<List<String>> getOkexUnderlyings(OkexInstType instType)
+      throws OkexException, IOException {
+    try {
+      return wrap(delegate.getOkxUnderlyings(instType.to()), s -> s);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
   public OkexResponse<List<OkexTrade>> getOkexTrades(String instrument, int limit)
       throws OkexException, IOException {
     try {

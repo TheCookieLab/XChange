@@ -9,10 +9,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
@@ -26,7 +23,11 @@ import org.knowm.xchange.okx.dto.account.OkxDepositAddress;
 import org.knowm.xchange.okx.dto.account.OkxPosition;
 import org.knowm.xchange.okx.dto.account.OkxSetLeverageRequest;
 import org.knowm.xchange.okx.dto.account.OkxSetLeverageResponse;
+import org.knowm.xchange.okx.dto.account.OkxSetPositionModeRequest;
+import org.knowm.xchange.okx.dto.account.OkxSetPositionModeResponse;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
+import org.knowm.xchange.okx.dto.account.OkxTransferRequest;
+import org.knowm.xchange.okx.dto.account.OkxTransferResponse;
 import org.knowm.xchange.okx.dto.account.OkxWalletBalance;
 import org.knowm.xchange.okx.dto.account.OkxWithdrawalRequest;
 import org.knowm.xchange.okx.dto.account.OkxWithdrawalResponse;
@@ -67,35 +68,41 @@ public interface OkxAuthenticated extends Okx {
   String subAccountList = "/users/subaccount/list"; // Stated as 2 req/2 sec
   String subAccountBalance = "/account/subaccount/balances"; // Stated as 2 req/2 sec
   String piggyBalance = "/asset/piggy-balance"; // Stated as 6 req/1 sec
+  String assetTransferPath = "/asset/transfer"; // Stated as 6 req/sec
+  String positionsHistoryPath = "/account/positions-history"; // Stated as 10 req/2 sec
+  String billsArchivePath = "/account/bills-archive"; // Stated as 6 req/sec
+  String setPositionModePath = "/account/set-position-mode"; // Stated as 5 req/2 sec
 
   // To avoid 429s, actual req/second may need to be lowered!
-  Map<String, List<Integer>> privatePathRateLimits =
-      new HashMap<String, List<Integer>>() {
-        {
-          put(balancePath, Arrays.asList(5, 1));
-          put(currenciesPath, Arrays.asList(6, 1));
-          put(assetBalancesPath, Arrays.asList(6, 1));
-          put(positionsPath, Arrays.asList(5, 1));
-          put(setLeveragePath, Arrays.asList(20, 2));
-          put(pendingOrdersPath, Arrays.asList(20, 2));
-          put(orderDetailsPath, Arrays.asList(60, 2));
-          put(placeOrderPath, Arrays.asList(60, 2));
-          put(placeBatchOrderPath, Arrays.asList(300, 2));
-          put(cancelOrderPath, Arrays.asList(60, 2));
-          put(cancelBatchOrderPath, Arrays.asList(300, 2));
-          put(amendOrderPath, Arrays.asList(60, 2));
-          put(amendBatchOrderPath, Arrays.asList(300, 2));
-          put(depositAddressPath, Arrays.asList(6, 1));
-          put(ordersHistoryPath, Arrays.asList(40, 2));
-          put(tradeFeePath, Arrays.asList(5, 2));
-          put(configPath, Arrays.asList(5, 2));
-          put(getBillsPath, Arrays.asList(6, 1));
-          put(changeMarginPath, Arrays.asList(20, 2));
-          put(subAccountList, Arrays.asList(2, 2));
-          put(subAccountBalance, Arrays.asList(2, 2));
-          put(piggyBalance, Arrays.asList(6, 1));
-        }
-      };
+  OkxRateLimitPolicy privatePathRateLimits =
+      OkxRateLimitPolicy.builder()
+          .limit(balancePath, 5, 1)
+          .limit(currenciesPath, 6, 1)
+          .limit(assetBalancesPath, 6, 1)
+          .limit(positionsPath, 5, 1)
+          .limit(setLeveragePath, 20, 2)
+          .limit(pendingOrdersPath, 20, 2)
+          .limit(orderDetailsPath, 60, 2)
+          .limit(placeOrderPath, 60, 2)
+          .limit(placeBatchOrderPath, 300, 2)
+          .limit(cancelOrderPath, 60, 2)
+          .limit(cancelBatchOrderPath, 300, 2)
+          .limit(amendOrderPath, 60, 2)
+          .limit(amendBatchOrderPath, 300, 2)
+          .limit(depositAddressPath, 6, 1)
+          .limit(ordersHistoryPath, 40, 2)
+          .limit(tradeFeePath, 5, 2)
+          .limit(configPath, 5, 2)
+          .limit(getBillsPath, 6, 1)
+          .limit(changeMarginPath, 20, 2)
+          .limit(subAccountList, 2, 2)
+          .limit(subAccountBalance, 2, 2)
+          .limit(piggyBalance, 6, 1)
+          .limit(assetTransferPath, 6, 1)
+          .limit(positionsHistoryPath, 10, 2)
+          .limit(billsArchivePath, 6, 1)
+          .limit(setPositionModePath, 5, 2)
+          .build();
 
   @GET
   @Path(tradeFeePath)
@@ -124,6 +131,27 @@ public interface OkxAuthenticated extends Okx {
   @GET
   @Path(getBillsPath)
   OkxResponse<List<OkxBillDetails>> getBills(
+      @QueryParam("instType") String instrumentType,
+      @QueryParam("ccy") String currency,
+      @QueryParam("mgnMode") String marginMode,
+      @QueryParam("ctType") String contractType,
+      @QueryParam("type") String billType,
+      @QueryParam("subType") String billSubType,
+      @QueryParam("after") String afterBillId,
+      @QueryParam("before") String beforeBillId,
+      @QueryParam("begin") String beginTimestamp,
+      @QueryParam("end") String endTimestamp,
+      @QueryParam("limit") String maxNumberOfResults,
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
+      throws OkxException, IOException;
+
+  @GET
+  @Path(billsArchivePath)
+  OkxResponse<List<OkxBillDetails>> getBillsArchive(
       @QueryParam("instType") String instrumentType,
       @QueryParam("ccy") String currency,
       @QueryParam("mgnMode") String marginMode,
@@ -225,12 +253,41 @@ public interface OkxAuthenticated extends Okx {
       OkxWithdrawalRequest requestPayload)
       throws OkxException, IOException;
 
+  @POST
+  @Path(assetTransferPath)
+  @Consumes(MediaType.APPLICATION_JSON)
+  OkxResponse<List<OkxTransferResponse>> assetTransfer(
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
+      OkxTransferRequest requestPayload)
+      throws OkxException, IOException;
+
   @GET
   @Path(positionsPath)
   OkxResponse<List<OkxPosition>> getPositions(
       @QueryParam("instType") String instrumentType,
       @QueryParam("instId") String instrumentId,
       @QueryParam("posId") String positionId,
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
+      throws IOException, OkxException;
+
+  @GET
+  @Path(positionsHistoryPath)
+  OkxResponse<List<OkxPosition>> getPositionsHistory(
+      @QueryParam("instType") String instrumentType,
+      @QueryParam("instId") String instrumentId,
+      @QueryParam("mgnMode") String marginMode,
+      @QueryParam("type") String type,
+      @QueryParam("after") String after,
+      @QueryParam("before") String before,
+      @QueryParam("limit") String limit,
       @HeaderParam("OK-ACCESS-KEY") String apiKey,
       @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
       @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
@@ -258,6 +315,18 @@ public interface OkxAuthenticated extends Okx {
       @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
       OkxSetLeverageRequest requestPayload)
+      throws IOException, OkxException;
+
+  @POST
+  @Path(setPositionModePath)
+  @Consumes(MediaType.APPLICATION_JSON)
+  OkxResponse<List<OkxSetPositionModeResponse>> setPositionMode(
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
+      OkxSetPositionModeRequest requestPayload)
       throws IOException, OkxException;
 
   @GET

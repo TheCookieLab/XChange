@@ -1,10 +1,7 @@
 package org.knowm.xchange.okx.service;
 
-import static org.knowm.xchange.okx.OkxExchange.PARAM_PASSPHRASE;
-import static org.knowm.xchange.okx.OkxExchange.PARAM_SIMULATED;
-
 import java.io.IOException;
-import java.util.Date;
+import java.util.Collections;
 import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.okx.Okx;
@@ -16,12 +13,11 @@ import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.marketdata.OkxCandleStick;
 import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 import org.knowm.xchange.okx.dto.marketdata.OkxFundingRate;
+import org.knowm.xchange.okx.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 import org.knowm.xchange.okx.dto.marketdata.OkxOrderbook;
 import org.knowm.xchange.okx.dto.marketdata.OkxTicker;
 import org.knowm.xchange.okx.dto.marketdata.OkxTrade;
-import org.knowm.xchange.okx.dto.marketdata.OkxFundingRateHistory;
-import org.knowm.xchange.utils.DateUtils;
 
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkxMarketDataServiceRaw extends OkxBaseService {
@@ -38,13 +34,7 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
       return decorateApiCall(
               () ->
                   okx.getInstruments(
-                      instrumentType,
-                      underlying,
-                      instrumentId,
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
+                      instrumentType, underlying, instrumentId, simulatedTrading()))
           .withRateLimiter(rateLimiter(Okx.instrumentsPath))
           .call();
     } catch (OkxException e) {
@@ -52,17 +42,41 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
     }
   }
 
+  /**
+   * Fetches the underlyings that support trading for the given instrument type from <a
+   * href="https://www.okx.com/docs-v5/en/#rest-api-public-data-get-underlying">GET
+   * /api/v5/public/underlying</a>.
+   *
+   * <p>OKX returns the underlying list as a single nested array; this method flattens it so callers
+   * receive the documented flat list shape. The returned values are required when querying OPTION
+   * instruments, see {@link #getOkxInstruments(String, String, String)}.
+   *
+   * @param instType instrument type; OKX supports FUTURES, SWAP and OPTION
+   * @return the list of underlyings, e.g. {@code BTC-USD}; empty when OKX reports none
+   */
+  public OkxResponse<List<String>> getOkxUnderlyings(OkxInstType instType)
+      throws OkxException, IOException {
+    OkxResponse<List<List<String>>> response;
+    try {
+      response =
+          decorateApiCall(() -> okx.getUnderlyings(instType.name()))
+              .withRateLimiter(rateLimiter(Okx.underlyingPath))
+              .call();
+    } catch (OkxException e) {
+      throw handleError(e);
+    }
+    List<String> underlyings =
+        response.getData() == null || response.getData().isEmpty()
+            ? Collections.emptyList()
+            : response.getData().get(0);
+    return new OkxResponse<>(response.getId(), response.getCode(), response.getMsg(), underlyings);
+  }
+
   public OkxResponse<List<OkxTicker>> getOkxTicker(String instrumentId)
       throws OkxException, IOException {
     try {
       return decorateApiCall(
-              () ->
-                  okx.getTicker(
-                      instrumentId,
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
+              () -> okx.getTicker(instrumentId, simulatedTrading()))
           .withRateLimiter(rateLimiter(Okx.tickerPath))
           .call();
     } catch (OkxException e) {
@@ -74,13 +88,7 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
       throws OkxException, IOException {
     try {
       return decorateApiCall(
-              () ->
-                  okx.getTickers(
-                      instType.toString(),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
+              () -> okx.getTickers(instType.toString(), simulatedTrading()))
           .withRateLimiter(rateLimiter(Okx.tickersPath))
           .call();
     } catch (OkxException e) {
@@ -92,13 +100,7 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
       throws OkxException, IOException {
     try {
       return decorateApiCall(
-              () ->
-                  okx.getFundingRate(
-                      instrumentId,
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
+              () -> okx.getFundingRate(instrumentId, simulatedTrading()))
           .withRateLimiter(rateLimiter(Okx.instrumentsPath))
           .call();
     } catch (OkxException e) {
@@ -108,20 +110,15 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
 
   public OkxResponse<List<OkxCurrency>> getOkxCurrencies() throws OkxException, IOException {
     try {
+      OkxAuthParams auth = authParams();
       return decorateApiCall(
               () ->
                   okxAuthenticated.getCurrencies(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
+                      auth.apiKey(),
+                      auth.signature(),
+                      auth.timestamp(),
+                      auth.passphrase(),
+                      auth.simulatedTrading()))
           .withRateLimiter(rateLimiter(OkxAuthenticated.currenciesPath))
           .call();
     } catch (OkxException e) {
@@ -132,20 +129,12 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxTrade>> getOkxTrades(String instrument, int limit)
       throws OkxException, IOException {
 
-    return okx.getTrades(
-        instrument,
-        limit,
-        (String)
-            exchange.getExchangeSpecification().getExchangeSpecificParametersItem(PARAM_SIMULATED));
+    return okx.getTrades(instrument, limit, simulatedTrading());
   }
 
   public OkxResponse<List<OkxOrderbook>> getOkxOrderbook(String instrument)
       throws OkxException, IOException {
-    return okx.getOrderbook(
-        instrument,
-        20,
-        (String)
-            exchange.getExchangeSpecification().getExchangeSpecificParametersItem(PARAM_SIMULATED));
+    return okx.getOrderbook(instrument, 20, simulatedTrading());
   }
 
   public OkxResponse<List<OkxCandleStick>> getHistoryCandle(
@@ -154,15 +143,7 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
     return decorateApiCall(
             () ->
                 okx.getHistoryCandles(
-                    instrument,
-                    after,
-                    before,
-                    bar,
-                    limit,
-                    (String)
-                        exchange
-                            .getExchangeSpecification()
-                            .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
+                    instrument, after, before, bar, limit, simulatedTrading()))
         .withRateLimiter(rateLimiter(Okx.candlesHistoryPath))
         .call();
   }
@@ -170,29 +151,14 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
   public OkxResponse<List<OkxCandleStick>> getCandle(
       String instrument, String after, String before, String bar, String limit)
       throws OkxException, IOException {
-    return okx.getCandles(
-        instrument,
-        after,
-        before,
-        bar,
-        limit,
-        (String)
-            exchange.getExchangeSpecification().getExchangeSpecificParametersItem(PARAM_SIMULATED));
+    return okx.getCandles(instrument, after, before, bar, limit, simulatedTrading());
   }
 
   public List<OkxFundingRateHistory> getOkxFundingRateHistoryRaw(
       String instrument, Long startTime, Long endTime, Integer limit) throws IOException {
     return decorateApiCall(
             () ->
-                okx.getFundingRateHistory(
-                        instrument,
-                        endTime,
-                        startTime,
-                        limit,
-                        (String)
-                            exchange
-                                .getExchangeSpecification()
-                                .getExchangeSpecificParametersItem(PARAM_SIMULATED))
+                okx.getFundingRateHistory(instrument, endTime, startTime, limit, simulatedTrading())
                     .getData())
         .withRateLimiter(rateLimiter(Okx.fundingRateHistoryPath))
         .call();

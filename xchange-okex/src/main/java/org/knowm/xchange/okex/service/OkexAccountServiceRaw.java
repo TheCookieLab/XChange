@@ -15,8 +15,11 @@ import org.knowm.xchange.okex.dto.account.OkexAssetBalance;
 import org.knowm.xchange.okex.dto.account.OkexBillDetails;
 import org.knowm.xchange.okex.dto.account.OkexChangeMarginResponse;
 import org.knowm.xchange.okex.dto.account.OkexDepositAddress;
+import org.knowm.xchange.okex.dto.account.OkexPosition;
 import org.knowm.xchange.okex.dto.account.OkexSetLeverageResponse;
+import org.knowm.xchange.okex.dto.account.OkexSetPositionModeResponse;
 import org.knowm.xchange.okex.dto.account.OkexTradeFee;
+import org.knowm.xchange.okex.dto.account.OkexTransferResponse;
 import org.knowm.xchange.okex.dto.account.OkexWalletBalance;
 import org.knowm.xchange.okex.dto.account.OkexWithdrawalResponse;
 import org.knowm.xchange.okex.dto.account.PiggyBalance;
@@ -97,6 +100,25 @@ public class OkexAccountServiceRaw extends OkxBaseService {
     }
   }
 
+  public OkexResponse<List<OkexTransferResponse>> assetTransfer(
+      String currency,
+      String amount,
+      String fromAccount,
+      String toAccount,
+      String type,
+      String instrumentId,
+      String toInstrumentId)
+      throws OkexException, IOException {
+    try {
+      return wrap(
+          delegate.assetTransfer(
+              currency, amount, fromAccount, toAccount, type, instrumentId, toInstrumentId),
+          OkexTransferResponse::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
   public OkexResponse<List<OkexSetLeverageResponse>> setLeverage(
       String instrumentId, String currency, String leverage, String marginMode, String positionSide)
       throws OkexException, IOException {
@@ -104,6 +126,16 @@ public class OkexAccountServiceRaw extends OkxBaseService {
       return wrap(
           delegate.setLeverage(instrumentId, currency, leverage, marginMode, positionSide),
           OkexSetLeverageResponse::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
+  public OkexResponse<List<OkexSetPositionModeResponse>> setPositionMode(
+      String positionMode, String accountLevel) throws OkexException, IOException {
+    try {
+      return wrap(
+          delegate.setPositionMode(positionMode, accountLevel), OkexSetPositionModeResponse::new);
     } catch (OkxException e) {
       throw new OkexException(e);
     }
@@ -172,6 +204,39 @@ public class OkexAccountServiceRaw extends OkxBaseService {
     }
   }
 
+  public OkexResponse<List<OkexBillDetails>> getBillsArchive(
+      String instrumentType,
+      String currency,
+      String marginMode,
+      String contractType,
+      String billType,
+      String billSubType,
+      String afterBillId,
+      String beforeBillId,
+      String beginTimestamp,
+      String endTimestamp,
+      String maxNumberOfResults)
+      throws OkexException, IOException {
+    try {
+      return wrap(
+          delegate.getBillsArchive(
+              instrumentType,
+              currency,
+              marginMode,
+              contractType,
+              billType,
+              billSubType,
+              afterBillId,
+              beforeBillId,
+              beginTimestamp,
+              endTimestamp,
+              maxNumberOfResults),
+          OkexBillDetails::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
   public OkexResponse<List<OkexChangeMarginResponse>> changeMargin(
       String instrumentId,
       String positionSide,
@@ -185,6 +250,24 @@ public class OkexAccountServiceRaw extends OkxBaseService {
       return wrap(
           delegate.changeMargin(instrumentId, positionSide, type, amount, currency, auto, loadTrans),
           OkexChangeMarginResponse::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
+  public OkexResponse<List<OkexPosition>> getPositionsHistory(
+      String instrumentType,
+      String instrumentId,
+      String marginMode,
+      String type,
+      String after,
+      String before,
+      String limit)
+      throws OkexException, IOException {
+    try {
+      return wrap(
+          delegate.getPositionsHistory(instrumentType, instrumentId, marginMode, type, after, before, limit),
+          OkexPosition::new);
     } catch (OkxException e) {
       throw new OkexException(e);
     }

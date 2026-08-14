@@ -3,6 +3,8 @@ package org.knowm.xchange.okx;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -420,6 +422,81 @@ public class OkxAdapters {
     }
   }
 
+  /**
+   * Adapts an OKX instrument DTO to the XChange {@link Instrument} using only native OKX fields.
+   *
+   * <p>SPOT and MARGIN instruments map to a {@link CurrencyPair} from {@code baseCcy}/{@code
+   * quoteCcy}; SWAP instruments map to a perpetual {@link FuturesContract}; FUTURES instruments map
+   * to a {@link FuturesContract} whose prompt is derived from the native {@code expTime}; OPTION
+   * instruments map to an {@link OptionsContract} built from the native {@code expTime}, {@code
+   * stk} and {@code optType}. Derivatives carry their base/quote pair in the native {@code uly}
+   * field ({@code baseCcy}/{@code quoteCcy} are empty for them), so the pair is always derived from
+   * {@code uly} for derivatives.
+   *
+   * <p>The result equals {@link #adaptOkxInstrumentId(String)} for SPOT, MARGIN, SWAP and FUTURES
+   * instruments. For OPTION the two builders agree on pair, strike and type; the expiry date of the
+   * string-parsed variant depends on the JVM default time zone while this builder uses the exact
+   * {@code expTime} timestamp, so callers that need a consistent key across both paths must derive
+   * it from a single builder.
+   *
+   * @param instrument the OKX instrument DTO
+   * @return the adapted instrument, or {@code null} when the instrument type cannot be represented
+   */
+  public static Instrument adaptOkxInstrument(OkxInstrument instrument) {
+    String instType = instrument.getInstrumentType();
+    if (OkxInstType.SPOT.name().equals(instType) || OkxInstType.MARGIN.name().equals(instType)) {
+      return new CurrencyPair(instrument.getBaseCurrency(), instrument.getQuoteCurrency());
+    }
+    CurrencyPair pair = underlyingToCurrencyPair(instrument.getUnderlying());
+    if (pair == null) {
+      return null;
+    }
+    if (OkxInstType.SWAP.name().equals(instType)) {
+      return new FuturesContract(pair, "SWAP");
+    }
+    if (OkxInstType.FUTURES.name().equals(instType)) {
+      return new FuturesContract(pair, formatExpiry(instrument.getExpiryTime()));
+    }
+    if (OkxInstType.OPTION.name().equals(instType)) {
+      if (instrument.getExpiryTime() == null
+          || instrument.getStrikePrice() == null
+          || instrument.getOptionType() == null) {
+        return null;
+      }
+      return new OptionsContract(
+          pair,
+          new Date(Long.parseLong(instrument.getExpiryTime())),
+          new BigDecimal(instrument.getStrikePrice()),
+          OptionsContract.OptionType.fromString(instrument.getOptionType()));
+    }
+    return null;
+  }
+
+  /** Formats an OKX expiry timestamp as the {@code yyMMdd} prompt used by XChange futures. */
+  private static String formatExpiry(String expiryTime) {
+    return Instant.ofEpochMilli(Long.parseLong(expiryTime))
+        .atZone(ZoneOffset.UTC)
+        .format(DateTimeFormatter.ofPattern("yyMMdd"));
+  }
+
+  /** Maps an OKX underlying (e.g. {@code BTC-USDT}) to the corresponding currency pair. */
+  private static CurrencyPair underlyingToCurrencyPair(String underlying) {
+    if (underlying == null) {
+      return null;
+    }
+    String[] tokens = underlying.split("-");
+    if (tokens.length != 2) {
+      return null;
+    }
+    return new CurrencyPair(tokens[0], tokens[1]);
+  }
+
+  /** True for instruments whose size is expressed in contracts (SWAP and FUTURES). */
+  private static boolean isContractDerivative(OkxInstrument instrument) {
+    String instType = instrument.getInstrumentType();
+    return OkxInstType.SWAP.name().equals(instType) || OkxInstType.FUTURES.name().equals(instType);
+  }
+
   public static Trades adaptTrades(
       List<OkxTrade> okxTrades, Instrument instrument, ExchangeMetaData exchangeMetaData) {
     List<Trade> trades = new ArrayList<>();
@@ -485,14 +562,14 @@ public class OkxAdapters {
           pair,
           InstrumentMetaData.builder()
               .minimumAmount(
-                  (instrument.getInstrumentType().equals(OkxInstType.SWAP.name()))
+                  (isContractDerivative(instrument))
                       ? convertContractSizeToVolume(
                           new BigDecimal(instrument.getMinSize()),
                           pair,
                           new BigDecimal(instrument.getContractValue()))
                       : new BigDecimal(instrument.getMinSize()))
               .volumeScale(
-                  (instrument.getInstrumentType().equals(OkxInstType.SWAP.name()))
+                  (isContractDerivative(instrument))
                       ? convertContractSizeToVolume(
                               new BigDecimal(instrument.getMinSize()),
                               pair,
@@ -501,7 +578,7 @@ public class OkxAdapters {
                       : Math.max(numberOfDecimals(new BigDecimal(instrument.getMinSize())), 0))
               .amountStepSize(
                   BigDecimal.ONE.movePointLeft(
-                      (instrument.getInstrumentType().equals(OkxInstType.SWAP.name()))
+                      (isContractDerivative(instrument))
                           ? convertContractSizeToVolume(
                                   new BigDecimal(instrument.getLotSize()),
                                   pair,
@@ -509,7 +586,7 @@ public class OkxAdapters {
                               .scale()
                           : Math.max(numberOfDecimals(new BigDecimal(instrument.getLotSize())), 0)))
               .contractValue(
-                  (instrument.getInstrumentType().equals(OkxInstType.SWAP.name()))
+                  (isContractDerivative(instrument))
                       ? new BigDecimal(instrument.getContractValue())
                       : null)
               .priceScale(numberOfDecimals(new BigDecimal(instrument.getTickSize())))

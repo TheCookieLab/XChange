@@ -10,6 +10,9 @@ import info.bitrich.xchangestream.okx.dto.OkxLoginMessage;
 import info.bitrich.xchangestream.okx.dto.OkxSubscribeMessage;
 import info.bitrich.xchangestream.okx.dto.OkxSubscriptionTopic;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
+import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableSource;
 import io.reactivex.rxjava3.core.Observable;
@@ -21,6 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
@@ -66,9 +70,22 @@ public class OkxPrivateStreamingService extends JsonNettyStreamingService {
     super(
         privateApiUrl,
         65536,
-        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
-        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
-        (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
+        (Duration)
+            Optional.ofNullable(
+                    (Duration)
+                        exchangeSpecification.getExchangeSpecificParametersItem(
+                            WS_CONNECTION_TIMEOUT))
+                .orElse(DEFAULT_CONNECTION_TIMEOUT),
+        (Duration)
+            Optional.ofNullable(
+                    (Duration)
+                        exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION))
+                .orElse(DEFAULT_RETRY_DURATION),
+        (Integer)
+            Optional.ofNullable(
+                    (Integer)
+                        exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT))
+                .orElse(DEFAULT_IDLE_TIMEOUT));
     this.exchangeSpecification = exchangeSpecification;
     this.okxExchange = okxExchange;
   }
@@ -277,5 +294,48 @@ public class OkxPrivateStreamingService extends JsonNettyStreamingService {
     if (loginDone) {
       super.resubscribeChannels();
     }
+  }
+
+  @Override
+  protected WebSocketClientHandler getWebSocketClientHandler(
+      WebSocketClientHandshaker handshake, WebSocketClientHandler.WebSocketMessageHandler handler) {
+    // Tag every message with the generation of the connection it arrived on; the message-handling
+    // boundary drops messages from superseded connections (e.g. after a reconnect).
+    long connectionGeneration = getGeneration();
+    return new NettyWebSocketClientHandler(
+        handshake, message -> handleMessageWithGeneration(connectionGeneration, message));
+  }
+
+  /**
+   * Message-handling boundary that drops messages arriving from a stale connection generation.
+   *
+   * <p>Every {@link #connect()} establishes a new connection generation (see {@link
+   * #getGeneration()}). The websocket client handler captures the generation it was created with
+   * and routes every message through this method, so a late response delivered by a superseded
+   * socket after a reconnect is rejected instead of being processed.
+   *
+   * @param messageGeneration the generation of the connection the message arrived on
+   * @param message the raw websocket message
+   * @return {@code true} if the message belonged to the current generation and was forwarded to
+   *     {@link #messageHandler(String)}; {@code false} if it was dropped as stale
+   */
+  protected boolean handleMessageWithGeneration(long messageGeneration, String message) {
+    if (messageGeneration != getGeneration()) {
+      LOG.debug(
+          "Dropping stale message from connection generation {} (current generation {})",
+          messageGeneration,
+          getGeneration());
+      return false;
+    }
+    messageHandler(message);
+    return true;
+  }
+
+  /**
+   * @return whether any private channel subscription is currently active (for example order or
+   *     position streams)
+   */
+  public boolean hasActiveChannels() {
+    return !channels.isEmpty();
   }
 }

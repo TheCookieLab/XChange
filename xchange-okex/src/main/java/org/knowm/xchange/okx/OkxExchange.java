@@ -1,14 +1,17 @@
 package org.knowm.xchange.okx;
 
 import static org.knowm.xchange.okx.OkxAdapters.adaptOkxInstrumentId;
-import static org.knowm.xchange.okx.dto.OkxInstType.SPOT;
-import static org.knowm.xchange.okx.dto.OkxInstType.SWAP;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.okx.dto.OkxInstType;
 import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 import org.knowm.xchange.okx.service.OkxAccountService;
@@ -84,31 +87,22 @@ public class OkxExchange extends BaseExchange {
 
   @Override
   public void remoteInit() throws IOException {
+    OkxMarketDataServiceRaw marketDataServiceRaw = (OkxMarketDataServiceRaw) marketDataService;
     List<OkxInstrument> instruments =
-        ((OkxMarketDataServiceRaw) marketDataService)
-            .getOkxInstruments(SPOT.name(), null, null)
-            .getData();
+        aggregateInstrumentFamilies(
+            List.of(
+                fetchInstruments(marketDataServiceRaw, OkxInstType.SPOT, null),
+                fetchInstruments(marketDataServiceRaw, OkxInstType.SWAP, null),
+                fetchInstruments(marketDataServiceRaw, OkxInstType.MARGIN, null),
+                fetchInstruments(marketDataServiceRaw, OkxInstType.FUTURES, null),
+                fetchOptionInstruments(marketDataServiceRaw)));
 
-    List<OkxInstrument> swap_instruments =
-        ((OkxMarketDataServiceRaw) marketDataService)
-            .getOkxInstruments(SWAP.name(), null, null)
-            .getData();
-
-    instruments.addAll(swap_instruments);
-
-    instruments.forEach(
-        instrument -> {
-          if (instrument.getInstIdCode() != null)
-            OkxAdapters.instrumentToInstrumentIdMap.put(
-                adaptOkxInstrumentId(instrument.getInstrumentId()),
-                Long.parseLong(instrument.getInstIdCode()));
-        });
     // Currency data is only retrievable through a private endpoint
     List<OkxCurrency> currencies = null;
     if (exchangeSpecification.getApiKey() != null
         && exchangeSpecification.getSecretKey() != null
         && exchangeSpecification.getExchangeSpecificParametersItem("passphrase") != null) {
-      currencies = ((OkxMarketDataServiceRaw) marketDataService).getOkxCurrencies().getData();
+      currencies = marketDataServiceRaw.getOkxCurrencies().getData();
       accountLevel =
           ((OkxAccountService) accountService)
               .getOkxAccountConfiguration()
@@ -118,6 +112,70 @@ public class OkxExchange extends BaseExchange {
     }
 
     exchangeMetaData = OkxAdapters.adaptToExchangeMetaData(instruments, currencies);
+  }
+
+  /**
+   * Fetches all instruments of one family, optionally restricted to a single underlying. All
+   * families are served by the public instruments endpoint and require no credentials.
+   */
+  private static List<OkxInstrument> fetchInstruments(
+      OkxMarketDataServiceRaw marketDataServiceRaw, OkxInstType instType, String underlying)
+      throws IOException {
+    return marketDataServiceRaw.getOkxInstruments(instType.name(), underlying, null).getData();
+  }
+
+  /**
+   * Fetches all option instruments. OKX requires an underlying (or instrument family) when
+   * querying OPTION, so every family reported by the public underlying endpoint is fetched in
+   * turn. Uses only public market data and requires no credentials.
+   */
+  private static List<OkxInstrument> fetchOptionInstruments(
+      OkxMarketDataServiceRaw marketDataServiceRaw) throws IOException {
+    List<String> underlyings =
+        marketDataServiceRaw.getOkxUnderlyings(OkxInstType.OPTION).getData();
+    if (underlyings == null || underlyings.isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<OkxInstrument> optionInstruments = new ArrayList<>();
+    for (String underlying : underlyings) {
+      optionInstruments.addAll(
+          fetchInstruments(marketDataServiceRaw, OkxInstType.OPTION, underlying));
+    }
+    return optionInstruments;
+  }
+
+  /**
+   * Aggregates per-family instrument lists into a single de-duplicated list and populates the
+   * instrument-id-code map used for order placement.
+   *
+   * <p>Instrument ids are unique across families except that MARGIN reuses the SPOT id of the same
+   * pair; the first occurrence of each id wins, so SPOT entries take precedence and the id map is
+   * collision-free. Package-private seam so the aggregation can be exercised offline with fixture
+   * data; {@link #remoteInit()} feeds it the fetched family lists.
+   *
+   * @param instrumentFamilies one list per family, in the order they should take precedence
+   * @return the de-duplicated instrument list in first-occurrence order
+   */
+  static List<OkxInstrument> aggregateInstrumentFamilies(
+      List<List<OkxInstrument>> instrumentFamilies) {
+    Map<String, OkxInstrument> byInstrumentId = new LinkedHashMap<>();
+    for (List<OkxInstrument> family : instrumentFamilies) {
+      if (family == null) {
+        continue;
+      }
+      for (OkxInstrument instrument : family) {
+        byInstrumentId.putIfAbsent(instrument.getInstrumentId(), instrument);
+      }
+    }
+    List<OkxInstrument> instruments = new ArrayList<>(byInstrumentId.values());
+    instruments.forEach(
+        instrument -> {
+          if (instrument.getInstIdCode() != null)
+            OkxAdapters.instrumentToInstrumentIdMap.put(
+                adaptOkxInstrumentId(instrument.getInstrumentId()),
+                Long.parseLong(instrument.getInstIdCode()));
+        });
+    return instruments;
   }
 
   protected boolean useSandbox() {

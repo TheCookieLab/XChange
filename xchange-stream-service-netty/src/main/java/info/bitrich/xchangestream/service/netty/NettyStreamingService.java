@@ -52,6 +52,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import org.slf4j.Logger;
@@ -86,6 +87,8 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
   private final int maxFramePayloadLength;
   protected URI uri;
   private final AtomicBoolean isManualDisconnect = new AtomicBoolean();
+  /** Monotonic counter of connection attempts; incremented on every {@link #openConnection()}. */
+  private final AtomicLong generation = new AtomicLong();
   private Channel webSocketChannel;
   private final Duration retryDuration;
   private final Duration connectionTimeout;
@@ -147,6 +150,9 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
     return Completable.create(
             completable -> {
               try {
+                // Every connection attempt (initial and reconnects) establishes a new generation,
+                // so consumers can reject messages delivered by a superseded socket.
+                generation.incrementAndGet();
                 LOG.info("Connecting to {}", uri.toString());
 
                 String scheme = uri.getScheme() == null ? "ws" : uri.getScheme();
@@ -553,7 +559,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
 
   protected class NettyWebSocketClientHandler extends WebSocketClientHandler {
 
-    protected NettyWebSocketClientHandler(
+    public NettyWebSocketClientHandler(
         WebSocketClientHandshaker handshaker, WebSocketMessageHandler handler) {
       super(handshaker, handler);
     }
@@ -585,6 +591,16 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
 
   public boolean isSocketOpen() {
     return webSocketChannel != null && webSocketChannel.isOpen();
+  }
+
+  /**
+   * @return the generation of the most recent connection attempt. The counter is incremented on
+   *     every {@link #openConnection()} (initial connect and reconnects); {@code 0} means no
+   *     connection attempt has been made yet. Messages arriving on a connection whose generation is
+   *     no longer current must be treated as stale.
+   */
+  public long getGeneration() {
+    return generation.get();
   }
 
   public void useCompressedMessages(boolean compressedMessages) {

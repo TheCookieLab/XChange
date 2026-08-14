@@ -22,6 +22,7 @@ import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.FundsExceededException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okx.OkxAdapters;
+import org.knowm.xchange.okx.OkxAuthenticated;
 import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
@@ -45,6 +46,31 @@ import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 public class OkxTradeService extends OkxTradeServiceRaw implements TradeService {
   public OkxTradeService(OkxExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
+  }
+
+  /**
+   * Builds a structured business error from a failed order-placement response, carrying the
+   * provider code, the API domain and endpoint, and the failed order's client order id (falling
+   * back to the exchange order id) as the safe request identity.
+   *
+   * @param response the non-success order response
+   * @param endpoint the endpoint path that produced the failure, e.g. {@link
+   *     OkxAuthenticated#placeOrderPath}
+   */
+  private OkxException orderException(
+      OkxResponse<List<OkxOrderResponse>> response, String endpoint) {
+    OkxOrderResponse failed = response.getData().get(0);
+    String requestId =
+        failed.getClientOrderId() != null ? failed.getClientOrderId() : failed.getOrderId();
+    return OkxException.builder()
+        .message(redact(failed.getMessage()))
+        .code(OkxException.parseCode(failed.getCode()))
+        .domain("trade")
+        .endpoint(endpoint)
+        .requestId(requestId)
+        .transportState(OkxException.TransportState.BUSINESS_ERROR)
+        .retryClassification(OkxException.classify(failed.getMessage(), failed.getCode()))
+        .build();
   }
 
   @Override
@@ -154,10 +180,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
                 marketOrder, exchange.getExchangeMetaData(), exchange.accountLevel));
 
     if (okxResponse.isSuccess()) return okxResponse.getData().get(0).getOrderId();
-    else
-      throw new OkxException(
-          okxResponse.getData().get(0).getMessage(),
-          Integer.parseInt(okxResponse.getData().get(0).getCode()));
+    else throw orderException(okxResponse, OkxAuthenticated.placeOrderPath);
   }
 
   @Override
@@ -168,10 +191,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
                 limitOrder, exchange.getExchangeMetaData(), exchange.accountLevel));
 
     if (okxResponse.isSuccess()) return okxResponse.getData().get(0).getOrderId();
-    else
-      throw new OkxException(
-          okxResponse.getData().get(0).getMessage(),
-          Integer.parseInt(okxResponse.getData().get(0).getCode()));
+    else throw orderException(okxResponse, OkxAuthenticated.placeOrderPath);
   }
 
   public List<String> placeLimitOrder(List<LimitOrder> limitOrders)
@@ -194,10 +214,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
     OkxResponse<List<OkxOrderResponse>> okxResponse =
         amendOkxOrder(OkxAdapters.adaptAmendOrder(limitOrder, exchange.getExchangeMetaData()));
     if (okxResponse.isSuccess()) return okxResponse.getData().get(0).getOrderId();
-    else
-      throw new OkxException(
-          okxResponse.getData().get(0).getMessage(),
-          Integer.parseInt(okxResponse.getData().get(0).getCode()));
+    else throw orderException(okxResponse, OkxAuthenticated.amendOrderPath);
   }
 
   public List<String> changeOrder(List<LimitOrder> limitOrders)
@@ -238,10 +255,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
               .build();
       OkxResponse<List<OkxOrderResponse>> okxResponse = cancelOkxOrder(req);
       if (okxResponse.isSuccess()) return true;
-      else
-        throw new OkxException(
-            okxResponse.getData().get(0).getMessage(),
-            Integer.parseInt(okxResponse.getData().get(0).getCode()));
+      else throw orderException(okxResponse, OkxAuthenticated.cancelOrderPath);
     } else {
       throw new IOException(
           "CancelOrderParams must implement (CancelOrderByIdParams or CancelOrderByUserReferenceParams) and CancelOrderByInstrument interface.");

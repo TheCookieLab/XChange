@@ -69,7 +69,7 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
               null,
               null);
       if (!okxResponse.isSuccess()) {
-        throw new OkxException(okxResponse.getMsg(), Integer.parseInt(okxResponse.getCode()));
+        throw OkxException.fromResponse(okxResponse, apiKey, secretKey, passphrase);
       }
 
       return okxResponse.getData().get(0).getWithdrawalId();
