@@ -28,7 +28,17 @@ import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.account.OkexAccountConfig;
 import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
+import org.knowm.xchange.okex.dto.account.OkexAssetBalance;
+import org.knowm.xchange.okex.dto.account.OkexBillDetails;
+import org.knowm.xchange.okex.dto.account.OkexDepositAddress;
+import org.knowm.xchange.okex.dto.account.OkexPosition;
+import org.knowm.xchange.okex.dto.account.OkexSetLeverageResponse;
+import org.knowm.xchange.okex.dto.account.OkexTradeFee;
+import org.knowm.xchange.okex.dto.account.OkexWalletBalance;
+import org.knowm.xchange.okex.dto.account.OkexWithdrawalResponse;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
+import org.knowm.xchange.okex.dto.marketdata.OkexCandles;
+import org.knowm.xchange.okex.dto.marketdata.OkexCurrency;
 import org.knowm.xchange.okex.dto.marketdata.OkexInstrument;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
 import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
@@ -51,6 +61,8 @@ import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxInstType;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk;
+import org.knowm.xchange.okx.dto.account.OkxTradeFee;
+import org.knowm.xchange.okx.dto.account.OkxWalletBalance;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 import org.knowm.xchange.okx.service.OkxAccountServiceRaw;
 import org.knowm.xchange.okx.service.OkxCandleStickPeriodType;
@@ -565,12 +577,8 @@ public class OkexCompatibilityTest {
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private static Map<Instrument, Long> instrumentIdMap() throws Exception {
-    java.lang.reflect.Field field =
-        OkxAdapters.class.getDeclaredField("instrumentToInstrumentIdMap");
-    field.setAccessible(true);
-    return (Map<Instrument, Long>) field.get(null);
+  private static Map<Instrument, Long> instrumentIdMap() {
+    return OkxAdapters.instrumentToInstrumentIdMapForTesting();
   }
 
   private static ExchangeMetaData adaptExchangeMetaData(ObjectMapper mapper) throws Exception {
@@ -581,6 +589,82 @@ public class OkexCompatibilityTest {
     List<OkexInstrument> legacy =
         instruments.stream().map(OkexInstrument::new).collect(java.util.stream.Collectors.toList());
     return OkexAdapters.adaptToExchangeMetaData(legacy, null);
+  }
+
+  @Test
+  public void legacyCandlesDeserializeWithPreRenameWireKeys() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    OkexCandles candles =
+        mapper.readValue(
+            "{\"ts\":\"1700000000000\",\"o\":\"1.1\",\"h\":\"1.2\",\"l\":\"1.0\","
+                + "\"c\":\"1.15\",\"vol\":\"123.4\",\"confirm\":\"1\"}",
+            OkexCandles.class);
+
+    assertThat(candles).isNotNull();
+    assertThat(readField(candles, "ts")).isEqualTo("1700000000000");
+    assertThat(readField(candles, "openPrice")).isEqualTo("1.1");
+    assertThat(readField(candles, "highestPrice")).isEqualTo("1.2");
+    assertThat(readField(candles, "lowestPrice")).isEqualTo("1.0");
+    assertThat(readField(candles, "closePrice")).isEqualTo("1.15");
+    assertThat(readField(candles, "volume")).isEqualTo("123.4");
+    assertThat(readField(candles, "confirm")).isEqualTo("1");
+  }
+
+  @Test
+  public void legacyNestedTypeNamesArePreserved() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    OkxTradeFee.FiatList canonicalFiat =
+        mapper.readValue(
+            "{\"ccy\":\"ccy\",\"taker\":\"taker\",\"maker\":\"maker\"}",
+            OkxTradeFee.FiatList.class);
+    OkexTradeFee.FiatList fiatList = new OkexTradeFee.FiatList(canonicalFiat);
+    assertThat(fiatList.getCcy()).isEqualTo("ccy");
+    assertThat(fiatList.getTaker()).isEqualTo("taker");
+    assertThat(fiatList.getMaker()).isEqualTo("maker");
+
+    OkxWalletBalance.Detail canonicalDetail =
+        mapper.readValue(
+            "{\"ccy\":\"BTC\",\"eq\":\"1.5\",\"cashBal\":\"0.5\"}", OkxWalletBalance.Detail.class);
+    OkexWalletBalance.Detail detail = new OkexWalletBalance.Detail(canonicalDetail);
+    assertThat(detail.getCurrency()).isEqualTo("BTC");
+    assertThat(detail.getEquity()).isEqualTo("1.5");
+    assertThat(detail.getCashBalance()).isEqualTo("0.5");
+  }
+
+  @Test
+  public void legacyWrapperDtosRetainPublicNoArgConstructors() throws Exception {
+    for (Class<?> legacyType :
+        new Class<?>[] {
+          OkexAccountConfig.class,
+          OkexAssetBalance.class,
+          OkexBillDetails.class,
+          OkexCurrency.class,
+          OkexDepositAddress.class,
+          OkexInstrument.class,
+          OkexPosition.class,
+          OkexSetLeverageResponse.class,
+          OkexTradeFee.class,
+          OkexWalletBalance.class,
+          OkexWithdrawalResponse.class
+        }) {
+      Object instance = legacyType.getDeclaredConstructor().newInstance();
+      assertThat(instance)
+          .as("%s must keep a public no-argument constructor", legacyType.getName())
+          .isNotNull();
+    }
+
+    // Delegate-backed wrappers must produce a fully wired canonical DTO, not a null delegate.
+    assertThat(new OkexInstrument().to()).isNotNull();
+    assertThat(new OkexPosition().to()).isNotNull();
+    assertThat(new OkexCurrency().to()).isNotNull();
+    assertThat(new OkexTradeFee().to()).isNotNull();
+    assertThat(new OkexWalletBalance().to()).isNotNull();
+  }
+
+  private static Object readField(Object target, String name) throws Exception {
+    java.lang.reflect.Field field = target.getClass().getDeclaredField(name);
+    field.setAccessible(true);
+    return field.get(target);
   }
 
   private static Class<?> substituteOkxType(Class<?> type) {
