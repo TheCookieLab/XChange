@@ -572,23 +572,30 @@ public class OkxTradeServiceRaw extends OkxBaseService {
   OkxResponse<List<OkxOrderResponse>> placeOkxOrderWithReconciliation(List<OkxOrderRequest> orders)
       throws IOException {
     List<OkxOrderRequest> toPlace = new ArrayList<>();
-    List<OkxOrderResponse> responses = new ArrayList<>();
-    for (OkxOrderRequest order : orders) {
+    List<Integer> toPlaceIndexes = new ArrayList<>();
+    List<OkxOrderResponse> responses = new ArrayList<>(Collections.nCopies(orders.size(), null));
+    for (int index = 0; index < orders.size(); index++) {
+      OkxOrderRequest order = orders.get(index);
       String clOrdId = order.getClientOrderId();
       if (clOrdId != null && !clOrdId.isEmpty() && order.getInstrumentId() != null) {
         List<OkxOrderDetails> existing =
             getOkxOrderByClientOrderId(order.getInstrumentId(), clOrdId).getData();
         if (existing != null && !existing.isEmpty()) {
           OkxOrderDetails found = existing.get(0);
-          responses.add(OkxOrderResponse.replay(found.getOrderId(), found.getClientOrderId()));
+          responses.set(
+              index, OkxOrderResponse.replay(found.getOrderId(), found.getClientOrderId()));
           continue;
         }
       }
       toPlace.add(order);
+      toPlaceIndexes.add(index);
     }
 
     if (!toPlace.isEmpty()) {
-      responses.addAll(doPlaceBatchOkxOrder(toPlace).getData());
+      List<OkxOrderResponse> placed = doPlaceBatchOkxOrder(toPlace).getData();
+      for (int index = 0; index < toPlaceIndexes.size(); index++) {
+        responses.set(toPlaceIndexes.get(index), placed.get(index));
+      }
     }
     return new OkxResponse<>(null, "0", null, responses);
   }
