@@ -215,6 +215,24 @@ public class OkxStreamingExchangeLifecycleTest {
   }
 
   @Test
+  public void connectReopensTransportsWithActiveChannelsDespitePublicOnlyOverride() {
+    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    injectAllServices();
+    exchange.setRequiredTransports(TransportRole.PUBLIC);
+    when(streamingService.connect()).thenReturn(Completable.complete());
+    when(privateStreamingService.connect()).thenReturn(Completable.complete());
+    when(businessStreamingService.connect()).thenReturn(Completable.complete());
+    when(businessStreamingService.hasActiveChannels()).thenReturn(true);
+    when(privateStreamingService.hasActiveChannels()).thenReturn(true);
+
+    exchange.connect().blockingAwait();
+
+    verify(streamingService).connect();
+    verify(privateStreamingService).connect();
+    verify(businessStreamingService).connect();
+  }
+
+  @Test
   public void marketDataFacadeIsRebuiltWhenBusinessTransportIsEnabledLater() throws Exception {
     exchange.applySpecification(exchange.getDefaultExchangeSpecification());
     exchange.setStreamingService(streamingService);

@@ -360,6 +360,23 @@ public class OkxInstrumentMetadataTest {
   }
 
   @Test
+  public void testAdaptToExchangeMetaDataRetainsInversePerpetualSwaps() throws IOException {
+    List<OkxInstrument> instruments = loadInstruments("instrumentsSwapUsd.json5");
+
+    Map<Instrument, InstrumentMetaData> metadata =
+        OkxAdapters.adaptToExchangeMetaData(instruments, null).getInstruments();
+
+    InstrumentMetaData btcUsdSwap =
+        metadata.get(new FuturesContract(new CurrencyPair("BTC", "USD"), "SWAP"));
+    assertThat(btcUsdSwap).isNotNull();
+    // Inverse swap minimums stay notional (sz x ctVal) at metadata time; price-aware call sites
+    // divide by the price, so the contract value must be present for them to dereference.
+    assertThat(btcUsdSwap.getContractValue()).isEqualByComparingTo("100");
+    assertThat(btcUsdSwap.getMinimumAmount()).isEqualByComparingTo("100");
+    assertThat(btcUsdSwap.getAmountStepSize()).isEqualByComparingTo("100");
+  }
+
+  @Test
   public void testRemoteInitUsesOnlyPublicEndpointsWithoutCredentials() throws Exception {
     OkxExchange exchange = new OkxExchange();
     ExchangeSpecification specification = new ExchangeSpecification(OkxExchange.class);

@@ -3,6 +3,7 @@ package org.knowm.xchange.okex;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
@@ -269,6 +270,22 @@ public class OkexCompatibilityTest {
             .isEqualTo(OkexResponse.class);
       }
     }
+  }
+
+  @Test
+  public void legacyOkexResponseDeserializesWithJackson() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkexResponse<List<String>> response =
+        mapper.readValue(
+            "{\"id\":\"1\",\"code\":\"0\",\"msg\":\"\",\"data\":[\"a\",\"b\"]}",
+            new TypeReference<OkexResponse<List<String>>>() {});
+
+    assertThat(response.getId()).isEqualTo("1");
+    assertThat(response.getCode()).isEqualTo("0");
+    assertThat(response.getMsg()).isEmpty();
+    assertThat(response.getData()).containsExactly("a", "b");
+    assertThat(response.isSuccess()).isTrue();
   }
 
   private static Class<?> substituteOkxType(Class<?> type) {
