@@ -42,6 +42,12 @@ public class OkxAlgoOrderRequest {
   @JsonProperty("px")
   private String price;
 
+  @JsonProperty("triggerPx")
+  private String triggerPrice;
+
+  @JsonProperty("orderPx")
+  private String orderPrice;
+
   @JsonProperty("reduceOnly")
   private boolean reducePosition;
 
