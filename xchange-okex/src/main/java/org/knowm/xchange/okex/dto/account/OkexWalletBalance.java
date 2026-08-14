@@ -14,6 +14,11 @@ public class OkexWalletBalance {
     this.delegate = delegate;
   }
 
+  /** Returns the wrapped canonical DTO. */
+  public OkxWalletBalance to() {
+    return delegate;
+  }
+
   public String getAsOfTime() {
     return delegate.getAsOfTime();
   }

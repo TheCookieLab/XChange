@@ -18,6 +18,11 @@ public class OkexAccountPositionRisk {
     this.delegate = delegate;
   }
 
+  /** Returns the wrapped canonical DTO. */
+  public OkxAccountPositionRisk to() {
+    return delegate;
+  }
+
   public BigDecimal getAdjustEquity() {
     return delegate.getAdjustEquity();
   }

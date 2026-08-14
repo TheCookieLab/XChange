@@ -14,6 +14,11 @@ public class OkexCandleStick {
     this.delegate = delegate;
   }
 
+  /** Returns the wrapped canonical DTO. */
+  public OkxCandleStick to() {
+    return delegate;
+  }
+
   public Long getTimestamp() {
     return delegate.getTimestamp();
   }

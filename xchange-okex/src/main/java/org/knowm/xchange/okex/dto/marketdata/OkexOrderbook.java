@@ -16,6 +16,11 @@ public class OkexOrderbook {
     this.delegate = delegate;
   }
 
+  /** Returns the wrapped canonical DTO. */
+  public OkxOrderbook to() {
+    return delegate;
+  }
+
   public List<OkexPublicOrder> getAsks() {
     return delegate.getAsks().stream().map(OkexPublicOrder::new).collect(Collectors.toList());
   }

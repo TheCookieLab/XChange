@@ -16,6 +16,11 @@ public class OkexFundingRate {
     this.delegate = delegate;
   }
 
+  /** Returns the wrapped canonical DTO. */
+  public OkxFundingRate to() {
+    return delegate;
+  }
+
   public String getInstType() {
     return delegate.getInstType();
   }

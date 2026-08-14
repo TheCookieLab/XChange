@@ -16,6 +16,11 @@ public class OkexTrade {
     this.delegate = delegate;
   }
 
+  /** Returns the wrapped canonical DTO. */
+  public OkxTrade to() {
+    return delegate;
+  }
+
   public String getTradeId() {
     return delegate.getTradeId();
   }

@@ -15,6 +15,11 @@ public class OkexPosition {
     this.delegate = delegate;
   }
 
+  /** Returns the wrapped canonical DTO. */
+  public OkxPosition to() {
+    return delegate;
+  }
+
   public String getInstrumentType() {
     return delegate.getInstrumentType();
   }

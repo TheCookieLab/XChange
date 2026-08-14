@@ -15,6 +15,11 @@ public class OkexPublicOrder {
     this.delegate = delegate;
   }
 
+  /** Returns the wrapped canonical DTO. */
+  public OkxPublicOrder to() {
+    return delegate;
+  }
+
   public BigDecimal getPrice() {
     return delegate.getPrice();
   }

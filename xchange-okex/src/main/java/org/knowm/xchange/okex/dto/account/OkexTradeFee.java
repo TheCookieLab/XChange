@@ -16,6 +16,11 @@ public class OkexTradeFee {
     this.delegate = delegate;
   }
 
+  /** Returns the wrapped canonical DTO. */
+  public OkxTradeFee to() {
+    return delegate;
+  }
+
   public String getDelivery() {
     return delegate.getDelivery();
   }
