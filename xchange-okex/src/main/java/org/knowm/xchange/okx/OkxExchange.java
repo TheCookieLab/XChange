@@ -15,6 +15,7 @@ import org.knowm.xchange.okx.dto.OkxInstType;
 import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 import org.knowm.xchange.okx.service.OkxAccountService;
+import org.knowm.xchange.okx.service.OkxAccountServiceRaw;
 import org.knowm.xchange.okx.service.OkxMarketDataService;
 import org.knowm.xchange.okx.service.OkxMarketDataServiceRaw;
 import org.knowm.xchange.okx.service.OkxTradeService;
@@ -86,7 +87,22 @@ public class OkxExchange extends BaseExchange {
 
   @Override
   public void remoteInit() throws IOException {
-    OkxMarketDataServiceRaw marketDataServiceRaw = (OkxMarketDataServiceRaw) marketDataService;
+    remoteInit(
+        (OkxMarketDataServiceRaw) marketDataService, (OkxAccountServiceRaw) accountService);
+  }
+
+  /**
+   * Populates exchange metadata from the OKX REST API.
+   *
+   * <p>Protected seam so the deprecated {@code OkexExchange} shim can re-initialize through the
+   * canonical raw endpoints of its delegation services instead of reimplementing the fetch logic.
+   *
+   * @param marketDataServiceRaw the market-data raw endpoint service
+   * @param accountServiceRaw the account raw endpoint service
+   */
+  protected void remoteInit(
+      OkxMarketDataServiceRaw marketDataServiceRaw, OkxAccountServiceRaw accountServiceRaw)
+      throws IOException {
     List<OkxInstrument> instruments =
         aggregateInstrumentFamilies(
             List.of(
@@ -103,7 +119,7 @@ public class OkxExchange extends BaseExchange {
         && exchangeSpecification.getExchangeSpecificParametersItem("passphrase") != null) {
       currencies = marketDataServiceRaw.getOkxCurrencies().getData();
       accountLevel =
-          ((OkxAccountService) accountService)
+          accountServiceRaw
               .getOkxAccountConfiguration()
               .getData()
               .get(0)

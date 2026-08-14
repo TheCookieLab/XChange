@@ -37,6 +37,14 @@ public class OkexMarketDataServiceRaw extends OkxBaseService {
     this.delegate = new OkxMarketDataServiceRaw(exchange, resilienceRegistries);
   }
 
+  /**
+   * Returns the canonical raw service this shim delegates to, so the exchange's {@code remoteInit}
+   * can reuse the canonical metadata-fetching logic.
+   */
+  public OkxMarketDataServiceRaw getDelegate() {
+    return delegate;
+  }
+
   private static <S, T> OkexResponse<List<T>> wrap(
       OkxResponse<List<S>> response, Function<S, T> mapper) {
     return new OkexResponse<>(

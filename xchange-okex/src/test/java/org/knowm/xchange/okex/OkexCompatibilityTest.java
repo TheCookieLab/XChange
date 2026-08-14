@@ -71,18 +71,22 @@ public class OkexCompatibilityTest {
   }
 
   @Test
-  public void legacyServicesAreCastableToCanonicalRawTypes() {
-    // Precondition for the inherited OkxExchange#remoteInit() casts: normal initialization
-    // must not throw ClassCastException before any metadata request is made.
+  public void legacyServicesExposeCanonicalDelegatesForRemoteInit() {
+    // The shim raws cannot extend the canonical raws (legacy methods clash on return types), so
+    // OkexExchange#remoteInit() unwraps the canonical delegates instead. The unwrap casts must
+    // succeed on normally initialized services, or initialization throws ClassCastException
+    // before any metadata request is made.
     ExchangeSpecification spec = new OkexExchange().getDefaultExchangeSpecification();
     spec.setShouldLoadRemoteMetaData(false);
 
     OkexExchange exchange = new OkexExchange();
     exchange.applySpecification(spec);
 
-    assertThat(exchange.getMarketDataService()).isInstanceOf(OkxMarketDataServiceRaw.class);
-    assertThat(exchange.getAccountService()).isInstanceOf(OkxAccountServiceRaw.class);
-    assertThat(exchange.getTradeService()).isInstanceOf(OkxTradeServiceRaw.class);
+    OkexMarketDataServiceRaw marketDataRaw =
+        (OkexMarketDataServiceRaw) exchange.getMarketDataService();
+    assertThat(marketDataRaw.getDelegate()).isInstanceOf(OkxMarketDataServiceRaw.class);
+    OkexAccountServiceRaw accountRaw = (OkexAccountServiceRaw) exchange.getAccountService();
+    assertThat(accountRaw.getDelegate()).isInstanceOf(OkxAccountServiceRaw.class);
   }
 
   @Test

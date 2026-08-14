@@ -45,6 +45,14 @@ public class OkexAccountServiceRaw extends OkxBaseService {
     this.delegate = new OkxAccountServiceRaw(exchange, resilienceRegistries);
   }
 
+  /**
+   * Returns the canonical raw service this shim delegates to, so the exchange's {@code remoteInit}
+   * can reuse the canonical metadata-fetching logic.
+   */
+  public OkxAccountServiceRaw getDelegate() {
+    return delegate;
+  }
+
   private static <S, T> OkexResponse<List<T>> wrap(
       OkxResponse<List<S>> response, Function<S, T> mapper) {
     return new OkexResponse<>(
