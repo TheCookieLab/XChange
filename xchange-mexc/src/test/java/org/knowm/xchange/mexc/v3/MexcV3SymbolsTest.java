@@ -24,6 +24,16 @@ public class MexcV3SymbolsTest {
   }
 
   @Test
+  public void toCurrencyPairResolvesCurrentMexcQuoteAssets() {
+    assertThat(MexcV3Symbols.toCurrencyPair("BTCUSD1"))
+        .isEqualTo(new CurrencyPair("BTC", "USD1"));
+    assertThat(MexcV3Symbols.toCurrencyPair("ETHUSDF"))
+        .isEqualTo(new CurrencyPair("ETH", "USDF"));
+    assertThat(MexcV3Symbols.toCurrencyPair("XRPBRL"))
+        .isEqualTo(new CurrencyPair("XRP", "BRL"));
+  }
+
+  @Test
   public void toCurrencyPairPrefersLongestQuoteMatch() {
     // Both "BTC" and "USDT" are known quotes; "BTCUSDT" must parse as BTC/USDT.
     assertThat(MexcV3Symbols.toCurrencyPair("BTCUSDT").getBase())
