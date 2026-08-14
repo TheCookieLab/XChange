@@ -11,6 +11,14 @@ public class OkexCurrency {
 
   private final OkxCurrency delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexCurrency() {
+    this(new OkxCurrency());
+  }
+
   @JsonCreator
   public OkexCurrency(OkxCurrency delegate) {
     this.delegate = delegate;

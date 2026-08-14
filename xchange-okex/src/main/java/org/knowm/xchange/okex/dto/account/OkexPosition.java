@@ -12,6 +12,14 @@ public class OkexPosition {
 
   private final OkxPosition delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexPosition() {
+    this(new OkxPosition());
+  }
+
   @JsonCreator
   public OkexPosition(OkxPosition delegate) {
     this.delegate = delegate;

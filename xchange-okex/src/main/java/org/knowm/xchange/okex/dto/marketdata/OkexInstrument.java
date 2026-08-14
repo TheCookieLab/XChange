@@ -11,6 +11,14 @@ public class OkexInstrument {
 
   private final OkxInstrument delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexInstrument() {
+    this(new OkxInstrument());
+  }
+
   @JsonCreator
   public OkexInstrument(OkxInstrument delegate) {
     this.delegate = delegate;

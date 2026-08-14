@@ -11,6 +11,14 @@ public class OkexSetLeverageResponse {
 
   private final OkxSetLeverageResponse delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexSetLeverageResponse() {
+    this(new OkxSetLeverageResponse());
+  }
+
   @JsonCreator
   public OkexSetLeverageResponse(OkxSetLeverageResponse delegate) {
     this.delegate = delegate;

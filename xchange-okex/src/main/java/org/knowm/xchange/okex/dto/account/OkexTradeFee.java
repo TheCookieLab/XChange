@@ -13,6 +13,14 @@ public class OkexTradeFee {
 
   private final OkxTradeFee delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexTradeFee() {
+    this(new OkxTradeFee());
+  }
+
   @JsonCreator
   public OkexTradeFee(OkxTradeFee delegate) {
     this.delegate = delegate;
@@ -71,19 +79,19 @@ public class OkexTradeFee {
     return delegate.getRuleType();
   }
 
-  public List<OkexFiatList> getFiatList() {
-    return delegate.getFiatList().stream().map(OkexFiatList::new).collect(Collectors.toList());
+  public List<FiatList> getFiatList() {
+    return delegate.getFiatList().stream().map(FiatList::new).collect(Collectors.toList());
   }
 
   /**
    * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxTradeFee.FiatList} instead.
    */
   @Deprecated
-  public static class OkexFiatList {
+  public static class FiatList {
 
     private final OkxTradeFee.FiatList delegate;
 
-    public OkexFiatList(OkxTradeFee.FiatList delegate) {
+    public FiatList(OkxTradeFee.FiatList delegate) {
       this.delegate = delegate;
     }
 

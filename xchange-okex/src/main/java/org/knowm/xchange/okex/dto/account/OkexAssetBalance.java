@@ -11,6 +11,14 @@ public class OkexAssetBalance {
 
   private final OkxAssetBalance delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexAssetBalance() {
+    this(new OkxAssetBalance());
+  }
+
   @JsonCreator
   public OkexAssetBalance(OkxAssetBalance delegate) {
     this.delegate = delegate;

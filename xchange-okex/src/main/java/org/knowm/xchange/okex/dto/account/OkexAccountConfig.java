@@ -11,6 +11,14 @@ public class OkexAccountConfig {
 
   private final OkxAccountConfig delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexAccountConfig() {
+    this(new OkxAccountConfig());
+  }
+
   @JsonCreator
   public OkexAccountConfig(OkxAccountConfig delegate) {
     this.delegate = delegate;

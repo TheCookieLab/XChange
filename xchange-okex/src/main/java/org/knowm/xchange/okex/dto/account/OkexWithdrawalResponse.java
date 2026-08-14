@@ -11,6 +11,14 @@ public class OkexWithdrawalResponse {
 
   private final OkxWithdrawalResponse delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexWithdrawalResponse() {
+    this(new OkxWithdrawalResponse());
+  }
+
   @JsonCreator
   public OkexWithdrawalResponse(OkxWithdrawalResponse delegate) {
     this.delegate = delegate;

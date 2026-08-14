@@ -11,6 +11,14 @@ public class OkexBillDetails {
 
   private final OkxBillDetails delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexBillDetails() {
+    this(new OkxBillDetails());
+  }
+
   @JsonCreator
   public OkexBillDetails(OkxBillDetails delegate) {
     this.delegate = delegate;

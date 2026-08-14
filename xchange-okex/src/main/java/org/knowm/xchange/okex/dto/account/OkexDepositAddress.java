@@ -11,6 +11,14 @@ public class OkexDepositAddress {
 
   private final OkxDepositAddress delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexDepositAddress() {
+    this(new OkxDepositAddress());
+  }
+
   @JsonCreator
   public OkexDepositAddress(OkxDepositAddress delegate) {
     this.delegate = delegate;

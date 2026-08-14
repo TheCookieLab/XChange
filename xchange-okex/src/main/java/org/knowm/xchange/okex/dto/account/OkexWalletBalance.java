@@ -11,6 +11,14 @@ public class OkexWalletBalance {
 
   private final OkxWalletBalance delegate;
 
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexWalletBalance() {
+    this(new OkxWalletBalance());
+  }
+
   @JsonCreator
   public OkexWalletBalance(OkxWalletBalance delegate) {
     this.delegate = delegate;
@@ -57,14 +65,14 @@ public class OkexWalletBalance {
     return delegate.getNotionalUsd();
   }
 
-  public OkexDetail[] getDetails() {
+  public Detail[] getDetails() {
     OkxWalletBalance.Detail[] details = delegate.getDetails();
     if (details == null) {
       return null;
     }
-    OkexDetail[] wrapped = new OkexDetail[details.length];
+    Detail[] wrapped = new Detail[details.length];
     for (int i = 0; i < details.length; i++) {
-      wrapped[i] = new OkexDetail(details[i]);
+      wrapped[i] = new Detail(details[i]);
     }
     return wrapped;
   }
@@ -73,11 +81,11 @@ public class OkexWalletBalance {
    * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxWalletBalance.Detail} instead.
    */
   @Deprecated
-  public static class OkexDetail {
+  public static class Detail {
 
     private final OkxWalletBalance.Detail delegate;
 
-    public OkexDetail(OkxWalletBalance.Detail delegate) {
+    public Detail(OkxWalletBalance.Detail delegate) {
       this.delegate = delegate;
     }
 
