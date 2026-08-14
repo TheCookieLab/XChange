@@ -487,8 +487,9 @@ public class OkxAdapters {
   public static Ticker adaptTicker(OkxTicker okxTicker) {
     BigDecimal quoteVolume = BigDecimal.ZERO;
     // for new coins 24h volume can be zero and getLast null
-    if ((okxTicker.getInstrumentType().equals("SWAP")
-        || okxTicker.getInstrumentType().equals("FUTURES"))) {
+    if (okxTicker.getInstrumentType().equals("SWAP")
+        || okxTicker.getInstrumentType().equals("FUTURES")
+        || okxTicker.getInstrumentType().equals("OPTION")) {
       if (okxTicker.getLast() != null) {
         quoteVolume = okxTicker.getVolumeCurrency24h().multiply(okxTicker.getLast());
       }
@@ -506,7 +507,8 @@ public class OkxAdapters {
         // .vwap(null)
         .volume(
             (okxTicker.getInstrumentType().equals("SWAP")
-                    || okxTicker.getInstrumentType().equals("FUTURES"))
+                    || okxTicker.getInstrumentType().equals("FUTURES")
+                    || okxTicker.getInstrumentType().equals("OPTION"))
                 ? okxTicker.getVolumeCurrency24h()
                 : okxTicker.getVolume24h())
         .quoteVolume(quoteVolume)

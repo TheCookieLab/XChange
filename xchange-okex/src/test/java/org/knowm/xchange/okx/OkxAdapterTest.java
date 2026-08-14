@@ -27,6 +27,7 @@ import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
@@ -43,6 +44,7 @@ import org.knowm.xchange.okx.dto.account.OkxPosition;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
 import org.knowm.xchange.okx.dto.marketdata.OkxOrderbook;
 import org.knowm.xchange.okx.dto.marketdata.OkxPublicOrder;
+import org.knowm.xchange.okx.dto.marketdata.OkxTicker;
 import org.knowm.xchange.okx.dto.marketdata.OkxTrade;
 import org.knowm.xchange.okx.dto.trade.OkxAlgoOrderRequest;
 import org.knowm.xchange.okx.dto.trade.OkxAmendAlgoRequest;
@@ -53,6 +55,28 @@ import org.knowm.xchange.okx.service.OkxTradeServiceRaw;
 import si.mazi.rescu.ParamsDigest;
 
 public class OkxAdapterTest {
+  @Test
+  public void testAdaptOptionTickerUsesBaseVolumeLikeOtherDerivatives() throws IOException {
+    // OPTION tickers report vol24h in contracts and volCcy24h in base currency, like SWAP and
+    // FUTURES; the spot branch would surface contract count as volume and base amount as quote
+    // volume.
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkxTicker optionTicker =
+        mapper.readValue(
+            "{\"instType\":\"OPTION\",\"instId\":\"BTC-USD-260828-110000-C\",\"last\":\"100\","
+                + "\"open24h\":\"90\",\"high24h\":\"110\",\"low24h\":\"80\",\"bidPx\":\"99\","
+                + "\"askPx\":\"101\",\"bidSz\":\"1\",\"askSz\":\"2\",\"vol24h\":\"42\","
+                + "\"volCcy24h\":\"4.2\",\"ts\":\"1720000000000\"}",
+            OkxTicker.class);
+
+    Ticker adapted = OkxAdapters.adaptTicker(optionTicker);
+
+    assertThat(adapted.getInstrument()).isEqualTo(new OptionsContract("BTC/USD/260828/110000/C"));
+    assertThat(adapted.getVolume()).isEqualByComparingTo("4.2");
+    assertThat(adapted.getQuoteVolume()).isEqualByComparingTo("420");
+  }
+
   @Test
   public void testAdaptTradingFee() throws IOException {
     ObjectMapper mapper = new ObjectMapper();
