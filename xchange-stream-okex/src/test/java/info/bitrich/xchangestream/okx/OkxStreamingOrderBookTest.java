@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.observers.TestObserver;
+import io.reactivex.rxjava3.subjects.PublishSubject;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -72,13 +73,13 @@ public class OkxStreamingOrderBookTest {
   }
 
   private JsonNode bookMessage(
-      String action, long seqId, long checksum, String[][] bids, String[][] asks) {
+      String channel, String action, long seqId, long checksum, String[][] bids, String[][] asks) {
     ObjectNode root = mapper.createObjectNode();
     if (action != null) {
       root.put("action", action);
     }
     ObjectNode arg = root.putObject("arg");
-    arg.put("channel", "books");
+    arg.put("channel", channel);
     arg.put("instId", "BTC-USDT");
     ObjectNode data = root.putArray("data").addObject();
     ArrayNode bidsArray = data.putArray("bids");
@@ -97,6 +98,11 @@ public class OkxStreamingOrderBookTest {
       data.put("checksum", checksum);
     }
     return root;
+  }
+
+  private JsonNode bookMessage(
+      String action, long seqId, long checksum, String[][] bids, String[][] asks) {
+    return bookMessage("books", action, seqId, checksum, bids, asks);
   }
 
   @Test
@@ -229,5 +235,38 @@ public class OkxStreamingOrderBookTest {
 
     observer.assertNoErrors().assertValueCount(1);
     verify(streamingService).resubscribeChannel(CHANNEL_UNIQUE_ID);
+  }
+
+  @Test
+  public void testBooksAndBooks5StateIsIsolatedPerChannel() {
+    String[][] fullBids = {{"100.0", "10"}, {"99.0", "1"}};
+    JsonNode booksSnapshot =
+        bookMessage("books", "snapshot", 1, expectedChecksum(fullBids, ASK_101), fullBids, ASK_101);
+    JsonNode books5Snapshot =
+        bookMessage("books5", "snapshot", 1, 0, BID_100, ASK_101);
+    String[][] bidsAfter = {{"100.0", "10"}, {"99.0", "1"}, {"98.0", "2"}};
+    JsonNode booksUpdate =
+        bookMessage("books", "update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
+
+    PublishSubject<JsonNode> booksSubject = PublishSubject.create();
+    PublishSubject<JsonNode> books5Subject = PublishSubject.create();
+    when(streamingService.subscribeChannel("booksBTC-USDT")).thenReturn(booksSubject);
+    when(streamingService.subscribeChannel("books5BTC-USDT")).thenReturn(books5Subject);
+
+    TestObserver<OrderBook> booksObserver = marketDataService.getOrderBook(INSTRUMENT, "books").test();
+    TestObserver<OrderBook> books5Observer = marketDataService.getOrderBook(INSTRUMENT, "books5").test();
+
+    booksSubject.onNext(booksSnapshot);
+    // A books5 snapshot for the same instrument must not clobber the full book's state.
+    books5Subject.onNext(books5Snapshot);
+    booksSubject.onNext(booksUpdate);
+
+    booksObserver.assertNoErrors().assertValueCount(2);
+    OrderBook book = booksObserver.values().get(1);
+    assertThat(book.getBids()).hasSize(3);
+    assertThat(book.getAsks()).hasSize(1);
+    books5Observer.assertNoErrors().assertValueCount(1);
+    assertThat(books5Observer.values().get(0).getBids()).hasSize(1);
+    verify(streamingService, never()).resubscribeChannel("booksBTC-USDT");
   }
 }
