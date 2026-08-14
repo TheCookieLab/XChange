@@ -79,6 +79,48 @@ public class OkexOrderRequest {
   @JsonProperty("attachAlgoOrds")
   private List<OkexAttachAlgoOrder> attachAlgoOrds;
 
+  /** Compatibility constructor wrapping the canonical DTO. */
+  public OkexOrderRequest(OkxOrderRequest delegate) {
+    this.instrumentId = delegate.getInstrumentId();
+    this.instIdCode = delegate.getInstIdCode();
+    this.tradeMode = delegate.getTradeMode();
+    this.marginCurrency = delegate.getMarginCurrency();
+    this.clientOrderId = delegate.getClientOrderId();
+    this.tag = delegate.getTag();
+    this.side = delegate.getSide();
+    this.posSide = delegate.getPosSide();
+    this.orderType = delegate.getOrderType();
+    this.amount = delegate.getAmount();
+    this.price = delegate.getPrice();
+    this.reducePosition = delegate.isReducePosition();
+    this.tradeQuoteCcy = delegate.getTradeQuoteCcy();
+    this.takeProfitTriggerPrice = delegate.getTakeProfitTriggerPrice();
+    this.takeProfitOrderPrice = delegate.getTakeProfitOrderPrice();
+    this.stopLossTriggerPrice = delegate.getStopLossTriggerPrice();
+    this.stopLossOrderPrice = delegate.getStopLossOrderPrice();
+    this.takeProfitTriggerPriceType = delegate.getTakeProfitTriggerPriceType();
+    this.stopLossTriggerPriceType = delegate.getStopLossTriggerPriceType();
+    List<org.knowm.xchange.okx.dto.trade.OkxAttachAlgoOrder> delegateAttachAlgoOrds =
+        delegate.getAttachAlgoOrds();
+    List<OkexAttachAlgoOrder> attachAlgoOrds = null;
+    if (delegateAttachAlgoOrds != null) {
+      attachAlgoOrds =
+          delegateAttachAlgoOrds.stream()
+              .map(
+                  attach ->
+                      new OkexAttachAlgoOrder(
+                          attach.getTakeProfitTriggerPrice(),
+                          attach.getTakeProfitOrderPrice(),
+                          attach.getStopLossTriggerPrice(),
+                          attach.getStopLossOrderPrice(),
+                          attach.getTakeProfitTriggerPriceType(),
+                          attach.getStopLossTriggerPriceType(),
+                          attach.getAmount()))
+              .collect(Collectors.toList());
+    }
+    this.attachAlgoOrds = attachAlgoOrds;
+  }
+
   public OkxOrderRequest to() {
     return OkxOrderRequest.builder()
         .instrumentId(instrumentId)

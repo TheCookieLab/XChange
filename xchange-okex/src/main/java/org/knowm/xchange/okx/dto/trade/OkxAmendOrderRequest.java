@@ -2,9 +2,11 @@ package org.knowm.xchange.okx.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
+import lombok.Getter;
 
 /** Author: Max Gao (gaamox@tutanota.com) Created: 10-06-2021 */
 @Builder
+@Getter
 public class OkxAmendOrderRequest {
   @JsonProperty("instId")
   private String instrumentId;
