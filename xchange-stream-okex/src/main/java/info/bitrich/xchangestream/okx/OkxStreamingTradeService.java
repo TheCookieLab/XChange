@@ -208,7 +208,7 @@ public class OkxStreamingTradeService implements StreamingTradeService {
    */
   private Single<Integer> submitOrderRequest(
       String method, Object payload, String clientOrderId, String rateLimiterPath) {
-    if (!privateStreamingService.isLoginDone()) {
+    if (privateStreamingService == null || !privateStreamingService.isLoginDone()) {
       throw new ExchangeException("privateStreamingService not authorized");
     }
     Observable<Integer> observable =
