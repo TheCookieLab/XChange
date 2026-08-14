@@ -104,7 +104,6 @@ public class OkexCompatibilityTest {
   public void testWrapperConversions() {
     assertThat(OkexInstType.from(OkxInstType.SWAP).to()).isEqualTo(OkxInstType.SWAP);
     assertThat(OkexInstType.from(null)).isNull();
-
     OkexResponse<String> response = OkexResponse.of(new OkxResponse<>("1", "0", "OK", "data"));
     assertThat(response.getId()).isEqualTo("1");
     assertThat(response.getCode()).isEqualTo("0");

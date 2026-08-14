@@ -191,6 +191,12 @@ public class OkxTradeServiceRawTest {
         "{\"ordId\":\"" + orderId + "\"}", new TypeReference<OkxAlgoOrderDetails>() {});
   }
 
+  /** Real algo-order payloads identify records with {@code algoId}; {@code ordId} is absent. */
+  private OkxAlgoOrderDetails algoOrderDetailsWithAlgoId(String algoId) throws Exception {
+    return mapper.readValue(
+        "{\"algoId\":\"" + algoId + "\"}", new TypeReference<OkxAlgoOrderDetails>() {});
+  }
+
   // ---------- Order history pagination ----------
 
   @Test
@@ -287,6 +293,37 @@ public class OkxTradeServiceRawTest {
         .extracting(OkxAlgoOrderDetails::getOrderId)
         .containsExactly("1", "2", "3");
     assertThat(service.algoHistoryCursors).containsExactly(null, "2");
+  }
+
+  @Test
+  public void testAlgoPendingPaginationAdvancesWithAlgoIdWhenOrdIdIsAbsent() throws Exception {
+    service.algoPendingPages.put(
+        null, List.of(algoOrderDetailsWithAlgoId("a-1"), algoOrderDetailsWithAlgoId("a-2")));
+    service.algoPendingPages.put("a-2", List.of(algoOrderDetailsWithAlgoId("a-3")));
+
+    OkxResponse<List<OkxAlgoOrderDetails>> result =
+        service.getAlgoOrdersPending("SPOT", "BTC-USDT", "conditional", OkxPageParams.of(2));
+
+    assertThat(result.getData())
+        .extracting(OkxAlgoOrderDetails::getAlgoId)
+        .containsExactly("a-1", "a-2", "a-3");
+    assertThat(service.algoPendingCursors).containsExactly(null, "a-2");
+  }
+
+  @Test
+  public void testAlgoHistoryPaginationAdvancesWithAlgoIdWhenOrdIdIsAbsent() throws Exception {
+    service.algoHistoryPages.put(
+        null, List.of(algoOrderDetailsWithAlgoId("a-1"), algoOrderDetailsWithAlgoId("a-2")));
+    service.algoHistoryPages.put("a-2", List.of(algoOrderDetailsWithAlgoId("a-3")));
+
+    OkxResponse<List<OkxAlgoOrderDetails>> result =
+        service.getAlgoOrdersHistory(
+            "SPOT", "BTC-USDT", "conditional", "effective", OkxPageParams.of(2));
+
+    assertThat(result.getData())
+        .extracting(OkxAlgoOrderDetails::getAlgoId)
+        .containsExactly("a-1", "a-2", "a-3");
+    assertThat(service.algoHistoryCursors).containsExactly(null, "a-2");
   }
 
   // ---------- Idempotent placement reconciliation ----------
