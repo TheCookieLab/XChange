@@ -290,8 +290,7 @@ public class OkxAdapters {
 
   /** True for inverse (crypto-margined) contracts, quoted against USD rather than USDT/USDC. */
   private static boolean isInverseContract(Instrument instrument) {
-    return instrument instanceof FuturesContract
-        && instrument.getCounter().equals(Currency.USD);
+    return instrument instanceof FuturesContract && instrument.getCounter().equals(Currency.USD);
   }
 
   public static String adaptTradeMode(Instrument instrument, String accountLevel) {
@@ -646,7 +645,10 @@ public class OkxAdapters {
                   BigDecimal.ONE.movePointLeft(
                       (isContractDerivative(instrument))
                           ? convertContractSizeToVolume(
-                                  new BigDecimal(instrument.getLotSize()), pair, contractValue, null)
+                                  new BigDecimal(instrument.getLotSize()),
+                                  pair,
+                                  contractValue,
+                                  null)
                               .scale()
                           : Math.max(numberOfDecimals(new BigDecimal(instrument.getLotSize())), 0)))
               .contractValue((isContractDerivative(instrument)) ? contractValue : null)
@@ -982,16 +984,14 @@ public class OkxAdapters {
     List<OrderBookUpdate> orderBookUpdates = new ArrayList<>();
     for (OkxPublicOrder ask : asks) {
       BigDecimal volume =
-          convertContractSizeToVolume(
-              ask.getVolume(), instrument, contractValue, ask.getPrice());
+          convertContractSizeToVolume(ask.getVolume(), instrument, contractValue, ask.getPrice());
       OrderBookUpdate o =
           new OrderBookUpdate(OrderType.ASK, volume, instrument, ask.getPrice(), date, volume);
       orderBookUpdates.add(o);
     }
     for (OkxPublicOrder bid : bids) {
       BigDecimal volume =
-          convertContractSizeToVolume(
-              bid.getVolume(), instrument, contractValue, bid.getPrice());
+          convertContractSizeToVolume(bid.getVolume(), instrument, contractValue, bid.getPrice());
       OrderBookUpdate o =
           new OrderBookUpdate(OrderType.BID, volume, instrument, bid.getPrice(), date, volume);
       orderBookUpdates.add(o);

@@ -56,8 +56,8 @@ public class OkxMarketDataService extends OkxMarketDataServiceRaw implements Mar
   }
 
   @Override
-  public CandleStickData getCandleStickData(
-      CurrencyPair currencyPair, CandleStickDataParams params) throws IOException {
+  public CandleStickData getCandleStickData(CurrencyPair currencyPair, CandleStickDataParams params)
+      throws IOException {
     return getCandleStickData((Instrument) currencyPair, params);
   }
 

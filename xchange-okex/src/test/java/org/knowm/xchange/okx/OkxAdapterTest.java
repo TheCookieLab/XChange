@@ -31,10 +31,10 @@ import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxPosition;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
-import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
 import org.knowm.xchange.okx.dto.marketdata.OkxPublicOrder;
 import org.knowm.xchange.okx.dto.marketdata.OkxTrade;
 import org.knowm.xchange.okx.dto.trade.OkxAttachAlgoOrder;
+import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
 import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 
 public class OkxAdapterTest {
@@ -214,13 +214,16 @@ public class OkxAdapterTest {
             "{\"tradeId\":\"t1\",\"instId\":\"BTC-USD-260814\",\"px\":50000,\"side\":\"buy\","
                 + "\"sz\":1,\"ts\":1690000000000}",
             OkxTrade.class);
-    
+
     Map<Instrument, Long> original = new HashMap<>(OkxAdapters.instrumentToInstrumentIdMap);
     OkxAdapters.instrumentToInstrumentIdMap.clear();
     try {
       ExchangeMetaData metaData = metaDataWithContractValue(contract, new BigDecimal("100"));
       assertThat(
-              OkxAdapters.adaptTrades(List.of(trade), contract, metaData).getTrades().get(0).getOriginalAmount())
+              OkxAdapters.adaptTrades(List.of(trade), contract, metaData)
+                  .getTrades()
+                  .get(0)
+                  .getOriginalAmount())
           .isEqualByComparingTo("0.002");
     } finally {
       OkxAdapters.instrumentToInstrumentIdMap.clear();

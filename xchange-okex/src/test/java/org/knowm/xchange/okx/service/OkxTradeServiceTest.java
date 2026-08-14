@@ -22,7 +22,8 @@ public class OkxTradeServiceTest {
         .isEqualTo("FUTURES");
     assertThat(OkxTradeService.historyInstrumentType(new FuturesContract("BTC/USD/260814")))
         .isEqualTo("FUTURES");
-    assertThat(OkxTradeService.historyInstrumentType(new OptionsContract("BTC/USD/260828/110000/C")))
+    assertThat(
+            OkxTradeService.historyInstrumentType(new OptionsContract("BTC/USD/260828/110000/C")))
         .isEqualTo("OPTION");
   }
 }

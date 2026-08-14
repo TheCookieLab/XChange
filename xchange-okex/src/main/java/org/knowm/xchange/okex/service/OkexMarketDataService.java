@@ -48,8 +48,8 @@ public class OkexMarketDataService extends OkexMarketDataServiceRaw implements M
   }
 
   @Override
-  public CandleStickData getCandleStickData(
-      CurrencyPair currencyPair, CandleStickDataParams params) throws IOException {
+  public CandleStickData getCandleStickData(CurrencyPair currencyPair, CandleStickDataParams params)
+      throws IOException {
     return delegate.getCandleStickData(currencyPair, params);
   }
 
