@@ -35,17 +35,23 @@ Replace the current MEXC legacy adapter with a deliberate Spot v3 implementation
 
 ## Implementation Checklist
 
-1. [ ] **Phase 1 — v2 isolation and v3 foundation.** Freeze v2 behavior (deprecate, keep endpoint semantics), define `mexc.v3` package boundary, v3 exchange config/host routing. Verification: representative v2 compile/runtime tests plus v3 host-routing tests.
-2. [ ] **Phase 2 — auth, endpoint policy, metadata, market data.** v3 common/auth/market raw services and metadata adapters. Signing/time/recvWindow, structured errors/redaction, exchange info, filters, public endpoints. Verification: WireMock signature/error/filter/exact-decimal fixtures and public remote-init test.
-3. [ ] **Phase 3 — account, wallet, trade, history.** v3 account/trade/wallet raw and high-level services. Balances, fees, orders/cancels, fills/history, stable wallet ops, typed bounded pagination. Verification: deterministic adapter fixtures and repeated/no-progress pagination tests.
-4. [ ] **Phase 4 — placement safety.** Client-order validation, trade service, unknown-outcome exception/reconciliation. Verification: transmitted-timeout found/absent/inconclusive scenarios with assertion that placement is never replayed.
-5. [ ] **Phase 5 — streaming module and protocol.** New `xchange-stream-mexc`, protobuf schema/build, connection/subscription lifecycle. Verification: schema-drift, encode/decode, ping/pong, lifetime rotation, subscription-limit, reconnect/resubscribe, stale-generation tests.
-6. [ ] **Phase 6 — depth and private streams.** Snapshot/delta assembler, listen-key lifecycle, private event adapters. Verification: stale/duplicate/gap/rebuild fixtures; listen-key expiry/replacement; private deduplication and redaction.
-7. [ ] **Phase 7 — migration and release validation.** READMEs/examples/Javadocs, v2 deprecation links, build configuration. Verification: `mvn -B -pl xchange-mexc,xchange-stream-mexc -am test`, PMD/format checks, repository-root build, public read-only smoke; private/trading canary opt-in only.
+1. [x] **Phase 1 — v2 isolation and v3 foundation.** Freeze v2 behavior (deprecate, keep endpoint semantics), define `mexc.v3` package boundary, v3 exchange config/host routing. Verification: representative v2 compile/runtime tests plus v3 host-routing tests.
+2. [x] **Phase 2 — auth, endpoint policy, metadata, market data.** v3 common/auth/market raw services and metadata adapters. Signing/time/recvWindow, structured errors/redaction, exchange info, filters, public endpoints. Verification: WireMock signature/error/filter/exact-decimal fixtures and public remote-init test.
+3. [x] **Phase 3 — account, wallet, trade, history.** v3 account/trade/wallet raw and high-level services. Balances, fees, orders/cancels, fills/history, stable wallet ops, typed bounded pagination. Verification: deterministic adapter fixtures and repeated/no-progress pagination tests.
+4. [x] **Phase 4 — placement safety.** Client-order validation, trade service, unknown-outcome exception/reconciliation. Verification: transmitted-timeout found/absent/inconclusive scenarios with assertion that placement is never replayed.
+5. [x] **Phase 5 — streaming module and protocol.** New `xchange-stream-mexc`, protobuf schema/build, connection/subscription lifecycle. Verification: schema-drift, encode/decode, ping/pong, lifetime rotation, subscription-limit, reconnect/resubscribe, stale-generation tests.
+6. [x] **Phase 6 — depth and private streams.** Snapshot/delta assembler, listen-key lifecycle, private event adapters. Verification: stale/duplicate/gap/rebuild fixtures; listen-key expiry/replacement; private deduplication and redaction.
+7. [x] **Phase 7 — migration and release validation.** READMEs/examples/Javadocs, v2 deprecation links, build configuration. Verification: `mvn -B -pl xchange-mexc,xchange-stream-mexc -am test`, PMD/format checks, repository-root build, public read-only smoke; private/trading canary opt-in only.
 
 ## Verification log
 
-* (filled per phase)
+* Phase 1 — v2 classes deprecated without endpoint changes; v3 host routing/config tests green in `xchange-mexc` WireMock suite.
+* Phase 2 — HMAC signing, error adaptation (incl. Retry-After), redaction, exchange-info/filter metadata, public remote-init tested; 43 v3 REST tests.
+* Phase 3 — account/wallet/trade raw+high-level services with typed bounded pagination; deterministic adapter fixtures.
+* Phase 4 — placement replay-safety: client-order-id validation, transmitted-timeout reconciliation (found/absent/inconclusive), never-blind-replay assertions; `ReplaySafety` + `RetryClassification` wired.
+* Phase 5 — `xchange-stream-mexc` module with pinned protobuf schema, `MexcV3ProtoCodec` round-trip, connection/subscription lifecycle, generation-aware rotation; 27 stream tests green.
+* Phase 6 — `MexcV3StreamingOrderBook` snapshot/delta assembler (stale drop, gap refetch, qty-0 removal), listenKey create/keepalive/close lifecycle, private account/orders/deals adapters; 212 tests green across `xchange-mexc` + `xchange-stream-mexc` reactor.
+* Phase 7 — module README, Javadocs on new public surface, v2 deprecation links; `mvn -B -pl xchange-mexc,xchange-stream-mexc -am test` green; repository-root build gate green; private/trading canary opt-in only.
 
 ## Risks
 
