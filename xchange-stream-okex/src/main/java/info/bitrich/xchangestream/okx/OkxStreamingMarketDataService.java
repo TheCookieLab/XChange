@@ -43,6 +43,8 @@ public class OkxStreamingMarketDataService implements StreamingMarketDataService
 
   private final Map<String, OrderBook> orderBookMap = new HashMap<>();
 
+  private final OkxBookContinuity bookContinuity = new OkxBookContinuity();
+
   @Override
   public Observable<Ticker> getTicker(Instrument instrument, Object... args) {
     String channelUniqueId = TICKERS + OkxAdapters.adaptInstrument(instrument);
@@ -121,11 +123,26 @@ public class OkxStreamingMarketDataService implements StreamingMarketDataService
                 String action =
                     channelName.equals(ORDERBOOK5) ? "snapshot" : jsonNode.get("action").asText();
                 if ("snapshot".equalsIgnoreCase(action)) {
+                  bookContinuity.snapshot(instId, jsonNode.get("data").get(0));
                   OrderBook orderBook =
                       OkxAdapters.adaptOrderBook(okxOrderbooks, instrument, exchangeMetaData);
                   orderBookMap.put(instId, orderBook);
                   return Observable.just(orderBook);
                 } else if ("update".equalsIgnoreCase(action)) {
+                  if (!channelName.equals(ORDERBOOK5)) {
+                    OkxBookContinuity.Gate gate =
+                        bookContinuity.gateUpdate(instId, jsonNode.get("data").get(0));
+                    if (gate == OkxBookContinuity.Gate.REBUILD) {
+                      LOG.warn(
+                          "Order book continuity violated for instId={}, requesting a fresh snapshot.",
+                          instId);
+                      service.resubscribeChannel(channelUniqueId);
+                      return Observable.fromIterable(new LinkedList<>());
+                    }
+                    if (gate == OkxBookContinuity.Gate.DROP_STALE) {
+                      return Observable.fromIterable(new LinkedList<>());
+                    }
+                  }
                   OrderBook orderBook = orderBookMap.getOrDefault(instId, null);
                   if (orderBook == null) {
                     LOG.error("Failed to get orderBook, instId={}.", instId);
