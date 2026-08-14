@@ -60,11 +60,17 @@ public class OkxStreamingOrderBookTest {
   /** Independent re-implementation of the OKX CRC32 checksum spec. */
   private static long expectedChecksum(String[][] bids, String[][] asks) {
     CRC32 crc = new CRC32();
-    for (String[] level : bids) {
-      crc.update((level[0] + ":" + level[1]).getBytes(StandardCharsets.UTF_8));
-    }
-    for (String[] level : asks) {
-      crc.update((level[0] + ":" + level[1]).getBytes(StandardCharsets.UTF_8));
+    for (int index = 0;
+        index < 25 && (index < bids.length || index < asks.length);
+        index++) {
+      if (index < bids.length) {
+        crc.update(
+            (bids[index][0] + ":" + bids[index][1]).getBytes(StandardCharsets.UTF_8));
+      }
+      if (index < asks.length) {
+        crc.update(
+            (asks[index][0] + ":" + asks[index][1]).getBytes(StandardCharsets.UTF_8));
+      }
     }
     return crc.getValue();
   }

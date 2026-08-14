@@ -25,16 +25,22 @@ public class OkxBookContinuityTest {
 
   /**
    * Independent re-implementation of the OKX checksum spec used to build expected fixtures: CRC32
-   * of {@code price:size} for every bid (highest first) then every ask (lowest first), no separator
-   * between levels.
+   * of the first 25 bids and asks, interleaved as bid1, ask1, bid2, ask2, with no separator between
+   * levels.
    */
   private static long expectedChecksum(String[][] bids, String[][] asks) {
     CRC32 crc = new CRC32();
-    for (String[] level : bids) {
-      crc.update((level[0] + ":" + level[1]).getBytes(StandardCharsets.UTF_8));
-    }
-    for (String[] level : asks) {
-      crc.update((level[0] + ":" + level[1]).getBytes(StandardCharsets.UTF_8));
+    for (int index = 0;
+        index < 25 && (index < bids.length || index < asks.length);
+        index++) {
+      if (index < bids.length) {
+        crc.update(
+            (bids[index][0] + ":" + bids[index][1]).getBytes(StandardCharsets.UTF_8));
+      }
+      if (index < asks.length) {
+        crc.update(
+            (asks[index][0] + ":" + asks[index][1]).getBytes(StandardCharsets.UTF_8));
+      }
     }
     return crc.getValue();
   }
@@ -187,11 +193,10 @@ public class OkxBookContinuityTest {
 
     // OKX orders the checksum input bid1, ask1, bid2, ask2 (top 25 on each side).
     assertThat(OkxBookContinuity.checksum(snapshot.get("bids"), snapshot.get("asks")))
-        .isEqualTo(2334835581L);
+        .isEqualTo(546959751L);
     continuity.snapshot(INST_ID, snapshot);
 
-    // A no-op update still carries the checksum for the complete reconstructed book.
-    assertThat(continuity.gateUpdate(INST_ID, data(2, 2334835581L, EMPTY, EMPTY)))
+    assertThat(continuity.gateUpdate(INST_ID, data(2, 546959751L, EMPTY, EMPTY)))
         .isEqualTo(OkxBookContinuity.Gate.ACCEPT);
   }
 }

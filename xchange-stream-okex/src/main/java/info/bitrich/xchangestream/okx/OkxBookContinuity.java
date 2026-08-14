@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,12 +28,13 @@ import org.slf4j.LoggerFactory;
  *       re-subscribes the channel and drops all updates until a fresh snapshot resets the state.
  * </ul>
  *
- * <p>The checksum algorithm follows the OKX v5 documentation: concatenate every level as {@code
- * price:size} — bids in descending price order followed by asks in ascending price order, with no
- * separator between levels — and compute the CRC32 (java.util.zip) of the UTF-8 encoded string. The
- * checksum in an update message covers the book as it stands after applying that update. OKX
- * deprecated the checksum field on 2026-06-23 and now always sends {@code 0}; a zero or absent
- * checksum disables verification and the sequence gate becomes the sole integrity check.
+ * <p>The checksum algorithm follows the OKX v5 documentation: concatenate the first 25 levels on
+ * each side, interleaving {@code bid1,ask1,bid2,ask2,...}, as {@code price:size} with no separator
+ * between levels, and compute the CRC32 (java.util.zip) of the UTF-8 encoded string. Bids are
+ * expected in descending price order and asks in ascending price order. The checksum in an update
+ * message covers the book as it stands after applying that update. OKX deprecated the checksum field
+ * on 2026-06-23 and now always sends {@code 0}; a zero or absent checksum disables verification and
+ * the sequence gate becomes the sole integrity check.
  *
  * <p>The {@link Gate} returned by {@link #gateUpdate(String, JsonNode)} must be evaluated on the
  * same thread that applies the message; the netty event loop satisfies this naturally because all
@@ -44,6 +46,7 @@ import org.slf4j.LoggerFactory;
 final class OkxBookContinuity {
 
   private static final Logger LOG = LoggerFactory.getLogger(OkxBookContinuity.class);
+  private static final int CHECKSUM_LEVEL_LIMIT = 25;
 
   /** Sentinel for an absent or unparseable sequence number. */
   static final long UNKNOWN_SEQ = Long.MIN_VALUE;
@@ -170,42 +173,64 @@ final class OkxBookContinuity {
   }
 
   /**
-   * Computes the OKX book checksum for the given raw bid/ask level arrays: CRC32 over {@code
-   * price:size} of bids (highest price first) concatenated with {@code price:size} of asks (lowest
-   * price first), no separator between levels.
+   * Computes the OKX book checksum for the first 25 raw bid/ask levels, interleaved as
+   * {@code bid1,ask1,bid2,ask2,...}: CRC32 over {@code price:size} with no separator between
+   * levels.
    *
    * @return unsigned CRC32 value in the range {@code [0, 2^32-1]}
    */
   static long checksum(JsonNode bids, JsonNode asks) {
     CRC32 crc = new CRC32();
-    appendLevels(crc, bids);
-    appendLevels(crc, asks);
+    int bidCount = arraySize(bids);
+    int askCount = arraySize(asks);
+    for (int index = 0; index < CHECKSUM_LEVEL_LIMIT && (index < bidCount || index < askCount); index++) {
+      if (index < bidCount) {
+        appendLevel(crc, bids.get(index));
+      }
+      if (index < askCount) {
+        appendLevel(crc, asks.get(index));
+      }
+    }
     return crc.getValue();
   }
 
-  private static void appendLevels(CRC32 crc, JsonNode levels) {
-    if (levels == null || !levels.isArray()) {
+  private static int arraySize(JsonNode levels) {
+    return levels != null && levels.isArray() ? levels.size() : 0;
+  }
+
+  private static void appendLevel(CRC32 crc, JsonNode level) {
+    if (level == null || !level.isArray() || level.size() < 2) {
       return;
     }
-    for (JsonNode level : levels) {
-      if (!level.isArray() || level.size() < 2) {
-        continue;
-      }
-      crc.update(
-          (level.get(0).asText() + ":" + level.get(1).asText()).getBytes(StandardCharsets.UTF_8));
-    }
+    crc.update(
+        (level.get(0).asText() + ":" + level.get(1).asText()).getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static void appendLevel(CRC32 crc, RawLevel level) {
+    crc.update((level.price + ":" + level.size).getBytes(StandardCharsets.UTF_8));
   }
 
   private static long checksum(BookState state) {
     CRC32 crc = new CRC32();
-    for (RawLevel level : state.bids.values()) {
-      crc.update((level.price + ":" + level.size).getBytes(StandardCharsets.UTF_8));
-    }
-    for (RawLevel level : state.asks.values()) {
-      crc.update((level.price + ":" + level.size).getBytes(StandardCharsets.UTF_8));
+    Iterator<RawLevel> bidLevels = state.bids.values().iterator();
+    Iterator<RawLevel> askLevels = state.asks.values().iterator();
+    for (int index = 0; index < CHECKSUM_LEVEL_LIMIT; index++) {
+      boolean appended = false;
+      if (bidLevels.hasNext()) {
+        appendLevel(crc, bidLevels.next());
+        appended = true;
+      }
+      if (askLevels.hasNext()) {
+        appendLevel(crc, askLevels.next());
+        appended = true;
+      }
+      if (!appended) {
+        break;
+      }
     }
     return crc.getValue();
   }
+
 
   private static long sequenceOf(JsonNode dataElement) {
     if (dataElement == null || !dataElement.hasNonNull("seqId")) {
