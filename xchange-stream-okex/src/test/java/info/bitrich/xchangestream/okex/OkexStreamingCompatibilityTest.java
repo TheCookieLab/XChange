@@ -17,11 +17,14 @@ import info.bitrich.xchangestream.okx.OkxStreamingService;
 import info.bitrich.xchangestream.okx.OkxStreamingTradeService;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.okex.OkexExchange;
 import org.knowm.xchange.okex.dto.OkexInstType;
 
@@ -95,6 +98,28 @@ public class OkexStreamingCompatibilityTest {
         .isEqualTo(OkxPrivateStreamingService.CHANGE_ORDER);
     assertThat(OkexPrivateStreamingService.CANCEL_ORDER)
         .isEqualTo(OkxPrivateStreamingService.CANCEL_ORDER);
+  }
+
+  @Test
+  public void legacyFacadeConstructorsRemainAvailable() {
+    ExchangeSpecification spec = new ExchangeSpecification(OkexStreamingExchange.class);
+    OkexStreamingService service =
+        new OkexStreamingService("wss://ws.okx.com:8443/ws/v5/public", spec);
+    OkexBusinessStreamingService business =
+        new OkexBusinessStreamingService("wss://ws.okx.com:8443/ws/v5/business", spec);
+    ExchangeMetaData metaData =
+        new ExchangeMetaData(Collections.emptyMap(), Collections.emptyMap(), null, null, null);
+
+    OkexStreamingMarketDataService marketDataService =
+        new OkexStreamingMarketDataService(service, business, metaData);
+    assertThat(marketDataService).isInstanceOf(StreamingMarketDataService.class);
+
+    OkexPrivateStreamingService priv =
+        new OkexPrivateStreamingService(
+            "wss://ws.okx.com:8443/ws/v5/private", spec, new OkexExchange());
+    OkexStreamingTradeService tradeService =
+        new OkexStreamingTradeService(priv, metaData, new ResilienceRegistries());
+    assertThat(tradeService).isInstanceOf(StreamingTradeService.class);
   }
 
   @Test

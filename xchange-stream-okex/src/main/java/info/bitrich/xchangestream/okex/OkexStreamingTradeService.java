@@ -4,8 +4,10 @@ import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.okx.OkxStreamingTradeService;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
+import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
@@ -22,6 +24,22 @@ public class OkexStreamingTradeService implements StreamingTradeService {
 
   public OkexStreamingTradeService(OkxStreamingTradeService delegate) {
     this.delegate = delegate;
+  }
+
+  /**
+   * Retained legacy constructor; delegates to the canonical service built from the legacy private
+   * transport (which extends the canonical transport class).
+   *
+   * @deprecated use {@link info.bitrich.xchangestream.okx.OkxStreamingTradeService} instead.
+   */
+  @Deprecated
+  public OkexStreamingTradeService(
+      OkexPrivateStreamingService privateStreamingService,
+      ExchangeMetaData exchangeMetaData,
+      ResilienceRegistries resilienceRegistries) {
+    this(
+        new OkxStreamingTradeService(
+            privateStreamingService, exchangeMetaData, resilienceRegistries));
   }
 
   @Override

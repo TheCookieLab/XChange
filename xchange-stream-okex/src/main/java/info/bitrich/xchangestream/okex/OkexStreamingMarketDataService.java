@@ -11,6 +11,7 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.instrument.Instrument;
 
 /**
@@ -23,6 +24,20 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
 
   public OkexStreamingMarketDataService(OkxStreamingMarketDataService delegate) {
     this.delegate = delegate;
+  }
+
+  /**
+   * Retained legacy constructor; delegates to the canonical service built from the legacy
+   * transports (which extend the canonical transport classes).
+   *
+   * @deprecated use {@link info.bitrich.xchangestream.okx.OkxStreamingMarketDataService} instead.
+   */
+  @Deprecated
+  public OkexStreamingMarketDataService(
+      OkexStreamingService service,
+      OkexBusinessStreamingService businessStreamingService,
+      ExchangeMetaData exchangeMetaData) {
+    this(new OkxStreamingMarketDataService(service, businessStreamingService, exchangeMetaData));
   }
 
   @Override
