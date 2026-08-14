@@ -68,7 +68,7 @@ public interface OkxAuthenticated extends Okx {
   String cancelOrderPath = "/trade/cancel-order"; // Stated as 60 req/2 sec
   String cancelBatchOrderPath = "/trade/cancel-batch-orders"; // Stated as 300 req/2 sec
   String amendOrderPath = "/trade/amend-order"; // Stated as 60 req/2 sec
-  String amendBatchOrderPath = "trade/amend-batch-orders"; // Stated as 300 req/2 sec
+  String amendBatchOrderPath = "/trade/amend-batch-orders"; // Stated as 300 req/2 sec
   String fillsPath = "/trade/fills"; // Stated as 60 req/2 sec
   String fillsHistoryPath = "/trade/fills-history"; // Stated as 10 req/2 sec
   String orderAlgoPath = "/trade/order-algo"; // Stated as 60 req/2 sec
