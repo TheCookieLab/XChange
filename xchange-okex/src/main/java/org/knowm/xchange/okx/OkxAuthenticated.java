@@ -551,7 +551,7 @@ public interface OkxAuthenticated extends Okx {
       @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
       @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
-      List<OkxAmendAlgoRequest> requestPayload)
+      OkxAmendAlgoRequest requestPayload)
       throws OkxException, IOException;
 
   @GET

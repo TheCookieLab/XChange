@@ -175,12 +175,9 @@ public class OkexTradeServiceRaw extends OkxBaseService {
         OkexAlgoOrderResponse::new);
   }
 
-  public OkexResponse<List<OkexAlgoOrderResponse>> amendOkexAlgoOrder(
-      List<OkexAmendAlgoRequest> orders) throws IOException {
-    return wrap(
-        delegate.amendOkxAlgoOrder(
-            orders.stream().map(OkexAmendAlgoRequest::to).collect(Collectors.toList())),
-        OkexAlgoOrderResponse::new);
+  public OkexResponse<List<OkexAlgoOrderResponse>> amendOkexAlgoOrder(OkexAmendAlgoRequest order)
+      throws IOException {
+    return wrap(delegate.amendOkxAlgoOrder(order.to()), OkexAlgoOrderResponse::new);
   }
 
   public OkexResponse<List<OkexAlgoOrderDetails>> getAlgoOrdersPending(

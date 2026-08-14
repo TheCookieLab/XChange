@@ -379,8 +379,16 @@ public class OkxTradeServiceRaw extends OkxBaseService {
     }
   }
 
-  /** <a href="https://www.okx.com/docs-v5/en/#rest-api-trade-amend-algo-order">...</a> */
-  public OkxResponse<List<OkxAlgoOrderResponse>> amendOkxAlgoOrder(List<OkxAmendAlgoRequest> orders)
+  /**
+   * Amends one algorithmic order. The endpoint accepts a single amendment object per request, so
+   * callers submit each order individually.
+   *
+   * @param order the amendment to submit
+   * @return the OKX response
+   * @throws IOException on transport errors
+   * @see <a href="https://www.okx.com/docs-v5/en/#rest-api-trade-amend-algo-order">OKX docs</a>
+   */
+  public OkxResponse<List<OkxAlgoOrderResponse>> amendOkxAlgoOrder(OkxAmendAlgoRequest order)
       throws IOException {
     try {
       OkxAuthParams auth = authParams();
@@ -392,7 +400,7 @@ public class OkxTradeServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading(),
-                      orders))
+                      order))
           .withRateLimiter(rateLimiter(OkxAuthenticated.amendAlgosPath))
           .call();
     } catch (OkxException e) {
