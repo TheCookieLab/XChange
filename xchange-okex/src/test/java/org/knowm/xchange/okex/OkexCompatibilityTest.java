@@ -60,6 +60,17 @@ public class OkexCompatibilityTest {
   }
 
   @Test
+  public void legacyExchangeRetainsMetadataWhenRemoteInitIsDisabled() {
+    ExchangeSpecification spec = new OkexExchange().getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+
+    OkexExchange exchange = new OkexExchange();
+    exchange.applySpecification(spec);
+
+    assertThat(exchange.getExchangeMetaData()).isNotNull();
+  }
+
+  @Test
   public void testWrapperConversions() {
     assertThat(OkexInstType.from(OkxInstType.SWAP).to()).isEqualTo(OkxInstType.SWAP);
     assertThat(OkexInstType.from(null)).isNull();
