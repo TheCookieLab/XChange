@@ -5,6 +5,7 @@ import static info.bitrich.xchangestream.okx.OkxStreamingService.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
+import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.subjects.PublishSubject;
 import java.math.BigDecimal;
@@ -194,6 +195,10 @@ public class OkxStreamingMarketDataService implements StreamingMarketDataService
         OkxAdapters.adaptCandleStickInterval(interval).name()
             + "-"
             + OkxAdapters.adaptInstrument(instrument);
+
+    if (businessStreamingService == null) {
+      return Observable.error(new NotConnectedException());
+    }
 
     return businessStreamingService
         .subscribeChannel(channelUniqueId)
