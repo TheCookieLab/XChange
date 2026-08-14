@@ -26,15 +26,27 @@ public class OkexAmendAlgoRequest {
   @JsonProperty("newSz")
   private String amendedAmount;
 
-  @JsonProperty("newPx")
-  private String amendedPrice;
+  @JsonProperty("newTpTriggerPx")
+  private String newTakeProfitTriggerPrice;
+
+  @JsonProperty("newTpOrdPx")
+  private String newTakeProfitOrderPrice;
+
+  @JsonProperty("newSlTriggerPx")
+  private String newStopLossTriggerPrice;
+
+  @JsonProperty("newSlOrdPx")
+  private String newStopLossOrderPrice;
 
   public OkxAmendAlgoRequest to() {
     return OkxAmendAlgoRequest.builder()
         .algoId(algoId)
         .instrumentId(instrumentId)
         .amendedAmount(amendedAmount)
-        .amendedPrice(amendedPrice)
+        .newTakeProfitTriggerPrice(newTakeProfitTriggerPrice)
+        .newTakeProfitOrderPrice(newTakeProfitOrderPrice)
+        .newStopLossTriggerPrice(newStopLossTriggerPrice)
+        .newStopLossOrderPrice(newStopLossOrderPrice)
         .build();
   }
 }

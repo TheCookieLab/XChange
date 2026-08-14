@@ -22,6 +22,15 @@ public class OkxAmendAlgoRequest {
   @JsonProperty("newSz")
   private String amendedAmount;
 
-  @JsonProperty("newPx")
-  private String amendedPrice;
+  @JsonProperty("newTpTriggerPx")
+  private String newTakeProfitTriggerPrice;
+
+  @JsonProperty("newTpOrdPx")
+  private String newTakeProfitOrderPrice;
+
+  @JsonProperty("newSlTriggerPx")
+  private String newStopLossTriggerPrice;
+
+  @JsonProperty("newSlOrdPx")
+  private String newStopLossOrderPrice;
 }

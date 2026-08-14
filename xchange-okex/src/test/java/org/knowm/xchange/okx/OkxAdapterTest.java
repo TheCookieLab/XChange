@@ -379,6 +379,27 @@ public class OkxAdapterTest {
   }
 
   @Test
+  public void testAmendAlgoRequestSerializesTpSlWireKeys() throws JsonProcessingException {
+    // /trade/amend-algos accepts TP/SL-specific amendment keys, not a generic newPx.
+    OkxAmendAlgoRequest request =
+        OkxAmendAlgoRequest.builder()
+            .algoId("algo-1")
+            .instrumentId("BTC-USDT-SWAP")
+            .amendedAmount("1")
+            .newTakeProfitTriggerPrice("70000")
+            .newTakeProfitOrderPrice("69000")
+            .newStopLossTriggerPrice("50000")
+            .newStopLossOrderPrice("51000")
+            .build();
+    JsonNode node = new ObjectMapper().readTree(new ObjectMapper().writeValueAsString(request));
+    assertThat(node.get("newTpTriggerPx").asText()).isEqualTo("70000");
+    assertThat(node.get("newTpOrdPx").asText()).isEqualTo("69000");
+    assertThat(node.get("newSlTriggerPx").asText()).isEqualTo("50000");
+    assertThat(node.get("newSlOrdPx").asText()).isEqualTo("51000");
+    assertThat(node.get("newPx")).isNull();
+  }
+
+  @Test
   public void testAmendAlgoOrderTakesSingleRequest() throws NoSuchMethodException {
     // /trade/amend-algos accepts one amendment object per request; a List parameter would make
     // Rescu serialize a JSON array and every amend call would be rejected.
