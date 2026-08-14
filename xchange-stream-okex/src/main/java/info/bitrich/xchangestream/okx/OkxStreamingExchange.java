@@ -189,7 +189,8 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
   /**
    * @return the transports that {@link #connect(ProductSubscription...)} opens: the public
    *     transport plus the configured transports (or, by default, business and private when
-   *     credentials are configured)
+   *     credentials are configured), plus any transports that still hold active channel
+   *     registrations so a reconnect resubscribes them (mirrors {@link #getRequiredTransports()})
    */
   private Set<TransportRole> getConnectionTransports() {
     Set<TransportRole> transports = new HashSet<>();
@@ -201,6 +202,14 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
       }
     } else {
       transports.addAll(requiredTransportsOverride);
+    }
+    // A transport with active channels must be reopened even when an explicit override no longer
+    // lists it; otherwise its subscriptions are silently dropped and isAlive() stays false.
+    if (businessStreamingService != null && businessStreamingService.hasActiveChannels()) {
+      transports.add(TransportRole.BUSINESS);
+    }
+    if (privateStreamingService != null && privateStreamingService.hasActiveChannels()) {
+      transports.add(TransportRole.PRIVATE);
     }
     return transports;
   }
