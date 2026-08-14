@@ -21,6 +21,9 @@ public class OkxAlgoOrderDetails {
   @JsonProperty("ordId")
   private String orderId;
 
+  @JsonProperty("algoId")
+  private String algoId;
+
   @JsonProperty("clOrdId")
   private String clientOrderId;
 

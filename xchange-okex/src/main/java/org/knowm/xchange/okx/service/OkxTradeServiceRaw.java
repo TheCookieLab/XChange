@@ -423,7 +423,7 @@ public class OkxTradeServiceRaw extends OkxBaseService {
                         page.getBefore(),
                         String.valueOf(page.getLimit()))
                     .getData(),
-            OkxAlgoOrderDetails::getOrderId,
+            OkxAlgoOrderDetails::getAlgoId,
             pagination);
     return new OkxResponse<>(null, "0", null, items);
   }
@@ -488,7 +488,7 @@ public class OkxTradeServiceRaw extends OkxBaseService {
                         page.getBefore(),
                         String.valueOf(page.getLimit()))
                     .getData(),
-            OkxAlgoOrderDetails::getOrderId,
+            OkxAlgoOrderDetails::getAlgoId,
             pagination);
     return new OkxResponse<>(null, "0", null, items);
   }

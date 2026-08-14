@@ -188,7 +188,8 @@ public class OkxTradeServiceRawTest {
 
   private OkxAlgoOrderDetails algoOrderDetails(String orderId) throws Exception {
     return mapper.readValue(
-        "{\"ordId\":\"" + orderId + "\"}", new TypeReference<OkxAlgoOrderDetails>() {});
+        "{\"ordId\":\"" + orderId + "\",\"algoId\":\"a-" + orderId + "\"}",
+        new TypeReference<OkxAlgoOrderDetails>() {});
   }
 
   /** Real algo-order payloads identify records with {@code algoId}; {@code ordId} is absent. */
@@ -269,7 +270,7 @@ public class OkxTradeServiceRawTest {
   @Test
   public void testGetAlgoOrdersPendingAccumulates() throws Exception {
     service.algoPendingPages.put(null, List.of(algoOrderDetails("1"), algoOrderDetails("2")));
-    service.algoPendingPages.put("2", List.of(algoOrderDetails("3")));
+    service.algoPendingPages.put("a-2", List.of(algoOrderDetails("3")));
 
     OkxResponse<List<OkxAlgoOrderDetails>> result =
         service.getAlgoOrdersPending("SPOT", "BTC-USDT", "conditional", OkxPageParams.of(2));
@@ -277,13 +278,13 @@ public class OkxTradeServiceRawTest {
     assertThat(result.getData())
         .extracting(OkxAlgoOrderDetails::getOrderId)
         .containsExactly("1", "2", "3");
-    assertThat(service.algoPendingCursors).containsExactly(null, "2");
+    assertThat(service.algoPendingCursors).containsExactly(null, "a-2");
   }
 
   @Test
   public void testGetAlgoOrdersHistoryAccumulates() throws Exception {
     service.algoHistoryPages.put(null, List.of(algoOrderDetails("1"), algoOrderDetails("2")));
-    service.algoHistoryPages.put("2", List.of(algoOrderDetails("3")));
+    service.algoHistoryPages.put("a-2", List.of(algoOrderDetails("3")));
 
     OkxResponse<List<OkxAlgoOrderDetails>> result =
         service.getAlgoOrdersHistory(
@@ -292,7 +293,7 @@ public class OkxTradeServiceRawTest {
     assertThat(result.getData())
         .extracting(OkxAlgoOrderDetails::getOrderId)
         .containsExactly("1", "2", "3");
-    assertThat(service.algoHistoryCursors).containsExactly(null, "2");
+    assertThat(service.algoHistoryCursors).containsExactly(null, "a-2");
   }
 
   @Test

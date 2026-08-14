@@ -12,6 +12,7 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.OkexExchange;
+import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.marketdata.OkexFundingRateHistory;
 import org.knowm.xchange.okx.service.OkxMarketDataService;
 import org.knowm.xchange.service.marketdata.MarketDataService;
@@ -65,7 +66,19 @@ public class OkexMarketDataService extends OkexMarketDataServiceRaw implements M
 
   @Override
   public List<Ticker> getTickers(Params params) throws IOException {
-    return delegate.getTickers(params);
+    return delegate.getTickers(convertTickerParams(params));
+  }
+
+  /**
+   * Converts legacy {@link OkexInstType} ticker parameters to their canonical {@link OkxInstType}
+   * counterpart so the delegation reaches {@code OkxMarketDataService#getTickers} without tripping
+   * its type guard.
+   *
+   * @param params the caller-supplied ticker parameters
+   * @return the canonical parameters, or {@code params} unchanged when no conversion applies
+   */
+  static Params convertTickerParams(Params params) {
+    return params instanceof OkexInstType ? ((OkexInstType) params).to() : params;
   }
 
   public List<OkexFundingRateHistory> getFundingRateHistory(
