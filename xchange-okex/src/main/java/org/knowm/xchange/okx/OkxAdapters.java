@@ -635,14 +635,10 @@ public class OkxAdapters {
        The price-dependent inverse-contract conversion (sz*ctVal/price) needs a price, which does
        not exist at metadata time and not for MarketOrders; conversion call sites with a price
        divide by it, while metadata minimums and market-order placement keep the plain ctVal
-       multiply/divide. USD- or USDC-counter perpetual swaps are skipped entirely because their
-       minimum amounts cannot be expressed in base volume without a price.
+       multiply/divide. USD- and USDC-counter perpetual swaps are registered like USDT swaps with
+       notional minimums, so their call sites can dereference the contract value and convert with
+       the price; without registration those calls would null-dereference instead.
       */
-      if (pair instanceof FuturesContract
-          && ((FuturesContract) pair).isPerpetual()
-          && !pair.getCounter().equals(Currency.USDT)) {
-        continue;
-      }
       // Contract sizes convert by ctVal (SWAP/FUTURES) or ctMult (OPTION); spot/margin leave
       // those fields empty so only build the multiplier for contract derivatives.
       BigDecimal contractValue =
