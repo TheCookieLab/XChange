@@ -70,7 +70,6 @@ public class OkxStreamingTradeService implements StreamingTradeService {
     this.dedupeCacheSize = dedupeCacheSize;
   }
 
-
   @Override
   public Observable<Order> getOrderChanges(Instrument instrument, Object... args) {
     String channelUniqueId = USER_ORDER_CHANGES + OkxAdapters.adaptInstrument(instrument);
@@ -130,7 +129,8 @@ public class OkxStreamingTradeService implements StreamingTradeService {
                                   Collections.singletonList(details), exchangeMetaData)
                               .getUserTrades()
                               .get(0);
-                      // Surface the fill-level tradeId (the wire "tradeId") so callers can correlate
+                      // Surface the fill-level tradeId (the wire "tradeId") so callers can
+                      // correlate
                       // the streamed fill with REST fills and order history.
                       String tradeId = details.getLastTradeId();
                       if (tradeId != null && !tradeId.isEmpty()) {
@@ -163,7 +163,8 @@ public class OkxStreamingTradeService implements StreamingTradeService {
                                 .constructCollectionType(List.class, OkxPosition.class));
                     List<OkxPosition> freshPositions =
                         okxPositions.stream()
-                            .filter(position -> !deduplicator.isDuplicate(positionEventKey(position)))
+                            .filter(
+                                position -> !deduplicator.isDuplicate(positionEventKey(position)))
                             .collect(Collectors.toList());
                     return Observable.fromIterable(
                         OkxAdapters.adaptOpenPositions(freshPositions, exchangeMetaData)

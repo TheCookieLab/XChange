@@ -165,6 +165,7 @@ public class OkxStreamingTradeServiceTest {
     assertThat(observer.values().get(0).getOrderId()).isEqualTo("123");
     assertThat(observer.values().get(1).getId()).isEqualTo("T-2");
   }
+
   @Test
   public void testIndependentUserTradeSubscriptionsEachReceiveTheEvent() {
     JsonNode first =
@@ -179,7 +180,6 @@ public class OkxStreamingTradeServiceTest {
     firstObserver.assertNoErrors().assertValueCount(1);
     secondObserver.assertNoErrors().assertValueCount(1);
   }
-
 
   @Test
   public void testGetOrderChangesDeduplicatesRedeliveredEvents() {
