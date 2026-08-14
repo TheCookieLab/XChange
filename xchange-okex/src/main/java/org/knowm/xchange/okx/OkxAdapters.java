@@ -50,9 +50,9 @@ public class OkxAdapters {
    * init registers the server's {@code BTC/USD} code while legacy callers still trade {@code
    * BTC/USDC}; {@link #adaptInstrument(Instrument)} maps that pair to the wire {@code BTC-USD},
    * whose reverse adaptation resolves to the registered key. The wire key is preferred so a
-   * currency-pair caller always receives the code that matches the {@code instId} sent on the
-   * wire (a direct {@code BTC/USDC} registration, if present, belongs to a different instrument
-   * type and would not be valid for the adapted {@code BTC-USD} request).
+   * currency-pair caller always receives the code that matches the {@code instId} sent on the wire
+   * (a direct {@code BTC/USDC} registration, if present, belongs to a different instrument type and
+   * would not be valid for the adapted {@code BTC-USD} request).
    *
    * @param instrument the instrument to resolve
    * @return the numeric instrument code, or {@code null} when unresolvable

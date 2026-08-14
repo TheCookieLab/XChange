@@ -113,11 +113,9 @@ public class OkxAdapterTest {
     try {
       OkxAdapters.instrumentToInstrumentIdMap.put(new CurrencyPair("BTC/USD"), 1234567890L);
       OkxAdapters.instrumentToInstrumentIdMap.put(new CurrencyPair("BTC/USDC"), 987654321L);
-      assertThat(OkxAdapters.instrumentCode(new CurrencyPair("BTC/USDC")))
-          .isEqualTo(1234567890L);
+      assertThat(OkxAdapters.instrumentCode(new CurrencyPair("BTC/USDC"))).isEqualTo(1234567890L);
       OkxAdapters.instrumentToInstrumentIdMap.remove(new CurrencyPair("BTC/USD"));
-      assertThat(OkxAdapters.instrumentCode(new CurrencyPair("BTC/USDC")))
-          .isEqualTo(987654321L);
+      assertThat(OkxAdapters.instrumentCode(new CurrencyPair("BTC/USDC"))).isEqualTo(987654321L);
       assertThat(OkxAdapters.instrumentCode(new CurrencyPair("ETH/USDT"))).isNull();
     } finally {
       OkxAdapters.instrumentToInstrumentIdMap.clear();
