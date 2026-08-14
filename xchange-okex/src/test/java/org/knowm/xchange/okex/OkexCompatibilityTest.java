@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import org.junit.Test;
@@ -18,6 +19,7 @@ import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
+import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
 import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.okex.service.OkexAccountService;
 import org.knowm.xchange.okex.service.OkexAccountServiceRaw;
@@ -43,6 +45,28 @@ import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
  * All tests are offline.
  */
 public class OkexCompatibilityTest {
+
+  @Test
+  public void legacyAuthenticatedSurfaceRestoredWithDeprecatedInterfaces() throws Exception {
+    assertThat(Okex.class.isInterface()).isTrue();
+    assertThat(OkexAuthenticated.class.isInterface()).isTrue();
+    assertThat(Okex.class.getAnnotation(Deprecated.class)).isNotNull();
+    assertThat(OkexAuthenticated.class.getAnnotation(Deprecated.class)).isNotNull();
+    assertThat(Okex.instrumentsPath).isEqualTo("/public/instruments");
+    assertThat(OkexAuthenticated.placeOrderPath).isEqualTo("/trade/order");
+    assertThat(OkexAuthenticated.privatePathRateLimits.get(OkexAuthenticated.placeOrderPath))
+        .isEqualTo(Arrays.asList(60, 2));
+    assertThat(
+            OkexAuthenticated.class.getMethod(
+                "placeOrder",
+                String.class,
+                si.mazi.rescu.ParamsDigest.class,
+                String.class,
+                String.class,
+                String.class,
+                OkexOrderRequest.class))
+        .isNotNull();
+  }
 
   @Test
   public void testDefaultExchangeSpecification() {

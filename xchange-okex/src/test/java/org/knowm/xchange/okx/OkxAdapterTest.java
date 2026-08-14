@@ -24,11 +24,16 @@ import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.dto.trade.OkexAttachAlgoOrder;
 import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
 import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.account.OkxPosition;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
+import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
+import org.knowm.xchange.okx.dto.marketdata.OkxPublicOrder;
+import org.knowm.xchange.okx.dto.marketdata.OkxTrade;
 import org.knowm.xchange.okx.dto.trade.OkxAttachAlgoOrder;
 import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 
@@ -165,6 +170,138 @@ public class OkxAdapterTest {
       OkxAdapters.instrumentToInstrumentIdMap.clear();
       OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
     }
+  }
+
+  @Test
+  public void testAdaptOrderDetailsInverseContractSizeToVolume() throws IOException {
+    FuturesContract contract = new FuturesContract("BTC/USD/260814");
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkxOrderDetails details =
+        mapper.readValue(
+            "{\"instId\":\"BTC-USD-260814\",\"instType\":\"FUTURES\",\"sz\":\"1\",\"px\":\"50000\","
+                + "\"avgPx\":\"50000\",\"accFillSz\":\"1\",\"fillPx\":\"50000\",\"fillSz\":\"1\","
+                + "\"fee\":\"0.5\",\"feeCcy\":\"USD\",\"side\":\"buy\",\"ordId\":\"order-1\","
+                + "\"uTime\":\"1690000000000\",\"cTime\":\"1690000000000\",\"state\":\"filled\","
+                + "\"clOrdId\":\"ref-1\",\"ordType\":\"limit\"}",
+            OkxOrderDetails.class);
+
+    Map<Instrument, Long> original = new HashMap<>(OkxAdapters.instrumentToInstrumentIdMap);
+    OkxAdapters.instrumentToInstrumentIdMap.clear();
+    try {
+      ExchangeMetaData metaData = metaDataWithContractValue(contract, new BigDecimal("100"));
+      assertThat(
+              OkxAdapters.adaptUserTrades(List.of(details), metaData)
+                  .getUserTrades()
+                  .get(0)
+                  .getOriginalAmount())
+          .isEqualByComparingTo("0.002");
+      assertThat(OkxAdapters.adaptOrder(details, metaData).getOriginalAmount())
+          .isEqualByComparingTo("0.002");
+    } finally {
+      OkxAdapters.instrumentToInstrumentIdMap.clear();
+      OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
+    }
+  }
+
+  @Test
+  public void testAdaptTradesInverseContractSizeToVolume() throws IOException {
+    FuturesContract contract = new FuturesContract("BTC/USD/260814");
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkxTrade trade =
+        mapper.readValue(
+            "{\"tradeId\":\"t1\",\"instId\":\"BTC-USD-260814\",\"px\":50000,\"side\":\"buy\","
+                + "\"sz\":1,\"ts\":1690000000000}",
+            OkxTrade.class);
+    
+    Map<Instrument, Long> original = new HashMap<>(OkxAdapters.instrumentToInstrumentIdMap);
+    OkxAdapters.instrumentToInstrumentIdMap.clear();
+    try {
+      ExchangeMetaData metaData = metaDataWithContractValue(contract, new BigDecimal("100"));
+      assertThat(
+              OkxAdapters.adaptTrades(List.of(trade), contract, metaData).getTrades().get(0).getOriginalAmount())
+          .isEqualByComparingTo("0.002");
+    } finally {
+      OkxAdapters.instrumentToInstrumentIdMap.clear();
+      OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
+    }
+  }
+
+  @Test
+  public void testAdaptLimitOrderInverseContractSizeToVolume() {
+    FuturesContract contract = new FuturesContract("BTC/USD/260814");
+    OkxPublicOrder okxPublicOrder =
+        new OkxPublicOrder(new BigDecimal("50000"), new BigDecimal("1"), 0, 0);
+    LimitOrder order =
+        OkxAdapters.adaptLimitOrder(
+            okxPublicOrder, contract, Order.OrderType.ASK, new Date(), new BigDecimal("100"));
+    assertThat(order.getOriginalAmount()).isEqualByComparingTo("0.002");
+  }
+
+  @Test
+  public void testAdaptOrderInverseVolumeToContractSize() {
+    FuturesContract contract = new FuturesContract("BTC/USD/260814");
+    ExchangeMetaData metaData = metaDataWithContractValue(contract, new BigDecimal("100"));
+    Map<Instrument, Long> original = new HashMap<>(OkxAdapters.instrumentToInstrumentIdMap);
+    OkxAdapters.instrumentToInstrumentIdMap.clear();
+    try {
+      OkxAdapters.instrumentToInstrumentIdMap.put(contract, 1234567890L);
+      LimitOrder limitOrder =
+          new LimitOrder(
+              Order.OrderType.BID,
+              new BigDecimal("0.002"),
+              contract,
+              "order-1",
+              new Date(),
+              new BigDecimal("50000"));
+      assertThat(OkxAdapters.adaptOrder(limitOrder, metaData, "1").getAmount()).isEqualTo("1");
+
+      MarketOrder marketOrder =
+          new MarketOrder(Order.OrderType.BID, new BigDecimal("0.002"), contract);
+      assertThat(OkxAdapters.adaptOrder(marketOrder, metaData, "1").getAmount())
+          .isEqualTo("0.00002");
+    } finally {
+      OkxAdapters.instrumentToInstrumentIdMap.clear();
+      OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
+    }
+  }
+
+  @Test
+  public void testAdaptOpenPositionsInverseContractSizeToVolume() throws IOException {
+    FuturesContract contract = new FuturesContract("BTC/USD/260814");
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkxPosition position =
+        mapper.readValue(
+            "{\"instType\":\"FUTURES\",\"mgnMode\":\"cross\",\"posSide\":\"net\",\"pos\":\"1\","
+                + "\"avgPx\":\"50000\",\"instId\":\"BTC-USD-260814\"}",
+            OkxPosition.class);
+
+    Map<Instrument, Long> original = new HashMap<>(OkxAdapters.instrumentToInstrumentIdMap);
+    OkxAdapters.instrumentToInstrumentIdMap.clear();
+    try {
+      ExchangeMetaData metaData = metaDataWithContractValue(contract, new BigDecimal("100"));
+      assertThat(
+              OkxAdapters.adaptOpenPositions(List.of(position), metaData)
+                  .getOpenPositions()
+                  .get(0)
+                  .getSize())
+          .isEqualByComparingTo("0.002");
+    } finally {
+      OkxAdapters.instrumentToInstrumentIdMap.clear();
+      OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
+    }
+  }
+
+  private static ExchangeMetaData metaDataWithContractValue(
+      Instrument instrument, BigDecimal contractValue) {
+    return new ExchangeMetaData(
+        Map.of(instrument, InstrumentMetaData.builder().contractValue(contractValue).build()),
+        Collections.emptyMap(),
+        null,
+        null,
+        null);
   }
 
   @Test
