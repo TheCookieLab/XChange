@@ -1,5 +1,6 @@
 package org.knowm.xchange.okx.service;
 
+import static org.knowm.xchange.okx.dto.OkxInstType.FUTURES;
 import static org.knowm.xchange.okx.dto.OkxInstType.OPTION;
 import static org.knowm.xchange.okx.dto.OkxInstType.SPOT;
 import static org.knowm.xchange.okx.dto.OkxInstType.SWAP;
@@ -57,6 +58,24 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
    * @param endpoint the endpoint path that produced the failure, e.g. {@link
    *     OkxAuthenticated#placeOrderPath}
    */
+  /**
+   * Maps an instrument to the {@code instType} OKX expects for order-history queries: SPOT/MARGIN
+   * pairs query {@code SPOT}, perpetual swaps query {@code SWAP}, dated futures query {@code
+   * FUTURES}, and options query {@code OPTION}.
+   *
+   * @param instrument the instrument to map
+   * @return the OKX instrument type name
+   */
+  static String historyInstrumentType(Instrument instrument) {
+    if (instrument instanceof FuturesContract) {
+      return ((FuturesContract) instrument).isPerpetual() ? SWAP.name() : FUTURES.name();
+    }
+    if (instrument instanceof OptionsContract) {
+      return OPTION.name();
+    }
+    return SPOT.name();
+  }
+
   private OkxException orderException(
       OkxResponse<List<OkxOrderResponse>> response, String endpoint) {
     OkxOrderResponse failed = response.getData().get(0);
@@ -84,12 +103,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
     if (params instanceof TradeHistoryParamInstrument) {
       Instrument instrument = ((TradeHistoryParamInstrument) params).getInstrument();
 
-      String instrumentType = SPOT.name();
-      if (instrument instanceof FuturesContract) {
-        instrumentType = SWAP.name();
-      } else if (instrument instanceof OptionsContract) {
-        instrumentType = OPTION.name();
-      }
+      String instrumentType = historyInstrumentType(instrument);
 
       return OkxAdapters.adaptUserTrades(
           getOrderHistory(
