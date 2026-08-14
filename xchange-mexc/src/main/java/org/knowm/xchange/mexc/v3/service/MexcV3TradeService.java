@@ -21,8 +21,10 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.mexc.v3.MexcV3Adapters;
 import org.knowm.xchange.mexc.v3.MexcV3Symbols;
 import org.knowm.xchange.mexc.v3.client.MexcV3Exception;
+import org.knowm.xchange.mexc.v3.client.ReplaySafety;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3MyTrade;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3Order;
+import org.knowm.xchange.mexc.v3.dto.trade.MexcV3OrderResponse;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3OrderSide;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3OrderType;
 import org.knowm.xchange.service.trade.TradeService;
@@ -61,24 +63,25 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
    */
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
-    try {
-      return mexcV3Authenticated
-          .placeOrder(
-              apiKey,
-              MexcV3Symbols.toMexcSymbol(limitOrder.getInstrument()),
-              limitOrder.getType() == OrderType.ASK ? MexcV3OrderSide.SELL : MexcV3OrderSide.BUY,
-              MexcV3OrderType.LIMIT,
-              limitOrder.getOriginalAmount().toPlainString(),
-              null,
-              limitOrder.getLimitPrice().toPlainString(),
-              limitOrder.getUserReference(),
-              recvWindowMs,
-              timestampFactory,
-              signatureCreator)
-          .getOrderId();
-    } catch (MexcV3Exception e) {
-      throw e.adapt();
-    }
+    return execute(
+        () ->
+            mexcV3Authenticated
+                .placeOrder(
+                    apiKey,
+                    MexcV3Symbols.toMexcSymbol(limitOrder.getInstrument()),
+                    limitOrder.getType() == OrderType.ASK
+                        ? MexcV3OrderSide.SELL
+                        : MexcV3OrderSide.BUY,
+                    MexcV3OrderType.LIMIT,
+                    limitOrder.getOriginalAmount().toPlainString(),
+                    null,
+                    limitOrder.getLimitPrice().toPlainString(),
+                    limitOrder.getUserReference(),
+                    recvWindowMs,
+                    timestampFactory,
+                    signatureCreator)
+                .getOrderId(),
+        ReplaySafety.PLACEMENT);
   }
 
   /**
@@ -89,25 +92,24 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
    */
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
-    try {
-      boolean buy = marketOrder.getType() == OrderType.BID;
-      return mexcV3Authenticated
-          .placeOrder(
-              apiKey,
-              MexcV3Symbols.toMexcSymbol(marketOrder.getInstrument()),
-              buy ? MexcV3OrderSide.BUY : MexcV3OrderSide.SELL,
-              MexcV3OrderType.MARKET,
-              buy ? null : marketOrder.getOriginalAmount().toPlainString(),
-              buy ? marketOrder.getOriginalAmount().toPlainString() : null,
-              null,
-              marketOrder.getUserReference(),
-              recvWindowMs,
-              timestampFactory,
-              signatureCreator)
-          .getOrderId();
-    } catch (MexcV3Exception e) {
-      throw e.adapt();
-    }
+    boolean buy = marketOrder.getType() == OrderType.BID;
+    return execute(
+        () ->
+            mexcV3Authenticated
+                .placeOrder(
+                    apiKey,
+                    MexcV3Symbols.toMexcSymbol(marketOrder.getInstrument()),
+                    buy ? MexcV3OrderSide.BUY : MexcV3OrderSide.SELL,
+                    MexcV3OrderType.MARKET,
+                    buy ? null : marketOrder.getOriginalAmount().toPlainString(),
+                    buy ? marketOrder.getOriginalAmount().toPlainString() : null,
+                    null,
+                    marketOrder.getUserReference(),
+                    recvWindowMs,
+                    timestampFactory,
+                    signatureCreator)
+                .getOrderId(),
+        ReplaySafety.PLACEMENT);
   }
 
   @Override
@@ -115,37 +117,50 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
     String symbol = null;
     String orderId = null;
     String origClientOrderId = null;
-    if (orderParams instanceof CancelOrderByInstrument
-        && orderParams instanceof CancelOrderByIdParams) {
+    if (orderParams instanceof CancelOrderByInstrument) {
       Instrument instrument = ((CancelOrderByInstrument) orderParams).getInstrument();
       if (instrument instanceof CurrencyPair) {
         symbol = MexcV3Symbols.toMexcSymbol(instrument);
       }
-      orderId = ((CancelOrderByIdParams) orderParams).getOrderId();
-    } else if (orderParams instanceof CancelOrderByCurrencyPair
-        && orderParams instanceof CancelOrderByIdParams) {
+    } else if (orderParams instanceof CancelOrderByCurrencyPair) {
       symbol =
           MexcV3Symbols.toMexcSymbol(
               ((CancelOrderByCurrencyPair) orderParams).getCurrencyPair());
-      orderId = ((CancelOrderByIdParams) orderParams).getOrderId();
+    }
+    if (orderParams instanceof CancelOrderByIdParams) {
+      String candidateOrderId = ((CancelOrderByIdParams) orderParams).getOrderId();
+      if (candidateOrderId != null) {
+        orderId = candidateOrderId;
+      } else if (orderParams instanceof CancelOrderByUserReferenceParams) {
+        origClientOrderId =
+            ((CancelOrderByUserReferenceParams) orderParams).getUserReference();
+      }
     } else if (orderParams instanceof CancelOrderByUserReferenceParams) {
       origClientOrderId = ((CancelOrderByUserReferenceParams) orderParams).getUserReference();
-    } else {
-      throw new IllegalArgumentException(
-          "MEXC Spot v3 cancelOrder requires a symbol plus orderId or user reference");
     }
     if (symbol == null) {
       throw new IllegalArgumentException(
           "MEXC Spot v3 cancelOrder requires a currency pair/instrument");
     }
-    try {
-      MexcV3Order canceled =
-          mexcV3Authenticated.cancelOrder(
-              apiKey, symbol, orderId, origClientOrderId, null, recvWindowMs, timestampFactory, signatureCreator);
-      return canceled != null && canceled.getOrderId() != null;
-    } catch (MexcV3Exception e) {
-      throw e.adapt();
+    if (orderId == null && origClientOrderId == null) {
+      throw new IllegalArgumentException(
+          "MEXC Spot v3 cancelOrder requires an orderId or user reference");
     }
+    if (symbol == null) {
+      throw new IllegalArgumentException(
+          "MEXC Spot v3 cancelOrder requires a currency pair/instrument");
+    }
+    final String querySymbol = symbol;
+    final String queryOrderId = orderId;
+    final String queryOrigClientOrderId = origClientOrderId;
+    return execute(
+        () -> {
+          MexcV3Order canceled =
+              mexcV3Authenticated.cancelOrder(
+                  apiKey, querySymbol, queryOrderId, queryOrigClientOrderId, null, recvWindowMs, timestampFactory, signatureCreator);
+          return canceled != null && canceled.getOrderId() != null;
+        },
+        ReplaySafety.IDEMPOTENT_CANCELLATION);
   }
 
   @Override
@@ -154,18 +169,18 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
       throw new IllegalArgumentException(
           "MEXC Spot v3 cancelAllOrders requires DefaultCancelAllOrdersByInstrument");
     }
-    String symbol = MexcV3Symbols.toMexcSymbol(((DefaultCancelAllOrdersByInstrument) orderParams).getInstrument());
-    try {
-      List<MexcV3Order> canceled =
-          mexcV3Authenticated.cancelAllOpenOrders(apiKey, symbol, recvWindowMs, timestampFactory, signatureCreator);
-      List<String> ids = new ArrayList<>(canceled.size());
-      for (MexcV3Order order : canceled) {
-        ids.add(order.getOrderId());
-      }
-      return ids;
-    } catch (MexcV3Exception e) {
-      throw e.adapt();
-    }
+    final String querySymbol = MexcV3Symbols.toMexcSymbol(((DefaultCancelAllOrdersByInstrument) orderParams).getInstrument());
+    return execute(
+        () -> {
+          List<MexcV3Order> canceled =
+              mexcV3Authenticated.cancelAllOpenOrders(apiKey, querySymbol, recvWindowMs, timestampFactory, signatureCreator);
+          List<String> ids = new ArrayList<>(canceled.size());
+          for (MexcV3Order order : canceled) {
+            ids.add(order.getOrderId());
+          }
+          return ids;
+        },
+        ReplaySafety.IDEMPOTENT_CANCELLATION);
   }
 
   @Override
@@ -183,18 +198,19 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
     if (pair == null) {
       throw new IllegalArgumentException("MEXC Spot v3 open orders require a currency pair");
     }
-    try {
-      List<MexcV3Order> raw =
-          mexcV3Authenticated.openOrders(
-              apiKey, MexcV3Symbols.toMexcSymbol(pair), recvWindowMs, timestampFactory, signatureCreator);
-      List<LimitOrder> orders = new ArrayList<>(raw.size());
-      for (MexcV3Order order : raw) {
-        orders.add(MexcV3Adapters.adaptOrder(order, MexcV3Symbols.toCurrencyPair(order.getSymbol())));
-      }
-      return new OpenOrders(orders);
-    } catch (MexcV3Exception e) {
-      throw e.adapt();
-    }
+    final CurrencyPair queryPair = pair;
+    return execute(
+        () -> {
+          List<MexcV3Order> raw =
+              mexcV3Authenticated.openOrders(
+                  apiKey, MexcV3Symbols.toMexcSymbol(queryPair), recvWindowMs, timestampFactory, signatureCreator);
+          List<LimitOrder> orders = new ArrayList<>(raw.size());
+          for (MexcV3Order order : raw) {
+            orders.add(MexcV3Adapters.adaptOrder(order, MexcV3Symbols.toCurrencyPair(order.getSymbol())));
+          }
+          return new OpenOrders(orders);
+        },
+        ReplaySafety.READ);
   }
 
   @Override
@@ -210,15 +226,18 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
       } else if (params instanceof OrderQueryParamInstrument) {
         symbol = MexcV3Symbols.toMexcSymbol(((OrderQueryParamInstrument) params).getInstrument());
       }
-      try {
-        MexcV3Order order =
-            mexcV3Authenticated.order(
-                apiKey, symbol, null, params.getOrderId(), recvWindowMs, timestampFactory, signatureCreator);
-        result.add(
-            MexcV3Adapters.adaptOrder(order, MexcV3Symbols.toCurrencyPair(order.getSymbol())));
-      } catch (MexcV3Exception e) {
-        throw e.adapt();
-      }
+      final String querySymbol = symbol;
+      Order order =
+          execute(
+              () -> {
+                MexcV3Order rawOrder =
+                    mexcV3Authenticated.order(
+                        apiKey, querySymbol, null, params.getOrderId(), recvWindowMs, timestampFactory, signatureCreator);
+                return MexcV3Adapters.adaptOrder(
+                    rawOrder, MexcV3Symbols.toCurrencyPair(rawOrder.getSymbol()));
+              },
+              ReplaySafety.READ);
+      result.add(order);
     }
     return result;
   }
@@ -246,39 +265,44 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
     if (pair == null) {
       throw new IllegalArgumentException("MEXC Spot v3 trade history requires a currency pair");
     }
-    try {
-      List<MexcV3MyTrade> raw =
-          mexcV3Authenticated.myTrades(
-              apiKey,
-              MexcV3Symbols.toMexcSymbol(pair),
-              orderId,
-              startTime == null ? null : startTime.getTime(),
-              endTime == null ? null : endTime.getTime(),
-              limit,
-              recvWindowMs,
-              timestampFactory,
-              signatureCreator);
-      List<UserTrade> trades = new ArrayList<>(raw.size());
-      for (MexcV3MyTrade trade : raw) {
-        trades.add(
-            UserTrade.builder()
-                .id(String.valueOf(trade.getId()))
-                .orderId(trade.getOrderId())
-                .orderUserReference(trade.getClientOrderId())
-                .instrument(pair)
-                .originalAmount(new java.math.BigDecimal(trade.getQty()))
-                .price(new java.math.BigDecimal(trade.getPrice()))
-                .timestamp(new Date(trade.getTime()))
-                .type(trade.isBuyer() ? OrderType.BID : OrderType.ASK)
-                .feeAmount(new java.math.BigDecimal(trade.getCommission()))
-                .feeCurrency(
-                    org.knowm.xchange.currency.Currency.getInstance(trade.getCommissionAsset()))
-                .build());
-      }
-      return new UserTrades(trades, TradeSortType.SortByID);
-    } catch (MexcV3Exception e) {
-      throw e.adapt();
-    }
+    final CurrencyPair queryPair = pair;
+    final String queryOrderId = orderId;
+    final Date queryStartTime = startTime;
+    final Date queryEndTime = endTime;
+    final Integer queryLimit = limit;
+    return execute(
+        () -> {
+          List<MexcV3MyTrade> raw =
+              mexcV3Authenticated.myTrades(
+                  apiKey,
+                  MexcV3Symbols.toMexcSymbol(queryPair),
+                  queryOrderId,
+                  queryStartTime == null ? null : queryStartTime.getTime(),
+                  queryEndTime == null ? null : queryEndTime.getTime(),
+                  queryLimit,
+                  recvWindowMs,
+                  timestampFactory,
+                  signatureCreator);
+          List<UserTrade> trades = new ArrayList<>(raw.size());
+          for (MexcV3MyTrade trade : raw) {
+            trades.add(
+                UserTrade.builder()
+                    .id(String.valueOf(trade.getId()))
+                    .orderId(trade.getOrderId())
+                    .orderUserReference(trade.getClientOrderId())
+                    .instrument(queryPair)
+                    .originalAmount(new java.math.BigDecimal(trade.getQty()))
+                    .price(new java.math.BigDecimal(trade.getPrice()))
+                    .timestamp(new Date(trade.getTime()))
+                    .type(trade.isBuyer() ? OrderType.BID : OrderType.ASK)
+                    .feeAmount(new java.math.BigDecimal(trade.getCommission()))
+                    .feeCurrency(
+                        org.knowm.xchange.currency.Currency.getInstance(trade.getCommissionAsset()))
+                    .build());
+          }
+          return new UserTrades(trades, TradeSortType.SortByID);
+        },
+        ReplaySafety.READ);
   }
 
   @Override
@@ -291,8 +315,11 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
     return new DefaultOpenOrdersParamCurrencyPair();
   }
 
-  /** Place-order test endpoint ({@code POST /api/v3/order/test}); returns the provider echo. */
-  public String placeOrderTest(
+  /**
+   * Place-order test endpoint ({@code POST /api/v3/order/test}); returns the parsed provider
+   * echo. The endpoint validates a new order without sending it to the matching engine.
+   */
+  public MexcV3OrderResponse placeOrderTest(
       CurrencyPair pair, MexcV3OrderSide side, MexcV3OrderType type, String quantity, String price)
       throws IOException, MexcV3Exception {
     return mexcV3Authenticated.placeOrderTest(

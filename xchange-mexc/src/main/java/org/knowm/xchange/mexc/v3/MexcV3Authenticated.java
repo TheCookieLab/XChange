@@ -73,7 +73,7 @@ public interface MexcV3Authenticated {
 
   @POST
   @Path("/order/test")
-  String placeOrderTest(
+  MexcV3OrderResponse placeOrderTest(
       @HeaderParam("X-MEXC-APIKEY") String apiKey,
       @QueryParam("symbol") String symbol,
       @QueryParam("side") MexcV3OrderSide side,

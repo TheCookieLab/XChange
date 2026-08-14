@@ -3,10 +3,10 @@ package org.knowm.xchange.mexc.v3.service;
 import java.io.IOException;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.dto.account.AccountInfo;
-import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.mexc.v3.MexcV3Adapters;
 import org.knowm.xchange.mexc.v3.MexcV3Symbols;
 import org.knowm.xchange.mexc.v3.client.MexcV3Exception;
+import org.knowm.xchange.mexc.v3.client.ReplaySafety;
 import org.knowm.xchange.mexc.v3.dto.account.MexcV3TradeFeeResponse;
 import org.knowm.xchange.service.account.AccountService;
 
@@ -32,11 +32,7 @@ public class MexcV3AccountService extends MexcV3BaseService implements AccountSe
 
   @Override
   public AccountInfo getAccountInfo() throws IOException {
-    try {
-      Wallet wallet = MexcV3Adapters.adaptWallet(getAccountRaw());
-      return new AccountInfo(wallet);
-    } catch (MexcV3Exception e) {
-      throw e.adapt();
-    }
+    return execute(
+        () -> new AccountInfo(MexcV3Adapters.adaptWallet(getAccountRaw())), ReplaySafety.READ);
   }
 }
