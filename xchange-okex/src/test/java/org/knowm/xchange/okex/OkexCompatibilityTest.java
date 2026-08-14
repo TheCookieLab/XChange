@@ -172,6 +172,28 @@ public class OkexCompatibilityTest {
     assertThat(serviceField(service, "okexAuthenticated")).isNotNull();
   }
 
+  @Test
+  public void legacyRawFacadesRemainInLegacyBaseHierarchy() throws Exception {
+    // Downstream subclasses assign to OkexBaseService and inherit its protected okex /
+    // okexAuthenticated members; the raw facades must keep the legacy hierarchy while delegating.
+    assertThat(OkexAccountServiceRaw.class.getSuperclass()).isEqualTo(OkexBaseService.class);
+    assertThat(OkexMarketDataServiceRaw.class.getSuperclass()).isEqualTo(OkexBaseService.class);
+    assertThat(OkexTradeServiceRaw.class.getSuperclass()).isEqualTo(OkexBaseService.class);
+
+    ExchangeSpecification spec = new OkexExchange().getDefaultExchangeSpecification();
+    spec.setApiKey("api-key");
+    spec.setSecretKey("secret-key");
+    spec.setExchangeSpecificParametersItem(OkxExchange.PARAM_PASSPHRASE, "passphrase");
+    spec.setShouldLoadRemoteMetaData(false);
+    OkexExchange exchange = new OkexExchange();
+    exchange.applySpecification(spec);
+
+    OkexBaseService account =
+        new OkexAccountServiceRaw(exchange, new org.knowm.xchange.client.ResilienceRegistries());
+    assertThat(serviceField(account, "okex")).isNotNull();
+    assertThat(serviceField(account, "okexAuthenticated")).isNotNull();
+  }
+
   private static Object serviceField(OkexBaseService service, String name) throws Exception {
     java.lang.reflect.Field field = OkexBaseService.class.getDeclaredField(name);
     field.setAccessible(true);

@@ -24,14 +24,13 @@ import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
 import org.knowm.xchange.okex.dto.trade.OkexPageParams;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
-import org.knowm.xchange.okx.service.OkxBaseService;
 import org.knowm.xchange.okx.service.OkxTradeServiceRaw;
 
 /**
  * @deprecated use {@link org.knowm.xchange.okx.service.OkxTradeServiceRaw} instead.
  */
 @Deprecated
-public class OkexTradeServiceRaw extends OkxBaseService {
+public class OkexTradeServiceRaw extends OkexBaseService {
 
   private final OkxTradeServiceRaw delegate;
 

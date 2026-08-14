@@ -22,14 +22,13 @@ import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
 import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
-import org.knowm.xchange.okx.service.OkxBaseService;
 import org.knowm.xchange.okx.service.OkxMarketDataServiceRaw;
 
 /**
  * @deprecated use {@link org.knowm.xchange.okx.service.OkxMarketDataServiceRaw} instead.
  */
 @Deprecated
-public class OkexMarketDataServiceRaw extends OkxBaseService {
+public class OkexMarketDataServiceRaw extends OkexBaseService {
 
   private final OkxMarketDataServiceRaw delegate;
 

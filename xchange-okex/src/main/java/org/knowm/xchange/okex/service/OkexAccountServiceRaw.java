@@ -28,13 +28,12 @@ import org.knowm.xchange.okex.dto.subaccount.OkexSubAccountDetails;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.service.OkxAccountServiceRaw;
-import org.knowm.xchange.okx.service.OkxBaseService;
 
 /**
  * @deprecated use {@link org.knowm.xchange.okx.service.OkxAccountServiceRaw} instead.
  */
 @Deprecated
-public class OkexAccountServiceRaw extends OkxBaseService {
+public class OkexAccountServiceRaw extends OkexBaseService {
 
   public static final String INTERNAL_METHOD = "3";
   public static final String ON_CHAIN_METHOD = "4";
