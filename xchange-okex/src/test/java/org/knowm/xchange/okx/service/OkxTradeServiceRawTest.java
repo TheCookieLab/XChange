@@ -133,7 +133,9 @@ public class OkxTradeServiceRawTest {
           null, "0", null, algoHistoryPages.getOrDefault(after, Collections.emptyList()));
     }
 
-    /** When non-null, the lookup seam throws OKX 51603 (order does not exist) for this client id. */
+    /**
+     * When non-null, the lookup seam throws OKX 51603 (order does not exist) for this client id.
+     */
     String notFoundClientOrderId;
 
     @Override
