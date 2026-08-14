@@ -86,6 +86,15 @@ public class OkxAdapterTest {
             OkxAdapters.adaptTradingFee(
                 okxSwapTradeFee, SWAP, new FuturesContract("USDC/USDT/SWAP")))
         .isEqualTo(new Fee(new BigDecimal("0.0002"), new BigDecimal("0.0005")));
+    // dated futures and options select the margin-currency rate like perpetual swaps
+    assertThat(
+            OkxAdapters.adaptTradingFee(
+                okxSwapTradeFee, FUTURES, new FuturesContract("BTC/USD/260814")))
+        .isEqualTo(new Fee(new BigDecimal("0.0002"), new BigDecimal("0.0005")));
+    assertThat(
+            OkxAdapters.adaptTradingFee(
+                okxSwapTradeFee, OPTION, new OptionsContract("BTC/USD/260828/110000/C")))
+        .isEqualTo(new Fee(new BigDecimal("0.0002"), new BigDecimal("0.0005")));
     // currently no USD support in OKX swap
     //    assertThat(OkxAdapters.adaptTradingFee(okxSwapTradeFee,SWAP, new
     // FuturesContract("BTC/USD/SWAP")))
