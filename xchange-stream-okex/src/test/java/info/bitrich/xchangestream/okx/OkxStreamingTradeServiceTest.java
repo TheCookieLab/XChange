@@ -165,6 +165,21 @@ public class OkxStreamingTradeServiceTest {
     assertThat(observer.values().get(0).getOrderId()).isEqualTo("123");
     assertThat(observer.values().get(1).getId()).isEqualTo("T-2");
   }
+  @Test
+  public void testIndependentUserTradeSubscriptionsEachReceiveTheEvent() {
+    JsonNode first =
+        orderEvent("123", "client-1", "1699999999999", "T-1", "100.0", "1", "1699999999000", "0.1");
+
+    when(privateStreamingService.subscribeChannel(ORDER_CHANNEL))
+        .thenReturn(Observable.just(first));
+
+    TestObserver<UserTrade> firstObserver = tradeService.getUserTrades(SPOT).test();
+    TestObserver<UserTrade> secondObserver = tradeService.getUserTrades(SPOT).test();
+
+    firstObserver.assertNoErrors().assertValueCount(1);
+    secondObserver.assertNoErrors().assertValueCount(1);
+  }
+
 
   @Test
   public void testGetOrderChangesDeduplicatesRedeliveredEvents() {
