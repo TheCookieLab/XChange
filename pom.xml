@@ -128,6 +128,7 @@
         <module>xchange-stream-kraken-v2</module>
         <module>xchange-stream-krakenfutures</module>
         <module>xchange-stream-kucoin</module>
+        <module>xchange-stream-mexc</module>
         <module>xchange-stream-okex</module>
         <module>xchange-stream-poloniex2</module>
         <module>xchange-stream-polymarket</module>
