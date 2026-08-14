@@ -65,6 +65,29 @@ public class OkxAdapters {
     return code;
   }
 
+  /**
+   * Resolves instrument metadata for a caller-supplied instrument, preferring the direct key and
+   * falling back to the adapted wire instrument. After the unified USD orderbook revamp, remote
+   * init registers metadata under the server's instrument (e.g. {@code BTC/USD}) while legacy
+   * callers still request the quote alias (e.g. {@code BTC/USDC}); the direct lookup would miss and
+   * dereference null. Mirrors {@link #instrumentCode(Instrument)}.
+   *
+   * @param instrument the instrument whose metadata to resolve
+   * @param exchangeMetaData the metadata to resolve against
+   * @return the instrument metadata, or {@code null} when unresolvable
+   */
+  public static InstrumentMetaData instrumentMetaData(
+      Instrument instrument, ExchangeMetaData exchangeMetaData) {
+    InstrumentMetaData metaData = exchangeMetaData.getInstruments().get(instrument);
+    if (metaData == null && instrument instanceof CurrencyPair) {
+      CurrencyPair pair = (CurrencyPair) instrument;
+      if (pair.getCounter().equals(Currency.USDC)) {
+        metaData = exchangeMetaData.getInstruments().get(new CurrencyPair(pair.getBase(), Currency.USD));
+      }
+    }
+    return metaData;
+  }
+
   public static UserTrades adaptUserTrades(
       List<OkxOrderDetails> okxTradeHistory, ExchangeMetaData exchangeMetaData) {
     List<UserTrade> userTradeList = new ArrayList<>();
@@ -379,7 +402,7 @@ public class OkxAdapters {
                         instrument,
                         OrderType.ASK,
                         timeStamp,
-                        exchangeMetaData.getInstruments().get(instrument).getContractValue())));
+                        instrumentMetaData(instrument, exchangeMetaData).getContractValue())));
 
     okxOrderbooks
         .get(0)
@@ -392,7 +415,7 @@ public class OkxAdapters {
                         instrument,
                         OrderType.BID,
                         timeStamp,
-                        exchangeMetaData.getInstruments().get(instrument).getContractValue())));
+                        instrumentMetaData(instrument, exchangeMetaData).getContractValue())));
 
     return new OrderBook(timeStamp, asks, bids);
   }
@@ -571,7 +594,7 @@ public class OkxAdapters {
                         convertContractSizeToVolume(
                             okxTrade.getSz(),
                             instrument,
-                            exchangeMetaData.getInstruments().get(instrument).getContractValue(),
+                            instrumentMetaData(instrument, exchangeMetaData).getContractValue(),
                             okxTrade.getPx()))
                     .price(okxTrade.getPx())
                     .timestamp(okxTrade.getTs())

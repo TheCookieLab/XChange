@@ -148,7 +148,8 @@ public class OkxStreamingMarketDataService implements StreamingMarketDataService
                   }
                   Date timestamp = new Timestamp(Long.parseLong(okxOrderbooks.get(0).getTs()));
                   BigDecimal contractValue =
-                      exchangeMetaData.getInstruments().get(instrument).getContractValue();
+                      OkxAdapters.instrumentMetaData(instrument, exchangeMetaData)
+                          .getContractValue();
                   List<OrderBookUpdate> orderBookUpdates =
                       OkxAdapters.adaptOrderBookUpdates(
                           instrument,
