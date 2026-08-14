@@ -1,6 +1,7 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.util.Date;
 import org.knowm.xchange.okx.dto.marketdata.OkxTrade;
@@ -16,6 +17,22 @@ public class OkexTrade {
   @JsonCreator
   public OkexTrade(OkxTrade delegate) {
     this.delegate = delegate;
+  }
+
+  /**
+   * Retained legacy value constructor; builds the canonical DTO internally.
+   *
+   * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxTrade} instead.
+   */
+  @Deprecated
+  public OkexTrade(
+      @JsonProperty("tradeId") String tradeId,
+      @JsonProperty("instId") String instId,
+      @JsonProperty("px") BigDecimal px,
+      @JsonProperty("sz") BigDecimal sz,
+      @JsonProperty("side") String side,
+      @JsonProperty("ts") Date ts) {
+    this(new OkxTrade(tradeId, instId, px, sz, side, ts));
   }
 
   /** Returns the wrapped canonical DTO. */

@@ -33,7 +33,10 @@ import org.knowm.xchange.okex.dto.account.OkexWithdrawalResponse;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandles;
 import org.knowm.xchange.okex.dto.marketdata.OkexCurrency;
+import org.knowm.xchange.okex.dto.marketdata.OkexFundingRate;
 import org.knowm.xchange.okex.dto.marketdata.OkexInstrument;
+import org.knowm.xchange.okex.dto.marketdata.OkexOrderbook;
+import org.knowm.xchange.okex.dto.marketdata.OkexPublicOrder;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
 import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
 import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
@@ -418,6 +421,67 @@ public class OkexCompatibilityTest {
     OkexAccountPositionRisk shim = new OkexAccountPositionRisk(canonical);
     assertThat(shim.getBalanceData()).hasSize(1);
     assertThat(shim.getPositionData()).hasSize(1);
+  }
+
+  @Test
+  public void legacyValueConstructorsBuildCanonicalDelegates() {
+    OkexFundingRate fundingRate =
+        new OkexFundingRate(
+            "SWAP",
+            "BTC-USDT-SWAP",
+            new BigDecimal("0.0001"),
+            new BigDecimal("0.0002"),
+            new Date(1000),
+            new Date(2000));
+    assertThat(fundingRate.getInstType()).isEqualTo("SWAP");
+    assertThat(fundingRate.getInstId()).isEqualTo("BTC-USDT-SWAP");
+    assertThat(fundingRate.getFundingRate()).isEqualByComparingTo("0.0001");
+    assertThat(fundingRate.getNextFundingRate()).isEqualByComparingTo("0.0002");
+    assertThat(fundingRate.getFundingTime()).isEqualTo(new Date(1000));
+    assertThat(fundingRate.getNextFundingTime()).isEqualTo(new Date(2000));
+
+    OkexTrade trade =
+        new OkexTrade(
+            "t1", "BTC-USDT", new BigDecimal("100"), new BigDecimal("2"), "buy", new Date(3000));
+    assertThat(trade.getTradeId()).isEqualTo("t1");
+    assertThat(trade.getInstId()).isEqualTo("BTC-USDT");
+    assertThat(trade.getPx()).isEqualByComparingTo("100");
+    assertThat(trade.getSz()).isEqualByComparingTo("2");
+    assertThat(trade.getSide()).isEqualTo("buy");
+    assertThat(trade.getTs()).isEqualTo(new Date(3000));
+
+    OkexPublicOrder publicOrder =
+        new OkexPublicOrder(new BigDecimal("100"), new BigDecimal("2"), 3, 4);
+    assertThat(publicOrder.getPrice()).isEqualByComparingTo("100");
+    assertThat(publicOrder.getVolume()).isEqualByComparingTo("2");
+
+    OkexOrderbook orderbook = new OkexOrderbook(List.of(publicOrder), List.of(publicOrder), "1234");
+    assertThat(orderbook.getAsks()).hasSize(1);
+    assertThat(orderbook.getAsks().get(0).getPrice()).isEqualByComparingTo("100");
+    assertThat(orderbook.getBids()).hasSize(1);
+    assertThat(orderbook.getBids().get(0).getVolume()).isEqualByComparingTo("2");
+    assertThat(orderbook.getTs()).isEqualTo("1234");
+
+    OkexAccountPositionRisk.BalanceData balance =
+        new OkexAccountPositionRisk.BalanceData(
+            Currency.BTC, new BigDecimal("1"), new BigDecimal("2"));
+    OkexAccountPositionRisk.PositionData position =
+        new OkexAccountPositionRisk.PositionData(
+            "BTC-USDT", new BigDecimal("3"), new BigDecimal("4"), "cross", "net");
+    OkexAccountPositionRisk positionRisk =
+        new OkexAccountPositionRisk(
+            new BigDecimal("5"), List.of(balance), List.of(position), new Date(4000));
+    assertThat(positionRisk.getAdjustEquity()).isEqualByComparingTo("5");
+    assertThat(positionRisk.getBalanceData()).hasSize(1);
+    assertThat(positionRisk.getBalanceData().get(0).getCurrency()).isEqualTo(Currency.BTC);
+    assertThat(positionRisk.getBalanceData().get(0).getEquityOfCurrency())
+        .isEqualByComparingTo("1");
+    assertThat(positionRisk.getPositionData()).hasSize(1);
+    assertThat(positionRisk.getPositionData().get(0).getInstrumentId()).isEqualTo("BTC-USDT");
+    assertThat(positionRisk.getPositionData().get(0).getPositionSize()).isEqualByComparingTo("3");
+    assertThat(positionRisk.getPositionData().get(0).getMgnMode()).isEqualTo("cross");
+    assertThat(positionRisk.getPositionData().get(0).getPosSide()).isEqualTo("net");
+    assertThat(positionRisk.getTimestamp()).isEqualTo(new Date(4000));
   }
 
   /**

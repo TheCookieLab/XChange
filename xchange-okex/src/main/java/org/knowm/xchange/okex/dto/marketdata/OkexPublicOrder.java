@@ -15,6 +15,17 @@ public class OkexPublicOrder {
     this.delegate = delegate;
   }
 
+  /**
+   * Retained legacy value constructor; builds the canonical DTO internally.
+   *
+   * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxPublicOrder} instead.
+   */
+  @Deprecated
+  public OkexPublicOrder(
+      BigDecimal price, BigDecimal volume, Integer liquidatedOrders, Integer activeOrders) {
+    this(new OkxPublicOrder(price, volume, liquidatedOrders, activeOrders));
+  }
+
   /** Returns the wrapped canonical DTO. */
   public OkxPublicOrder to() {
     return delegate;
