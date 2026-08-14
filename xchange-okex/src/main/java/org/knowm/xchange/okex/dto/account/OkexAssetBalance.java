@@ -1,25 +1,32 @@
 package org.knowm.xchange.okex.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import org.knowm.xchange.okx.dto.account.OkxAssetBalance;
 
-/* Author: Ali Gokalp Peker (aligokalppeker@yahoo.com) Created: 23-10-2021 */
-
-/** <a href="https://www.okx.com/docs-v5/en/#rest-api-funding-get-balance">...</a> * */
-@Getter
-@NoArgsConstructor
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxAssetBalance} instead.
+ */
+@Deprecated
 public class OkexAssetBalance {
 
-  @JsonProperty("ccy")
-  private String currency;
+  private final OkxAssetBalance delegate;
 
-  @JsonProperty("bal")
-  private String balance;
+  public OkexAssetBalance(OkxAssetBalance delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("availBal")
-  private String availableBalance;
+  public String getCurrency() {
+    return delegate.getCurrency();
+  }
 
-  @JsonProperty("frozenBal")
-  private String frozenBalance;
+  public String getBalance() {
+    return delegate.getBalance();
+  }
+
+  public String getAvailableBalance() {
+    return delegate.getAvailableBalance();
+  }
+
+  public String getFrozenBalance() {
+    return delegate.getFrozenBalance();
+  }
 }

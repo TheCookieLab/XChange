@@ -1,8 +1,6 @@
 package org.knowm.xchange.okex.service;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.knowm.xchange.client.ResilienceRegistries;
@@ -12,109 +10,70 @@ import org.knowm.xchange.dto.marketdata.FundingRate;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
-import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.knowm.xchange.instrument.Instrument;
-import org.knowm.xchange.okex.OkexAdapters;
 import org.knowm.xchange.okex.OkexExchange;
-import org.knowm.xchange.okex.dto.OkexInstType;
-import org.knowm.xchange.okex.dto.OkexResponse;
-import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
-import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
+import org.knowm.xchange.okex.dto.marketdata.OkexFundingRateHistory;
+import org.knowm.xchange.okx.service.OkxMarketDataService;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
 import org.knowm.xchange.service.trade.params.CandleStickDataParams;
-import org.knowm.xchange.service.trade.params.DefaultCandleStickParam;
-import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.service.OkxMarketDataService} instead.
+ */
+@Deprecated
 public class OkexMarketDataService extends OkexMarketDataServiceRaw implements MarketDataService {
+
+  private final OkxMarketDataService delegate;
 
   public OkexMarketDataService(OkexExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
+    this.delegate = new OkxMarketDataService(exchange, resilienceRegistries);
   }
 
   @Override
   public OrderBook getOrderBook(Instrument instrument, Object... args) throws IOException {
-    return OkexAdapters.adaptOrderBook(
-        getOkexOrderbook(OkexAdapters.adaptInstrument(instrument)),
-        instrument,
-        exchange.getExchangeMetaData());
+    return delegate.getOrderBook(instrument, args);
   }
 
   @Override
   public Trades getTrades(Instrument instrument, Object... args) throws IOException {
-    return OkexAdapters.adaptTrades(
-        getOkexTrades(OkexAdapters.adaptInstrument(instrument), 100).getData(),
-        instrument,
-        exchange.getExchangeMetaData());
+    return delegate.getTrades(instrument, args);
   }
 
   @Override
   public Ticker getTicker(Instrument instrument, Object... args) throws IOException {
-    return OkexAdapters.adaptTicker(
-        getOkexTicker(OkexAdapters.adaptInstrument(instrument)).getData().get(0));
+    return delegate.getTicker(instrument, args);
   }
 
   @Override
   public CandleStickData getCandleStickData(
       CurrencyPair currencyPair, CandleStickDataParams params) {
-    return getCandleStickData(currencyPair, params);
+    return delegate.getCandleStickData(currencyPair, params);
   }
 
   @Override
   public CandleStickData getCandleStickData(Instrument instrument, CandleStickDataParams params)
       throws IOException {
-
-    if (!(params instanceof DefaultCandleStickParam)) {
-      throw new NotYetImplementedForExchangeException("Only DefaultCandleStickParam is supported");
-    }
-    DefaultCandleStickParam defaultCandleStickParam = (DefaultCandleStickParam) params;
-    OkexCandleStickPeriodType periodType =
-        OkexCandleStickPeriodType.getPeriodTypeFromSecs(defaultCandleStickParam.getPeriodInSecs());
-    if (periodType == null) {
-      throw new NotYetImplementedForExchangeException(
-          "Only discrete period values are supported;"
-              + Arrays.toString(OkexCandleStickPeriodType.getSupportedPeriodsInSecs()));
-    }
-
-    String limit = null;
-    if (params instanceof DefaultCandleStickParamWithLimit) {
-      limit = String.valueOf(((DefaultCandleStickParamWithLimit) params).getLimit());
-    }
-
-    OkexResponse<List<OkexCandleStick>> historyCandle =
-        getHistoryCandle(
-            OkexAdapters.adaptInstrument(instrument),
-            String.valueOf(defaultCandleStickParam.getEndDate().getTime()),
-            String.valueOf(defaultCandleStickParam.getStartDate().getTime()),
-            periodType.getFieldValue(),
-            limit);
-    return OkexAdapters.adaptCandleStickData(historyCandle.getData(), instrument);
+    return delegate.getCandleStickData(instrument, params);
   }
 
   @Override
   public FundingRate getFundingRate(Instrument instrument) throws IOException {
-    return OkexAdapters.adaptFundingRate(
-        getOkexFundingRate(OkexAdapters.adaptInstrument(instrument)).getData());
+    return delegate.getFundingRate(instrument);
   }
 
+  @Override
   public List<Ticker> getTickers(Params params) throws IOException {
-    if (!(params instanceof OkexInstType)) {
-      throw new IllegalArgumentException("Params must be instance of OkexInstType");
-    }
-    OkexInstType instType = (OkexInstType) params;
-    return getOkexTickers(instType).getData().stream()
-        .map(OkexAdapters::adaptTicker)
-        .collect(Collectors.toList());
+    return delegate.getTickers(params);
   }
 
-  public List<OkxFundingRateHistory> getFundingRateHistory(
+  public List<OkexFundingRateHistory> getFundingRateHistory(
       Instrument instrument, Long startTime, Long endTime, Integer limit) throws IOException {
-    List<OkxFundingRateHistory> result =
-        getOkxFundingRateHistoryRaw(
-            OkexAdapters.adaptInstrument(instrument), startTime, endTime, limit);
-    // sort, oldest first
-    result.sort(Comparator.comparingLong(c -> c.getFundingTime().toEpochMilli()));
-    return result;
+    return delegate
+        .getFundingRateHistory(instrument, startTime, endTime, limit)
+        .stream()
+        .map(OkexFundingRateHistory::new)
+        .collect(Collectors.toList());
   }
 }

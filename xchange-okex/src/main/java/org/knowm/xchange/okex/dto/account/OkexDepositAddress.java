@@ -1,36 +1,52 @@
 package org.knowm.xchange.okex.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import org.knowm.xchange.okx.dto.account.OkxDepositAddress;
 
-@Getter
-@NoArgsConstructor
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxDepositAddress} instead.
+ */
+@Deprecated
 public class OkexDepositAddress {
-  @JsonProperty("addr")
-  String address;
 
-  @JsonProperty("tag")
-  String tag;
+  private final OkxDepositAddress delegate;
 
-  @JsonProperty("memo")
-  String memo;
+  public OkexDepositAddress(OkxDepositAddress delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("pmtId")
-  String paymentId;
+  public String getAddress() {
+    return delegate.getAddress();
+  }
 
-  @JsonProperty("pmtId")
-  String currency;
+  public String getTag() {
+    return delegate.getTag();
+  }
 
-  @JsonProperty("chain")
-  String chain;
+  public String getMemo() {
+    return delegate.getMemo();
+  }
 
-  @JsonProperty("to")
-  String to;
+  public String getPaymentId() {
+    return delegate.getPaymentId();
+  }
 
-  @JsonProperty("selected")
-  String selected;
+  public String getCurrency() {
+    return delegate.getCurrency();
+  }
 
-  @JsonProperty("ctAddr")
-  String contactAddress;
+  public String getChain() {
+    return delegate.getChain();
+  }
+
+  public String getTo() {
+    return delegate.getTo();
+  }
+
+  public String getSelected() {
+    return delegate.getSelected();
+  }
+
+  public String getContactAddress() {
+    return delegate.getContactAddress();
+  }
 }

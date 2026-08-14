@@ -11,8 +11,8 @@
 
     <artifactId>xchange-okex</artifactId>
 
-    <name>XChange Okex</name>
-    <description>XChange implementation for Okex</description>
+    <name>XChange OKX</name>
+    <description>XChange implementation for OKX</description>
 
     <url>http://knowm.org/open-source/xchange/</url>
     <inceptionYear>2021</inceptionYear>

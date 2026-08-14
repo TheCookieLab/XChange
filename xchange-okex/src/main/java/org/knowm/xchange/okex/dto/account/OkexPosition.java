@@ -1,107 +1,141 @@
 package org.knowm.xchange.okex.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import org.knowm.xchange.okx.dto.account.OkxPosition;
 
-/** https://www.okx.com/docs-v5/en/#rest-api-account-get-positions */
-@Getter
-@NoArgsConstructor
-@ToString
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxPosition} instead.
+ */
+@Deprecated
 public class OkexPosition {
 
-  @JsonProperty("instType")
-  private String instrumentType;
+  private final OkxPosition delegate;
 
-  @JsonProperty("mgnMode")
-  private String marginMode;
+  public OkexPosition(OkxPosition delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("posId")
-  private String positionId;
+  public String getInstrumentType() {
+    return delegate.getInstrumentType();
+  }
 
-  @JsonProperty("posSide")
-  private String positionSide;
+  public String getMarginMode() {
+    return delegate.getMarginMode();
+  }
 
-  @JsonProperty("pos")
-  private BigDecimal position;
+  public String getPositionId() {
+    return delegate.getPositionId();
+  }
 
-  @JsonProperty("baseBal")
-  private String baseCurrencyBalance;
+  public String getPositionSide() {
+    return delegate.getPositionSide();
+  }
 
-  @JsonProperty("quoteBal")
-  private String quoteCurrencyBalance;
+  public BigDecimal getPosition() {
+    return delegate.getPosition();
+  }
 
-  @JsonProperty("posCcy")
-  private String positionCurrency;
+  public String getBaseCurrencyBalance() {
+    return delegate.getBaseCurrencyBalance();
+  }
 
-  @JsonProperty("availPos")
-  private String availablePosition;
+  public String getQuoteCurrencyBalance() {
+    return delegate.getQuoteCurrencyBalance();
+  }
 
-  @JsonProperty("avgPx")
-  private BigDecimal averageOpenPrice;
+  public String getPositionCurrency() {
+    return delegate.getPositionCurrency();
+  }
 
-  @JsonProperty("markPx")
-  private BigDecimal markPrice;
+  public String getAvailablePosition() {
+    return delegate.getAvailablePosition();
+  }
 
-  @JsonProperty("upl")
-  private BigDecimal unrealizedPnL;
+  public BigDecimal getAverageOpenPrice() {
+    return delegate.getAverageOpenPrice();
+  }
 
-  @JsonProperty("uplRatio")
-  private String unrealizedPnLRatio;
+  public BigDecimal getMarkPrice() {
+    return delegate.getMarkPrice();
+  }
 
-  @JsonProperty("instId")
-  private String instrumentId;
+  public BigDecimal getUnrealizedPnL() {
+    return delegate.getUnrealizedPnL();
+  }
 
-  @JsonProperty("lever")
-  private String leverage;
+  public String getUnrealizedPnLRatio() {
+    return delegate.getUnrealizedPnLRatio();
+  }
 
-  @JsonProperty("liqPx")
-  private BigDecimal liquidationPrice;
+  public String getInstrumentId() {
+    return delegate.getInstrumentId();
+  }
 
-  @JsonProperty("imr")
-  private String initialMarginRequirement;
+  public String getLeverage() {
+    return delegate.getLeverage();
+  }
 
-  @JsonProperty("margin")
-  private String margin;
+  public BigDecimal getLiquidationPrice() {
+    return delegate.getLiquidationPrice();
+  }
 
-  @JsonProperty("mgnRatio")
-  private String marginRatio;
+  public String getInitialMarginRequirement() {
+    return delegate.getInitialMarginRequirement();
+  }
 
-  @JsonProperty("mmr")
-  private String maintenanceMarginRatio;
+  public String getMargin() {
+    return delegate.getMargin();
+  }
 
-  @JsonProperty("liab")
-  private String liabilities;
+  public String getMarginRatio() {
+    return delegate.getMarginRatio();
+  }
 
-  @JsonProperty("liabCcy")
-  private String liabilitiesCurrency;
+  public String getMaintenanceMarginRatio() {
+    return delegate.getMaintenanceMarginRatio();
+  }
 
-  @JsonProperty("interest")
-  private String interest;
+  public String getLiabilities() {
+    return delegate.getLiabilities();
+  }
 
-  @JsonProperty("tradeId")
-  private String tradeId;
+  public String getLiabilitiesCurrency() {
+    return delegate.getLiabilitiesCurrency();
+  }
 
-  @JsonProperty("optVal")
-  private String optionValue;
+  public String getInterest() {
+    return delegate.getInterest();
+  }
 
-  @JsonProperty("notionalUsd")
-  private String notionalUsd;
+  public String getTradeId() {
+    return delegate.getTradeId();
+  }
 
-  @JsonProperty("adl")
-  private String adl;
+  public String getOptionValue() {
+    return delegate.getOptionValue();
+  }
 
-  @JsonProperty("ccy")
-  private String currency;
+  public String getNotionalUsd() {
+    return delegate.getNotionalUsd();
+  }
 
-  @JsonProperty("last")
-  private BigDecimal lastPrice;
+  public String getAdl() {
+    return delegate.getAdl();
+  }
 
-  @JsonProperty("cTime")
-  private String creationTime;
+  public String getCurrency() {
+    return delegate.getCurrency();
+  }
 
-  @JsonProperty("uTime")
-  private String updateTime;
+  public BigDecimal getLastPrice() {
+    return delegate.getLastPrice();
+  }
+
+  public String getCreationTime() {
+    return delegate.getCreationTime();
+  }
+
+  public String getUpdateTime() {
+    return delegate.getUpdateTime();
+  }
 }

@@ -1,109 +1,148 @@
 package org.knowm.xchange.okex.dto.trade;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.ToString;
+import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 10-06-2021 */
-@Getter
-@ToString
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.trade.OkxOrderDetails} instead.
+ */
+@Deprecated
 public class OkexOrderDetails {
-  @JsonProperty("instType")
-  private String instrumentType;
 
-  @JsonProperty("instId")
-  private String instrumentId;
+  private final OkxOrderDetails delegate;
 
-  @JsonProperty("tdMode")
-  private String tradeMode;
+  public OkexOrderDetails(OkxOrderDetails delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("ccy")
-  private String marginCurrency;
+  public String getInstrumentType() {
+    return delegate.getInstrumentType();
+  }
 
-  @JsonProperty("ordId")
-  private String orderId;
+  public String getInstrumentId() {
+    return delegate.getInstrumentId();
+  }
 
-  @JsonProperty("clOrdId")
-  private String clientOrderId;
+  public String getTradeMode() {
+    return delegate.getTradeMode();
+  }
 
-  @JsonProperty("tag")
-  private String tag;
+  public String getMarginCurrency() {
+    return delegate.getMarginCurrency();
+  }
 
-  @JsonProperty("side")
-  private String side;
+  public String getOrderId() {
+    return delegate.getOrderId();
+  }
 
-  @JsonProperty("pnl")
-  private String pnl;
+  public String getClientOrderId() {
+    return delegate.getClientOrderId();
+  }
 
-  @JsonProperty("posSide")
-  private String posSide;
+  public String getTag() {
+    return delegate.getTag();
+  }
 
-  @JsonProperty("ordType")
-  private String orderType;
+  public String getSide() {
+    return delegate.getSide();
+  }
 
-  @JsonProperty("sz")
-  private String amount;
+  public String getPnl() {
+    return delegate.getPnl();
+  }
 
-  @JsonProperty("px")
-  private String price;
+  public String getPosSide() {
+    return delegate.getPosSide();
+  }
 
-  @JsonProperty("accFillSz")
-  private String accumulatedFill;
+  public String getOrderType() {
+    return delegate.getOrderType();
+  }
 
-  @JsonProperty("fillPx")
-  private String lastFilledPrice;
+  public String getAmount() {
+    return delegate.getAmount();
+  }
 
-  @JsonProperty("tradeId")
-  private String lastTradeId;
+  public String getPrice() {
+    return delegate.getPrice();
+  }
 
-  @JsonProperty("fillSz")
-  private String lastFilledQuantity;
+  public String getAccumulatedFill() {
+    return delegate.getAccumulatedFill();
+  }
 
-  @JsonProperty("fillTime")
-  private String lastFilledTime;
+  public String getLastFilledPrice() {
+    return delegate.getLastFilledPrice();
+  }
 
-  @JsonProperty("avgPx")
-  private String averageFilledPrice;
+  public String getLastTradeId() {
+    return delegate.getLastTradeId();
+  }
 
-  @JsonProperty("lastPx")
-  private String lastPrice;
+  public String getLastFilledQuantity() {
+    return delegate.getLastFilledQuantity();
+  }
 
-  @JsonProperty("state")
-  private String state;
+  public String getLastFilledTime() {
+    return delegate.getLastFilledTime();
+  }
 
-  @JsonProperty("lever")
-  private String leverage;
+  public String getAverageFilledPrice() {
+    return delegate.getAverageFilledPrice();
+  }
 
-  @JsonProperty("tpTriggerPx")
-  private String takeProfitTriggerPrice;
+  public String getLastPrice() {
+    return delegate.getLastPrice();
+  }
 
-  @JsonProperty("tpOrdPx")
-  private String takeProfitOrderPrice;
+  public String getState() {
+    return delegate.getState();
+  }
 
-  @JsonProperty("slTriggerPx")
-  private String stopLossTriggerPrice;
+  public String getLeverage() {
+    return delegate.getLeverage();
+  }
 
-  @JsonProperty("slOrdPx")
-  private String stopLossOrderPrice;
+  public String getTakeProfitTriggerPrice() {
+    return delegate.getTakeProfitTriggerPrice();
+  }
 
-  @JsonProperty("feeCcy")
-  private String feeCurrency;
+  public String getTakeProfitOrderPrice() {
+    return delegate.getTakeProfitOrderPrice();
+  }
 
-  @JsonProperty("fee")
-  private String fee;
+  public String getStopLossTriggerPrice() {
+    return delegate.getStopLossTriggerPrice();
+  }
 
-  @JsonProperty("rebaseCcy")
-  private String rebateCcy;
+  public String getStopLossOrderPrice() {
+    return delegate.getStopLossOrderPrice();
+  }
 
-  @JsonProperty("rebase")
-  private String rebateAmount;
+  public String getFeeCurrency() {
+    return delegate.getFeeCurrency();
+  }
 
-  @JsonProperty("category")
-  private String category;
+  public String getFee() {
+    return delegate.getFee();
+  }
 
-  @JsonProperty("uTime")
-  private String updateTime;
+  public String getRebateCcy() {
+    return delegate.getRebateCcy();
+  }
 
-  @JsonProperty("cTime")
-  private String creationTime;
+  public String getRebateAmount() {
+    return delegate.getRebateAmount();
+  }
+
+  public String getCategory() {
+    return delegate.getCategory();
+  }
+
+  public String getUpdateTime() {
+    return delegate.getUpdateTime();
+  }
+
+  public String getCreationTime() {
+    return delegate.getCreationTime();
+  }
 }

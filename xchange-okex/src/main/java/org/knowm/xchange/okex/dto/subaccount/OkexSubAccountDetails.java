@@ -1,26 +1,40 @@
 package org.knowm.xchange.okex.dto.subaccount;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
+import org.knowm.xchange.okx.dto.subaccount.OkxSubAccountDetails;
 
-@Getter
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.subaccount.OkxSubAccountDetails} instead.
+ */
+@Deprecated
 public class OkexSubAccountDetails {
 
-  @JsonProperty("enable")
-  private String enable;
+  private final OkxSubAccountDetails delegate;
 
-  @JsonProperty("subAcct")
-  private String subAcct;
+  public OkexSubAccountDetails(OkxSubAccountDetails delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("label")
-  private String label;
+  public String getEnable() {
+    return delegate.getEnable();
+  }
 
-  @JsonProperty("mobile")
-  private String mobile;
+  public String getSubAcct() {
+    return delegate.getSubAcct();
+  }
 
-  @JsonProperty("gAuth")
-  private String gAuth;
+  public String getLabel() {
+    return delegate.getLabel();
+  }
 
-  @JsonProperty("ts")
-  private String ts;
+  public String getMobile() {
+    return delegate.getMobile();
+  }
+
+  public String getGAuth() {
+    return delegate.getGAuth();
+  }
+
+  public String getTs() {
+    return delegate.getTs();
+  }
 }

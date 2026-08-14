@@ -1,71 +1,96 @@
 package org.knowm.xchange.okex.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import org.knowm.xchange.okx.dto.account.OkxBillDetails;
 
-@Getter
-@NoArgsConstructor
-@ToString
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxBillDetails} instead.
+ */
+@Deprecated
 public class OkexBillDetails {
-  @JsonProperty("instType")
-  String instType;
 
-  @JsonProperty("billId")
-  String billId;
+  private final OkxBillDetails delegate;
 
-  @JsonProperty("type")
-  String billType;
+  public OkexBillDetails(OkxBillDetails delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("subType")
-  String billSubType;
+  public String getInstType() {
+    return delegate.getInstType();
+  }
 
-  @JsonProperty("ts")
-  String timestamp;
+  public String getBillId() {
+    return delegate.getBillId();
+  }
 
-  @JsonProperty("balChg")
-  String accountBalanceChange;
+  public String getBillType() {
+    return delegate.getBillType();
+  }
 
-  @JsonProperty("posBalChg")
-  String positionBalanceChange;
+  public String getBillSubType() {
+    return delegate.getBillSubType();
+  }
 
-  @JsonProperty("bal")
-  String accountBalance;
+  public String getTimestamp() {
+    return delegate.getTimestamp();
+  }
 
-  @JsonProperty("posBal")
-  String positionBalance;
+  public String getAccountBalanceChange() {
+    return delegate.getAccountBalanceChange();
+  }
 
-  @JsonProperty("sz")
-  String quantity;
+  public String getPositionBalanceChange() {
+    return delegate.getPositionBalanceChange();
+  }
 
-  @JsonProperty("ccy")
-  String currency;
+  public String getAccountBalance() {
+    return delegate.getAccountBalance();
+  }
 
-  @JsonProperty("pnl")
-  String pnl;
+  public String getPositionBalance() {
+    return delegate.getPositionBalance();
+  }
 
-  @JsonProperty("fee")
-  String fee;
+  public String getQuantity() {
+    return delegate.getQuantity();
+  }
 
-  @JsonProperty("mgnMode")
-  String marginMode;
+  public String getCurrency() {
+    return delegate.getCurrency();
+  }
 
-  @JsonProperty("instId")
-  String instId;
+  public String getPnl() {
+    return delegate.getPnl();
+  }
 
-  @JsonProperty("ordId")
-  String orderId;
+  public String getFee() {
+    return delegate.getFee();
+  }
 
-  @JsonProperty("execType")
-  String execType;
+  public String getMarginMode() {
+    return delegate.getMarginMode();
+  }
 
-  @JsonProperty("from")
-  String fromAccount;
+  public String getInstId() {
+    return delegate.getInstId();
+  }
 
-  @JsonProperty("to")
-  String toAccount;
+  public String getOrderId() {
+    return delegate.getOrderId();
+  }
 
-  @JsonProperty("notes")
-  String notes;
+  public String getExecType() {
+    return delegate.getExecType();
+  }
+
+  public String getFromAccount() {
+    return delegate.getFromAccount();
+  }
+
+  public String getToAccount() {
+    return delegate.getToAccount();
+  }
+
+  public String getNotes() {
+    return delegate.getNotes();
+  }
 }

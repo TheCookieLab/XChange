@@ -1,33 +1,44 @@
 package org.knowm.xchange.okex.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import org.knowm.xchange.okx.dto.account.OkxAccountConfig;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
-
-/** https://www.okx.com/docs-v5/en/#rest-api-account-get-account-configuration * */
-@Getter
-@NoArgsConstructor
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxAccountConfig} instead.
+ */
+@Deprecated
 public class OkexAccountConfig {
-  @JsonProperty("uid")
-  private String uid;
 
-  @JsonProperty("acctLv")
-  private String accountLevel;
+  private final OkxAccountConfig delegate;
 
-  @JsonProperty("posMode")
-  private String positionMode;
+  public OkexAccountConfig(OkxAccountConfig delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("autoLoan")
-  private Boolean autoLoan;
+  public String getUid() {
+    return delegate.getUid();
+  }
 
-  @JsonProperty("greeksType")
-  private String greeksType;
+  public String getAccountLevel() {
+    return delegate.getAccountLevel();
+  }
 
-  @JsonProperty("level")
-  private String level;
+  public String getPositionMode() {
+    return delegate.getPositionMode();
+  }
 
-  @JsonProperty("levelTmp")
-  private String levelTmp;
+  public Boolean getAutoLoan() {
+    return delegate.getAutoLoan();
+  }
+
+  public String getGreeksType() {
+    return delegate.getGreeksType();
+  }
+
+  public String getLevel() {
+    return delegate.getLevel();
+  }
+
+  public String getLevelTmp() {
+    return delegate.getLevelTmp();
+  }
 }

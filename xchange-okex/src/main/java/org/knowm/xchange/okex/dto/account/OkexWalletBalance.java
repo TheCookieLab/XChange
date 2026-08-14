@@ -1,81 +1,121 @@
 package org.knowm.xchange.okex.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import org.knowm.xchange.okx.dto.account.OkxWalletBalance;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
-
-/** https://www.okx.com/docs-v5/en/#rest-api-account-get-balance * */
-@Getter
-@NoArgsConstructor
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxWalletBalance} instead.
+ */
+@Deprecated
 public class OkexWalletBalance {
-  @JsonProperty("uTime")
-  private String asOfTime;
 
-  @JsonProperty("totalEq")
-  private String totalEquity;
+  private final OkxWalletBalance delegate;
 
-  @JsonProperty("isoEq")
-  private String isolatedMarginEquity;
+  public OkexWalletBalance(OkxWalletBalance delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("adjEq")
-  private String adjustedEquity;
+  public String getAsOfTime() {
+    return delegate.getAsOfTime();
+  }
 
-  @JsonProperty("ordFroz")
-  private String marginFrozen;
+  public String getTotalEquity() {
+    return delegate.getTotalEquity();
+  }
 
-  @JsonProperty("imr")
-  private String initialMarginRequirement;
+  public String getIsolatedMarginEquity() {
+    return delegate.getIsolatedMarginEquity();
+  }
 
-  @JsonProperty("mmr")
-  private String maintenanceMarginRequirement;
+  public String getAdjustedEquity() {
+    return delegate.getAdjustedEquity();
+  }
 
-  @JsonProperty("mgnRatio")
-  private String marginRatio;
+  public String getMarginFrozen() {
+    return delegate.getMarginFrozen();
+  }
 
-  @JsonProperty("notionalUsd")
-  private String notionalUsd;
+  public String getInitialMarginRequirement() {
+    return delegate.getInitialMarginRequirement();
+  }
 
-  @JsonProperty("details")
-  private Detail[] details;
+  public String getMaintenanceMarginRequirement() {
+    return delegate.getMaintenanceMarginRequirement();
+  }
 
-  @NoArgsConstructor
-  @Getter
-  public static class Detail {
-    @JsonProperty("ccy")
-    private String currency;
+  public String getMarginRatio() {
+    return delegate.getMarginRatio();
+  }
 
-    @JsonProperty("eq")
-    private String equity;
+  public String getNotionalUsd() {
+    return delegate.getNotionalUsd();
+  }
 
-    @JsonProperty("cashBal")
-    private String cashBalance;
+  public OkexDetail[] getDetails() {
+    OkxWalletBalance.Detail[] details = delegate.getDetails();
+    if (details == null) {
+      return null;
+    }
+    OkexDetail[] wrapped = new OkexDetail[details.length];
+    for (int i = 0; i < details.length; i++) {
+      wrapped[i] = new OkexDetail(details[i]);
+    }
+    return wrapped;
+  }
 
-    @JsonProperty("uTime")
-    private String asOfTime;
+  /**
+   * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxWalletBalance.Detail} instead.
+   */
+  @Deprecated
+  public static class OkexDetail {
 
-    @JsonProperty("isoEq")
-    private String isolatedMarginEquity;
+    private final OkxWalletBalance.Detail delegate;
 
-    @JsonProperty("availEq")
-    private String avilableEquity;
+    public OkexDetail(OkxWalletBalance.Detail delegate) {
+      this.delegate = delegate;
+    }
 
-    @JsonProperty("disEq")
-    private String discountEquity;
+    public String getCurrency() {
+      return delegate.getCurrency();
+    }
 
-    @JsonProperty("availBal")
-    private String availableBalance;
+    public String getEquity() {
+      return delegate.getEquity();
+    }
 
-    @JsonProperty("frozenBal")
-    private String frozenBalance;
+    public String getCashBalance() {
+      return delegate.getCashBalance();
+    }
 
-    @JsonProperty("ordFrozen")
-    private String marginFrozen;
+    public String getAsOfTime() {
+      return delegate.getAsOfTime();
+    }
 
-    @JsonProperty("eqUsd")
-    private String usdEqual;
+    public String getIsolatedMarginEquity() {
+      return delegate.getIsolatedMarginEquity();
+    }
 
-    // TODO: Model the rest of the margin fields
+    public String getAvilableEquity() {
+      return delegate.getAvilableEquity();
+    }
+
+    public String getDiscountEquity() {
+      return delegate.getDiscountEquity();
+    }
+
+    public String getAvailableBalance() {
+      return delegate.getAvailableBalance();
+    }
+
+    public String getFrozenBalance() {
+      return delegate.getFrozenBalance();
+    }
+
+    public String getMarginFrozen() {
+      return delegate.getMarginFrozen();
+    }
+
+    public String getUsdEqual() {
+      return delegate.getUsdEqual();
+    }
   }
 }

@@ -2,12 +2,19 @@ package org.knowm.xchange.okex.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.ToString;
+import org.knowm.xchange.okx.dto.account.OkxWithdrawalRequest;
 
-/** https://www.okx.com/docs-v5/en/#rest-api-funding-withdrawal */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxWithdrawalRequest} instead.
+ */
+@Deprecated
 @Builder
+@Getter
 @ToString
 public class OkexWithdrawalRequest {
+
   @JsonProperty("ccy")
   private String currency;
 
@@ -29,4 +36,16 @@ public class OkexWithdrawalRequest {
 
   @JsonProperty("clientId")
   private String clientId;
+
+  public OkxWithdrawalRequest to() {
+    return OkxWithdrawalRequest.builder()
+        .currency(currency)
+        .amount(amount)
+        .method(method)
+        .address(address)
+        .fee(fee)
+        .chain(chain)
+        .clientId(clientId)
+        .build();
+  }
 }

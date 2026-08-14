@@ -1,61 +1,95 @@
 package org.knowm.xchange.okex.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import java.util.stream.Collectors;
+import org.knowm.xchange.okx.dto.account.OkxTradeFee;
 
-@Getter
-@NoArgsConstructor
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxTradeFee} instead.
+ */
+@Deprecated
 public class OkexTradeFee {
-  @JsonProperty("delivery")
-  private String delivery;
 
-  @JsonProperty("exercise")
-  private String exercise;
+  private final OkxTradeFee delegate;
 
-  @JsonProperty("instType")
-  private String instType;
+  public OkexTradeFee(OkxTradeFee delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("level")
-  private String level;
+  public String getDelivery() {
+    return delegate.getDelivery();
+  }
 
-  @JsonProperty("maker")
-  private String maker;
+  public String getExercise() {
+    return delegate.getExercise();
+  }
 
-  @JsonProperty("taker")
-  private String taker;
+  public String getInstType() {
+    return delegate.getInstType();
+  }
 
-  @JsonProperty("makerU")
-  private String makerU;
+  public String getLevel() {
+    return delegate.getLevel();
+  }
 
-  @JsonProperty("takerU")
-  private String takerU;
+  public String getMaker() {
+    return delegate.getMaker();
+  }
 
-  @JsonProperty("makerUSDC")
-  private String makerUSDC;
+  public String getTaker() {
+    return delegate.getTaker();
+  }
 
-  @JsonProperty("takerUSDC")
-  private String takerUSDC;
+  public String getMakerU() {
+    return delegate.getMakerU();
+  }
 
-  @JsonProperty("ts")
-  private String timestamp;
+  public String getTakerU() {
+    return delegate.getTakerU();
+  }
 
-  @JsonProperty("ruleType")
-  private String ruleType;
+  public String getMakerUSDC() {
+    return delegate.getMakerUSDC();
+  }
 
-  @JsonProperty("fiat")
-  private List<FiatList> fiatList;
+  public String getTakerUSDC() {
+    return delegate.getTakerUSDC();
+  }
 
-  @Getter
-  public static class FiatList {
-    @JsonProperty("ccy")
-    private String ccy;
+  public String getTimestamp() {
+    return delegate.getTimestamp();
+  }
 
-    @JsonProperty("taker")
-    private String taker;
+  public String getRuleType() {
+    return delegate.getRuleType();
+  }
 
-    @JsonProperty("maker")
-    private String maker;
+  public List<OkexFiatList> getFiatList() {
+    return delegate.getFiatList().stream().map(OkexFiatList::new).collect(Collectors.toList());
+  }
+
+  /**
+   * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxTradeFee.FiatList} instead.
+   */
+  @Deprecated
+  public static class OkexFiatList {
+
+    private final OkxTradeFee.FiatList delegate;
+
+    public OkexFiatList(OkxTradeFee.FiatList delegate) {
+      this.delegate = delegate;
+    }
+
+    public String getCcy() {
+      return delegate.getCcy();
+    }
+
+    public String getTaker() {
+      return delegate.getTaker();
+    }
+
+    public String getMaker() {
+      return delegate.getMaker();
+    }
   }
 }

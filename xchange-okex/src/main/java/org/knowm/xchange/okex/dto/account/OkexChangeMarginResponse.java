@@ -1,11 +1,25 @@
 package org.knowm.xchange.okex.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import org.knowm.xchange.okx.dto.account.OkxChangeMarginResponse;
 
-/** https://www.okx.com/docs-v5/en/#rest-api-account-increase-decrease-margin * */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxChangeMarginResponse} instead.
+ */
+@Deprecated
 @Builder
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 public class OkexChangeMarginResponse {
+
+  private final OkxChangeMarginResponse delegate;
+
+  public OkexChangeMarginResponse(OkxChangeMarginResponse delegate) {
+    this.delegate = delegate;
+  }
+
   @JsonProperty("instId")
   private String instrumentId;
 

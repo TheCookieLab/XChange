@@ -3,14 +3,20 @@ package org.knowm.xchange.okex.dto.trade;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 
-/* Author: Max Gao (gaamox@tutanota.com) Created: 09-06-2021 */
-/** <a href="https://www.okx.com/docs-v5/en/#rest-api-trade-place-order">...</a> * */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.trade.OkxOrderRequest} instead.
+ */
+@Deprecated
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
 public class OkexOrderRequest {
+
   @JsonProperty("instId")
   private String instrumentId;
 
@@ -49,4 +55,22 @@ public class OkexOrderRequest {
 
   @JsonProperty("tradeQuoteCcy")
   private String tradeQuoteCcy;
+
+  public OkxOrderRequest to() {
+    return OkxOrderRequest.builder()
+        .instrumentId(instrumentId)
+        .instIdCode(instIdCode)
+        .tradeMode(tradeMode)
+        .marginCurrency(marginCurrency)
+        .clientOrderId(clientOrderId)
+        .tag(tag)
+        .side(side)
+        .posSide(posSide)
+        .orderType(orderType)
+        .amount(amount)
+        .price(price)
+        .reducePosition(reducePosition)
+        .tradeQuoteCcy(tradeQuoteCcy)
+        .build();
+  }
 }

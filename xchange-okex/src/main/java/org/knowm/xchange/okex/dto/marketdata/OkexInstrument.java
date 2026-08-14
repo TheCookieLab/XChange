@@ -1,74 +1,100 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 
-/* Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
-/** <a href="https://www.okx.com/docs-v5/en/#rest-api-public-data-get-instruments">...</a> * */
-@Getter
-@NoArgsConstructor
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxInstrument} instead.
+ */
+@Deprecated
 public class OkexInstrument {
-  @JsonProperty("instType")
-  private String instrumentType;
 
-  @JsonProperty("instId")
-  private String instrumentId;
+  private final OkxInstrument delegate;
 
-  @JsonProperty("uly")
-  private String underlying;
+  public OkexInstrument(OkxInstrument delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("category")
-  private String category;
+  public String getInstrumentType() {
+    return delegate.getInstrumentType();
+  }
 
-  @JsonProperty("baseCcy")
-  private String baseCurrency;
+  public String getInstrumentId() {
+    return delegate.getInstrumentId();
+  }
 
-  @JsonProperty("quoteCcy")
-  private String quoteCurrency;
+  public String getUnderlying() {
+    return delegate.getUnderlying();
+  }
 
-  @JsonProperty("settleCcy")
-  private String settleCurrency;
+  public String getCategory() {
+    return delegate.getCategory();
+  }
 
-  @JsonProperty("ctVal")
-  private String contractValue;
+  public String getBaseCurrency() {
+    return delegate.getBaseCurrency();
+  }
 
-  @JsonProperty("ctMult")
-  private String contractMultiplier;
+  public String getQuoteCurrency() {
+    return delegate.getQuoteCurrency();
+  }
 
-  @JsonProperty("optType")
-  private String optionType;
+  public String getSettleCurrency() {
+    return delegate.getSettleCurrency();
+  }
 
-  @JsonProperty("stk")
-  private String strikePrice;
+  public String getContractValue() {
+    return delegate.getContractValue();
+  }
 
-  @JsonProperty("listTime")
-  private String listTime;
+  public String getContractMultiplier() {
+    return delegate.getContractMultiplier();
+  }
 
-  @JsonProperty("expTime")
-  private String expiryTime;
+  public String getOptionType() {
+    return delegate.getOptionType();
+  }
 
-  @JsonProperty("lever")
-  private String leverage;
+  public String getStrikePrice() {
+    return delegate.getStrikePrice();
+  }
 
-  @JsonProperty("tickSz")
-  private String tickSize;
+  public String getListTime() {
+    return delegate.getListTime();
+  }
 
-  @JsonProperty("lotSz")
-  private String lotSize;
+  public String getExpiryTime() {
+    return delegate.getExpiryTime();
+  }
 
-  @JsonProperty("minSz")
-  private String minSize;
+  public String getLeverage() {
+    return delegate.getLeverage();
+  }
 
-  @JsonProperty("ctType")
-  private String contractType;
+  public String getTickSize() {
+    return delegate.getTickSize();
+  }
 
-  @JsonProperty("alias")
-  private String alias;
+  public String getLotSize() {
+    return delegate.getLotSize();
+  }
 
-  @JsonProperty("state")
-  private String state;
+  public String getMinSize() {
+    return delegate.getMinSize();
+  }
 
-  @JsonProperty("instIdCode")
-  private String instIdCode;
+  public String getContractType() {
+    return delegate.getContractType();
+  }
+
+  public String getAlias() {
+    return delegate.getAlias();
+  }
+
+  public String getState() {
+    return delegate.getState();
+  }
+
+  public String getInstIdCode() {
+    return delegate.getInstIdCode();
+  }
 }

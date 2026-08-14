@@ -1,38 +1,52 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
-/** https://www.okx.com/docs-v5/en/#rest-api-funding-get-currencies * */
-@Getter
-@NoArgsConstructor
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxCurrency} instead.
+ */
+@Deprecated
 public class OkexCurrency {
-  @JsonProperty("ccy")
-  private String currency;
 
-  @JsonProperty("name")
-  private String name;
+  private final OkxCurrency delegate;
 
-  @JsonProperty("chain")
-  private String chain;
+  public OkexCurrency(OkxCurrency delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("canDep")
-  private boolean canDep;
+  public String getCurrency() {
+    return delegate.getCurrency();
+  }
 
-  @JsonProperty("canWd")
-  private boolean canWd;
+  public String getName() {
+    return delegate.getName();
+  }
 
-  @JsonProperty("canInternal")
-  private boolean canInternal;
+  public String getChain() {
+    return delegate.getChain();
+  }
 
-  @JsonProperty("minWd")
-  private String minWd;
+  public boolean isCanDep() {
+    return delegate.isCanDep();
+  }
 
-  @JsonProperty("minFee")
-  private String minFee;
+  public boolean isCanWd() {
+    return delegate.isCanWd();
+  }
 
-  @JsonProperty("maxFee")
-  private String maxFee;
+  public boolean isCanInternal() {
+    return delegate.isCanInternal();
+  }
+
+  public String getMinWd() {
+    return delegate.getMinWd();
+  }
+
+  public String getMinFee() {
+    return delegate.getMinFee();
+  }
+
+  public String getMaxFee() {
+    return delegate.getMaxFee();
+  }
 }

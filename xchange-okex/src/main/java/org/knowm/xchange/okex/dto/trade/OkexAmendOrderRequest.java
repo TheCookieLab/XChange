@@ -2,10 +2,17 @@ package org.knowm.xchange.okex.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
+import lombok.Getter;
+import org.knowm.xchange.okx.dto.trade.OkxAmendOrderRequest;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 10-06-2021 */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.trade.OkxAmendOrderRequest} instead.
+ */
+@Deprecated
 @Builder
+@Getter
 public class OkexAmendOrderRequest {
+
   @JsonProperty("instId")
   private String instrumentId;
 
@@ -29,4 +36,17 @@ public class OkexAmendOrderRequest {
 
   @JsonProperty("newPx")
   private String amendedPrice;
+
+  public OkxAmendOrderRequest to() {
+    return OkxAmendOrderRequest.builder()
+        .instrumentId(instrumentId)
+        .instIdCode(instIdCode)
+        .cancelOnFail(cancelOnFail)
+        .orderId(orderId)
+        .clientOrderId(clientOrderId)
+        .requestId(requestId)
+        .amendedAmount(amendedAmount)
+        .amendedPrice(amendedPrice)
+        .build();
+  }
 }

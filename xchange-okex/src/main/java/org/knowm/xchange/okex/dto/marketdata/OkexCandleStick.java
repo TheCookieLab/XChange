@@ -1,49 +1,52 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
-import lombok.Getter;
+import org.knowm.xchange.okx.dto.marketdata.OkxCandleStick;
 
-@Getter
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxCandleStick} instead.
+ */
+@Deprecated
 public class OkexCandleStick {
-  @JsonProperty("ts")
-  private final Long timestamp;
 
-  @JsonProperty("o")
-  private final String openPrice;
+  private final OkxCandleStick delegate;
 
-  @JsonProperty("c")
-  private final String closePrice;
+  public OkexCandleStick(OkxCandleStick delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("h")
-  private final String highPrice;
+  public Long getTimestamp() {
+    return delegate.getTimestamp();
+  }
 
-  @JsonProperty("l")
-  private final String lowPrice;
+  public String getOpenPrice() {
+    return delegate.getOpenPrice();
+  }
 
-  @JsonProperty("vol")
-  private final String volume;
+  public String getClosePrice() {
+    return delegate.getClosePrice();
+  }
 
-  @JsonProperty("volCcy")
-  private final String volumeCcy;
+  public String getHighPrice() {
+    return delegate.getHighPrice();
+  }
 
-  @JsonProperty("volCcyQuote")
-  private final String volCcyQuote;
+  public String getLowPrice() {
+    return delegate.getLowPrice();
+  }
 
-  @JsonProperty("confirm")
-  private final String confirm;
+  public String getVolume() {
+    return delegate.getVolume();
+  }
 
-  @JsonCreator
-  public OkexCandleStick(JsonNode node) {
-    this.timestamp = node.get(0).asLong();
-    this.openPrice = node.get(1).asText();
-    this.closePrice = node.get(4).asText();
-    this.highPrice = node.get(2).asText();
-    this.lowPrice = node.get(3).asText();
-    this.volume = node.get(5).asText();
-    this.volumeCcy = node.get(6).asText();
-    this.volCcyQuote = node.get(7).asText();
-    this.confirm = node.get(8).asText();
+  public String getVolumeCcy() {
+    return delegate.getVolumeCcy();
+  }
+
+  public String getVolCcyQuote() {
+    return delegate.getVolCcyQuote();
+  }
+
+  public String getConfirm() {
+    return delegate.getConfirm();
   }
 }

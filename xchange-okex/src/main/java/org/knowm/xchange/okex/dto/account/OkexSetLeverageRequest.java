@@ -2,10 +2,16 @@ package org.knowm.xchange.okex.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.ToString;
+import org.knowm.xchange.okx.dto.account.OkxSetLeverageRequest;
 
-/** https://www.okx.com/docs-v5/en/#rest-api-account-set-leverage */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxSetLeverageRequest} instead.
+ */
+@Deprecated
 @Builder
+@Getter
 @ToString
 public class OkexSetLeverageRequest {
 
@@ -23,4 +29,14 @@ public class OkexSetLeverageRequest {
 
   @JsonProperty("posSide")
   private String positionSide;
+
+  public OkxSetLeverageRequest to() {
+    return OkxSetLeverageRequest.builder()
+        .instrumentId(instrumentId)
+        .currency(currency)
+        .leverage(leverage)
+        .marginMode(marginMode)
+        .positionSide(positionSide)
+        .build();
+  }
 }

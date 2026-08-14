@@ -1,27 +1,36 @@
 package org.knowm.xchange.okex.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import org.knowm.xchange.okx.dto.account.OkxWithdrawalResponse;
 
-/** https://www.okx.com/docs-v5/en/#rest-api-funding-withdrawal */
-@Getter
-@NoArgsConstructor
-@ToString
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxWithdrawalResponse} instead.
+ */
+@Deprecated
 public class OkexWithdrawalResponse {
-  @JsonProperty("ccy")
-  private String currency;
 
-  @JsonProperty("amt")
-  private String amount;
+  private final OkxWithdrawalResponse delegate;
 
-  @JsonProperty("chain")
-  private String chain;
+  public OkexWithdrawalResponse(OkxWithdrawalResponse delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("clientId")
-  private String clientId;
+  public String getCurrency() {
+    return delegate.getCurrency();
+  }
 
-  @JsonProperty("wdId")
-  private String withdrawalId;
+  public String getAmount() {
+    return delegate.getAmount();
+  }
+
+  public String getChain() {
+    return delegate.getChain();
+  }
+
+  public String getClientId() {
+    return delegate.getClientId();
+  }
+
+  public String getWithdrawalId() {
+    return delegate.getWithdrawalId();
+  }
 }

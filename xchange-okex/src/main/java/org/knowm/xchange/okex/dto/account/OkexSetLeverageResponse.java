@@ -1,25 +1,32 @@
 package org.knowm.xchange.okex.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import org.knowm.xchange.okx.dto.account.OkxSetLeverageResponse;
 
-/** https://www.okx.com/docs-v5/en/#rest-api-account-set-leverage */
-@Getter
-@NoArgsConstructor
-@ToString
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.account.OkxSetLeverageResponse} instead.
+ */
+@Deprecated
 public class OkexSetLeverageResponse {
 
-  @JsonProperty("mgnMode")
-  private String marginMode;
+  private final OkxSetLeverageResponse delegate;
 
-  @JsonProperty("posSide")
-  private String positionSide;
+  public OkexSetLeverageResponse(OkxSetLeverageResponse delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("instId")
-  private String instrumentId;
+  public String getMarginMode() {
+    return delegate.getMarginMode();
+  }
 
-  @JsonProperty("lever")
-  private String leverage;
+  public String getPositionSide() {
+    return delegate.getPositionSide();
+  }
+
+  public String getInstrumentId() {
+    return delegate.getInstrumentId();
+  }
+
+  public String getLeverage() {
+    return delegate.getLeverage();
+  }
 }
