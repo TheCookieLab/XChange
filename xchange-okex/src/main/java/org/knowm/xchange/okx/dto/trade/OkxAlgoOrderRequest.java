@@ -1,36 +1,31 @@
 package org.knowm.xchange.okx.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/* Author: Max Gao (gaamox@tutanota.com) Created: 09-06-2021 */
-/** <a href="https://www.okx.com/docs-v5/en/#rest-api-trade-place-order">...</a> * */
+/**
+ * Request body for placing an algorithmic (algo) order via {@code /api/v5/trade/order-algo}.
+ *
+ * <p>Fields follow the OKX v5 wire keys. Only the fields relevant to the stable algo order types
+ * (conditional, OCO, trigger, move-order-stop, iceberg, TWAP, ADL) are modeled.
+ */
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-public class OkxOrderRequest {
+public class OkxAlgoOrderRequest {
+
   @JsonProperty("instId")
   private String instrumentId;
-
-  @JsonProperty("instIdCode")
-  private String instIdCode;
 
   @JsonProperty("tdMode")
   private String tradeMode;
 
   @JsonProperty("ccy")
   private String marginCurrency;
-
-  @JsonProperty("clOrdId")
-  private String clientOrderId;
-
-  @JsonProperty("tag")
-  private String tag;
 
   @JsonProperty("side")
   private String side;
@@ -50,9 +45,6 @@ public class OkxOrderRequest {
   @JsonProperty("reduceOnly")
   private boolean reducePosition;
 
-  @JsonProperty("tradeQuoteCcy")
-  private String tradeQuoteCcy;
-
   @JsonProperty("tpTriggerPx")
   private String takeProfitTriggerPrice;
 
@@ -71,9 +63,24 @@ public class OkxOrderRequest {
   @JsonProperty("slTriggerPxType")
   private String stopLossTriggerPriceType;
 
-  @JsonProperty("attachAlgoOrs")
-  private List<OkxAttachAlgoOrder> attachAlgoOrs;
+  @JsonProperty("tpOrdKind")
+  private String takeProfitOrderKind;
 
-  @JsonProperty("attachAlgoCls")
-  private List<OkxAttachAlgoOrder> attachAlgoCls;
+  @JsonProperty("algoClOrdId")
+  private String algoClientOrderId;
+
+  @JsonProperty("tag")
+  private String tag;
+
+  @JsonProperty("callbackRatio")
+  private String callbackRatio;
+
+  @JsonProperty("callbackSpread")
+  private String callbackSpread;
+
+  @JsonProperty("activePx")
+  private String activePrice;
+
+  @JsonProperty("cxlOnClosePos")
+  private boolean cancelOnClosePosition;
 }

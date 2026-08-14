@@ -1,41 +1,30 @@
 package org.knowm.xchange.okex.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
-import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
+import org.knowm.xchange.okx.dto.trade.OkxAlgoOrderRequest;
 
 /**
- * @deprecated use {@link org.knowm.xchange.okx.dto.trade.OkxOrderRequest} instead.
+ * @deprecated use {@link org.knowm.xchange.okx.dto.trade.OkxAlgoOrderRequest} instead.
  */
 @Deprecated
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-public class OkexOrderRequest {
+public class OkexAlgoOrderRequest {
 
   @JsonProperty("instId")
   private String instrumentId;
-
-  @JsonProperty("instIdCode")
-  private String instIdCode;
 
   @JsonProperty("tdMode")
   private String tradeMode;
 
   @JsonProperty("ccy")
   private String marginCurrency;
-
-  @JsonProperty("clOrdId")
-  private String clientOrderId;
-
-  @JsonProperty("tag")
-  private String tag;
 
   @JsonProperty("side")
   private String side;
@@ -55,9 +44,6 @@ public class OkexOrderRequest {
   @JsonProperty("reduceOnly")
   private boolean reducePosition;
 
-  @JsonProperty("tradeQuoteCcy")
-  private String tradeQuoteCcy;
-
   @JsonProperty("tpTriggerPx")
   private String takeProfitTriggerPrice;
 
@@ -76,43 +62,51 @@ public class OkexOrderRequest {
   @JsonProperty("slTriggerPxType")
   private String stopLossTriggerPriceType;
 
-  @JsonProperty("attachAlgoOrs")
-  private List<OkexAttachAlgoOrder> attachAlgoOrs;
+  @JsonProperty("tpOrdKind")
+  private String takeProfitOrderKind;
 
-  @JsonProperty("attachAlgoCls")
-  private List<OkexAttachAlgoOrder> attachAlgoCls;
+  @JsonProperty("algoClOrdId")
+  private String algoClientOrderId;
 
-  public OkxOrderRequest to() {
-    return OkxOrderRequest.builder()
+  @JsonProperty("tag")
+  private String tag;
+
+  @JsonProperty("callbackRatio")
+  private String callbackRatio;
+
+  @JsonProperty("callbackSpread")
+  private String callbackSpread;
+
+  @JsonProperty("activePx")
+  private String activePrice;
+
+  @JsonProperty("cxlOnClosePos")
+  private boolean cancelOnClosePosition;
+
+  public OkxAlgoOrderRequest to() {
+    return OkxAlgoOrderRequest.builder()
         .instrumentId(instrumentId)
-        .instIdCode(instIdCode)
         .tradeMode(tradeMode)
         .marginCurrency(marginCurrency)
-        .clientOrderId(clientOrderId)
-        .tag(tag)
         .side(side)
         .posSide(posSide)
         .orderType(orderType)
         .amount(amount)
         .price(price)
         .reducePosition(reducePosition)
-        .tradeQuoteCcy(tradeQuoteCcy)
         .takeProfitTriggerPrice(takeProfitTriggerPrice)
         .takeProfitOrderPrice(takeProfitOrderPrice)
         .stopLossTriggerPrice(stopLossTriggerPrice)
         .stopLossOrderPrice(stopLossOrderPrice)
         .takeProfitTriggerPriceType(takeProfitTriggerPriceType)
         .stopLossTriggerPriceType(stopLossTriggerPriceType)
-        .attachAlgoOrs(toAttachAlgoOrders(attachAlgoOrs))
-        .attachAlgoCls(toAttachAlgoOrders(attachAlgoCls))
+        .takeProfitOrderKind(takeProfitOrderKind)
+        .algoClientOrderId(algoClientOrderId)
+        .tag(tag)
+        .callbackRatio(callbackRatio)
+        .callbackSpread(callbackSpread)
+        .activePrice(activePrice)
+        .cancelOnClosePosition(cancelOnClosePosition)
         .build();
-  }
-
-  private static List<org.knowm.xchange.okx.dto.trade.OkxAttachAlgoOrder> toAttachAlgoOrders(
-      List<OkexAttachAlgoOrder> orders) {
-    if (orders == null) {
-      return null;
-    }
-    return orders.stream().map(OkexAttachAlgoOrder::to).collect(Collectors.toList());
   }
 }

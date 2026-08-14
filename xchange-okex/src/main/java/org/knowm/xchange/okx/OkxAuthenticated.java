@@ -34,8 +34,14 @@ import org.knowm.xchange.okx.dto.account.OkxWithdrawalResponse;
 import org.knowm.xchange.okx.dto.account.PiggyBalance;
 import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 import org.knowm.xchange.okx.dto.subaccount.OkxSubAccountDetails;
+import org.knowm.xchange.okx.dto.trade.OkxAlgoOrderDetails;
+import org.knowm.xchange.okx.dto.trade.OkxAlgoOrderRequest;
+import org.knowm.xchange.okx.dto.trade.OkxAlgoOrderResponse;
+import org.knowm.xchange.okx.dto.trade.OkxAmendAlgoRequest;
 import org.knowm.xchange.okx.dto.trade.OkxAmendOrderRequest;
+import org.knowm.xchange.okx.dto.trade.OkxCancelAlgoRequest;
 import org.knowm.xchange.okx.dto.trade.OkxCancelOrderRequest;
+import org.knowm.xchange.okx.dto.trade.OkxFill;
 import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
 import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
@@ -63,6 +69,13 @@ public interface OkxAuthenticated extends Okx {
   String cancelBatchOrderPath = "/trade/cancel-batch-orders"; // Stated as 300 req/2 sec
   String amendOrderPath = "/trade/amend-order"; // Stated as 60 req/2 sec
   String amendBatchOrderPath = "trade/amend-batch-orders"; // Stated as 300 req/2 sec
+  String fillsPath = "/trade/fills"; // Stated as 60 req/2 sec
+  String fillsHistoryPath = "/trade/fills-history"; // Stated as 10 req/2 sec
+  String orderAlgoPath = "/trade/order-algo"; // Stated as 60 req/2 sec
+  String cancelAlgosPath = "/trade/cancel-algos"; // Stated as 60 req/2 sec
+  String amendAlgosPath = "/trade/amend-algos"; // Stated as 60 req/2 sec
+  String ordersAlgoPendingPath = "/trade/orders-algo-pending"; // Stated as 10 req/2 sec
+  String ordersAlgoHistoryPath = "/trade/orders-algo-history"; // Stated as 20 req/2 sec
   String depositAddressPath = "/asset/deposit-address"; // Stated as 6 req/sec
   String ordersHistoryPath = "/trade/orders-history"; // Stated as 40 req/2 sec
   String subAccountList = "/users/subaccount/list"; // Stated as 2 req/2 sec
@@ -89,6 +102,13 @@ public interface OkxAuthenticated extends Okx {
           .limit(cancelBatchOrderPath, 300, 2)
           .limit(amendOrderPath, 60, 2)
           .limit(amendBatchOrderPath, 300, 2)
+          .limit(fillsPath, 60, 2)
+          .limit(fillsHistoryPath, 10, 2)
+          .limit(orderAlgoPath, 60, 2)
+          .limit(cancelAlgosPath, 60, 2)
+          .limit(amendAlgosPath, 60, 2)
+          .limit(ordersAlgoPendingPath, 10, 2)
+          .limit(ordersAlgoHistoryPath, 20, 2)
           .limit(depositAddressPath, 6, 1)
           .limit(ordersHistoryPath, 40, 2)
           .limit(tradeFeePath, 5, 2)
@@ -464,5 +484,106 @@ public interface OkxAuthenticated extends Okx {
       @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
       List<OkxAmendOrderRequest> requestPayload)
+      throws OkxException, IOException;
+
+  @GET
+  @Path(fillsPath)
+  OkxResponse<List<OkxFill>> getFills(
+      @QueryParam("instType") String instrumentType,
+      @QueryParam("instId") String instrumentId,
+      @QueryParam("ordId") String orderId,
+      @QueryParam("after") String after,
+      @QueryParam("before") String before,
+      @QueryParam("limit") String limit,
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
+      throws OkxException, IOException;
+
+  @GET
+  @Path(fillsHistoryPath)
+  OkxResponse<List<OkxFill>> getFillsHistory(
+      @QueryParam("instType") String instrumentType,
+      @QueryParam("instId") String instrumentId,
+      @QueryParam("ordId") String orderId,
+      @QueryParam("after") String after,
+      @QueryParam("before") String before,
+      @QueryParam("limit") String limit,
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
+      throws OkxException, IOException;
+
+  @POST
+  @Path(orderAlgoPath)
+  @Consumes(MediaType.APPLICATION_JSON)
+  OkxResponse<List<OkxAlgoOrderResponse>> placeAlgoOrder(
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
+      OkxAlgoOrderRequest requestPayload)
+      throws OkxException, IOException;
+
+  @POST
+  @Path(cancelAlgosPath)
+  @Consumes(MediaType.APPLICATION_JSON)
+  OkxResponse<List<OkxAlgoOrderResponse>> cancelAlgoOrders(
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
+      List<OkxCancelAlgoRequest> requestPayload)
+      throws OkxException, IOException;
+
+  @POST
+  @Path(amendAlgosPath)
+  @Consumes(MediaType.APPLICATION_JSON)
+  OkxResponse<List<OkxAlgoOrderResponse>> amendAlgoOrders(
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
+      List<OkxAmendAlgoRequest> requestPayload)
+      throws OkxException, IOException;
+
+  @GET
+  @Path(ordersAlgoPendingPath)
+  OkxResponse<List<OkxAlgoOrderDetails>> getAlgoOrdersPending(
+      @QueryParam("instType") String instrumentType,
+      @QueryParam("instId") String instrumentId,
+      @QueryParam("ordType") String orderType,
+      @QueryParam("after") String after,
+      @QueryParam("before") String before,
+      @QueryParam("limit") String limit,
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
+      throws OkxException, IOException;
+
+  @GET
+  @Path(ordersAlgoHistoryPath)
+  OkxResponse<List<OkxAlgoOrderDetails>> getAlgoOrdersHistory(
+      @QueryParam("instType") String instrumentType,
+      @QueryParam("instId") String instrumentId,
+      @QueryParam("ordType") String orderType,
+      @QueryParam("state") String state,
+      @QueryParam("after") String after,
+      @QueryParam("before") String before,
+      @QueryParam("limit") String limit,
+      @HeaderParam("OK-ACCESS-KEY") String apiKey,
+      @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+      @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+      @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
       throws OkxException, IOException;
 }
