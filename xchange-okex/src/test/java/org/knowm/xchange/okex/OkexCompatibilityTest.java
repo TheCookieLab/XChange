@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -37,6 +38,7 @@ import org.knowm.xchange.okex.dto.account.OkexSetLeverageResponse;
 import org.knowm.xchange.okex.dto.account.OkexTradeFee;
 import org.knowm.xchange.okex.dto.account.OkexWalletBalance;
 import org.knowm.xchange.okex.dto.account.OkexWithdrawalResponse;
+import org.knowm.xchange.okex.dto.account.PiggyBalance;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandles;
 import org.knowm.xchange.okex.dto.marketdata.OkexCurrency;
@@ -46,7 +48,10 @@ import org.knowm.xchange.okex.dto.marketdata.OkexOrderbook;
 import org.knowm.xchange.okex.dto.marketdata.OkexPublicOrder;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
 import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
+import org.knowm.xchange.okex.dto.subaccount.OkexSubAccountDetails;
+import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
 import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
+import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
 import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.okex.service.OkexAccountService;
 import org.knowm.xchange.okex.service.OkexAccountServiceRaw;
@@ -64,6 +69,7 @@ import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
 import org.knowm.xchange.okx.dto.account.OkxWalletBalance;
+import org.knowm.xchange.okx.dto.subaccount.OkxSubAccountDetails;
 import org.knowm.xchange.okx.service.OkxAccountService;
 import org.knowm.xchange.okx.service.OkxAccountServiceRaw;
 import org.knowm.xchange.okx.service.OkxCandleStickPeriodType;
@@ -192,6 +198,69 @@ public class OkexCompatibilityTest {
         new OkexAccountServiceRaw(exchange, new org.knowm.xchange.client.ResilienceRegistries());
     assertThat(serviceField(account, "okex")).isNotNull();
     assertThat(serviceField(account, "okexAuthenticated")).isNotNull();
+  }
+
+  @Test
+  public void legacyDtoNoArgConstructorsRestored() {
+    // Pre-rename these DTOs had implicit public no-argument constructors; the delegate
+    // constructors must not remove them (source compatibility plus binary no
+    // NoSuchMethodError for callers invoking <init>()).
+    OkexSubAccountDetails details = new OkexSubAccountDetails();
+    assertThat(details.getSubAcct()).isNull();
+    PiggyBalance piggy = new PiggyBalance();
+    assertThat(piggy.getCcy()).isNull();
+    OkexOrderDetails orderDetails = new OkexOrderDetails();
+    assertThat(orderDetails.getOrderId()).isNull();
+    OkexOrderResponse response = new OkexOrderResponse();
+    assertThat(response.getOrderId()).isNull();
+  }
+
+  @Test
+  public void legacyAccountRawTranslatesDelegateFailures() throws Exception {
+    ExchangeSpecification spec = new OkexExchange().getDefaultExchangeSpecification();
+    spec.setApiKey("api-key");
+    spec.setSecretKey("secret-key");
+    spec.setExchangeSpecificParametersItem(OkxExchange.PARAM_PASSPHRASE, "passphrase");
+    spec.setShouldLoadRemoteMetaData(false);
+    OkexExchange exchange = new OkexExchange();
+    exchange.applySpecification(spec);
+
+    OkexAccountServiceRaw raw =
+        new OkexAccountServiceRaw(exchange, new org.knowm.xchange.client.ResilienceRegistries());
+    Field delegateField = OkexAccountServiceRaw.class.getDeclaredField("delegate");
+    delegateField.setAccessible(true);
+    delegateField.set(
+        raw,
+        new FailingAccountRawDelegate(
+            exchange, new org.knowm.xchange.client.ResilienceRegistries()));
+
+    assertThatThrownBy(() -> raw.getSubAccounts(false, null)).isInstanceOf(OkexException.class);
+    assertThatThrownBy(() -> raw.getSubAccountBalance("main")).isInstanceOf(OkexException.class);
+    assertThatThrownBy(() -> raw.getPiggyBalance("BTC")).isInstanceOf(OkexException.class);
+  }
+
+  /** Canonical raw account delegate whose sub-account endpoints fail with {@link OkxException}. */
+  static final class FailingAccountRawDelegate extends OkxAccountServiceRaw {
+
+    FailingAccountRawDelegate(OkexExchange exchange, ResilienceRegistries registries) {
+      super(exchange, registries);
+    }
+
+    @Override
+    public OkxResponse<List<OkxSubAccountDetails>> getSubAccounts(Boolean enable, String subAcct) {
+      throw new OkxException("boom", 50000);
+    }
+
+    @Override
+    public OkxResponse<List<OkxWalletBalance>> getSubAccountBalance(String subAcct) {
+      throw new OkxException("boom", 50000);
+    }
+
+    @Override
+    public OkxResponse<List<org.knowm.xchange.okx.dto.account.PiggyBalance>> getPiggyBalance(
+        String ccy) {
+      throw new OkxException("boom", 50000);
+    }
   }
 
   private static Object serviceField(OkexBaseService service, String name) throws Exception {

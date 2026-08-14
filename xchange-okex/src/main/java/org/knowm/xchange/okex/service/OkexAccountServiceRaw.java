@@ -284,16 +284,29 @@ public class OkexAccountServiceRaw extends OkexBaseService {
   }
 
   public OkexResponse<List<OkexSubAccountDetails>> getSubAccounts(Boolean enable, String subAcct)
-      throws IOException {
-    return wrap(delegate.getSubAccounts(enable, subAcct), OkexSubAccountDetails::new);
+      throws IOException, OkexException {
+    try {
+      return wrap(delegate.getSubAccounts(enable, subAcct), OkexSubAccountDetails::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   public OkexResponse<List<OkexWalletBalance>> getSubAccountBalance(String subAcct)
-      throws IOException {
-    return wrap(delegate.getSubAccountBalance(subAcct), OkexWalletBalance::new);
+      throws IOException, OkexException {
+    try {
+      return wrap(delegate.getSubAccountBalance(subAcct), OkexWalletBalance::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
-  public OkexResponse<List<PiggyBalance>> getPiggyBalance(String ccy) throws IOException {
-    return wrap(delegate.getPiggyBalance(ccy), PiggyBalance::new);
+  public OkexResponse<List<PiggyBalance>> getPiggyBalance(String ccy)
+      throws IOException, OkexException {
+    try {
+      return wrap(delegate.getPiggyBalance(ccy), PiggyBalance::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 }

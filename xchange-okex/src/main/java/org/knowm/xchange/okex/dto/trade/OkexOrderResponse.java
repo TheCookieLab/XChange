@@ -11,6 +11,11 @@ public class OkexOrderResponse {
 
   private final OkxOrderResponse delegate;
 
+  /** Restores the pre-rename implicit no-argument constructor. */
+  public OkexOrderResponse() {
+    this(new OkxOrderResponse());
+  }
+
   @JsonCreator
   public OkexOrderResponse(OkxOrderResponse delegate) {
     this.delegate = delegate;

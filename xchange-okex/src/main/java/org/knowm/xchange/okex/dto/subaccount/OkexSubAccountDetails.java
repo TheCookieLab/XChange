@@ -11,6 +11,11 @@ public class OkexSubAccountDetails {
 
   private final OkxSubAccountDetails delegate;
 
+  /** Restores the pre-rename implicit no-argument constructor. */
+  public OkexSubAccountDetails() {
+    this(new OkxSubAccountDetails());
+  }
+
   @JsonCreator
   public OkexSubAccountDetails(OkxSubAccountDetails delegate) {
     this.delegate = delegate;

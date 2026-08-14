@@ -10,6 +10,11 @@ public class PiggyBalance {
 
   private final org.knowm.xchange.okx.dto.account.PiggyBalance delegate;
 
+  /** Restores the pre-rename implicit no-argument constructor. */
+  public PiggyBalance() {
+    this(new org.knowm.xchange.okx.dto.account.PiggyBalance());
+  }
+
   @JsonCreator
   public PiggyBalance(org.knowm.xchange.okx.dto.account.PiggyBalance delegate) {
     this.delegate = delegate;
