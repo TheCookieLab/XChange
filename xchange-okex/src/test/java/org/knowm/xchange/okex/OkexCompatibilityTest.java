@@ -71,6 +71,32 @@ public class OkexCompatibilityTest {
   }
 
   @Test
+  public void legacyServicesAreCastableToCanonicalRawTypes() {
+    // Precondition for the inherited OkxExchange#remoteInit() casts: normal initialization
+    // must not throw ClassCastException before any metadata request is made.
+    ExchangeSpecification spec = new OkexExchange().getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+
+    OkexExchange exchange = new OkexExchange();
+    exchange.applySpecification(spec);
+
+    assertThat(exchange.getMarketDataService()).isInstanceOf(OkxMarketDataServiceRaw.class);
+    assertThat(exchange.getAccountService()).isInstanceOf(OkxAccountServiceRaw.class);
+    assertThat(exchange.getTradeService()).isInstanceOf(OkxTradeServiceRaw.class);
+  }
+
+  @Test
+  public void legacyResponseRetainsFourArgumentConstructor() {
+    OkexResponse<String> response = new OkexResponse<>("id-1", "0", "ok", "payload");
+
+    assertThat(response.getId()).isEqualTo("id-1");
+    assertThat(response.getCode()).isEqualTo("0");
+    assertThat(response.getMsg()).isEqualTo("ok");
+    assertThat(response.getData()).isEqualTo("payload");
+    assertThat(response.isSuccess()).isTrue();
+  }
+
+  @Test
   public void testWrapperConversions() {
     assertThat(OkexInstType.from(OkxInstType.SWAP).to()).isEqualTo(OkxInstType.SWAP);
     assertThat(OkexInstType.from(null)).isNull();
