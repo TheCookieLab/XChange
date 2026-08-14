@@ -61,6 +61,29 @@ class MexcV3StreamingExchangeTest {
     observer.dispose();
     exchange.disconnect().onErrorComplete().blockingAwait();
   }
+  @Test
+  void typedStreamBaseUrlTakesPrecedenceOverLegacyWebsocketUri() throws Exception {
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3Configuration.STREAM_BASE_URL_KEY, "wss://127.0.0.1:1/typed");
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/legacy");
+    exchange.applySpecification(spec);
+
+    TestObserver<Void> observer = exchange.connect().test();
+    Field serviceField = MexcV3StreamingExchange.class.getDeclaredField("streamingService");
+    serviceField.setAccessible(true);
+    MexcV3StreamingService service =
+        (MexcV3StreamingService) serviceField.get(exchange);
+    Field uriField = NettyStreamingService.class.getDeclaredField("uri");
+    uriField.setAccessible(true);
+    assertEquals(URI.create("wss://127.0.0.1:1/typed"), uriField.get(service));
+
+    observer.dispose();
+    exchange.disconnect().onErrorComplete().blockingAwait();
+  }
 
   @Test
   void connectCreatesServicesAndReportsConnectionFailure() throws IOException {
