@@ -3,12 +3,12 @@ package info.bitrich.xchangestream.okx;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -91,8 +91,7 @@ public class OkxStreamingServiceGenerationTest {
     service.messageHandler("{\"event\":\"login\",\"code\":\"0\",\"msg\":\"\"}");
     assertThat(service.isLoginDone()).isTrue();
 
-    service.messageHandler(
-        "{\"event\":\"login\",\"code\":\"60009\",\"msg\":\"Login failed\"}");
+    service.messageHandler("{\"event\":\"login\",\"code\":\"60009\",\"msg\":\"Login failed\"}");
     assertThat(service.isLoginDone()).isFalse();
   }
 

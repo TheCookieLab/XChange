@@ -30,16 +30,12 @@ public class OkxBookContinuityTest {
    */
   private static long expectedChecksum(String[][] bids, String[][] asks) {
     CRC32 crc = new CRC32();
-    for (int index = 0;
-        index < 25 && (index < bids.length || index < asks.length);
-        index++) {
+    for (int index = 0; index < 25 && (index < bids.length || index < asks.length); index++) {
       if (index < bids.length) {
-        crc.update(
-            (bids[index][0] + ":" + bids[index][1]).getBytes(StandardCharsets.UTF_8));
+        crc.update((bids[index][0] + ":" + bids[index][1]).getBytes(StandardCharsets.UTF_8));
       }
       if (index < asks.length) {
-        crc.update(
-            (asks[index][0] + ":" + asks[index][1]).getBytes(StandardCharsets.UTF_8));
+        crc.update((asks[index][0] + ":" + asks[index][1]).getBytes(StandardCharsets.UTF_8));
       }
     }
     return crc.getValue();
@@ -184,7 +180,7 @@ public class OkxBookContinuityTest {
     assertThat(continuity.gateUpdate(INST_ID, data(2, 0, BID_99, EMPTY)))
         .isEqualTo(OkxBookContinuity.Gate.REBUILD);
   }
-  
+
   @Test
   public void testChecksumInterleavesTopBidsAndAsks() {
     String[][] bids = {{"102", "2"}, {"100", "1"}};

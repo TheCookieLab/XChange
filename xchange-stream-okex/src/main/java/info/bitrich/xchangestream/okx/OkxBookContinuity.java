@@ -34,9 +34,9 @@ import org.slf4j.LoggerFactory;
  * each side, interleaving {@code bid1,ask1,bid2,ask2,...}, as {@code price:size} with no separator
  * between levels, and compute the CRC32 (java.util.zip) of the UTF-8 encoded string. Bids are
  * expected in descending price order and asks in ascending price order. The checksum in an update
- * message covers the book as it stands after applying that update. OKX deprecated the checksum field
- * on 2026-06-23 and now always sends {@code 0}; a zero or absent checksum disables verification and
- * the sequence gate becomes the sole integrity check.
+ * message covers the book as it stands after applying that update. OKX deprecated the checksum
+ * field on 2026-06-23 and now always sends {@code 0}; a zero or absent checksum disables
+ * verification and the sequence gate becomes the sole integrity check.
  *
  * <p>The {@link Gate} returned by {@link #gateUpdate(String, JsonNode)} must be evaluated on the
  * same thread that applies the message; the netty event loop satisfies this naturally because all
@@ -186,9 +186,8 @@ final class OkxBookContinuity {
   }
 
   /**
-   * Computes the OKX book checksum for the first 25 raw bid/ask levels, interleaved as
-   * {@code bid1,ask1,bid2,ask2,...}: CRC32 over {@code price:size} with no separator between
-   * levels.
+   * Computes the OKX book checksum for the first 25 raw bid/ask levels, interleaved as {@code
+   * bid1,ask1,bid2,ask2,...}: CRC32 over {@code price:size} with no separator between levels.
    *
    * @return unsigned CRC32 value in the range {@code [0, 2^32-1]}
    */
@@ -196,7 +195,9 @@ final class OkxBookContinuity {
     CRC32 crc = new CRC32();
     int bidCount = arraySize(bids);
     int askCount = arraySize(asks);
-    for (int index = 0; index < CHECKSUM_LEVEL_LIMIT && (index < bidCount || index < askCount); index++) {
+    for (int index = 0;
+        index < CHECKSUM_LEVEL_LIMIT && (index < bidCount || index < askCount);
+        index++) {
       if (index < bidCount) {
         appendLevel(crc, bids.get(index));
       }
@@ -243,7 +244,6 @@ final class OkxBookContinuity {
     }
     return crc.getValue();
   }
-
 
   private static long sequenceOf(JsonNode dataElement) {
     return sequenceOf(dataElement, "seqId");

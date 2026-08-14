@@ -125,8 +125,7 @@ public class OkxPrivateStreamingService extends JsonNettyStreamingService {
         Base64.getEncoder().encodeToString(mac.doFinal(toSign.getBytes(StandardCharsets.UTF_8)));
 
     OkxLoginMessage message = new OkxLoginMessage();
-    Object passphraseValue =
-        exchangeSpecification.getExchangeSpecificParametersItem("passphrase");
+    Object passphraseValue = exchangeSpecification.getExchangeSpecificParametersItem("passphrase");
     if (passphraseValue == null || passphraseValue.toString().isEmpty()) {
       throw new ExchangeException("Missing API passphrase");
     }

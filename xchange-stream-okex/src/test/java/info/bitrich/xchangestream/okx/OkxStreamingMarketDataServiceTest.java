@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
 import java.math.BigDecimal;
@@ -18,7 +19,6 @@ import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.CandleStickInterval;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.instrument.Instrument;
-import info.bitrich.xchangestream.service.exception.NotConnectedException;
 
 public class OkxStreamingMarketDataServiceTest {
 
