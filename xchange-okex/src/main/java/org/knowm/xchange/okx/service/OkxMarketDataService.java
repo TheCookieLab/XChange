@@ -36,7 +36,7 @@ public class OkxMarketDataService extends OkxMarketDataServiceRaw implements Mar
   @Override
   public OrderBook getOrderBook(Instrument instrument, Object... args) throws IOException {
     return OkxAdapters.adaptOrderBook(
-        getOkxOrderbook(OkxAdapters.adaptInstrument(instrument)),
+        requireSingle(getOkxOrderbook(OkxAdapters.adaptInstrument(instrument))),
         instrument,
         exchange.getExchangeMetaData());
   }
@@ -44,7 +44,7 @@ public class OkxMarketDataService extends OkxMarketDataServiceRaw implements Mar
   @Override
   public Trades getTrades(Instrument instrument, Object... args) throws IOException {
     return OkxAdapters.adaptTrades(
-        getOkxTrades(OkxAdapters.adaptInstrument(instrument), 100).getData(),
+        requireData(getOkxTrades(OkxAdapters.adaptInstrument(instrument), 100)),
         instrument,
         exchange.getExchangeMetaData());
   }
@@ -52,7 +52,7 @@ public class OkxMarketDataService extends OkxMarketDataServiceRaw implements Mar
   @Override
   public Ticker getTicker(Instrument instrument, Object... args) throws IOException {
     return OkxAdapters.adaptTicker(
-        getOkxTicker(OkxAdapters.adaptInstrument(instrument)).getData().get(0));
+        requireSingle(getOkxTicker(OkxAdapters.adaptInstrument(instrument))).get(0));
   }
 
   @Override
@@ -89,13 +89,13 @@ public class OkxMarketDataService extends OkxMarketDataServiceRaw implements Mar
             String.valueOf(defaultCandleStickParam.getStartDate().getTime()),
             periodType.getFieldValue(),
             limit);
-    return OkxAdapters.adaptCandleStickData(historyCandle.getData(), instrument);
+    return OkxAdapters.adaptCandleStickData(requireData(historyCandle), instrument);
   }
 
   @Override
   public FundingRate getFundingRate(Instrument instrument) throws IOException {
     return OkxAdapters.adaptFundingRate(
-        getOkxFundingRate(OkxAdapters.adaptInstrument(instrument)).getData());
+        requireSingle(getOkxFundingRate(OkxAdapters.adaptInstrument(instrument))));
   }
 
   public List<Ticker> getTickers(Params params) throws IOException {
@@ -103,7 +103,7 @@ public class OkxMarketDataService extends OkxMarketDataServiceRaw implements Mar
       throw new IllegalArgumentException("Params must be instance of OkxInstType");
     }
     OkxInstType instType = (OkxInstType) params;
-    return getOkxTickers(instType).getData().stream()
+    return requireData(getOkxTickers(instType)).stream()
         .map(OkxAdapters::adaptTicker)
         .collect(Collectors.toList());
   }

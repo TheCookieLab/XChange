@@ -706,10 +706,16 @@ public class OkxAdapters {
        The price-dependent inverse-contract conversion (sz*ctVal/price) needs a price, which does
        not exist at metadata time and not for MarketOrders; conversion call sites with a price
        divide by it, while metadata minimums and market-order placement keep the plain ctVal
-       multiply/divide. USD- and USDC-counter perpetual swaps are registered like USDT swaps with
-       notional minimums, so their call sites can dereference the contract value and convert with
-       the price; without registration those calls would null-dereference instead.
+       multiply/divide. USD-counter (inverse) contracts therefore leave the volume restrictions
+       (minimumAmount, volumeScale, amountStepSize) unset: those values are only meaningful in
+       base volume, which cannot be derived without a price, and publishing the ctVal-multiplied
+       notional (e.g. 100 BTC for a 1-contract BTC-USD-SWAP minimum) would make consumers reject
+       valid orders at any realistic price. Consumers treat unset restrictions as absent
+       (OrderValuesHelper/BaseExchangeService skip them), while the contract value stays
+       registered so price-aware conversion call sites can dereference it.
       */
+      boolean priceDependentRestrictions =
+          isContractDerivative(instrument) && isInverseContract(pair);
       // Contract sizes convert by ctVal (SWAP/FUTURES) or ctMult (OPTION); spot/margin leave
       // those fields empty so only build the multiplier for contract derivatives.
       BigDecimal contractValue =
@@ -718,29 +724,39 @@ public class OkxAdapters {
                   ? new BigDecimal(instrument.getContractMultiplier())
                   : new BigDecimal(instrument.getContractValue()))
               : null;
+      Integer volumeScale =
+          isContractDerivative(instrument) && !priceDependentRestrictions
+              ? Integer.valueOf(
+                  convertContractSizeToVolume(
+                          new BigDecimal(instrument.getMinSize()), pair, contractValue, null)
+                      .scale())
+              : (isContractDerivative(instrument)
+                  ? null
+                  : Integer.valueOf(
+                      Math.max(numberOfDecimals(new BigDecimal(instrument.getMinSize())), 0)));
       InstrumentMetaData meta =
           InstrumentMetaData.builder()
               .minimumAmount(
                   (isContractDerivative(instrument))
-                      ? convertContractSizeToVolume(
-                          new BigDecimal(instrument.getMinSize()), pair, contractValue, null)
+                      ? (priceDependentRestrictions
+                          ? null
+                          : convertContractSizeToVolume(
+                              new BigDecimal(instrument.getMinSize()), pair, contractValue, null))
                       : new BigDecimal(instrument.getMinSize()))
-              .volumeScale(
-                  (isContractDerivative(instrument))
-                      ? convertContractSizeToVolume(
-                              new BigDecimal(instrument.getMinSize()), pair, contractValue, null)
-                          .scale()
-                      : Math.max(numberOfDecimals(new BigDecimal(instrument.getMinSize())), 0))
+              .volumeScale(volumeScale)
               .amountStepSize(
-                  BigDecimal.ONE.movePointLeft(
-                      (isContractDerivative(instrument))
-                          ? convertContractSizeToVolume(
-                                  new BigDecimal(instrument.getLotSize()),
-                                  pair,
-                                  contractValue,
-                                  null)
-                              .scale()
-                          : Math.max(numberOfDecimals(new BigDecimal(instrument.getLotSize())), 0)))
+                  priceDependentRestrictions
+                      ? null
+                      : BigDecimal.ONE.movePointLeft(
+                          (isContractDerivative(instrument))
+                              ? convertContractSizeToVolume(
+                                      new BigDecimal(instrument.getLotSize()),
+                                      pair,
+                                      contractValue,
+                                      null)
+                                  .scale()
+                              : Math.max(
+                                  numberOfDecimals(new BigDecimal(instrument.getLotSize())), 0)))
               .contractValue((isContractDerivative(instrument)) ? contractValue : null)
               .priceScale(numberOfDecimals(new BigDecimal(instrument.getTickSize())))
               .priceStepSize(

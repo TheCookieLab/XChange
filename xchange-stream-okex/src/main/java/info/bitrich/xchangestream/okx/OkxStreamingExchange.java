@@ -171,15 +171,19 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
   /**
    * @return the transports that must currently be healthy for {@link #isAlive()} to return {@code
    *     true}. The public transport is always required; the default model additionally requires the
-   *     business transport and the private transport once credentials are configured and private
-   *     subscriptions are active. Explicit configuration replaces the defaults, while active
-   *     business subscriptions always keep the business transport required.
+   *     business transport and, when API credentials are configured, the private transport — {@code
+   *     isAlive()} must not report liveness while the private login is still pending. Explicit
+   *     configuration replaces the defaults, while active business subscriptions always keep the
+   *     business transport required.
    */
   public Set<TransportRole> getRequiredTransports() {
     Set<TransportRole> required = new HashSet<>();
     required.add(TransportRole.PUBLIC);
     if (requiredTransportsOverride == null) {
       required.add(TransportRole.BUSINESS);
+      if (isApiKeyValid()) {
+        required.add(TransportRole.PRIVATE);
+      }
     } else {
       required.addAll(requiredTransportsOverride);
     }
@@ -232,6 +236,9 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
   }
 
   private boolean isApiKeyValid() {
+    if (exchangeSpecification == null) {
+      return false;
+    }
     Object passphrase = exchangeSpecification.getExchangeSpecificParametersItem("passphrase");
     return exchangeSpecification.getApiKey() != null
         && !exchangeSpecification.getApiKey().isEmpty()

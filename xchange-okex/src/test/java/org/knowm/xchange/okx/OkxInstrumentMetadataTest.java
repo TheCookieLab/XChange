@@ -348,13 +348,15 @@ public class OkxInstrumentMetadataTest {
     assertThat(swap.getContractValue()).isEqualByComparingTo("0.01");
     assertThat(swap.getMinimumAmount()).isEqualByComparingTo("0.0001");
 
-    // USD-margined futures enter the metadata and carry their contract value
+    // USD-margined futures enter the metadata and carry their contract value, but their volume
+    // restrictions are price-dependent (sz x ctVal / price) and cannot be expressed at metadata
+    // time, so they are left unset for consumers to skip.
     InstrumentMetaData btcUsdFuture =
         metadata.get(new FuturesContract(new CurrencyPair("BTC", "USD"), "260814"));
     assertThat(btcUsdFuture).isNotNull();
     assertThat(btcUsdFuture.getContractValue()).isEqualByComparingTo("100");
-    assertThat(btcUsdFuture.getMinimumAmount()).isEqualByComparingTo("10");
-    assertThat(btcUsdFuture.getAmountStepSize()).isEqualByComparingTo("10");
+    assertThat(btcUsdFuture.getMinimumAmount()).isNull();
+    assertThat(btcUsdFuture.getAmountStepSize()).isNull();
 
     InstrumentMetaData ethUsdtFuture =
         metadata.get(new FuturesContract(new CurrencyPair("ETH", "USDT"), "260829"));
@@ -389,11 +391,15 @@ public class OkxInstrumentMetadataTest {
     InstrumentMetaData btcUsdSwap =
         metadata.get(new FuturesContract(new CurrencyPair("BTC", "USD"), "SWAP"));
     assertThat(btcUsdSwap).isNotNull();
-    // Inverse swap minimums stay notional (sz x ctVal) at metadata time; price-aware call sites
-    // divide by the price, so the contract value must be present for them to dereference.
+    // Inverse swap volume restrictions are price-dependent (sz x ctVal / price) and cannot be
+    // expressed in base volume at metadata time; publishing the ctVal-multiplied notional (100 BTC
+    // for a 1-contract minimum) would reject valid orders at realistic prices, so they are left
+    // unset and consumers skip them. The contract value stays registered for price-aware
+    // conversion call sites to dereference.
     assertThat(btcUsdSwap.getContractValue()).isEqualByComparingTo("100");
-    assertThat(btcUsdSwap.getMinimumAmount()).isEqualByComparingTo("100");
-    assertThat(btcUsdSwap.getAmountStepSize()).isEqualByComparingTo("100");
+    assertThat(btcUsdSwap.getMinimumAmount()).isNull();
+    assertThat(btcUsdSwap.getAmountStepSize()).isNull();
+    assertThat(btcUsdSwap.getVolumeScale()).isNull();
   }
 
   @Test

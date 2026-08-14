@@ -107,7 +107,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
   @Override
   public OpenPositions getOpenPositions() throws IOException {
     return OkxAdapters.adaptOpenPositions(
-        getPositions(null, null, null).getData(), exchange.getExchangeMetaData());
+        requireData(getPositions(null, null, null)), exchange.getExchangeMetaData());
   }
 
   @Override
@@ -118,15 +118,15 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
       String instrumentType = historyInstrumentType(instrument);
 
       return OkxAdapters.adaptUserTrades(
-          getOrderHistory(
+          requireData(
+              getOrderHistory(
                   instrumentType,
                   OkxAdapters.adaptInstrument(
                       ((TradeHistoryParamInstrument) params).getInstrument()),
                   null,
                   null,
                   null,
-                  null)
-              .getData(),
+                  null)),
           exchange.getExchangeMetaData());
     } else {
       throw new NotSupportedException(
@@ -137,7 +137,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
   @Override
   public OpenOrders getOpenOrders() throws IOException {
     return OkxAdapters.adaptOpenOrders(
-        getOkxPendingOrder(null, null, null, null, null, null, null, null).getData(),
+        requireData(getOkxPendingOrder(null, null, null, null, null, null, null, null)),
         exchange.getExchangeMetaData());
   }
 
@@ -145,7 +145,8 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
     if (params instanceof OpenOrdersParamInstrument) {
       return OkxAdapters.adaptOpenOrders(
-          getOkxPendingOrder(
+          requireData(
+              getOkxPendingOrder(
                   null,
                   null,
                   OkxAdapters.adaptInstrument(((OpenOrdersParamInstrument) params).getInstrument()),
@@ -153,8 +154,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
                   null,
                   null,
                   null,
-                  null)
-              .getData(),
+                  null)),
           exchange.getExchangeMetaData());
     } else {
       throw new NotSupportedException(
@@ -174,7 +174,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
       String orderId = orderQueryParams.getOrderId();
 
       List<OkxOrderDetails> orderResults =
-          getOkxOrder(OkxAdapters.adaptInstrument(instrument), orderId).getData();
+          requireData(getOkxOrder(OkxAdapters.adaptInstrument(instrument), orderId));
 
       if (!orderResults.isEmpty()) {
         result = OkxAdapters.adaptOrder(orderResults.get(0), exchange.getExchangeMetaData());

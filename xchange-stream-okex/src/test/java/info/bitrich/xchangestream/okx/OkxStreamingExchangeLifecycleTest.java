@@ -15,6 +15,7 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import org.junit.Before;
 import org.junit.Test;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.CandleStickInterval;
 
@@ -115,6 +116,53 @@ public class OkxStreamingExchangeLifecycleTest {
     exchange.setBusinessStreamingService(businessStreamingService);
 
     assertThat(exchange.getRequiredTransports()).doesNotContain(TransportRole.PRIVATE);
+  }
+
+  @Test
+  public void privateTransportIsRequiredByDefaultWhenCredentialsAreConfigured() {
+    applyCredentials();
+    injectAllServices();
+    when(privateStreamingService.hasActiveChannels()).thenReturn(false);
+
+    // The default model connects the private socket whenever credentials are present, so
+    // liveness must not be reported while that socket's login is still pending.
+    assertThat(exchange.getRequiredTransports())
+        .containsExactlyInAnyOrder(
+            TransportRole.PUBLIC, TransportRole.BUSINESS, TransportRole.PRIVATE);
+  }
+
+  @Test
+  public void isAliveWaitsForPrivateLoginWithCredentialsEvenWithoutPrivateStreams() {
+    applyCredentials();
+    injectAllServices();
+    when(streamingService.isSocketOpen()).thenReturn(true);
+    when(businessStreamingService.isSocketOpen()).thenReturn(true);
+    when(privateStreamingService.isSocketOpen()).thenReturn(true);
+    when(privateStreamingService.hasActiveChannels()).thenReturn(false);
+    when(privateStreamingService.isLoginDone()).thenReturn(false);
+
+    assertThat(exchange.isAlive()).isFalse();
+
+    when(privateStreamingService.isLoginDone()).thenReturn(true);
+    assertThat(exchange.isAlive()).isTrue();
+  }
+
+  @Test
+  public void credentialsDoNotForcePrivateTransportWhenExplicitlyOverridden() {
+    applyCredentials();
+    injectAllServices();
+    exchange.setRequiredTransports(TransportRole.PUBLIC);
+
+    assertThat(exchange.getRequiredTransports()).containsExactlyInAnyOrder(TransportRole.PUBLIC);
+  }
+
+  private void applyCredentials() {
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setApiKey("api-key");
+    spec.setSecretKey("secret-key");
+    spec.setExchangeSpecificParametersItem("passphrase", "passphrase");
+    exchange.applySpecification(spec);
   }
 
   @Test

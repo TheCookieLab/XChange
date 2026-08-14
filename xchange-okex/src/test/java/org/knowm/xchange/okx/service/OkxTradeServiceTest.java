@@ -23,11 +23,16 @@ import org.knowm.xchange.okx.OkxAuthenticated;
 import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.account.OkxPosition;
 import org.knowm.xchange.okx.dto.trade.OkxAmendOrderRequest;
 import org.knowm.xchange.okx.dto.trade.OkxCancelOrderRequest;
+import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
 import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
 import org.knowm.xchange.okx.dto.trade.OkxTradeParams;
+import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamInstrument;
+import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
+import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParamInstrument;
 
 /** Verifies the {@code instType} mapping used for order-history queries. */
 public class OkxTradeServiceTest {
@@ -48,6 +53,10 @@ public class OkxTradeServiceTest {
     OkxResponse<List<OkxOrderResponse>> placeResponse;
     OkxResponse<List<OkxOrderResponse>> amendResponse;
     OkxResponse<List<OkxOrderResponse>> cancelResponse;
+    OkxResponse<List<OkxPosition>> positionsResponse;
+    OkxResponse<List<OkxOrderDetails>> pendingOrderResponse;
+    OkxResponse<List<OkxOrderDetails>> orderResponse;
+    OkxResponse<List<OkxOrderDetails>> orderHistoryResponse;
 
     StubTradeService(OkxExchange exchange) {
       super(exchange, new ResilienceRegistries());
@@ -75,6 +84,44 @@ public class OkxTradeServiceTest {
     public OkxResponse<List<OkxOrderResponse>> cancelOkxOrder(OkxCancelOrderRequest order)
         throws IOException {
       return cancelResponse;
+    }
+
+    @Override
+    public OkxResponse<List<OkxPosition>> getPositions(
+        String instrumentType, String instrumentId, String positionId) throws IOException {
+      return positionsResponse;
+    }
+
+    @Override
+    public OkxResponse<List<OkxOrderDetails>> getOkxPendingOrder(
+        String instrumentType,
+        String underlying,
+        String instrumentId,
+        String orderType,
+        String state,
+        String after,
+        String before,
+        String limit)
+        throws IOException {
+      return pendingOrderResponse;
+    }
+
+    @Override
+    public OkxResponse<List<OkxOrderDetails>> getOkxOrder(String instrumentId, String orderId)
+        throws IOException {
+      return orderResponse;
+    }
+
+    @Override
+    public OkxResponse<List<OkxOrderDetails>> getOrderHistory(
+        String instrumentType,
+        String instrumentId,
+        String orderType,
+        String after,
+        String before,
+        String limit)
+        throws IOException {
+      return orderHistoryResponse;
     }
   }
 
@@ -388,5 +435,61 @@ public class OkxTradeServiceTest {
             service.cancelOrder(
                 new OkxTradeParams.OkxCancelOrderParams(new CurrencyPair("BTC/USDT"), "order-1")))
         .isTrue();
+  }
+
+  // --- read-path envelope validation ---------------------------------------------------
+
+  private static final OkxResponse<List<OkxOrderDetails>> HISTORY_FAILURE =
+      new OkxResponse<>("1", "51000", "Instrument does not exist", null);
+
+  @Test
+  public void readEndpointsSurfaceBusinessFailures() throws Exception {
+    StubTradeService service = stubService();
+    service.positionsResponse = new OkxResponse<>("1", "51000", "Instrument does not exist", null);
+    service.pendingOrderResponse = HISTORY_FAILURE;
+    service.orderResponse = HISTORY_FAILURE;
+    service.orderHistoryResponse = HISTORY_FAILURE;
+    CurrencyPair pair = new CurrencyPair("BTC/USDT");
+
+    assertThatThrownBy(() -> service.getOpenPositions())
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Instrument does not exist")
+        .extracting(e -> ((OkxException) e).getCode())
+        .isEqualTo(51000);
+    assertThatThrownBy(() -> service.getOpenOrders())
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Instrument does not exist");
+    assertThatThrownBy(() -> service.getOpenOrders(new DefaultOpenOrdersParamInstrument(pair)))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Instrument does not exist");
+    assertThatThrownBy(() -> service.getTradeHistory(new DefaultTradeHistoryParamInstrument(pair)))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Instrument does not exist");
+    assertThatThrownBy(() -> service.getOrder(new DefaultQueryOrderParamInstrument(pair, "ord-1")))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Instrument does not exist");
+  }
+
+  @Test
+  public void readEndpointsRejectMissingPayloads() throws Exception {
+    StubTradeService service = stubService();
+    OkxResponse<List<OkxOrderDetails>> missing = new OkxResponse<>("1", "0", "OK", null);
+    service.positionsResponse = new OkxResponse<>("1", "0", "OK", null);
+    service.pendingOrderResponse = missing;
+    service.orderResponse = missing;
+    service.orderHistoryResponse = missing;
+
+    assertThatThrownBy(() -> service.getOpenPositions())
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Missing data");
+    assertThatThrownBy(() -> service.getOpenOrders())
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Missing data");
+    assertThatThrownBy(
+            () ->
+                service.getTradeHistory(
+                    new DefaultTradeHistoryParamInstrument(new CurrencyPair("BTC/USDT"))))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Missing data");
   }
 }

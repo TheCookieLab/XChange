@@ -4,6 +4,7 @@ import static org.knowm.xchange.okx.OkxExchange.PARAM_PASSPHRASE;
 import static org.knowm.xchange.okx.OkxExchange.PARAM_SIMULATED;
 
 import java.util.Date;
+import java.util.List;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.exceptions.ExchangeException;
@@ -14,6 +15,7 @@ import org.knowm.xchange.okx.OkxAuthenticated;
 import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.OkxRedaction;
 import org.knowm.xchange.okx.dto.OkxException;
+import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.service.BaseResilientExchangeService;
 import org.knowm.xchange.service.BaseService;
 import org.knowm.xchange.utils.DateUtils;
@@ -90,6 +92,42 @@ public class OkxBaseService extends BaseResilientExchangeService<OkxExchange>
   protected String simulatedTrading() {
     return (String)
         exchange.getExchangeSpecification().getExchangeSpecificParametersItem(PARAM_SIMULATED);
+  }
+
+  /**
+   * Validates a public-endpoint envelope before its payload is dereferenced: business failures
+   * (non-zero {@code code}) surface as {@link OkxException}, and a missing payload is rejected
+   * instead of leaking as a null-dereference at the caller.
+   *
+   * @param response the response envelope to validate
+   * @param <T> the payload element type
+   * @return the non-null payload
+   */
+  protected <T> List<T> requireData(OkxResponse<List<T>> response) {
+    if (!response.isSuccess()) {
+      throw OkxException.fromResponse(response, apiKey, secretKey, passphrase);
+    }
+    if (response.getData() == null) {
+      throw new OkxException("Missing data in OKX response", 0);
+    }
+    return response.getData();
+  }
+
+  /**
+   * Like {@link #requireData(OkxResponse)}, but additionally rejects an empty payload for endpoints
+   * where the absence of data means the response is unusable (e.g. a single order-book snapshot),
+   * rather than letting the caller fail with an index error.
+   *
+   * @param response the response envelope to validate
+   * @param <T> the payload element type
+   * @return the non-null, non-empty payload
+   */
+  protected <T> List<T> requireSingle(OkxResponse<List<T>> response) {
+    List<T> data = requireData(response);
+    if (data.isEmpty()) {
+      throw new OkxException("Empty data in OKX response", 0);
+    }
+    return data;
   }
 
   /**
