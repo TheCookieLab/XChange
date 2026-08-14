@@ -15,6 +15,7 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxInstType;
 import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.account.OkxAccountConfig;
 import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 import org.knowm.xchange.okx.service.OkxAccountService;
@@ -119,9 +120,26 @@ public class OkxExchange extends BaseExchange {
     if (exchangeSpecification.getApiKey() != null
         && exchangeSpecification.getSecretKey() != null
         && exchangeSpecification.getExchangeSpecificParametersItem("passphrase") != null) {
-      currencies = marketDataServiceRaw.getOkxCurrencies().getData();
-      accountLevel =
-          accountServiceRaw.getOkxAccountConfiguration().getData().get(0).getAccountLevel();
+      OkxResponse<List<OkxCurrency>> currenciesResponse = marketDataServiceRaw.getOkxCurrencies();
+      if (currenciesResponse == null || !currenciesResponse.isSuccess()) {
+        throw currenciesResponse == null
+            ? new OkxException("Empty response from OKX currencies endpoint", 0)
+            : OkxException.fromResponse(currenciesResponse);
+      }
+      currencies = currenciesResponse.getData();
+
+      OkxResponse<List<OkxAccountConfig>> accountConfigResponse =
+          accountServiceRaw.getOkxAccountConfiguration();
+      if (accountConfigResponse == null || !accountConfigResponse.isSuccess()) {
+        throw accountConfigResponse == null
+            ? new OkxException("Empty response from OKX account configuration endpoint", 0)
+            : OkxException.fromResponse(accountConfigResponse);
+      }
+      List<OkxAccountConfig> accountConfigs = accountConfigResponse.getData();
+      if (accountConfigs == null || accountConfigs.isEmpty()) {
+        throw new OkxException("Empty data from OKX account configuration endpoint", 0);
+      }
+      accountLevel = accountConfigs.get(0).getAccountLevel();
     }
 
     exchangeMetaData = OkxAdapters.adaptToExchangeMetaData(instruments, currencies);

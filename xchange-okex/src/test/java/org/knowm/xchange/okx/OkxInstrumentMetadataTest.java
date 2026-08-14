@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,9 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxInstType;
 import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.account.OkxAccountConfig;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
+import org.knowm.xchange.okx.service.OkxAccountService;
 import org.knowm.xchange.okx.service.OkxMarketDataService;
 
 /** Offline, deterministic coverage of Phase 2 instrument-metadata support. */
@@ -551,5 +554,124 @@ public class OkxInstrumentMetadataTest {
     exchange.applySpecification(spec);
 
     assertThat(exchange.getExchangeMetaData()).isNotNull();
+  }
+
+  private OkxExchange credentialedExchange() {
+    OkxExchange exchange = new OkxExchange();
+    ExchangeSpecification specification = new ExchangeSpecification(OkxExchange.class);
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setApiKey("api-key");
+    specification.setSecretKey("secret-key");
+    specification.setExchangeSpecificParametersItem("passphrase", "passphrase");
+    exchange.applySpecification(specification);
+    return exchange;
+  }
+
+  private OkxMarketDataService stubInstrumentFamilies(OkxMarketDataService raw) throws IOException {
+    when(raw.getOkxInstruments("SPOT", null, null))
+        .thenReturn(new OkxResponse<>(null, "0", "", loadInstruments("instrumentsSpot.json5")));
+    when(raw.getOkxInstruments("SWAP", null, null))
+        .thenReturn(new OkxResponse<>(null, "0", "", loadInstruments("instrumentsSwap.json5")));
+    when(raw.getOkxInstruments("MARGIN", null, null))
+        .thenReturn(new OkxResponse<>(null, "0", "", loadInstruments("instrumentsMargin.json5")));
+    when(raw.getOkxInstruments("FUTURES", null, null))
+        .thenReturn(new OkxResponse<>(null, "0", "", loadInstruments("instrumentsFutures.json5")));
+    when(raw.getOkxUnderlyings(OkxInstType.OPTION))
+        .thenReturn(new OkxResponse<>(null, "0", "", List.of()));
+    return raw;
+  }
+
+  private void setMarketDataService(OkxExchange exchange, OkxMarketDataService raw)
+      throws Exception {
+    Field marketDataService =
+        org.knowm.xchange.BaseExchange.class.getDeclaredField("marketDataService");
+    marketDataService.setAccessible(true);
+    marketDataService.set(exchange, raw);
+  }
+
+  private void setAccountService(OkxExchange exchange, OkxAccountService raw) throws Exception {
+    Field accountService = org.knowm.xchange.BaseExchange.class.getDeclaredField("accountService");
+    accountService.setAccessible(true);
+    accountService.set(exchange, raw);
+  }
+
+  @Test
+  public void testRemoteInitPropagatesFailedCurrenciesLookup() throws Exception {
+    // A failed authenticated currencies response must not be silently treated as absent currency
+    // metadata: remoteInit fails instead of publishing metadata without currencies.
+    OkxExchange exchange = credentialedExchange();
+    OkxMarketDataService raw = stubInstrumentFamilies(mock(OkxMarketDataService.class));
+    when(raw.getOkxCurrencies())
+        .thenReturn(new OkxResponse<>(null, "50111", "Invalid OK Access Key", null));
+    setMarketDataService(exchange, raw);
+
+    assertThatThrownBy(exchange::remoteInit)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Invalid OK Access Key");
+  }
+
+  @Test
+  public void testRemoteInitPropagatesFailedAccountConfigurationLookup() throws Exception {
+    // A failed authenticated account-configuration response must not be dereferenced as null
+    // data: remoteInit fails with the provider error instead of an unrelated NPE.
+    OkxExchange exchange = credentialedExchange();
+    OkxMarketDataService raw = stubInstrumentFamilies(mock(OkxMarketDataService.class));
+    when(raw.getOkxCurrencies()).thenReturn(new OkxResponse<>(null, "0", "", List.of()));
+    setMarketDataService(exchange, raw);
+
+    OkxAccountService accountRaw = mock(OkxAccountService.class);
+    when(accountRaw.getOkxAccountConfiguration())
+        .thenReturn(new OkxResponse<>(null, "50111", "Invalid OK Access Key", null));
+    setAccountService(exchange, accountRaw);
+
+    assertThatThrownBy(exchange::remoteInit)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Invalid OK Access Key");
+  }
+
+  @Test
+  public void testRemoteInitPropagatesEmptyAccountConfigurationData() throws Exception {
+    // A success envelope with no account-configuration entries cannot yield an account level:
+    // remoteInit fails instead of throwing an unrelated IndexOutOfBoundsException.
+    OkxExchange exchange = credentialedExchange();
+    OkxMarketDataService raw = stubInstrumentFamilies(mock(OkxMarketDataService.class));
+    when(raw.getOkxCurrencies()).thenReturn(new OkxResponse<>(null, "0", "", List.of()));
+    setMarketDataService(exchange, raw);
+
+    OkxAccountService accountRaw = mock(OkxAccountService.class);
+    when(accountRaw.getOkxAccountConfiguration())
+        .thenReturn(new OkxResponse<>(null, "0", "", List.of()));
+    setAccountService(exchange, accountRaw);
+
+    assertThatThrownBy(exchange::remoteInit)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Empty data from OKX account configuration endpoint");
+  }
+
+  @Test
+  public void testRemoteInitAppliesAccountLevelFromCredentialedConfiguration() throws Exception {
+    // The credentialed branch populates accountLevel from the authenticated configuration and
+    // still publishes instruments metadata.
+    OkxExchange exchange = credentialedExchange();
+    OkxMarketDataService raw = stubInstrumentFamilies(mock(OkxMarketDataService.class));
+    when(raw.getOkxCurrencies()).thenReturn(new OkxResponse<>(null, "0", "", List.of()));
+    setMarketDataService(exchange, raw);
+
+    OkxAccountService accountRaw = mock(OkxAccountService.class);
+    when(accountRaw.getOkxAccountConfiguration())
+        .thenReturn(
+            new OkxResponse<>(
+                null,
+                "0",
+                "",
+                Collections.singletonList(
+                    MAPPER.readValue("{\"acctLv\":\"2\"}", OkxAccountConfig.class))));
+    setAccountService(exchange, accountRaw);
+
+    exchange.remoteInit();
+
+    assertThat(exchange.accountLevel).isEqualTo("2");
+    assertThat(exchange.getExchangeMetaData().getInstruments())
+        .containsKey(new CurrencyPair("BTC", "USDT"));
   }
 }
