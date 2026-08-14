@@ -46,10 +46,11 @@ public class OkxPageParams {
 
   /**
    * Returns a copy of these params with the {@code after} cursor advanced to {@code lastRecordId},
-   * for fetching the next (older) page. The {@code before} cursor is cleared.
+   * for fetching the next (older) page. A caller-supplied {@code before} bound is preserved so
+   * subsequent pages stay inside the requested range.
    */
   public OkxPageParams advanceAfter(String lastRecordId) {
-    return new OkxPageParams(lastRecordId, null, limit);
+    return new OkxPageParams(lastRecordId, before, limit);
   }
 
   private static int clamp(int limit) {

@@ -44,6 +44,24 @@ public class OkxAdapters {
   private static final String FUTURES_WALLET_ID = "futures";
   static final Map<Instrument, Long> instrumentToInstrumentIdMap = new HashMap<>();
 
+  /**
+   * Resolves the OKX numeric instrument code for an instrument, falling back to the adapted wire
+   * instrument when the direct key is absent. After the unified USD orderbook revamp, remote init
+   * registers the server's {@code BTC/USD} code while legacy callers still trade {@code BTC/USDC};
+   * {@link #adaptInstrument(Instrument)} maps that pair to the wire {@code BTC-USD}, which the
+   * reverse adaptation resolves to the registered key.
+   *
+   * @param instrument the instrument to resolve
+   * @return the numeric instrument code, or {@code null} when unresolvable
+   */
+  static Long instrumentCode(Instrument instrument) {
+    Long code = instrumentToInstrumentIdMap.get(instrument);
+    if (code == null) {
+      code = instrumentToInstrumentIdMap.get(adaptOkxInstrumentId(adaptInstrument(instrument)));
+    }
+    return code;
+  }
+
   public static UserTrades adaptUserTrades(
       List<OkxOrderDetails> okxTradeHistory, ExchangeMetaData exchangeMetaData) {
     List<UserTrade> userTradeList = new ArrayList<>();
@@ -180,7 +198,7 @@ public class OkxAdapters {
       LimitOrder order, ExchangeMetaData exchangeMetaData) {
     return OkxAmendOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
-        .instIdCode(instrumentToInstrumentIdMap.get(order.getInstrument()).toString())
+        .instIdCode(instrumentCode(order.getInstrument()).toString())
         .orderId(order.getId())
         .clientOrderId(order.getUserReference())
         .amendedAmount(convertVolumeToContractSize(order, exchangeMetaData))
@@ -192,7 +210,7 @@ public class OkxAdapters {
       MarketOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
     return OkxOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
-        .instIdCode(instrumentToInstrumentIdMap.get(order.getInstrument()).toString())
+        .instIdCode(instrumentCode(order.getInstrument()).toString())
         .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
         .side(getSide(order))
         .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
@@ -246,7 +264,7 @@ public class OkxAdapters {
       LimitOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
     return OkxOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
-        .instIdCode(instrumentToInstrumentIdMap.get(order.getInstrument()).toString())
+        .instIdCode(instrumentCode(order.getInstrument()).toString())
         .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
         .side(getSide(order))
         .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
@@ -933,6 +951,6 @@ public class OkxAdapters {
   }
 
   public static String instrumentToInstrumentCode(Instrument instrument) {
-    return instrumentToInstrumentIdMap.get(instrument).toString();
+    return instrumentCode(instrument).toString();
   }
 }
