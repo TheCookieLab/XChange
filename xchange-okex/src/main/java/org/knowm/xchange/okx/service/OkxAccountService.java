@@ -133,7 +133,7 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
 
   private Map<Instrument, Fee> getTradeFeesSPOT() throws IOException {
     Map<Instrument, Fee> result = new HashMap<>();
-    OkxTradeFee okxTradeFee = getTradeFee(SPOT.name(), null, null, null).getData().get(0);
+    OkxTradeFee okxTradeFee = requireSingle(getTradeFee(SPOT.name(), null, null, null)).get(0);
     for (Instrument instrument : exchange.getExchangeMetaData().getInstruments().keySet()) {
       if (instrument instanceof CurrencyPair) {
         result.put(instrument, adaptTradingFee(okxTradeFee, SPOT, instrument));
@@ -144,7 +144,7 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
 
   private Map<Instrument, Fee> getTradeFeesSWAP() throws IOException {
     Map<Instrument, Fee> result = new HashMap<>();
-    OkxTradeFee okxTradeFee = getTradeFee(SWAP.name(), null, null, null).getData().get(0);
+    OkxTradeFee okxTradeFee = requireSingle(getTradeFee(SWAP.name(), null, null, null)).get(0);
     for (Instrument instrument : exchange.getExchangeMetaData().getInstruments().keySet()) {
       if (instrument instanceof FuturesContract && ((FuturesContract) instrument).isPerpetual()) {
         result.put(instrument, adaptTradingFee(okxTradeFee, SWAP, instrument));
@@ -161,7 +161,7 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
         String underlying = adaptInstrument(((FuturesContract) instrument).getCurrencyPair());
         OkxTradeFee okxTradeFee = feesByUnderlying.get(underlying);
         if (okxTradeFee == null) {
-          okxTradeFee = getTradeFee(FUTURES.name(), null, underlying, null).getData().get(0);
+          okxTradeFee = requireSingle(getTradeFee(FUTURES.name(), null, underlying, null)).get(0);
           feesByUnderlying.put(underlying, okxTradeFee);
         }
         result.put(instrument, adaptTradingFee(okxTradeFee, FUTURES, instrument));
@@ -178,7 +178,7 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
         String instFamily = adaptInstrument(((OptionsContract) instrument).getCurrencyPair());
         OkxTradeFee okxTradeFee = feesByFamily.get(instFamily);
         if (okxTradeFee == null) {
-          okxTradeFee = getTradeFee(OPTION.name(), null, null, instFamily).getData().get(0);
+          okxTradeFee = requireSingle(getTradeFee(OPTION.name(), null, null, instFamily)).get(0);
           feesByFamily.put(instFamily, okxTradeFee);
         }
         result.put(instrument, adaptTradingFee(okxTradeFee, OPTION, instrument));

@@ -232,6 +232,45 @@ public class OkxAccountServiceTest {
     assertThat(accountInfo.getWallets()).hasSize(3);
   }
 
+  /**
+   * Subclass that stubs a single trade-fee envelope so {@code getDynamicTradingFeesByInstrument}
+   * runs offline.
+   */
+  private class FeeEnvelopeAccountService extends OkxAccountService {
+
+    OkxResponse<List<OkxTradeFee>> feeResponse;
+
+    FeeEnvelopeAccountService(OkxExchange exchange) {
+      super(exchange, new ResilienceRegistries());
+    }
+
+    @Override
+    public OkxResponse<List<OkxTradeFee>> getTradeFee(
+        String instrumentType, String instrumentId, String underlying, String instFamily) {
+      return feeResponse;
+    }
+  }
+
+  @Test
+  public void getTradeFeesThrowsOnFeeBusinessFailure() {
+    FeeEnvelopeAccountService service = new FeeEnvelopeAccountService(exchange());
+    service.feeResponse = new OkxResponse<>(null, "40001", "Invalid OK-ACCESS-KEY", null);
+
+    assertThatThrownBy(service::getDynamicTradingFeesByInstrument)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Invalid OK-ACCESS-KEY");
+  }
+
+  @Test
+  public void getTradeFeesThrowsOnEmptyFeePayload() {
+    FeeEnvelopeAccountService service = new FeeEnvelopeAccountService(exchange());
+    service.feeResponse = new OkxResponse<>(null, "0", "", List.of());
+
+    assertThatThrownBy(service::getDynamicTradingFeesByInstrument)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Empty data in OKX response");
+  }
+
   private OkxExchange exchange() {
     OkxExchange exchange = new OkxExchange();
     ExchangeSpecification specification = new ExchangeSpecification(OkxExchange.class);
