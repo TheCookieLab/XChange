@@ -16,8 +16,6 @@ import io.reactivex.rxjava3.core.Single;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.dto.Order;
@@ -48,7 +46,6 @@ public class OkxStreamingTradeService implements StreamingTradeService {
   private final ResilienceRegistries resilienceRegistries;
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
   private final int dedupeCacheSize;
-  private final Map<String, OkxEventDeduplicator> deduplicators = new ConcurrentHashMap<>();
 
   public OkxStreamingTradeService(
       OkxPrivateStreamingService privateStreamingService,
@@ -73,34 +70,33 @@ public class OkxStreamingTradeService implements StreamingTradeService {
     this.dedupeCacheSize = dedupeCacheSize;
   }
 
-  private OkxEventDeduplicator deduplicatorFor(String channelUniqueId) {
-    return deduplicators.computeIfAbsent(
-        channelUniqueId, key -> new OkxEventDeduplicator(dedupeCacheSize));
-  }
 
   @Override
   public Observable<Order> getOrderChanges(Instrument instrument, Object... args) {
     String channelUniqueId = USER_ORDER_CHANGES + OkxAdapters.adaptInstrument(instrument);
-    OkxEventDeduplicator deduplicator = deduplicatorFor(channelUniqueId);
 
-    return privateStreamingService
-        .subscribeChannel(channelUniqueId)
-        .filter(message -> message.has("data"))
-        .flatMap(
-            jsonNode -> {
-              List<OkxOrderDetails> okxOrderDetails =
-                  mapper.treeToValue(
-                      jsonNode.get("data"),
-                      mapper
-                          .getTypeFactory()
-                          .constructCollectionType(List.class, OkxOrderDetails.class));
-              List<OkxOrderDetails> freshOrderDetails =
-                  okxOrderDetails.stream()
-                      .filter(details -> !deduplicator.isDuplicate(orderEventKey(details)))
-                      .collect(Collectors.toList());
-              return Observable.fromIterable(
-                  OkxAdapters.adaptOrdersChanges(freshOrderDetails, exchangeMetaData));
-            });
+    return Observable.defer(
+        () -> {
+          OkxEventDeduplicator deduplicator = new OkxEventDeduplicator(dedupeCacheSize);
+          return privateStreamingService
+              .subscribeChannel(channelUniqueId)
+              .filter(message -> message.has("data"))
+              .flatMap(
+                  jsonNode -> {
+                    List<OkxOrderDetails> okxOrderDetails =
+                        mapper.treeToValue(
+                            jsonNode.get("data"),
+                            mapper
+                                .getTypeFactory()
+                                .constructCollectionType(List.class, OkxOrderDetails.class));
+                    List<OkxOrderDetails> freshOrderDetails =
+                        okxOrderDetails.stream()
+                            .filter(details -> !deduplicator.isDuplicate(orderEventKey(details)))
+                            .collect(Collectors.toList());
+                    return Observable.fromIterable(
+                        OkxAdapters.adaptOrdersChanges(freshOrderDetails, exchangeMetaData));
+                  });
+        });
   }
 
   // cannot use OrderChanges and UserTrades together
@@ -108,66 +104,72 @@ public class OkxStreamingTradeService implements StreamingTradeService {
   @Override
   public Observable<UserTrade> getUserTrades(Instrument instrument, Object... args) {
     String channelUniqueId = USER_ORDER_CHANGES + OkxAdapters.adaptInstrument(instrument);
-    OkxEventDeduplicator deduplicator = deduplicatorFor(channelUniqueId);
 
-    return privateStreamingService
-        .subscribeChannel(channelUniqueId)
-        .filter(message -> message.has("data"))
-        .flatMap(
-            jsonNode -> {
-              List<OkxOrderDetails> okxOrderDetails =
-                  mapper.treeToValue(
-                      jsonNode.get("data"),
-                      mapper
-                          .getTypeFactory()
-                          .constructCollectionType(List.class, OkxOrderDetails.class));
-              List<OkxOrderDetails> freshOrderDetails =
-                  okxOrderDetails.stream()
-                      .filter(details -> !deduplicator.isDuplicate(orderEventKey(details)))
-                      .collect(Collectors.toList());
-              List<UserTrade> userTrades = new ArrayList<>(freshOrderDetails.size());
-              for (OkxOrderDetails details : freshOrderDetails) {
-                UserTrade userTrade =
-                    OkxAdapters.adaptUserTrades(
-                            Collections.singletonList(details), exchangeMetaData)
-                        .getUserTrades()
-                        .get(0);
-                // Surface the fill-level tradeId (the wire "tradeId") so callers can correlate
-                // the streamed fill with REST fills and order history.
-                String tradeId = details.getLastTradeId();
-                if (tradeId != null && !tradeId.isEmpty()) {
-                  userTrade.setId(tradeId);
-                }
-                userTrades.add(userTrade);
-              }
-              return Observable.fromIterable(userTrades);
-            });
+    return Observable.defer(
+        () -> {
+          OkxEventDeduplicator deduplicator = new OkxEventDeduplicator(dedupeCacheSize);
+          return privateStreamingService
+              .subscribeChannel(channelUniqueId)
+              .filter(message -> message.has("data"))
+              .flatMap(
+                  jsonNode -> {
+                    List<OkxOrderDetails> okxOrderDetails =
+                        mapper.treeToValue(
+                            jsonNode.get("data"),
+                            mapper
+                                .getTypeFactory()
+                                .constructCollectionType(List.class, OkxOrderDetails.class));
+                    List<OkxOrderDetails> freshOrderDetails =
+                        okxOrderDetails.stream()
+                            .filter(details -> !deduplicator.isDuplicate(orderEventKey(details)))
+                            .collect(Collectors.toList());
+                    List<UserTrade> userTrades = new ArrayList<>(freshOrderDetails.size());
+                    for (OkxOrderDetails details : freshOrderDetails) {
+                      UserTrade userTrade =
+                          OkxAdapters.adaptUserTrades(
+                                  Collections.singletonList(details), exchangeMetaData)
+                              .getUserTrades()
+                              .get(0);
+                      // Surface the fill-level tradeId (the wire "tradeId") so callers can correlate
+                      // the streamed fill with REST fills and order history.
+                      String tradeId = details.getLastTradeId();
+                      if (tradeId != null && !tradeId.isEmpty()) {
+                        userTrade.setId(tradeId);
+                      }
+                      userTrades.add(userTrade);
+                    }
+                    return Observable.fromIterable(userTrades);
+                  });
+        });
   }
 
   @Override
   public Observable<OpenPosition> getPositionChanges(Instrument instrument) {
     String channelUniqueId = USER_POSITION_CHANGES + OkxAdapters.adaptInstrument(instrument);
-    OkxEventDeduplicator deduplicator = deduplicatorFor(channelUniqueId);
 
-    return privateStreamingService
-        .subscribeChannel(channelUniqueId)
-        .filter(message -> message.has("data"))
-        .flatMap(
-            jsonNode -> {
-              List<OkxPosition> okxPositions =
-                  mapper.treeToValue(
-                      jsonNode.get("data"),
-                      mapper
-                          .getTypeFactory()
-                          .constructCollectionType(List.class, OkxPosition.class));
-              List<OkxPosition> freshPositions =
-                  okxPositions.stream()
-                      .filter(position -> !deduplicator.isDuplicate(positionEventKey(position)))
-                      .collect(Collectors.toList());
-              return Observable.fromIterable(
-                  OkxAdapters.adaptOpenPositions(freshPositions, exchangeMetaData)
-                      .getOpenPositions());
-            });
+    return Observable.defer(
+        () -> {
+          OkxEventDeduplicator deduplicator = new OkxEventDeduplicator(dedupeCacheSize);
+          return privateStreamingService
+              .subscribeChannel(channelUniqueId)
+              .filter(message -> message.has("data"))
+              .flatMap(
+                  jsonNode -> {
+                    List<OkxPosition> okxPositions =
+                        mapper.treeToValue(
+                            jsonNode.get("data"),
+                            mapper
+                                .getTypeFactory()
+                                .constructCollectionType(List.class, OkxPosition.class));
+                    List<OkxPosition> freshPositions =
+                        okxPositions.stream()
+                            .filter(position -> !deduplicator.isDuplicate(positionEventKey(position)))
+                            .collect(Collectors.toList());
+                    return Observable.fromIterable(
+                        OkxAdapters.adaptOpenPositions(freshPositions, exchangeMetaData)
+                            .getOpenPositions());
+                  });
+        });
   }
 
   @Override
