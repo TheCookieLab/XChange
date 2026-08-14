@@ -161,19 +161,23 @@ public interface MexcV3Authenticated {
 
   @POST
   @Path("/userDataStream")
-  MexcV3ListenKey createListenKey() throws IOException, MexcV3Exception;
+  MexcV3ListenKey createListenKey(@HeaderParam("X-MEXC-APIKEY") String apiKey)
+      throws IOException, MexcV3Exception;
 
   @GET
   @Path("/userDataStream")
-  MexcV3ListenKeyList listListenKeys() throws IOException, MexcV3Exception;
+  MexcV3ListenKeyList listListenKeys(@HeaderParam("X-MEXC-APIKEY") String apiKey)
+      throws IOException, MexcV3Exception;
 
   @PUT
   @Path("/userDataStream")
-  MexcV3ListenKey keepAliveListenKey(@QueryParam("listenKey") String listenKey)
+  MexcV3ListenKey keepAliveListenKey(
+      @HeaderParam("X-MEXC-APIKEY") String apiKey, @QueryParam("listenKey") String listenKey)
       throws IOException, MexcV3Exception;
 
   @DELETE
   @Path("/userDataStream")
-  MexcV3ListenKey closeListenKey(@QueryParam("listenKey") String listenKey)
+  MexcV3ListenKey closeListenKey(
+      @HeaderParam("X-MEXC-APIKEY") String apiKey, @QueryParam("listenKey") String listenKey)
       throws IOException, MexcV3Exception;
 }

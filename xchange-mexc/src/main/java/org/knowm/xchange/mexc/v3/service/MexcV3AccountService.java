@@ -51,12 +51,12 @@ public class MexcV3AccountService extends MexcV3BaseService implements AccountSe
    * {@link IOException} propagates instead of an ambiguous error.
    */
   public MexcV3ListenKey createListenKey() throws IOException, MexcV3Exception {
-    return execute(() -> mexcV3Authenticated.createListenKey(), ReplaySafety.READ);
+    return execute(() -> mexcV3Authenticated.createListenKey(apiKey), ReplaySafety.READ);
   }
 
   /** Lists all currently valid listen keys ({@code GET /api/v3/userDataStream}). */
   public MexcV3ListenKeyList listListenKeys() throws IOException, MexcV3Exception {
-    return execute(() -> mexcV3Authenticated.listListenKeys(), ReplaySafety.READ);
+    return execute(() -> mexcV3Authenticated.listListenKeys(apiKey), ReplaySafety.READ);
   }
 
   /**
@@ -64,7 +64,8 @@ public class MexcV3AccountService extends MexcV3BaseService implements AccountSe
    * key lifetime as 60 minutes; keeping it alive every 30 minutes leaves a full retry window.
    */
   public MexcV3ListenKey keepAliveListenKey(String listenKey) throws IOException, MexcV3Exception {
-    return execute(() -> mexcV3Authenticated.keepAliveListenKey(listenKey), ReplaySafety.READ);
+    return execute(
+        () -> mexcV3Authenticated.keepAliveListenKey(apiKey, listenKey), ReplaySafety.READ);
   }
 
   /**
@@ -72,6 +73,7 @@ public class MexcV3AccountService extends MexcV3BaseService implements AccountSe
    * private WebSocket channels immediately; no further keepalive is needed afterwards.
    */
   public MexcV3ListenKey closeListenKey(String listenKey) throws IOException, MexcV3Exception {
-    return execute(() -> mexcV3Authenticated.closeListenKey(listenKey), ReplaySafety.READ);
+    return execute(
+        () -> mexcV3Authenticated.closeListenKey(apiKey, listenKey), ReplaySafety.READ);
   }
 }
