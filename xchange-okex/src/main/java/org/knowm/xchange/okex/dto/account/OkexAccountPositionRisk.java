@@ -70,11 +70,19 @@ public class OkexAccountPositionRisk {
   }
 
   public List<BalanceData> getBalanceData() {
-    return delegate.getBalanceData().stream().map(BalanceData::new).collect(Collectors.toList());
+    List<OkxAccountPositionRisk.BalanceData> balanceData = delegate.getBalanceData();
+    if (balanceData == null) {
+      return null;
+    }
+    return balanceData.stream().map(BalanceData::new).collect(Collectors.toList());
   }
 
   public List<PositionData> getPositionData() {
-    return delegate.getPositionData().stream().map(PositionData::new).collect(Collectors.toList());
+    List<OkxAccountPositionRisk.PositionData> positionData = delegate.getPositionData();
+    if (positionData == null) {
+      return null;
+    }
+    return positionData.stream().map(PositionData::new).collect(Collectors.toList());
   }
 
   public Date getTimestamp() {

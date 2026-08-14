@@ -635,6 +635,27 @@ public class OkexCompatibilityTest {
   }
 
   @Test
+  public void legacyNestedTypesRetainNoArgConstructorsAndNullLists() throws Exception {
+    // Pre-rename nested DTOs had public no-argument constructors (implicit or Lombok-generated);
+    // source construction and compiled <init>() calls must keep working.
+    OkexTradeFee.FiatList fiatList = new OkexTradeFee.FiatList();
+    assertThat(fiatList).isNotNull();
+    assertThat(fiatList.getCcy()).isNull();
+
+    OkexWalletBalance.Detail detail = new OkexWalletBalance.Detail();
+    assertThat(detail).isNotNull();
+    assertThat(detail.getCurrency()).isNull();
+
+    // Absent lists previously surfaced as null from the Lombok getters; the wrappers must not
+    // throw when the canonical collection is absent.
+    assertThat(new OkexTradeFee().getFiatList()).isNull();
+    OkexAccountPositionRisk positionRisk =
+        new OkexAccountPositionRisk(BigDecimal.ONE, null, null, new Date(0L));
+    assertThat(positionRisk.getBalanceData()).isNull();
+    assertThat(positionRisk.getPositionData()).isNull();
+  }
+
+  @Test
   public void legacyWrapperDtosRetainPublicNoArgConstructors() throws Exception {
     for (Class<?> legacyType :
         new Class<?>[] {

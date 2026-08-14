@@ -80,7 +80,11 @@ public class OkexTradeFee {
   }
 
   public List<FiatList> getFiatList() {
-    return delegate.getFiatList().stream().map(FiatList::new).collect(Collectors.toList());
+    List<OkxTradeFee.FiatList> fiatList = delegate.getFiatList();
+    if (fiatList == null) {
+      return null;
+    }
+    return fiatList.stream().map(FiatList::new).collect(Collectors.toList());
   }
 
   /**
@@ -90,6 +94,14 @@ public class OkexTradeFee {
   public static class FiatList {
 
     private final OkxTradeFee.FiatList delegate;
+
+    /**
+     * Public no-argument constructor retained for source and binary compatibility with pre-rename
+     * clients (previously Lombok {@code @NoArgsConstructor}).
+     */
+    public FiatList() {
+      this(new OkxTradeFee.FiatList());
+    }
 
     public FiatList(OkxTradeFee.FiatList delegate) {
       this.delegate = delegate;

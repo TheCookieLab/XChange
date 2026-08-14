@@ -85,6 +85,14 @@ public class OkexWalletBalance {
 
     private final OkxWalletBalance.Detail delegate;
 
+    /**
+     * Public no-argument constructor retained for source and binary compatibility with pre-rename
+     * clients (previously Lombok {@code @NoArgsConstructor}).
+     */
+    public Detail() {
+      this(new OkxWalletBalance.Detail());
+    }
+
     public Detail(OkxWalletBalance.Detail delegate) {
       this.delegate = delegate;
     }
