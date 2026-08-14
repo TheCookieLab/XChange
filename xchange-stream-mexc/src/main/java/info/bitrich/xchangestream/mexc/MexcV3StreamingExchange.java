@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.mexc.v3.MexcV3Exchange;
+import org.knowm.xchange.mexc.v3.config.MexcV3Configuration;
 import org.knowm.xchange.mexc.v3.client.MexcV3Redactor;
 import org.knowm.xchange.mexc.v3.service.MexcV3AccountService;
 import org.knowm.xchange.mexc.v3.service.MexcV3MarketDataServiceRaw;
@@ -55,9 +56,14 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
       return Completable.complete();
     }
     ExchangeSpecification specification = getExchangeSpecification();
-    String uri = (String) specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_URI);
-    if (uri == null || uri.isBlank()) {
-      uri = getConfiguration().getStreamBaseUrl();
+    String uri = getConfiguration().getStreamBaseUrl();
+    if (specification.getExchangeSpecificParametersItem(MexcV3Configuration.STREAM_BASE_URL_KEY)
+        == null) {
+      String legacyUri =
+          (String) specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_URI);
+      if (legacyUri != null && !legacyUri.isBlank()) {
+        uri = legacyUri;
+      }
     }
     final String resolvedUri = uri;
     if (specification.getApiKey() != null && !uri.contains("listenKey=")) {
