@@ -12,8 +12,10 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.OkexExchange;
+import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.service.OkxMarketDataService;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
@@ -34,39 +36,67 @@ public class OkexMarketDataService extends OkexMarketDataServiceRaw implements M
 
   @Override
   public OrderBook getOrderBook(Instrument instrument, Object... args) throws IOException {
-    return delegate.getOrderBook(instrument, args);
+    try {
+      return delegate.getOrderBook(instrument, args);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public Trades getTrades(Instrument instrument, Object... args) throws IOException {
-    return delegate.getTrades(instrument, args);
+    try {
+      return delegate.getTrades(instrument, args);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public Ticker getTicker(Instrument instrument, Object... args) throws IOException {
-    return delegate.getTicker(instrument, args);
+    try {
+      return delegate.getTicker(instrument, args);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public CandleStickData getCandleStickData(CurrencyPair currencyPair, CandleStickDataParams params)
       throws IOException {
-    return delegate.getCandleStickData(currencyPair, params);
+    try {
+      return delegate.getCandleStickData(currencyPair, params);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public CandleStickData getCandleStickData(Instrument instrument, CandleStickDataParams params)
       throws IOException {
-    return delegate.getCandleStickData(instrument, params);
+    try {
+      return delegate.getCandleStickData(instrument, params);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public FundingRate getFundingRate(Instrument instrument) throws IOException {
-    return delegate.getFundingRate(instrument);
+    try {
+      return delegate.getFundingRate(instrument);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public List<Ticker> getTickers(Params params) throws IOException {
-    return delegate.getTickers(convertTickerParams(params));
+    try {
+      return delegate.getTickers(convertTickerParams(params));
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   /**
@@ -88,8 +118,12 @@ public class OkexMarketDataService extends OkexMarketDataServiceRaw implements M
    */
   public List<OkxFundingRateHistory> getFundingRateHistory(
       Instrument instrument, Long startTime, Long endTime, Integer limit) throws IOException {
-    return delegate.getFundingRateHistory(instrument, startTime, endTime, limit).stream()
-        .map(OkexMarketDataServiceRaw::toLegacyFundingRateHistory)
-        .collect(Collectors.toList());
+    try {
+      return delegate.getFundingRateHistory(instrument, startTime, endTime, limit).stream()
+          .map(OkexMarketDataServiceRaw::toLegacyFundingRateHistory)
+          .collect(Collectors.toList());
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 }

@@ -1,11 +1,16 @@
 package org.knowm.xchange.okex;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -15,8 +20,10 @@ import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
@@ -57,13 +64,17 @@ import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
 import org.knowm.xchange.okx.dto.account.OkxWalletBalance;
+import org.knowm.xchange.okx.service.OkxAccountService;
 import org.knowm.xchange.okx.service.OkxAccountServiceRaw;
 import org.knowm.xchange.okx.service.OkxCandleStickPeriodType;
+import org.knowm.xchange.okx.service.OkxMarketDataService;
 import org.knowm.xchange.okx.service.OkxMarketDataServiceRaw;
+import org.knowm.xchange.okx.service.OkxTradeService;
 import org.knowm.xchange.okx.service.OkxTradeServiceRaw;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByInstrument;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
+import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
 
 /**
  * Verifies that the deprecated {@code org.knowm.xchange.okex} compatibility shims expose the old
@@ -651,6 +662,51 @@ public class OkexCompatibilityTest {
     assertThat(new OkexCurrency().to()).isNotNull();
     assertThat(new OkexTradeFee().to()).isNotNull();
     assertThat(new OkexWalletBalance().to()).isNotNull();
+  }
+
+  @Test
+  public void legacyStandardServicesTranslateCanonicalExceptions() throws Exception {
+    // Pre-rename handlers catch OkexException; the canonical delegates throw OkxException. The
+    // legacy standard services must translate, or existing catch (OkexException) blocks silently
+    // stop matching provider failures.
+    OkexExchange exchange = new OkexExchange();
+    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+
+    OkexAccountService account = (OkexAccountService) exchange.getAccountService();
+    OkxAccountService canonicalAccount = mock(OkxAccountService.class);
+    when(canonicalAccount.withdrawFunds(any()))
+        .thenThrow(new OkxException("Insufficient balance", 51008));
+    setDelegate(account, canonicalAccount);
+
+    assertThatThrownBy(() -> account.withdrawFunds(mock(WithdrawFundsParams.class)))
+        .isInstanceOf(OkexException.class)
+        .hasMessageContaining("Insufficient balance");
+
+    OkexMarketDataService marketData = (OkexMarketDataService) exchange.getMarketDataService();
+    OkxMarketDataService canonicalMarketData = mock(OkxMarketDataService.class);
+    when(canonicalMarketData.getFundingRate(any()))
+        .thenThrow(new OkxException("Invalid instrument", 51000));
+    setDelegate(marketData, canonicalMarketData);
+
+    assertThatThrownBy(() -> marketData.getFundingRate(new FuturesContract("BTC/USDT/SWAP")))
+        .isInstanceOf(OkexException.class)
+        .hasMessageContaining("Invalid instrument");
+
+    OkexTradeService trade = (OkexTradeService) exchange.getTradeService();
+    OkxTradeService canonicalTrade = mock(OkxTradeService.class);
+    when(canonicalTrade.placeMarketOrder(any()))
+        .thenThrow(new OkxException("Insufficient balance", 51008));
+    setDelegate(trade, canonicalTrade);
+
+    assertThatThrownBy(() -> trade.placeMarketOrder(mock(MarketOrder.class)))
+        .isInstanceOf(OkexException.class)
+        .hasMessageContaining("Insufficient balance");
+  }
+
+  private static void setDelegate(Object service, Object canonicalDelegate) throws Exception {
+    Field field = service.getClass().getDeclaredField("delegate");
+    field.setAccessible(true);
+    field.set(service, canonicalDelegate);
   }
 
   private static Object readField(Object target, String name) throws Exception {

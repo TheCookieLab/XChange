@@ -7,6 +7,8 @@ import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.OkexExchange;
+import org.knowm.xchange.okex.dto.OkexException;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.service.OkxAccountService;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
@@ -25,22 +27,38 @@ public class OkexAccountService extends OkexAccountServiceRaw implements Account
   }
 
   public AccountInfo getAccountInfo() throws IOException {
-    return delegate.getAccountInfo();
+    try {
+      return delegate.getAccountInfo();
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public String withdrawFunds(WithdrawFundsParams params) throws IOException {
-    return delegate.withdrawFunds(params);
+    try {
+      return delegate.withdrawFunds(params);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
       throws IOException {
-    return delegate.getDynamicTradingFeesByInstrument(category);
+    try {
+      return delegate.getDynamicTradingFeesByInstrument(category);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
-    return delegate.setLeverage(instrument, leverage);
+    try {
+      return delegate.setLeverage(instrument, leverage);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 }

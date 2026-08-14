@@ -14,7 +14,9 @@ import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.FundsExceededException;
 import org.knowm.xchange.okex.OkexExchange;
+import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.trade.OkxTradeParams;
 import org.knowm.xchange.okx.service.OkxTradeService;
 import org.knowm.xchange.service.trade.TradeService;
@@ -38,22 +40,38 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
   @Override
   public OpenPositions getOpenPositions() throws IOException {
-    return delegate.getOpenPositions();
+    try {
+      return delegate.getOpenPositions();
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public UserTrades getTradeHistory(TradeHistoryParams params) throws IOException {
-    return delegate.getTradeHistory(params);
+    try {
+      return delegate.getTradeHistory(params);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public OpenOrders getOpenOrders() throws IOException {
-    return delegate.getOpenOrders();
+    try {
+      return delegate.getOpenOrders();
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
-    return delegate.getOpenOrders(params);
+    try {
+      return delegate.getOpenOrders(params);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
@@ -62,7 +80,11 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
   }
 
   public Order getOrder(OrderQueryParams orderQueryParams) throws IOException {
-    return delegate.getOrder(orderQueryParams);
+    try {
+      return delegate.getOrder(orderQueryParams);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
@@ -79,39 +101,63 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
-    return delegate.placeMarketOrder(marketOrder);
+    try {
+      return delegate.placeMarketOrder(marketOrder);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException, FundsExceededException {
-    return delegate.placeLimitOrder(limitOrder);
+    try {
+      return delegate.placeLimitOrder(limitOrder);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   public List<String> placeLimitOrder(List<LimitOrder> limitOrders)
       throws IOException, FundsExceededException {
-    return delegate.placeLimitOrder(limitOrders);
+    try {
+      return delegate.placeLimitOrder(limitOrders);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException, FundsExceededException {
-    return delegate.changeOrder(limitOrder);
+    try {
+      return delegate.changeOrder(limitOrder);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   public List<String> changeOrder(List<LimitOrder> limitOrders)
       throws IOException, FundsExceededException {
-    return delegate.changeOrder(limitOrders);
+    try {
+      return delegate.changeOrder(limitOrders);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public boolean cancelOrder(CancelOrderParams params) throws IOException {
-    if (params instanceof OkexTradeParams.OkexCancelOrderParams) {
-      OkexTradeParams.OkexCancelOrderParams okexParams =
-          (OkexTradeParams.OkexCancelOrderParams) params;
-      return delegate.cancelOrder(
-          new OkxTradeParams.OkxCancelOrderParams(
-              okexParams.instrument, okexParams.orderId, okexParams.userReference));
+    try {
+      if (params instanceof OkexTradeParams.OkexCancelOrderParams) {
+        OkexTradeParams.OkexCancelOrderParams okexParams =
+            (OkexTradeParams.OkexCancelOrderParams) params;
+        return delegate.cancelOrder(
+            new OkxTradeParams.OkxCancelOrderParams(
+                okexParams.instrument, okexParams.orderId, okexParams.userReference));
+      }
+      return delegate.cancelOrder(params);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
-    return delegate.cancelOrder(params);
   }
 
   @Override
@@ -120,18 +166,22 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
   }
 
   public List<Boolean> cancelOrder(List<CancelOrderParams> params) throws IOException {
-    return delegate.cancelOrder(
-        params.stream()
-            .map(
-                param -> {
-                  if (param instanceof OkexTradeParams.OkexCancelOrderParams) {
-                    OkexTradeParams.OkexCancelOrderParams okexParams =
-                        (OkexTradeParams.OkexCancelOrderParams) param;
-                    return new OkxTradeParams.OkxCancelOrderParams(
-                        okexParams.instrument, okexParams.orderId, okexParams.userReference);
-                  }
-                  return (CancelOrderParams) param;
-                })
-            .collect(Collectors.toList()));
+    try {
+      return delegate.cancelOrder(
+          params.stream()
+              .map(
+                  param -> {
+                    if (param instanceof OkexTradeParams.OkexCancelOrderParams) {
+                      OkexTradeParams.OkexCancelOrderParams okexParams =
+                          (OkexTradeParams.OkexCancelOrderParams) param;
+                      return new OkxTradeParams.OkxCancelOrderParams(
+                          okexParams.instrument, okexParams.orderId, okexParams.userReference);
+                    }
+                    return (CancelOrderParams) param;
+                  })
+              .collect(Collectors.toList()));
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 }
