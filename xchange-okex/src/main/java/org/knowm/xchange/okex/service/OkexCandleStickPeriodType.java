@@ -2,6 +2,12 @@ package org.knowm.xchange.okex.service;
 
 import lombok.Getter;
 
+/**
+ * Legacy candle-stick period enum kept for source compatibility.
+ *
+ * @deprecated use {@link org.knowm.xchange.okx.service.OkxCandleStickPeriodType} instead.
+ */
+@Deprecated
 public enum OkexCandleStickPeriodType {
   CANDLE_STICK_1M(1, "1m"),
   CANDLE_STICK_3M(3, "3m"),
@@ -19,23 +25,13 @@ public enum OkexCandleStickPeriodType {
     this.fieldValue = fieldValue;
   }
 
-  static OkexCandleStickPeriodType getPeriodTypeFromSecs(long periodInSecs) {
-    OkexCandleStickPeriodType result = null;
-    for (OkexCandleStickPeriodType period : OkexCandleStickPeriodType.values()) {
-      if (period.periodInSecs == periodInSecs) {
-        result = period;
-        break;
-      }
-    }
-    return result;
-  }
-
+  /**
+   * @deprecated use {@link
+   *     org.knowm.xchange.okx.service.OkxCandleStickPeriodType#getSupportedPeriodsInSecs()}
+   *     instead.
+   */
+  @Deprecated
   public static long[] getSupportedPeriodsInSecs() {
-    long[] result = new long[OkexCandleStickPeriodType.values().length];
-    int index = 0;
-    for (OkexCandleStickPeriodType period : OkexCandleStickPeriodType.values()) {
-      result[index++] = period.periodInSecs;
-    }
-    return result;
+    return org.knowm.xchange.okx.service.OkxCandleStickPeriodType.getSupportedPeriodsInSecs();
   }
 }

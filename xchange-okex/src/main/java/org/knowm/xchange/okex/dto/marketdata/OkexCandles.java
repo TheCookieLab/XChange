@@ -2,6 +2,12 @@ package org.knowm.xchange.okex.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * Legacy candlestick payload retained for source and binary compatibility with pre-rename clients.
+ *
+ * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxCandles} instead.
+ */
+@Deprecated
 public class OkexCandles {
   @JsonProperty("ts")
   private String ts; // Opening time of the candlestick, Unix timestamp format in milliseconds

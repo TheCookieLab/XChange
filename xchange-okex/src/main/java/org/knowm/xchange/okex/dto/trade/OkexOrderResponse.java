@@ -1,27 +1,47 @@
 package org.knowm.xchange.okex.dto.trade;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 09-06-2021 */
-/** Response DTO received from placing, cancelling, and amending orders * */
-@Getter
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.trade.OkxOrderResponse} instead.
+ */
+@Deprecated
 public class OkexOrderResponse {
-  @JsonProperty("ordId")
-  private String orderId;
 
-  @JsonProperty("clOrdId")
-  private String clientOrderId;
+  private final OkxOrderResponse delegate;
 
-  @JsonProperty("tag")
-  private String orderTag;
+  /** Restores the pre-rename implicit no-argument constructor. */
+  public OkexOrderResponse() {
+    this(new OkxOrderResponse());
+  }
 
-  @JsonProperty("sCode")
-  private String code;
+  @JsonCreator
+  public OkexOrderResponse(OkxOrderResponse delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("sMsg")
-  private String message;
+  public String getOrderId() {
+    return delegate.getOrderId();
+  }
 
-  @JsonProperty("ts")
-  private Long ts;
+  public String getClientOrderId() {
+    return delegate.getClientOrderId();
+  }
+
+  public String getOrderTag() {
+    return delegate.getOrderTag();
+  }
+
+  public String getCode() {
+    return delegate.getCode();
+  }
+
+  public String getMessage() {
+    return delegate.getMessage();
+  }
+
+  public Long getTs() {
+    return delegate.getTs();
+  }
 }

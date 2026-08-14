@@ -1,64 +1,41 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.ObjectCodec;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import java.io.IOException;
 import java.math.BigDecimal;
-import lombok.Getter;
+import org.knowm.xchange.okx.dto.marketdata.OkxPublicOrder;
 
-@JsonDeserialize(using = OkexPublicOrder.OkexOrderDeserializer.class)
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxPublicOrder} instead.
+ */
+@Deprecated
 public class OkexPublicOrder {
 
-  @Getter private final BigDecimal price;
-  @Getter private final BigDecimal volume;
-  private final Integer liquidatedOrders;
-  private final Integer activeOrders;
+  private final OkxPublicOrder delegate;
 
+  public OkexPublicOrder(OkxPublicOrder delegate) {
+    this.delegate = delegate;
+  }
+
+  /**
+   * Retained legacy value constructor; builds the canonical DTO internally.
+   *
+   * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxPublicOrder} instead.
+   */
+  @Deprecated
   public OkexPublicOrder(
       BigDecimal price, BigDecimal volume, Integer liquidatedOrders, Integer activeOrders) {
-
-    this.price = price;
-    this.volume = volume;
-    this.liquidatedOrders = liquidatedOrders;
-    this.activeOrders = activeOrders;
+    this(new OkxPublicOrder(price, volume, liquidatedOrders, activeOrders));
   }
 
-  @Override
-  public String toString() {
-    return "OkexPublicOrder{"
-        + "price="
-        + price
-        + ", volume="
-        + volume
-        + ", liquidatedOrders="
-        + liquidatedOrders
-        + ", activeOrders="
-        + activeOrders
-        + '}';
+  /** Returns the wrapped canonical DTO. */
+  public OkxPublicOrder to() {
+    return delegate;
   }
 
-  static class OkexOrderDeserializer extends JsonDeserializer<OkexPublicOrder> {
+  public BigDecimal getPrice() {
+    return delegate.getPrice();
+  }
 
-    @Override
-    public OkexPublicOrder deserialize(JsonParser jsonParser, DeserializationContext ctxt)
-        throws IOException {
-
-      ObjectCodec oc = jsonParser.getCodec();
-      JsonNode node = oc.readTree(jsonParser);
-      if (node.isArray()) {
-        BigDecimal price = new BigDecimal(node.path(0).asText());
-        BigDecimal volume = new BigDecimal(node.path(1).asText());
-        Integer liquidatedOrders = Integer.valueOf(node.path(2).asText());
-        Integer activeOrders = Integer.valueOf(node.path(3).asText());
-
-        return new OkexPublicOrder(price, volume, liquidatedOrders, activeOrders);
-      }
-
-      return null;
-    }
+  public BigDecimal getVolume() {
+    return delegate.getVolume();
   }
 }

@@ -42,6 +42,10 @@ import si.mazi.rescu.ParamsDigest;
 
 @Path("/api/v5")
 @Produces(MediaType.APPLICATION_JSON)
+/**
+ * @deprecated use { org.knowm.xchange.okx.OkxAuthenticated} instead.
+ */
+@Deprecated
 public interface OkexAuthenticated extends Okex {
   String balancePath = "/account/balance"; // Stated as 10 req/2 sec
   String tradeFeePath = "/account/trade-fee"; // Stated as 5 req/2 sec

@@ -1,14 +1,12 @@
 package org.knowm.xchange.okex.service;
 
-import static org.knowm.xchange.okex.OkexExchange.PARAM_PASSPHRASE;
-import static org.knowm.xchange.okex.OkexExchange.PARAM_SIMULATED;
-
 import java.io.IOException;
-import java.util.Date;
+import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.Currency;
-import org.knowm.xchange.okex.OkexAuthenticated;
 import org.knowm.xchange.okex.OkexExchange;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexResponse;
@@ -16,100 +14,79 @@ import org.knowm.xchange.okex.dto.account.OkexAccountConfig;
 import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
 import org.knowm.xchange.okex.dto.account.OkexAssetBalance;
 import org.knowm.xchange.okex.dto.account.OkexBillDetails;
-import org.knowm.xchange.okex.dto.account.OkexChangeMarginRequest;
 import org.knowm.xchange.okex.dto.account.OkexChangeMarginResponse;
 import org.knowm.xchange.okex.dto.account.OkexDepositAddress;
-import org.knowm.xchange.okex.dto.account.OkexSetLeverageRequest;
+import org.knowm.xchange.okex.dto.account.OkexPosition;
 import org.knowm.xchange.okex.dto.account.OkexSetLeverageResponse;
+import org.knowm.xchange.okex.dto.account.OkexSetPositionModeResponse;
 import org.knowm.xchange.okex.dto.account.OkexTradeFee;
+import org.knowm.xchange.okex.dto.account.OkexTransferResponse;
 import org.knowm.xchange.okex.dto.account.OkexWalletBalance;
-import org.knowm.xchange.okex.dto.account.OkexWithdrawalRequest;
 import org.knowm.xchange.okex.dto.account.OkexWithdrawalResponse;
 import org.knowm.xchange.okex.dto.account.PiggyBalance;
 import org.knowm.xchange.okex.dto.subaccount.OkexSubAccountDetails;
-import org.knowm.xchange.utils.DateUtils;
+import org.knowm.xchange.okx.dto.OkxException;
+import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.service.OkxAccountServiceRaw;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.service.OkxAccountServiceRaw} instead.
+ */
+@Deprecated
 public class OkexAccountServiceRaw extends OkexBaseService {
 
   public static final String INTERNAL_METHOD = "3";
   public static final String ON_CHAIN_METHOD = "4";
 
+  private final OkxAccountServiceRaw delegate;
+
   public OkexAccountServiceRaw(OkexExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
+    this.delegate = new OkxAccountServiceRaw(exchange, resilienceRegistries);
+  }
+
+  /**
+   * Returns the canonical raw service this shim delegates to, so the exchange's {@code remoteInit}
+   * can reuse the canonical metadata-fetching logic.
+   */
+  public OkxAccountServiceRaw getDelegate() {
+    return delegate;
+  }
+
+  /** Testable seam backing legacy response wrapping (see {@link OkexRawWrapTest}). */
+  static <S, T> OkexResponse<List<T>> wrap(OkxResponse<List<S>> response, Function<S, T> mapper) {
+    List<T> data =
+        response.getData() == null
+            ? Collections.emptyList()
+            : response.getData().stream().map(mapper).collect(Collectors.toList());
+    return new OkexResponse<>(
+        new OkxResponse<>(response.getId(), response.getCode(), response.getMsg(), data));
   }
 
   public OkexResponse<List<OkexAssetBalance>> getAssetBalances(List<Currency> currencies)
       throws OkexException, IOException {
     try {
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.getAssetBalances(
-                      currencies,
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem("passphrase"),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem("simulated")))
-          .withRateLimiter(rateLimiter(OkexAuthenticated.assetBalancesPath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(delegate.getAssetBalances(currencies), OkexAssetBalance::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
   public OkexResponse<List<OkexWalletBalance>> getWalletBalances(List<Currency> currencies)
       throws OkexException, IOException {
     try {
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.getWalletBalances(
-                      currencies,
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
-          .withRateLimiter(rateLimiter(OkexAuthenticated.balancePath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(delegate.getWalletBalances(currencies), OkexWalletBalance::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
   public OkexResponse<List<OkexAccountPositionRisk>> getAccountPositionRisk()
       throws OkexException, IOException {
     try {
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.getAccountPositionRisk(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
-          .withRateLimiter(rateLimiter(OkexAuthenticated.balancePath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(delegate.getAccountPositionRisk(), OkexAccountPositionRisk::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
@@ -123,35 +100,30 @@ public class OkexAccountServiceRaw extends OkexBaseService {
       String clientId)
       throws OkexException, IOException {
     try {
-      OkexWithdrawalRequest requestPayload =
-          OkexWithdrawalRequest.builder()
-              .currency(currency)
-              .amount(amount)
-              .method(method)
-              .address(address)
-              .fee(fee)
-              .chain(chain)
-              .clientId(clientId)
-              .build();
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.assetWithdrawal(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem("passphrase"),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem("simulated"),
-                      requestPayload))
-          .withRateLimiter(rateLimiter(OkexAuthenticated.assetWithdrawalPath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(
+          delegate.assetWithdrawal(currency, amount, method, address, fee, chain, clientId),
+          OkexWithdrawalResponse::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
+  public OkexResponse<List<OkexTransferResponse>> assetTransfer(
+      String currency,
+      String amount,
+      String fromAccount,
+      String toAccount,
+      String type,
+      String instrumentId,
+      String toInstrumentId)
+      throws OkexException, IOException {
+    try {
+      return wrap(
+          delegate.assetTransfer(
+              currency, amount, fromAccount, toAccount, type, instrumentId, toInstrumentId),
+          OkexTransferResponse::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
@@ -159,58 +131,30 @@ public class OkexAccountServiceRaw extends OkexBaseService {
       String instrumentId, String currency, String leverage, String marginMode, String positionSide)
       throws OkexException, IOException {
     try {
-      OkexSetLeverageRequest requestPayload =
-          OkexSetLeverageRequest.builder()
-              .instrumentId(instrumentId)
-              .currency(currency)
-              .leverage(leverage)
-              .marginMode(marginMode)
-              .positionSide(positionSide)
-              .build();
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.setLeverage(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
-                      requestPayload))
-          .withRateLimiter(rateLimiter(OkexAuthenticated.setLeveragePath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(
+          delegate.setLeverage(instrumentId, currency, leverage, marginMode, positionSide),
+          OkexSetLeverageResponse::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
+  public OkexResponse<List<OkexSetPositionModeResponse>> setPositionMode(
+      String positionMode, String accountLevel) throws OkexException, IOException {
+    try {
+      return wrap(
+          delegate.setPositionMode(positionMode, accountLevel), OkexSetPositionModeResponse::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
   public OkexResponse<List<OkexDepositAddress>> getDepositAddress(String currency)
       throws OkexException, IOException {
     try {
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.getDepositAddress(
-                      currency,
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
-          .withRateLimiter(rateLimiter(OkexAuthenticated.depositAddressPath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(delegate.getDepositAddress(currency), OkexDepositAddress::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
@@ -218,53 +162,20 @@ public class OkexAccountServiceRaw extends OkexBaseService {
       String instrumentType, String instrumentId, String underlying, String instFamily)
       throws IOException, OkexException {
     try {
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.getTradeFee(
-                      instrumentType,
-                      instrumentId,
-                      underlying,
-                      instFamily,
-                      "normal",
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
-          .withRateLimiter(rateLimiter(OkexAuthenticated.tradeFeePath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(
+          delegate.getTradeFee(instrumentType, instrumentId, underlying, instFamily),
+          OkexTradeFee::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
   public OkexResponse<List<OkexAccountConfig>> getOkexAccountConfiguration()
       throws OkexException, IOException {
     try {
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.getAccountConfiguration(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
-          .withRateLimiter(rateLimiter(okexAuthenticated.currenciesPath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(delegate.getOkxAccountConfiguration(), OkexAccountConfig::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
@@ -282,35 +193,55 @@ public class OkexAccountServiceRaw extends OkexBaseService {
       String maxNumberOfResults)
       throws OkexException, IOException {
     try {
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.getBills(
-                      instrumentType,
-                      currency,
-                      marginMode,
-                      contractType,
-                      billType,
-                      billSubType,
-                      afterBillId,
-                      beforeBillId,
-                      beginTimestamp,
-                      endTimestamp,
-                      maxNumberOfResults,
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
-          .withRateLimiter(rateLimiter(okexAuthenticated.currenciesPath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(
+          delegate.getBills(
+              instrumentType,
+              currency,
+              marginMode,
+              contractType,
+              billType,
+              billSubType,
+              afterBillId,
+              beforeBillId,
+              beginTimestamp,
+              endTimestamp,
+              maxNumberOfResults),
+          OkexBillDetails::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
+  public OkexResponse<List<OkexBillDetails>> getBillsArchive(
+      String instrumentType,
+      String currency,
+      String marginMode,
+      String contractType,
+      String billType,
+      String billSubType,
+      String afterBillId,
+      String beforeBillId,
+      String beginTimestamp,
+      String endTimestamp,
+      String maxNumberOfResults)
+      throws OkexException, IOException {
+    try {
+      return wrap(
+          delegate.getBillsArchive(
+              instrumentType,
+              currency,
+              marginMode,
+              contractType,
+              billType,
+              billSubType,
+              afterBillId,
+              beforeBillId,
+              beginTimestamp,
+              endTimestamp,
+              maxNumberOfResults),
+          OkexBillDetails::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
@@ -324,98 +255,58 @@ public class OkexAccountServiceRaw extends OkexBaseService {
       boolean loadTrans)
       throws OkexException, IOException {
     try {
-      OkexChangeMarginRequest requestPayload =
-          OkexChangeMarginRequest.builder()
-              .instrumentId(instrumentId)
-              .posSide(positionSide)
-              .type(type)
-              .amount(amount)
-              .currency(currency)
-              .auto(auto)
-              .loanTrans(loadTrans)
-              .build();
-      return decorateApiCall(
-              () ->
-                  okexAuthenticated.changeMargin(
-                      exchange.getExchangeSpecification().getApiKey(),
-                      signatureCreator,
-                      DateUtils.toUTCISODateString(new Date()),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                      (String)
-                          exchange
-                              .getExchangeSpecification()
-                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
-                      requestPayload))
-          .withRateLimiter(rateLimiter(okexAuthenticated.currenciesPath))
-          .call();
-    } catch (OkexException e) {
-      throw handleError(e);
+      return wrap(
+          delegate.changeMargin(
+              instrumentId, positionSide, type, amount, currency, auto, loadTrans),
+          OkexChangeMarginResponse::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
+  public OkexResponse<List<OkexPosition>> getPositionsHistory(
+      String instrumentType,
+      String instrumentId,
+      String marginMode,
+      String type,
+      String after,
+      String before,
+      String limit)
+      throws OkexException, IOException {
+    try {
+      return wrap(
+          delegate.getPositionsHistory(
+              instrumentType, instrumentId, marginMode, type, after, before, limit),
+          OkexPosition::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
   public OkexResponse<List<OkexSubAccountDetails>> getSubAccounts(Boolean enable, String subAcct)
-      throws IOException {
-    return decorateApiCall(
-            () ->
-                this.okexAuthenticated.getSubAccountList(
-                    exchange.getExchangeSpecification().getApiKey(),
-                    signatureCreator,
-                    DateUtils.toUTCISODateString(new Date()),
-                    (String)
-                        exchange
-                            .getExchangeSpecification()
-                            .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                    (String)
-                        exchange
-                            .getExchangeSpecification()
-                            .getExchangeSpecificParametersItem(PARAM_SIMULATED),
-                    enable == null ? null : enable.toString(),
-                    subAcct))
-        .withRateLimiter(rateLimiter(OkexAuthenticated.subAccountList))
-        .call();
+      throws IOException, OkexException {
+    try {
+      return wrap(delegate.getSubAccounts(enable, subAcct), OkexSubAccountDetails::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   public OkexResponse<List<OkexWalletBalance>> getSubAccountBalance(String subAcct)
-      throws IOException {
-    return decorateApiCall(
-            () ->
-                this.okexAuthenticated.getSubAccountBalance(
-                    exchange.getExchangeSpecification().getApiKey(),
-                    signatureCreator,
-                    DateUtils.toUTCISODateString(new Date()),
-                    (String)
-                        exchange
-                            .getExchangeSpecification()
-                            .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                    (String)
-                        exchange
-                            .getExchangeSpecification()
-                            .getExchangeSpecificParametersItem(PARAM_SIMULATED),
-                    subAcct))
-        .withRateLimiter(rateLimiter(OkexAuthenticated.subAccountList))
-        .call();
+      throws IOException, OkexException {
+    try {
+      return wrap(delegate.getSubAccountBalance(subAcct), OkexWalletBalance::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
-  public OkexResponse<List<PiggyBalance>> getPiggyBalance(String ccy) throws IOException {
-    return decorateApiCall(
-            () ->
-                this.okexAuthenticated.getPiggyBalance(
-                    exchange.getExchangeSpecification().getApiKey(),
-                    signatureCreator,
-                    DateUtils.toUTCISODateString(new Date()),
-                    (String)
-                        exchange
-                            .getExchangeSpecification()
-                            .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
-                    (String)
-                        exchange
-                            .getExchangeSpecification()
-                            .getExchangeSpecificParametersItem(PARAM_SIMULATED),
-                    ccy))
-        .withRateLimiter(rateLimiter(OkexAuthenticated.subAccountList))
-        .call();
+  public OkexResponse<List<PiggyBalance>> getPiggyBalance(String ccy)
+      throws IOException, OkexException {
+    try {
+      return wrap(delegate.getPiggyBalance(ccy), PiggyBalance::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 }

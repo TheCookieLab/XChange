@@ -1,45 +1,22 @@
 package org.knowm.xchange.okex;
 
-import static jakarta.ws.rs.core.Response.Status.TOO_MANY_REQUESTS;
-
-import io.github.resilience4j.ratelimiter.RateLimiterConfig;
-import java.time.Duration;
 import org.knowm.xchange.client.ResilienceRegistries;
-import org.knowm.xchange.client.ResilienceUtils;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.OkxResilience} instead.
+ */
+@Deprecated
 public class OkexResilience {
+
+  private OkexResilience() {}
+
+  /**
+   * Delegates to the canonical {@link org.knowm.xchange.okx.OkxResilience#createRegistries()}.
+   *
+   * @deprecated use {@link org.knowm.xchange.okx.OkxResilience#createRegistries()} instead.
+   */
+  @Deprecated
   public static ResilienceRegistries createRegistries() {
-    final ResilienceRegistries registries = new ResilienceRegistries();
-
-    Okex.publicPathRateLimits.forEach(
-        (path, limit) -> {
-          registries
-              .rateLimiters()
-              .rateLimiter(
-                  path,
-                  RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                      .limitRefreshPeriod(Duration.ofSeconds(limit.get(1)))
-                      .limitForPeriod(limit.get(0))
-                      .drainPermissionsOnResult(
-                          e -> ResilienceUtils.matchesHttpCode(e, TOO_MANY_REQUESTS))
-                      .build());
-        });
-
-    OkexAuthenticated.privatePathRateLimits.forEach(
-        (path, limit) -> {
-          registries
-              .rateLimiters()
-              .rateLimiter(
-                  path,
-                  RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                      .limitRefreshPeriod(Duration.ofSeconds(limit.get(1)))
-                      .limitForPeriod(limit.get(0))
-                      .drainPermissionsOnResult(
-                          e -> ResilienceUtils.matchesHttpCode(e, TOO_MANY_REQUESTS))
-                      .build());
-        });
-
-    return registries;
+    return org.knowm.xchange.okx.OkxResilience.createRegistries();
   }
 }

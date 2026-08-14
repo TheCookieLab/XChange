@@ -1,24 +1,30 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.util.Date;
-import lombok.Getter;
-import lombok.ToString;
+import org.knowm.xchange.okx.dto.marketdata.OkxFundingRate;
 
-@Getter
-@ToString
-@JsonInclude(JsonInclude.Include.NON_NULL)
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxFundingRate} instead.
+ */
+@Deprecated
 public class OkexFundingRate {
 
-  private final String instType;
-  private final String instId;
-  private final BigDecimal fundingRate;
-  private final BigDecimal nextFundingRate;
-  private final Date fundingTime;
-  private final Date nextFundingTime;
+  private final OkxFundingRate delegate;
 
+  @JsonCreator
+  public OkexFundingRate(OkxFundingRate delegate) {
+    this.delegate = delegate;
+  }
+
+  /**
+   * Retained legacy value constructor; builds the canonical DTO internally.
+   *
+   * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxFundingRate} instead.
+   */
+  @Deprecated
   public OkexFundingRate(
       @JsonProperty("instType") String instType,
       @JsonProperty("instId") String instId,
@@ -26,11 +32,37 @@ public class OkexFundingRate {
       @JsonProperty("nextFundingRate") BigDecimal nextFundingRate,
       @JsonProperty("fundingTime") Date fundingTime,
       @JsonProperty("nextFundingTime") Date nextFundingTime) {
-    this.instType = instType;
-    this.instId = instId;
-    this.fundingRate = fundingRate;
-    this.nextFundingRate = nextFundingRate;
-    this.fundingTime = fundingTime;
-    this.nextFundingTime = nextFundingTime;
+    this(
+        new OkxFundingRate(
+            instType, instId, fundingRate, nextFundingRate, fundingTime, nextFundingTime));
+  }
+
+  /** Returns the wrapped canonical DTO. */
+  public OkxFundingRate to() {
+    return delegate;
+  }
+
+  public String getInstType() {
+    return delegate.getInstType();
+  }
+
+  public String getInstId() {
+    return delegate.getInstId();
+  }
+
+  public BigDecimal getFundingRate() {
+    return delegate.getFundingRate();
+  }
+
+  public BigDecimal getNextFundingRate() {
+    return delegate.getNextFundingRate();
+  }
+
+  public Date getFundingTime() {
+    return delegate.getFundingTime();
+  }
+
+  public Date getNextFundingTime() {
+    return delegate.getNextFundingTime();
   }
 }

@@ -24,6 +24,10 @@ import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
 
 @Path("/api/v5")
 @Produces(APPLICATION_JSON)
+/**
+ * @deprecated use { org.knowm.xchange.okx.Okx} instead.
+ */
+@Deprecated
 public interface Okex {
   String instrumentsPath = "/public/instruments"; // Stated as 20 req/2 sec
   String tickerPath = "/market/ticker"; // Stated as 20 req/2 sec

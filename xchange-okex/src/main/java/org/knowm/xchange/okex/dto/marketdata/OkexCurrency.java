@@ -1,38 +1,67 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
-/** https://www.okx.com/docs-v5/en/#rest-api-funding-get-currencies * */
-@Getter
-@NoArgsConstructor
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxCurrency} instead.
+ */
+@Deprecated
 public class OkexCurrency {
-  @JsonProperty("ccy")
-  private String currency;
 
-  @JsonProperty("name")
-  private String name;
+  private final OkxCurrency delegate;
 
-  @JsonProperty("chain")
-  private String chain;
+  /**
+   * Public no-argument constructor retained for source and binary compatibility with pre-rename
+   * clients (previously Lombok {@code @NoArgsConstructor}).
+   */
+  public OkexCurrency() {
+    this(new OkxCurrency());
+  }
 
-  @JsonProperty("canDep")
-  private boolean canDep;
+  @JsonCreator
+  public OkexCurrency(OkxCurrency delegate) {
+    this.delegate = delegate;
+  }
 
-  @JsonProperty("canWd")
-  private boolean canWd;
+  /** Returns the wrapped canonical DTO. */
+  public OkxCurrency to() {
+    return delegate;
+  }
 
-  @JsonProperty("canInternal")
-  private boolean canInternal;
+  public String getCurrency() {
+    return delegate.getCurrency();
+  }
 
-  @JsonProperty("minWd")
-  private String minWd;
+  public String getName() {
+    return delegate.getName();
+  }
 
-  @JsonProperty("minFee")
-  private String minFee;
+  public String getChain() {
+    return delegate.getChain();
+  }
 
-  @JsonProperty("maxFee")
-  private String maxFee;
+  public boolean isCanDep() {
+    return delegate.isCanDep();
+  }
+
+  public boolean isCanWd() {
+    return delegate.isCanWd();
+  }
+
+  public boolean isCanInternal() {
+    return delegate.isCanInternal();
+  }
+
+  public String getMinWd() {
+    return delegate.getMinWd();
+  }
+
+  public String getMinFee() {
+    return delegate.getMinFee();
+  }
+
+  public String getMaxFee() {
+    return delegate.getMaxFee();
+  }
 }

@@ -10,7 +10,7 @@
     </parent>
     <artifactId>xchange-stream-okex</artifactId>
 
-    <name>XChange Okex Stream</name>
+    <name>XChange OKX Stream</name>
 
     <dependencies>
         <dependency>

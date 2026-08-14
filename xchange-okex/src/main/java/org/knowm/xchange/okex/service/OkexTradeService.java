@@ -1,18 +1,11 @@
 package org.knowm.xchange.okex.service;
 
-import static org.knowm.xchange.okex.dto.OkexInstType.OPTION;
-import static org.knowm.xchange.okex.dto.OkexInstType.SPOT;
-import static org.knowm.xchange.okex.dto.OkexInstType.SWAP;
-
-import jakarta.ws.rs.NotSupportedException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.knowm.xchange.client.ResilienceRegistries;
-import org.knowm.xchange.derivative.FuturesContract;
-import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.trade.LimitOrder;
@@ -20,118 +13,78 @@ import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.FundsExceededException;
-import org.knowm.xchange.instrument.Instrument;
-import org.knowm.xchange.okex.OkexAdapters;
 import org.knowm.xchange.okex.OkexExchange;
 import org.knowm.xchange.okex.dto.OkexException;
-import org.knowm.xchange.okex.dto.OkexResponse;
-import org.knowm.xchange.okex.dto.trade.OkexCancelOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
-import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
 import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
+import org.knowm.xchange.okx.dto.OkxException;
+import org.knowm.xchange.okx.dto.trade.OkxTradeParams;
+import org.knowm.xchange.okx.service.OkxTradeService;
 import org.knowm.xchange.service.trade.TradeService;
-import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
-import org.knowm.xchange.service.trade.params.CancelOrderByInstrument;
-import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamInstrument;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
-import org.knowm.xchange.service.trade.params.orders.OpenOrdersParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
-import org.knowm.xchange.service.trade.params.orders.OrderQueryParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.service.OkxTradeService} instead.
+ */
+@Deprecated
 public class OkexTradeService extends OkexTradeServiceRaw implements TradeService {
+
+  private final OkxTradeService delegate;
+
   public OkexTradeService(OkexExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
+    this.delegate = new OkxTradeService(exchange, resilienceRegistries);
   }
 
   @Override
   public OpenPositions getOpenPositions() throws IOException {
-    return OkexAdapters.adaptOpenPositions(
-        getPositions(null, null, null).getData(), exchange.getExchangeMetaData());
+    try {
+      return delegate.getOpenPositions();
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public UserTrades getTradeHistory(TradeHistoryParams params) throws IOException {
-    if (params instanceof TradeHistoryParamInstrument) {
-      Instrument instrument = ((TradeHistoryParamInstrument) params).getInstrument();
-
-      String instrumentType = SPOT.name();
-      if (instrument instanceof FuturesContract) {
-        instrumentType = SWAP.name();
-      } else if (instrument instanceof OptionsContract) {
-        instrumentType = OPTION.name();
-      }
-
-      return OkexAdapters.adaptUserTrades(
-          getOrderHistory(
-                  instrumentType,
-                  OkexAdapters.adaptInstrument(
-                      ((TradeHistoryParamInstrument) params).getInstrument()),
-                  null,
-                  null,
-                  null,
-                  null)
-              .getData(),
-          exchange.getExchangeMetaData());
-    } else {
-      throw new NotSupportedException(
-          "TradeHistoryParams must implement " + TradeHistoryParamInstrument.class.getSimpleName());
+    try {
+      return delegate.getTradeHistory(params);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
   @Override
   public OpenOrders getOpenOrders() throws IOException {
-    return OkexAdapters.adaptOpenOrders(
-        getOkexPendingOrder(null, null, null, null, null, null, null, null).getData(),
-        exchange.getExchangeMetaData());
+    try {
+      return delegate.getOpenOrders();
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
-    if (params instanceof OpenOrdersParamInstrument) {
-      return OkexAdapters.adaptOpenOrders(
-          getOkexPendingOrder(
-                  null,
-                  null,
-                  OkexAdapters.adaptInstrument(
-                      ((OpenOrdersParamInstrument) params).getInstrument()),
-                  null,
-                  null,
-                  null,
-                  null,
-                  null)
-              .getData(),
-          exchange.getExchangeMetaData());
-    } else {
-      throw new NotSupportedException(
-          "OpenOrdersParam must implement " + OpenOrdersParamInstrument.class.getSimpleName());
+    try {
+      return delegate.getOpenOrders(params);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
   @Override
   public Class getRequiredOrderQueryParamClass() {
-    return OrderQueryParamInstrument.class;
+    return delegate.getRequiredOrderQueryParamClass();
   }
 
   public Order getOrder(OrderQueryParams orderQueryParams) throws IOException {
-    Order result = null;
-    if (orderQueryParams instanceof OrderQueryParamInstrument) {
-      Instrument instrument = ((OrderQueryParamInstrument) orderQueryParams).getInstrument();
-      String orderId = orderQueryParams.getOrderId();
-
-      List<OkexOrderDetails> orderResults =
-          getOkexOrder(OkexAdapters.adaptInstrument(instrument), orderId).getData();
-
-      if (!orderResults.isEmpty()) {
-        result = OkexAdapters.adaptOrder(orderResults.get(0), exchange.getExchangeMetaData());
-      }
-    } else {
-      throw new IOException("OrderQueryParams must implement OrderQueryParamInstrument interface.");
+    try {
+      return delegate.getOrder(orderQueryParams);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
-    return result;
   }
 
   @Override
@@ -148,126 +101,87 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
-    OkexResponse<List<OkexOrderResponse>> okexResponse =
-        placeOkexOrder(
-            OkexAdapters.adaptOrder(
-                marketOrder, exchange.getExchangeMetaData(), exchange.accountLevel));
-
-    if (okexResponse.isSuccess()) return okexResponse.getData().get(0).getOrderId();
-    else
-      throw new OkexException(
-          okexResponse.getData().get(0).getMessage(),
-          Integer.parseInt(okexResponse.getData().get(0).getCode()));
+    try {
+      return delegate.placeMarketOrder(marketOrder);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException, FundsExceededException {
-    OkexResponse<List<OkexOrderResponse>> okexResponse =
-        placeOkexOrder(
-            OkexAdapters.adaptOrder(
-                limitOrder, exchange.getExchangeMetaData(), exchange.accountLevel));
-
-    if (okexResponse.isSuccess()) return okexResponse.getData().get(0).getOrderId();
-    else
-      throw new OkexException(
-          okexResponse.getData().get(0).getMessage(),
-          Integer.parseInt(okexResponse.getData().get(0).getCode()));
+    try {
+      return delegate.placeLimitOrder(limitOrder);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   public List<String> placeLimitOrder(List<LimitOrder> limitOrders)
       throws IOException, FundsExceededException {
-    return placeOkexOrder(
-            limitOrders.stream()
-                .map(
-                    order ->
-                        OkexAdapters.adaptOrder(
-                            order, exchange.getExchangeMetaData(), exchange.accountLevel))
-                .collect(Collectors.toList()))
-        .getData()
-        .stream()
-        .map(OkexOrderResponse::getOrderId)
-        .collect(Collectors.toList());
+    try {
+      return delegate.placeLimitOrder(limitOrders);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException, FundsExceededException {
-    OkexResponse<List<OkexOrderResponse>> okexResponse =
-        amendOkexOrder(OkexAdapters.adaptAmendOrder(limitOrder, exchange.getExchangeMetaData()));
-    if (okexResponse.isSuccess()) return okexResponse.getData().get(0).getOrderId();
-    else
-      throw new OkexException(
-          okexResponse.getData().get(0).getMessage(),
-          Integer.parseInt(okexResponse.getData().get(0).getCode()));
+    try {
+      return delegate.changeOrder(limitOrder);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   public List<String> changeOrder(List<LimitOrder> limitOrders)
       throws IOException, FundsExceededException {
-    return amendOkexOrder(
-            limitOrders.stream()
-                .map(order -> OkexAdapters.adaptAmendOrder(order, exchange.getExchangeMetaData()))
-                .collect(Collectors.toList()))
-        .getData()
-        .stream()
-        .map(OkexOrderResponse::getOrderId)
-        .collect(Collectors.toList());
+    try {
+      return delegate.changeOrder(limitOrders);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   @Override
   public boolean cancelOrder(CancelOrderParams params) throws IOException {
-    if (params instanceof OkexTradeParams.OkexCancelOrderParams) {
-      Instrument instrument = ((CancelOrderByInstrument) params).getInstrument();
-      if (instrument == null) {
-        throw new UnsupportedOperationException(
-            "Instrument and (orderId or userReference) required");
+    try {
+      if (params instanceof OkexTradeParams.OkexCancelOrderParams) {
+        OkexTradeParams.OkexCancelOrderParams okexParams =
+            (OkexTradeParams.OkexCancelOrderParams) params;
+        return delegate.cancelOrder(
+            new OkxTradeParams.OkxCancelOrderParams(
+                okexParams.instrument, okexParams.orderId, okexParams.userReference));
       }
-      String orderId = ((CancelOrderByIdParams) params).getOrderId();
-      String userReference = ((CancelOrderByUserReferenceParams) params).getUserReference();
-      if ((orderId == null || orderId.isEmpty())
-          && (userReference == null || userReference.isEmpty())) {
-        throw new UnsupportedOperationException("OrderId or userReference is required");
-      }
-      String id = ((CancelOrderByIdParams) params).getOrderId();
-      String instrumentId =
-          OkexAdapters.adaptInstrument(((CancelOrderByInstrument) params).getInstrument());
-
-      OkexCancelOrderRequest req =
-          OkexCancelOrderRequest.builder()
-              .instrumentId(instrumentId)
-              .orderId(id)
-              .clientOrderId(userReference)
-              .build();
-      OkexResponse<List<OkexOrderResponse>> okexResponse = cancelOkexOrder(req);
-      if (okexResponse.isSuccess()) return true;
-      else
-        throw new OkexException(
-            okexResponse.getData().get(0).getMessage(),
-            Integer.parseInt(okexResponse.getData().get(0).getCode()));
-    } else {
-      throw new IOException(
-          "CancelOrderParams must implement (CancelOrderByIdParams or CancelOrderByUserReferenceParams) and CancelOrderByInstrument interface.");
+      return delegate.cancelOrder(params);
+    } catch (OkxException e) {
+      throw new OkexException(e);
     }
   }
 
   @Override
   public Class[] getRequiredCancelOrderParamClasses() {
-    return new Class[] {CancelOrderByIdParams.class, CancelOrderByInstrument.class};
+    return delegate.getRequiredCancelOrderParamClasses();
   }
 
   public List<Boolean> cancelOrder(List<CancelOrderParams> params) throws IOException {
-    return cancelOkexOrder(
-            params.stream()
-                .map(
-                    param ->
-                        OkexCancelOrderRequest.builder()
-                            .orderId(((CancelOrderByIdParams) param).getOrderId())
-                            .instrumentId(
-                                OkexAdapters.adaptInstrument(
-                                    ((CancelOrderByInstrument) param).getInstrument()))
-                            .build())
-                .collect(Collectors.toList()))
-        .getData()
-        .stream()
-        .map(result -> "0".equals(result.getCode()))
-        .collect(Collectors.toList());
+    try {
+      return delegate.cancelOrder(
+          params.stream()
+              .map(
+                  param -> {
+                    if (param instanceof OkexTradeParams.OkexCancelOrderParams) {
+                      OkexTradeParams.OkexCancelOrderParams okexParams =
+                          (OkexTradeParams.OkexCancelOrderParams) param;
+                      return new OkxTradeParams.OkxCancelOrderParams(
+                          okexParams.instrument, okexParams.orderId, okexParams.userReference);
+                    }
+                    return (CancelOrderParams) param;
+                  })
+              .collect(Collectors.toList()));
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 }

@@ -8,15 +8,19 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Payload for placing an order via OKX WebSocket private channel.
+ * Payload for placing an order via OKX WebSocket private channel, retained for source and binary
+ * compatibility with pre-rename clients.
  *
  * <p>Note: OKX API expects strings for most numeric values (price, size, etc.). Optional fields are
  * serialized only when non-null.
+ *
+ * @deprecated use {@link info.bitrich.xchangestream.okx.dto.OkxWebsocketPlaceOrderPayload} instead.
  */
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Deprecated
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class OkexWebsocketPlaceOrderPayload {
 

@@ -1,18 +1,30 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.util.Date;
+import org.knowm.xchange.okx.dto.marketdata.OkxTrade;
 
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxTrade} instead.
+ */
+@Deprecated
 public class OkexTrade {
 
-  private final String tradeId;
-  private final String instId;
-  private final BigDecimal px;
-  private final String side;
-  private final BigDecimal sz;
-  private final Date ts;
+  private final OkxTrade delegate;
 
+  @JsonCreator
+  public OkexTrade(OkxTrade delegate) {
+    this.delegate = delegate;
+  }
+
+  /**
+   * Retained legacy value constructor; builds the canonical DTO internally.
+   *
+   * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxTrade} instead.
+   */
+  @Deprecated
   public OkexTrade(
       @JsonProperty("tradeId") String tradeId,
       @JsonProperty("instId") String instId,
@@ -20,54 +32,35 @@ public class OkexTrade {
       @JsonProperty("sz") BigDecimal sz,
       @JsonProperty("side") String side,
       @JsonProperty("ts") Date ts) {
-    this.tradeId = tradeId;
-    this.instId = instId;
-    this.px = px;
-    this.sz = sz;
-    this.side = side;
-    this.ts = ts;
+    this(new OkxTrade(tradeId, instId, px, sz, side, ts));
+  }
+
+  /** Returns the wrapped canonical DTO. */
+  public OkxTrade to() {
+    return delegate;
   }
 
   public String getTradeId() {
-    return tradeId;
+    return delegate.getTradeId();
   }
 
   public String getInstId() {
-    return instId;
+    return delegate.getInstId();
   }
 
   public BigDecimal getPx() {
-    return px;
+    return delegate.getPx();
   }
 
   public BigDecimal getSz() {
-    return sz;
+    return delegate.getSz();
   }
 
   public String getSide() {
-    return side;
+    return delegate.getSide();
   }
 
   public Date getTs() {
-    return ts;
-  }
-
-  @Override
-  public String toString() {
-    return "OkexTrade{"
-        + "tradeId='"
-        + tradeId
-        + '\''
-        + ", instId="
-        + instId
-        + ", px="
-        + px
-        + ", side="
-        + side
-        + ", sz="
-        + sz
-        + ", ts="
-        + ts
-        + '}';
+    return delegate.getTs();
   }
 }

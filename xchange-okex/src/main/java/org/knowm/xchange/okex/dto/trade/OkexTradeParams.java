@@ -7,8 +7,17 @@ import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByInstrument;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 10-06-2021 */
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.trade.OkxTradeParams} instead.
+ */
+@Deprecated
 public class OkexTradeParams {
+
+  /**
+   * @deprecated use {@link org.knowm.xchange.okx.dto.trade.OkxTradeParams.OkxCancelOrderParams}
+   *     instead.
+   */
+  @Deprecated
   @Getter
   @ToString
   public static class OkexCancelOrderParams

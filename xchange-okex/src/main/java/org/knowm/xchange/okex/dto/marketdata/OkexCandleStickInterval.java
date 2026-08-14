@@ -1,5 +1,11 @@
 package org.knowm.xchange.okex.dto.marketdata;
 
+import org.knowm.xchange.okx.dto.marketdata.OkxCandleStickInterval;
+
+/**
+ * @deprecated use {@link org.knowm.xchange.okx.dto.marketdata.OkxCandleStickInterval} instead.
+ */
+@Deprecated
 public enum OkexCandleStickInterval {
   candle3M,
   candle1M,
@@ -27,5 +33,13 @@ public enum OkexCandleStickInterval {
   candle3Dutc,
   candle5Dutc,
   candle12Hutc,
-  candle6Hutc
+  candle6Hutc;
+
+  public static OkexCandleStickInterval from(OkxCandleStickInterval value) {
+    return value == null ? null : OkexCandleStickInterval.valueOf(value.name());
+  }
+
+  public OkxCandleStickInterval to() {
+    return OkxCandleStickInterval.valueOf(name());
+  }
 }

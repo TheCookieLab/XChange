@@ -1,0 +1,76 @@
+package org.knowm.xchange.okx.dto.trade;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/* Author: Max Gao (gaamox@tutanota.com) Created: 09-06-2021 */
+/** <a href="https://www.okx.com/docs-v5/en/#rest-api-trade-place-order">...</a> * */
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+public class OkxOrderRequest {
+  @JsonProperty("instId")
+  private String instrumentId;
+
+  @JsonProperty("instIdCode")
+  private String instIdCode;
+
+  @JsonProperty("tdMode")
+  private String tradeMode;
+
+  @JsonProperty("ccy")
+  private String marginCurrency;
+
+  @JsonProperty("clOrdId")
+  private String clientOrderId;
+
+  @JsonProperty("tag")
+  private String tag;
+
+  @JsonProperty("side")
+  private String side;
+
+  @JsonProperty("posSide")
+  private String posSide;
+
+  @JsonProperty("ordType")
+  private String orderType;
+
+  @JsonProperty("sz")
+  private String amount;
+
+  @JsonProperty("px")
+  private String price;
+
+  @JsonProperty("reduceOnly")
+  private boolean reducePosition;
+
+  @JsonProperty("tradeQuoteCcy")
+  private String tradeQuoteCcy;
+
+  @JsonProperty("tpTriggerPx")
+  private String takeProfitTriggerPrice;
+
+  @JsonProperty("tpOrdPx")
+  private String takeProfitOrderPrice;
+
+  @JsonProperty("slTriggerPx")
+  private String stopLossTriggerPrice;
+
+  @JsonProperty("slOrdPx")
+  private String stopLossOrderPrice;
+
+  @JsonProperty("tpTriggerPxType")
+  private String takeProfitTriggerPriceType;
+
+  @JsonProperty("slTriggerPxType")
+  private String stopLossTriggerPriceType;
+
+  @JsonProperty("attachAlgoOrds")
+  private List<OkxAttachAlgoOrder> attachAlgoOrds;
+}

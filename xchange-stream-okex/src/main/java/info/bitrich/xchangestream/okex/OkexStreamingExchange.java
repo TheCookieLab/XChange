@@ -3,157 +3,89 @@ package info.bitrich.xchangestream.okex;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
+import info.bitrich.xchangestream.okx.OkxStreamingExchange;
+import info.bitrich.xchangestream.okx.OkxStreamingMarketDataService;
+import info.bitrich.xchangestream.okx.OkxStreamingTradeService;
+import info.bitrich.xchangestream.okx.TransportRole;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.knowm.xchange.okex.OkexExchange;
 
+/**
+ * @deprecated use {@link info.bitrich.xchangestream.okx.OkxStreamingExchange} instead.
+ */
+@Deprecated
 public class OkexStreamingExchange extends OkexExchange implements StreamingExchange {
 
   // Production URIs
-  public static final String WS_PUBLIC_CHANNEL_URI = "wss://ws.okx.com:8443/ws/v5/public";
-  public static final String WS_PRIVATE_CHANNEL_URI = "wss://ws.okx.com:8443/ws/v5/private";
-  public static final String WS_BUSINESS_CHANNEL_URI = "wss://ws.okx.com:8443/ws/v5/business";
+  public static final String WS_PUBLIC_CHANNEL_URI = OkxStreamingExchange.WS_PUBLIC_CHANNEL_URI;
+  public static final String WS_PRIVATE_CHANNEL_URI = OkxStreamingExchange.WS_PRIVATE_CHANNEL_URI;
+  public static final String WS_BUSINESS_CHANNEL_URI = OkxStreamingExchange.WS_BUSINESS_CHANNEL_URI;
 
   // Demo(Sandbox) URIs
   public static final String SANDBOX_WS_PUBLIC_CHANNEL_URI =
-      "wss://wspap.okx.com:8443/ws/v5/public?brokerId=9999";
+      OkxStreamingExchange.SANDBOX_WS_PUBLIC_CHANNEL_URI;
   public static final String SANDBOX_WS_PRIVATE_CHANNEL_URI =
-      "wss://wspap.okx.com:8443/ws/v5/private?brokerId=9999";
+      OkxStreamingExchange.SANDBOX_WS_PRIVATE_CHANNEL_URI;
   public static final String SANDBOX_WS_BUSINESS_CHANNEL_URI =
-      "wss://wspap.okx.com:8443/ws/v5/business?brokerId=9999";
+      OkxStreamingExchange.SANDBOX_WS_BUSINESS_CHANNEL_URI;
 
-  private OkexStreamingService streamingService;
-
-  private OkexStreamingMarketDataService streamingMarketDataService;
-
-  private OkexStreamingTradeService streamingTradeService;
-
-  private OkexPrivateStreamingService privateStreamingService;
-  private OkexBusinessStreamingService businessStreamingService;
+  /**
+   * Canonical streaming exchange backing this deprecated shim. The delegate shares the legacy
+   * exchange specification and runs its own {@code remoteInit} so streaming services observe the
+   * same live exchange metadata as the legacy side.
+   */
+  private final OkxStreamingExchange delegate = new OkxStreamingExchange();
 
   public OkexStreamingExchange() {}
 
   @Override
+  public void applySpecification(ExchangeSpecification exchangeSpecification) {
+    super.applySpecification(exchangeSpecification);
+    delegate.applySpecification(exchangeSpecification);
+  }
+
+  @Override
   public Completable connect(ProductSubscription... args) {
-    applyWebsocketTimeouts(exchangeSpecification);
-    streamingService = new OkexStreamingService(getPublicApiUrl(), exchangeSpecification);
-    applyStreamingSpecification(exchangeSpecification, streamingService);
-    if (isApiKeyValid()) {
-      privateStreamingService =
-          new OkexPrivateStreamingService(getPrivateApiUrl(), exchangeSpecification, this);
-      applyStreamingSpecification(exchangeSpecification, privateStreamingService);
-    }
-    businessStreamingService =
-        new OkexBusinessStreamingService(getBusinessApiUrl(), exchangeSpecification);
-    applyStreamingSpecification(exchangeSpecification, businessStreamingService);
-    streamingMarketDataService =
-        new OkexStreamingMarketDataService(
-            streamingService, businessStreamingService, exchangeMetaData);
-    streamingTradeService =
-        new OkexStreamingTradeService(
-            privateStreamingService, exchangeMetaData, getResilienceRegistries());
-    List<Completable> completableList = new ArrayList<>();
-    completableList.add(streamingService.connect());
-    completableList.add(businessStreamingService.connect());
-    if (isApiKeyValid()) {
-      completableList.add(privateStreamingService.connect());
-    }
-    return Completable.concat(completableList);
-  }
-
-  private boolean isApiKeyValid() {
-    return exchangeSpecification.getApiKey() != null
-        && !exchangeSpecification.getApiKey().isEmpty()
-        && exchangeSpecification.getSecretKey() != null
-        && !exchangeSpecification.getSecretKey().isEmpty();
-  }
-
-  private String getPublicApiUrl() {
-    String apiUrl;
-    ExchangeSpecification exchangeSpec = getExchangeSpecification();
-    if (exchangeSpec.getOverrideWebsocketApiUri() != null) {
-      return exchangeSpec.getOverrideWebsocketApiUri();
-    }
-    if (useSandbox()) {
-      apiUrl = SANDBOX_WS_PUBLIC_CHANNEL_URI;
-    } else {
-      apiUrl = WS_PUBLIC_CHANNEL_URI;
-    }
-    return apiUrl;
-  }
-
-  private String getPrivateApiUrl() {
-    String apiUrl;
-    if (useSandbox()) {
-      apiUrl = SANDBOX_WS_PRIVATE_CHANNEL_URI;
-    } else {
-      apiUrl = WS_PRIVATE_CHANNEL_URI;
-    }
-    return apiUrl;
-  }
-
-  private String getBusinessApiUrl() {
-    String apiUrl;
-    if (useSandbox()) {
-      apiUrl = SANDBOX_WS_BUSINESS_CHANNEL_URI;
-    } else {
-      apiUrl = WS_BUSINESS_CHANNEL_URI;
-    }
-    return apiUrl;
+    return delegate.connect(args);
   }
 
   @Override
   public Completable disconnect() {
-    List<Completable> completableList = new ArrayList<>();
-    if (streamingService != null) {
-      streamingService.pingPongDisconnectIfConnected();
-      completableList.add(streamingService.disconnect());
-    }
-    if (privateStreamingService != null) {
-      privateStreamingService.pingPongDisconnectIfConnected();
-      completableList.add(privateStreamingService.disconnect());
-    }
-    if (businessStreamingService != null) {
-      businessStreamingService.pingPongDisconnectIfConnected();
-      completableList.add(businessStreamingService.disconnect());
-    }
-    return Completable.concat(completableList);
+    return delegate.disconnect();
   }
 
   @Override
   public boolean isAlive() {
-    if (streamingService != null) {
-      if (privateStreamingService != null) {
-        return streamingService.isSocketOpen()
-            && privateStreamingService.isSocketOpen()
-            && privateStreamingService.isLoginDone();
-      } else {
-        return streamingService.isSocketOpen();
-      }
-    }
-    return false;
+    return delegate.isAlive();
   }
 
   @Override
   public StreamingMarketDataService getStreamingMarketDataService() {
-    return streamingMarketDataService;
+    OkxStreamingMarketDataService okxStreamingMarketDataService =
+        (OkxStreamingMarketDataService) delegate.getStreamingMarketDataService();
+    return okxStreamingMarketDataService == null
+        ? null
+        : new OkexStreamingMarketDataService(okxStreamingMarketDataService);
   }
 
   @Override
   public OkexStreamingTradeService getStreamingTradeService() {
-    return streamingTradeService;
+    OkxStreamingTradeService okxStreamingTradeService =
+        (OkxStreamingTradeService) delegate.getStreamingTradeService();
+    return okxStreamingTradeService == null
+        ? null
+        : new OkexStreamingTradeService(okxStreamingTradeService);
   }
 
   @Override
   public void useCompressedMessages(boolean compressedMessages) {
-    throw new NotYetImplementedForExchangeException("useCompressedMessage");
+    delegate.useCompressedMessages(compressedMessages);
   }
 
   /**
@@ -163,34 +95,50 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
    */
   public void setChannelInactiveHandler(
       WebSocketClientHandler.WebSocketMessageHandler channelInactiveHandler) {
-    streamingService.setChannelInactiveHandler(channelInactiveHandler);
+    delegate.setChannelInactiveHandler(channelInactiveHandler);
   }
 
   @Override
   public Observable<Throwable> reconnectFailure() {
-    return streamingService.subscribeReconnectFailure();
+    return delegate.reconnectFailure();
   }
 
   @Override
   public Observable<ConnectionStateModel.State> connectionStateObservable() {
-    return streamingService.subscribeConnectionState();
+    return delegate.connectionStateObservable();
   }
 
   public Observable<State> connectionStateObservablePrivateChannel() {
-    return privateStreamingService.subscribeConnectionState();
+    return delegate.connectionStateObservablePrivateChannel();
   }
 
   public Observable<State> connectionStateObservableBusinessChannel() {
-    return businessStreamingService.subscribeConnectionState();
+    return delegate.connectionStateObservableBusinessChannel();
   }
 
   @Override
   public void resubscribeChannels() {
-    streamingService.resubscribeChannels();
+    delegate.resubscribeChannels();
   }
 
   @Override
   public Observable<Object> connectionIdle() {
-    return streamingService.subscribeIdle();
+    return delegate.connectionIdle();
+  }
+
+  public long getConnectionGeneration() {
+    return delegate.getConnectionGeneration();
+  }
+
+  public void setRequiredTransports(TransportRole... transports) {
+    delegate.setRequiredTransports(transports);
+  }
+
+  public void setRequiredTransports(Set<TransportRole> transports) {
+    delegate.setRequiredTransports(transports);
+  }
+
+  public Set<TransportRole> getRequiredTransports() {
+    return delegate.getRequiredTransports();
   }
 }

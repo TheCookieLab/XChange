@@ -13,7 +13,13 @@ import org.knowm.xchange.service.BaseResilientExchangeService;
 import org.knowm.xchange.service.BaseService;
 import si.mazi.rescu.ParamsDigest;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
+/**
+ * Legacy base service kept so downstream {@code Okex*} service implementations keep compiling and
+ * loading during the migration grace period.
+ *
+ * @deprecated use {@link org.knowm.xchange.okx.service.OkxBaseService} instead.
+ */
+@Deprecated
 public class OkexBaseService extends BaseResilientExchangeService<OkexExchange>
     implements BaseService {
 

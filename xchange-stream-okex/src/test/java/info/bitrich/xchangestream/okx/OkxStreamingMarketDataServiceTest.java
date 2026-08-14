@@ -1,0 +1,85 @@
+package info.bitrich.xchangestream.okx;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.service.exception.NotConnectedException;
+import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
+import io.reactivex.rxjava3.core.Observable;
+import java.math.BigDecimal;
+import org.junit.Before;
+import org.junit.Test;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.marketdata.CandleStickData;
+import org.knowm.xchange.dto.marketdata.CandleStickInterval;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.instrument.Instrument;
+
+public class OkxStreamingMarketDataServiceTest {
+
+  private OkxStreamingMarketDataService marketDataService;
+  private OkxStreamingService streamingService;
+  private OkxBusinessStreamingService businessStreamingService;
+  private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
+
+  @Before
+  public void setUp() {
+    streamingService = mock(OkxStreamingService.class);
+    businessStreamingService = mock(OkxBusinessStreamingService.class);
+    ExchangeMetaData exchangeMetaData = mock(ExchangeMetaData.class);
+    marketDataService =
+        new OkxStreamingMarketDataService(
+            streamingService, businessStreamingService, exchangeMetaData);
+  }
+
+  @Test
+  public void testGetCandleStick() throws Exception {
+    JsonNode jsonNode =
+        mapper.readTree(this.getClass().getResourceAsStream("/getCandleStickResponse.json"));
+
+    when(businessStreamingService.subscribeChannel(anyString()))
+        .thenReturn(Observable.just(jsonNode));
+
+    Instrument instrument = CurrencyPair.BTC_USDT;
+    Observable<CandleStickData> candleStickDataObservable =
+        marketDataService.getCandleStick(instrument, CandleStickInterval.m5);
+
+    CandleStickData candleStickData = candleStickDataObservable.blockingFirst();
+
+    assertThat(candleStickData).isNotNull();
+    assertThat(candleStickData.getInstrument()).isEqualTo(instrument);
+    assertThat(candleStickData.getCandleSticks()).hasSize(1);
+    assertThat(candleStickData.getCandleSticks().get(0).getOpen())
+        .isEqualByComparingTo(new BigDecimal("16649.5"));
+    assertThat(candleStickData.getCandleSticks().get(0).getHigh())
+        .isEqualByComparingTo(new BigDecimal("16677"));
+    assertThat(candleStickData.getCandleSticks().get(0).getLow())
+        .isEqualByComparingTo(new BigDecimal("16608"));
+    assertThat(candleStickData.getCandleSticks().get(0).getClose())
+        .isEqualByComparingTo(new BigDecimal("16677"));
+    assertThat(candleStickData.getCandleSticks().get(0).getVolume())
+        .isEqualByComparingTo(new BigDecimal("2.081"));
+    assertThat(candleStickData.getCandleSticks().get(0).getQuotaVolume())
+        .isEqualByComparingTo(new BigDecimal("34666.4005"));
+    assertThat(candleStickData.getCandleSticks().get(0).getTimestamp().toEpochMilli())
+        .isEqualTo(1672324988882L);
+  }
+
+  @Test
+  public void candleStickWithoutBusinessTransportReportsNotConnected() {
+    OkxStreamingMarketDataService publicOnlyMarketDataService =
+        new OkxStreamingMarketDataService(streamingService, null, null);
+
+    assertThatThrownBy(
+            () ->
+                publicOnlyMarketDataService
+                    .getCandleStick(CurrencyPair.BTC_USDT, CandleStickInterval.m5)
+                    .blockingFirst())
+        .isInstanceOf(NotConnectedException.class);
+  }
+}
