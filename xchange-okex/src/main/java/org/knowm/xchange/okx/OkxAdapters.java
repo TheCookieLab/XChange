@@ -320,13 +320,15 @@ public class OkxAdapters {
     BigDecimal size = order.getOriginalAmount();
     if (isInverseContract(order.getInstrument())) {
       BigDecimal price = order instanceof LimitOrder ? ((LimitOrder) order).getLimitPrice() : null;
-      if (price != null && price.signum() > 0) {
-        size = size.multiply(price).divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN);
-      } else {
-        // Market orders carry no price, so the price-dependent inverse conversion cannot run; keep
-        // the plain contract divide as the documented fallback.
-        size = size.divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN);
+      if (price == null || price.signum() <= 0) {
+        // Inverse contracts convert with contracts = volume * price / ctVal; a market order
+        // carries no price, so the plain contract divide would silently submit a severely
+        // incorrect size. Reject instead of guessing.
+        throw new IllegalArgumentException(
+            "Inverse-contract orders require a price for the volume-to-contract conversion; "
+                + "use a limit order or convert to contract size before placing the order");
       }
+      size = size.multiply(price).divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN);
     } else {
       size = size.divide(metaData.getContractValue(), 20, RoundingMode.HALF_DOWN);
     }

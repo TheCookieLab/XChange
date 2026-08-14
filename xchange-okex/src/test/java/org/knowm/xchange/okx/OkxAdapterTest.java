@@ -1,6 +1,7 @@
 package org.knowm.xchange.okx;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.knowm.xchange.okx.dto.OkxInstType.FUTURES;
 import static org.knowm.xchange.okx.dto.OkxInstType.OPTION;
 import static org.knowm.xchange.okx.dto.OkxInstType.SPOT;
@@ -285,8 +286,11 @@ public class OkxAdapterTest {
 
       MarketOrder marketOrder =
           new MarketOrder(Order.OrderType.BID, new BigDecimal("0.002"), contract);
-      assertThat(OkxAdapters.adaptOrder(marketOrder, metaData, "1").getAmount())
-          .isEqualTo("0.00002");
+      // Inverse market orders carry no price for the volume*price/ctVal conversion; rejecting is
+      // safer than silently submitting volume/ctVal.
+      assertThatThrownBy(() -> OkxAdapters.adaptOrder(marketOrder, metaData, "1"))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("require a price");
     } finally {
       OkxAdapters.instrumentToInstrumentIdMap.clear();
       OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
