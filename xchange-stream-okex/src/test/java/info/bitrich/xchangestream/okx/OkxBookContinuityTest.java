@@ -161,4 +161,20 @@ public class OkxBookContinuityTest {
     assertThat(continuity.gateUpdate(INST_ID, data(2, 0, BID_99, EMPTY)))
         .isEqualTo(OkxBookContinuity.Gate.REBUILD);
   }
+  
+  @Test
+  public void testChecksumInterleavesTopBidsAndAsks() {
+    String[][] bids = {{"102", "2"}, {"100", "1"}};
+    String[][] asks = {{"103", "3"}, {"105", "4"}};
+    JsonNode snapshot = data(1, 0, bids, asks);
+
+    // OKX orders the checksum input bid1, ask1, bid2, ask2 (top 25 on each side).
+    assertThat(OkxBookContinuity.checksum(snapshot.get("bids"), snapshot.get("asks")))
+        .isEqualTo(2334835581L);
+    continuity.snapshot(INST_ID, snapshot);
+
+    // A no-op update still carries the checksum for the complete reconstructed book.
+    assertThat(continuity.gateUpdate(INST_ID, data(2, 2334835581L, EMPTY, EMPTY)))
+        .isEqualTo(OkxBookContinuity.Gate.ACCEPT);
+  }
 }
