@@ -17,15 +17,17 @@ import org.slf4j.LoggerFactory;
  * Continuity guard for the OKX {@code books} (full order-book) channel.
  *
  * <p>The OKX books channel streams an initial snapshot followed by incremental updates. Every
- * message carries a {@code seqId} (and {@code prevSeqId}) that must advance by exactly one per
- * message and, while the field was active, a {@code checksum} over the reconstructed book. This
- * class enforces both invariants per instrument:
+ * message carries a {@code seqId} and usually a {@code prevSeqId}. The latter links an update to
+ * the last applied message; when absent, the guard falls back to requiring a one-step sequence
+ * advance. Messages also carry a checksum over the reconstructed book while that field is active.
+ * This class enforces both invariants per instrument:
  *
  * <ul>
  *   <li>updates whose {@code seqId} is not strictly greater than the last applied sequence are
  *       dropped (duplicates or out-of-order deliveries);
- *   <li>a {@code seqId} jump (gap) or a checksum mismatch marks the book for rebuild: the caller
- *       re-subscribes the channel and drops all updates until a fresh snapshot resets the state.
+ *   <li>a {@code prevSeqId} mismatch (or a sequence jump when {@code prevSeqId} is absent) or a
+ *       checksum mismatch marks the book for rebuild: the caller re-subscribes the channel and
+ *       drops all updates until a fresh snapshot resets the state.
  * </ul>
  *
  * <p>The checksum algorithm follows the OKX v5 documentation: concatenate the first 25 levels on
@@ -112,6 +114,7 @@ final class OkxBookContinuity {
     }
 
     long seqId = sequenceOf(dataElement);
+    long prevSeqId = previousSequenceOf(dataElement);
     if (seqId != UNKNOWN_SEQ && state.lastSeqId != UNKNOWN_SEQ) {
       if (seqId <= state.lastSeqId) {
         LOG.debug(
@@ -121,7 +124,17 @@ final class OkxBookContinuity {
             state.lastSeqId);
         return Gate.DROP_STALE;
       }
-      if (seqId > state.lastSeqId + 1) {
+      if (prevSeqId != UNKNOWN_SEQ) {
+        if (prevSeqId != state.lastSeqId) {
+          LOG.warn(
+              "Book previous sequence mismatch for {}: expected {} but got {}, requesting rebuild.",
+              instId,
+              state.lastSeqId,
+              prevSeqId);
+          markRebuilding(instId);
+          return Gate.REBUILD;
+        }
+      } else if (seqId > state.lastSeqId + 1) {
         LOG.warn(
             "Book sequence gap for {}: expected {} but got {}, requesting rebuild.",
             instId,
@@ -233,17 +246,25 @@ final class OkxBookContinuity {
 
 
   private static long sequenceOf(JsonNode dataElement) {
-    if (dataElement == null || !dataElement.hasNonNull("seqId")) {
+    return sequenceOf(dataElement, "seqId");
+  }
+
+  private static long previousSequenceOf(JsonNode dataElement) {
+    return sequenceOf(dataElement, "prevSeqId");
+  }
+
+  private static long sequenceOf(JsonNode dataElement, String fieldName) {
+    if (dataElement == null || !dataElement.hasNonNull(fieldName)) {
       return UNKNOWN_SEQ;
     }
-    String text = dataElement.get("seqId").asText();
+    String text = dataElement.get(fieldName).asText();
     if (text.isEmpty()) {
       return UNKNOWN_SEQ;
     }
     try {
       return Long.parseLong(text);
     } catch (NumberFormatException e) {
-      LOG.warn("Unparseable seqId '{}' in books message.", text);
+      LOG.warn("Unparseable {} '{}' in books message.", fieldName, text);
       return UNKNOWN_SEQ;
     }
   }
