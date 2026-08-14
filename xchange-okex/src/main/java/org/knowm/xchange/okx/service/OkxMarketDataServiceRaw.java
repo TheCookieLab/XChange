@@ -150,9 +150,15 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
   public List<OkxFundingRateHistory> getOkxFundingRateHistoryRaw(
       String instrument, Long startTime, Long endTime, Integer limit) throws IOException {
     return decorateApiCall(
-            () ->
-                okx.getFundingRateHistory(instrument, endTime, startTime, limit, simulatedTrading())
-                    .getData())
+            () -> {
+              OkxResponse<List<OkxFundingRateHistory>> response =
+                  okx.getFundingRateHistory(
+                      instrument, endTime, startTime, limit, simulatedTrading());
+              if (!response.isSuccess()) {
+                throw OkxException.fromResponse(response, apiKey, secretKey, passphrase);
+              }
+              return response.getData();
+            })
         .withRateLimiter(rateLimiter(Okx.fundingRateHistoryPath))
         .call();
   }

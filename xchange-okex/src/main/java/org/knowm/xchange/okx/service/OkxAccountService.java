@@ -47,6 +47,18 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
     OkxResponse<List<OkxWalletBalance>> tradingBalances = getWalletBalances(null);
     OkxResponse<List<OkxAssetBalance>> assetBalances = getAssetBalances(null);
     OkxResponse<List<OkxAccountPositionRisk>> positionRis = getAccountPositionRisk();
+    if (!tradingBalances.isSuccess()) {
+      throw OkxException.fromResponse(tradingBalances, apiKey, secretKey, passphrase);
+    }
+    if (!assetBalances.isSuccess()) {
+      throw OkxException.fromResponse(assetBalances, apiKey, secretKey, passphrase);
+    }
+    if (!positionRis.isSuccess()) {
+      throw OkxException.fromResponse(positionRis, apiKey, secretKey, passphrase);
+    }
+    if (positionRis.getData() == null || positionRis.getData().isEmpty()) {
+      throw new OkxException("Missing position-risk data in account response", 0);
+    }
     return new AccountInfo(
         OkxAdapters.adaptOkxBalances(tradingBalances.getData()),
         OkxAdapters.adaptOkxAssetBalances(assetBalances.getData()),

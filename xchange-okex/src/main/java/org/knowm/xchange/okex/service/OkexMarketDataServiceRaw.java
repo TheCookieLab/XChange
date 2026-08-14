@@ -153,9 +153,13 @@ public class OkexMarketDataServiceRaw extends OkexBaseService {
 
   public List<OkexFundingRateHistory> getOkexFundingRateHistoryRaw(
       String instrument, Long startTime, Long endTime, Integer limit) throws IOException {
-    return delegate.getOkxFundingRateHistoryRaw(instrument, startTime, endTime, limit).stream()
-        .map(OkexFundingRateHistory::new)
-        .collect(Collectors.toList());
+    try {
+      return delegate.getOkxFundingRateHistoryRaw(instrument, startTime, endTime, limit).stream()
+          .map(OkexFundingRateHistory::new)
+          .collect(Collectors.toList());
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   /**
@@ -165,9 +169,13 @@ public class OkexMarketDataServiceRaw extends OkexBaseService {
    */
   public List<OkxFundingRateHistory> getOkxFundingRateHistoryRaw(
       String instrument, Long startTime, Long endTime, Integer limit) throws IOException {
-    return delegate.getOkxFundingRateHistoryRaw(instrument, startTime, endTime, limit).stream()
-        .map(OkexMarketDataServiceRaw::toLegacyFundingRateHistory)
-        .collect(Collectors.toList());
+    try {
+      return delegate.getOkxFundingRateHistoryRaw(instrument, startTime, endTime, limit).stream()
+          .map(OkexMarketDataServiceRaw::toLegacyFundingRateHistory)
+          .collect(Collectors.toList());
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
   }
 
   /** Maps a canonical history record back to the legacy element type. */

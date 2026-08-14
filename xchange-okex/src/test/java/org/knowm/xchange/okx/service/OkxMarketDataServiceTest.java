@@ -1,10 +1,16 @@
 package org.knowm.xchange.okx.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -12,9 +18,12 @@ import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.okx.Okx;
 import org.knowm.xchange.okx.OkxExchange;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.marketdata.OkxCandleStick;
+import org.knowm.xchange.okx.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
 
 /**
@@ -74,5 +83,64 @@ public class OkxMarketDataServiceTest {
     assertThat(result.getCandleSticks().get(0).getLow()).isEqualByComparingTo("29900");
     assertThat(result.getCandleSticks().get(0).getClose()).isEqualByComparingTo("30100");
     assertThat(result.getCandleSticks().get(0).getVolume()).isEqualByComparingTo("10");
+  }
+
+  @Test
+  public void fundingRateHistoryPreservesBusinessFailures() throws Exception {
+    OkxExchange exchange = new OkxExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(spec);
+
+    OkxMarketDataServiceRaw service =
+        new OkxMarketDataServiceRaw(exchange, new ResilienceRegistries());
+    Okx okx = mock(Okx.class);
+    when(okx.getFundingRateHistory(any(), any(), any(), any(), any()))
+        .thenReturn(new OkxResponse<>("1", "51000", "Instrument does not exist", null));
+    Field okxField = OkxBaseService.class.getDeclaredField("okx");
+    okxField.setAccessible(true);
+    okxField.set(service, okx);
+
+    assertThatThrownBy(() -> service.getOkxFundingRateHistoryRaw("BTC-USDT", null, null, 5))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Instrument does not exist")
+        .extracting(e -> ((OkxException) e).getCode())
+        .isEqualTo(51000);
+  }
+
+  @Test
+  public void fundingRateHistoryReturnsDataOnSuccess() throws Exception {
+    OkxExchange exchange = new OkxExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(spec);
+
+    OkxMarketDataServiceRaw service =
+        new OkxMarketDataServiceRaw(exchange, new ResilienceRegistries());
+    Okx okx = mock(Okx.class);
+    when(okx.getFundingRateHistory(any(), any(), any(), any(), any()))
+        .thenReturn(
+            new OkxResponse<>(
+                "1",
+                "0",
+                "OK",
+                List.of(
+                    new OkxFundingRateHistory(
+                        "SWAP",
+                        "BTC-USDT",
+                        new BigDecimal("0.0001"),
+                        new BigDecimal("0.0002"),
+                        1700000000000L,
+                        "derivatives"))));
+    Field okxField = OkxBaseService.class.getDeclaredField("okx");
+    okxField.setAccessible(true);
+    okxField.set(service, okx);
+
+    List<OkxFundingRateHistory> result =
+        service.getOkxFundingRateHistoryRaw("BTC-USDT", null, null, 5);
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).getInstrument()).isEqualTo(new CurrencyPair("BTC", "USDT"));
+    assertThat(result.get(0).getFundingRate()).isEqualByComparingTo("0.0002");
   }
 }

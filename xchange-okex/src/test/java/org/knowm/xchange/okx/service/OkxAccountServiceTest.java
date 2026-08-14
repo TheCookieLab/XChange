@@ -1,12 +1,14 @@
 package org.knowm.xchange.okx.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,16 +18,22 @@ import org.junit.Test;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
+import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okx.OkxExchange;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk;
+import org.knowm.xchange.okx.dto.account.OkxAssetBalance;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
+import org.knowm.xchange.okx.dto.account.OkxWalletBalance;
 
 /**
  * Offline tests for the dynamic trading-fee map: every fee category present in the exchange
@@ -128,5 +136,107 @@ public class OkxAccountServiceTest {
               OkxTradeFee.class);
       return new OkxResponse<>(null, "0", "", List.of(okxTradeFee));
     }
+  }
+
+  /** Subclass that stubs the three account envelopes so {@code getAccountInfo} runs offline. */
+  private class EnvelopeAccountService extends OkxAccountService {
+
+    OkxResponse<List<OkxWalletBalance>> walletBalances;
+    OkxResponse<List<OkxAssetBalance>> assetBalances;
+    OkxResponse<List<OkxAccountPositionRisk>> positionRisk;
+
+    EnvelopeAccountService(OkxExchange exchange) {
+      super(exchange, new ResilienceRegistries());
+    }
+
+    @Override
+    public OkxResponse<List<OkxWalletBalance>> getWalletBalances(List<Currency> currencies) {
+      return walletBalances;
+    }
+
+    @Override
+    public OkxResponse<List<OkxAssetBalance>> getAssetBalances(List<Currency> currencies) {
+      return assetBalances;
+    }
+
+    @Override
+    public OkxResponse<List<OkxAccountPositionRisk>> getAccountPositionRisk() {
+      return positionRisk;
+    }
+  }
+
+  @Test
+  public void getAccountInfoThrowsOnWalletBalanceBusinessFailure() {
+    EnvelopeAccountService service = new EnvelopeAccountService(exchange());
+    service.walletBalances = new OkxResponse<>(null, "40001", "Invalid OK-ACCESS-KEY", null);
+    service.assetBalances = new OkxResponse<>(null, "0", "", List.of());
+    service.positionRisk = new OkxResponse<>(null, "0", "", List.of());
+
+    assertThatThrownBy(service::getAccountInfo)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Invalid OK-ACCESS-KEY");
+  }
+
+  @Test
+  public void getAccountInfoThrowsOnAssetBalanceBusinessFailure() {
+    EnvelopeAccountService service = new EnvelopeAccountService(exchange());
+    service.walletBalances = new OkxResponse<>(null, "0", "", List.of());
+    service.assetBalances = new OkxResponse<>(null, "50001", "Asset error", null);
+    service.positionRisk = new OkxResponse<>(null, "0", "", List.of());
+
+    assertThatThrownBy(service::getAccountInfo)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Asset error");
+  }
+
+  @Test
+  public void getAccountInfoThrowsOnPositionRiskBusinessFailure() {
+    EnvelopeAccountService service = new EnvelopeAccountService(exchange());
+    service.walletBalances = new OkxResponse<>(null, "0", "", List.of());
+    service.assetBalances = new OkxResponse<>(null, "0", "", List.of());
+    service.positionRisk = new OkxResponse<>(null, "51001", "Position risk error", null);
+
+    assertThatThrownBy(service::getAccountInfo)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Position risk error");
+  }
+
+  @Test
+  public void getAccountInfoThrowsOnMissingPositionRiskPayload() {
+    EnvelopeAccountService service = new EnvelopeAccountService(exchange());
+    service.walletBalances = new OkxResponse<>(null, "0", "", List.of());
+    service.assetBalances = new OkxResponse<>(null, "0", "", List.of());
+    service.positionRisk = new OkxResponse<>(null, "0", "", null);
+
+    assertThatThrownBy(service::getAccountInfo)
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Missing position-risk data");
+  }
+
+  @Test
+  public void getAccountInfoSucceedsWithEmptySuccessEnvelopes() throws Exception {
+    EnvelopeAccountService service = new EnvelopeAccountService(exchange());
+    service.walletBalances = new OkxResponse<>(null, "0", "", List.of());
+    service.assetBalances = new OkxResponse<>(null, "0", "", List.of());
+    service.positionRisk =
+        new OkxResponse<>(
+            null,
+            "0",
+            "",
+            List.of(
+                new OkxAccountPositionRisk(
+                    new java.math.BigDecimal("1000"), List.of(), List.of(), new Date())));
+
+    AccountInfo accountInfo = service.getAccountInfo();
+
+    assertThat(accountInfo.getWallets()).hasSize(3);
+  }
+
+  private OkxExchange exchange() {
+    OkxExchange exchange = new OkxExchange();
+    ExchangeSpecification specification = new ExchangeSpecification(OkxExchange.class);
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
+    return exchange;
   }
 }
