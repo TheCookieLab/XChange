@@ -246,7 +246,13 @@ public class OkxStreamingOrderBookTest {
         bookMessage("books5", "snapshot", 1, 0, BID_100, ASK_101);
     String[][] bidsAfter = {{"100.0", "10"}, {"99.0", "1"}, {"98.0", "2"}};
     JsonNode booksUpdate =
-        bookMessage("books", "update", 2, expectedChecksum(bidsAfter, ASK_101), BID_99, EMPTY);
+        bookMessage(
+            "books",
+            "update",
+            2,
+            expectedChecksum(bidsAfter, ASK_101),
+            new String[][] {{"98.0", "2"}},
+            EMPTY);
 
     PublishSubject<JsonNode> booksSubject = PublishSubject.create();
     PublishSubject<JsonNode> books5Subject = PublishSubject.create();

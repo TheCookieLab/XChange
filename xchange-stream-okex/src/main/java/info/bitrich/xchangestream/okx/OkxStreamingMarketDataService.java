@@ -121,19 +121,19 @@ public class OkxStreamingMarketDataService implements StreamingMarketDataService
                 String action =
                     channelName.equals(ORDERBOOK5) ? "snapshot" : jsonNode.get("action").asText();
                 if ("snapshot".equalsIgnoreCase(action)) {
-                  bookContinuity.snapshot(instId, jsonNode.get("data").get(0));
+                  bookContinuity.snapshot(channelUniqueId, jsonNode.get("data").get(0));
                   OrderBook orderBook =
                       OkxAdapters.adaptOrderBook(okxOrderbooks, instrument, exchangeMetaData);
-                  orderBookMap.put(instId, orderBook);
+                  orderBookMap.put(channelUniqueId, orderBook);
                   return Observable.just(orderBook);
                 } else if ("update".equalsIgnoreCase(action)) {
                   if (!channelName.equals(ORDERBOOK5)) {
                     OkxBookContinuity.Gate gate =
-                        bookContinuity.gateUpdate(instId, jsonNode.get("data").get(0));
+                        bookContinuity.gateUpdate(channelUniqueId, jsonNode.get("data").get(0));
                     if (gate == OkxBookContinuity.Gate.REBUILD) {
                       LOG.warn(
-                          "Order book continuity violated for instId={}, requesting a fresh snapshot.",
-                          instId);
+                          "Order book continuity violated for channel={}, requesting a fresh snapshot.",
+                          channelUniqueId);
                       service.resubscribeChannel(channelUniqueId);
                       return Observable.fromIterable(new LinkedList<>());
                     }
@@ -141,9 +141,9 @@ public class OkxStreamingMarketDataService implements StreamingMarketDataService
                       return Observable.fromIterable(new LinkedList<>());
                     }
                   }
-                  OrderBook orderBook = orderBookMap.getOrDefault(instId, null);
+                  OrderBook orderBook = orderBookMap.getOrDefault(channelUniqueId, null);
                   if (orderBook == null) {
-                    LOG.error("Failed to get orderBook, instId={}.", instId);
+                    LOG.error("Failed to get orderBook, channel={}.", channelUniqueId);
                     return Observable.fromIterable(new LinkedList<>());
                   }
                   Date timestamp = new Timestamp(Long.parseLong(okxOrderbooks.get(0).getTs()));

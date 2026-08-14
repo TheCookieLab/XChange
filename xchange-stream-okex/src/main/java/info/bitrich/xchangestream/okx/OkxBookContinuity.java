@@ -20,7 +20,8 @@ import org.slf4j.LoggerFactory;
  * message carries a {@code seqId} and usually a {@code prevSeqId}. The latter links an update to
  * the last applied message; when absent, the guard falls back to requiring a one-step sequence
  * advance. Messages also carry a checksum over the reconstructed book while that field is active.
- * This class enforces both invariants per instrument:
+ * This class enforces both invariants per order-book subscription (channel + instrument, e.g.
+ * {@code booksBTC-USDT} and {@code books5BTC-USDT} are independent state):
  *
  * <ul>
  *   <li>updates whose {@code seqId} is not strictly greater than the last applied sequence are
