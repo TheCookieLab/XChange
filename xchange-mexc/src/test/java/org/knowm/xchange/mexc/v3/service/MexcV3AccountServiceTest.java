@@ -27,6 +27,16 @@ public class MexcV3AccountServiceTest extends BaseMexcV3WiremockTest {
   private static final String LISTEN_KEY_PATH = "/api/v3/userDataStream";
 
   @Test
+  public void createListenKeySendsApiKeyHeader() throws IOException {
+    stubFor(
+        post(urlEqualTo(LISTEN_KEY_PATH))
+            .withHeader("X-MEXC-APIKEY", com.github.tomakehurst.wiremock.client.WireMock.equalTo("test_api_key"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"header-checked\"}")));
+
+    assertThat(accountService().createListenKey().getListenKey()).isEqualTo("header-checked");
+  }
+
+  @Test
   public void createListenKeyPostsAndReturnsKey() throws IOException {
     stubFor(
         post(urlEqualTo(LISTEN_KEY_PATH))
