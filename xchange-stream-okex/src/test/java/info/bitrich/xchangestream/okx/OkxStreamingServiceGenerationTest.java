@@ -3,17 +3,24 @@ package info.bitrich.xchangestream.okx;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.okx.OkxExchange;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Offline tests for the per-service connection generation and the generation-guarded message
@@ -151,5 +158,43 @@ public class OkxStreamingServiceGenerationTest {
     assertThatThrownBy(service::login)
         .isInstanceOf(org.knowm.xchange.exceptions.ExchangeException.class)
         .hasMessageContaining("passphrase");
+  }
+
+  @Test
+  public void resubscribeChannelSendsUnsubscribeBeforeSubscribe() throws Exception {
+    OkxStreamingService service = spy(new OkxStreamingService("wss://localhost/ws", spec));
+    doNothing().when(service).sendMessage(anyString());
+    service.subscribeChannel("booksBTC-USDT").test();
+
+    service.resubscribeChannel("booksBTC-USDT");
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    // registration sends its own subscribe, then recovery sends unsubscribe and subscribe
+    verify(service, times(3)).sendMessage(captor.capture());
+    List<String> sent = captor.getAllValues();
+    assertThat(sent).hasSize(3);
+    ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
+    JsonNode registration = mapper.readTree(sent.get(0));
+    JsonNode unsubscribe = mapper.readTree(sent.get(1));
+    JsonNode subscribe = mapper.readTree(sent.get(2));
+    assertThat(registration.get("op").asText()).isEqualTo("subscribe");
+    // OKX ignores a subscribe for an already-registered channel, so recovery must unsubscribe
+    // first to obtain a fresh snapshot
+    assertThat(unsubscribe.get("op").asText()).isEqualTo("unsubscribe");
+    assertThat(subscribe.get("op").asText()).isEqualTo("subscribe");
+    assertThat(unsubscribe.get("args").get(0).get("channel").asText()).isEqualTo("books");
+    assertThat(unsubscribe.get("args").get(0).get("instId").asText()).isEqualTo("BTC-USDT");
+    assertThat(subscribe.get("args").get(0).get("channel").asText()).isEqualTo("books");
+    assertThat(subscribe.get("args").get(0).get("instId").asText()).isEqualTo("BTC-USDT");
+  }
+
+  @Test
+  public void resubscribeChannelUnknownChannelIsIgnored() {
+    OkxStreamingService service = spy(new OkxStreamingService("wss://localhost/ws", spec));
+    doNothing().when(service).sendMessage(anyString());
+
+    service.resubscribeChannel("booksBTC-UNKNOWN");
+
+    verify(service, never()).sendMessage(anyString());
   }
 }

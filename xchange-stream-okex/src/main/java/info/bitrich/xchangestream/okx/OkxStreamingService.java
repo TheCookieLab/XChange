@@ -210,6 +210,29 @@ public class OkxStreamingService extends JsonNettyStreamingService {
   }
 
   /**
+   * Re-sends the unsubscribe and subscribe messages for an already-registered channel.
+   *
+   * <p>OKX treats a subscribe request for a channel that is still registered as a no-op and does
+   * not emit a fresh snapshot, so a plain re-subscribe would leave the continuity state rebuilding
+   * forever. Unsubscribing first makes the server treat the follow-up subscribe as a new
+   * registration and push the replacement snapshot on the same topic.
+   */
+  @Override
+  public void resubscribeChannel(String channelName, Object... args) {
+    String subscriptionUniqueId = getSubscriptionUniqueId(channelName, args);
+    if (!channels.containsKey(subscriptionUniqueId)) {
+      LOG.warn("Cannot resubscribe unknown channel {}", subscriptionUniqueId);
+      return;
+    }
+    try {
+      sendMessage(getUnsubscribeMessage(channelName, args));
+      sendMessage(getSubscribeMessage(channelName, args));
+    } catch (IOException e) {
+      LOG.error("Failed to resubscribe channel {}", subscriptionUniqueId, e);
+    }
+  }
+
+  /**
    * Custom client handler in order to execute an external, user-provided handler on channel events.
    */
   class OkxWebSocketClientHandler extends NettyWebSocketClientHandler {
