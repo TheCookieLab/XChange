@@ -20,7 +20,9 @@ public final class MexcV3Symbols {
 
   /** Quote currencies commonly seen on MEXC Spot, longest first for suffix disambiguation. */
   private static final List<String> KNOWN_QUOTES =
-      Arrays.asList("USDT", "USDC", "BTC", "ETH", "MX", "BNB", "DAI", "TUSD", "EUR", "USD");
+      Arrays.asList(
+          "USDT", "USDC", "USD1", "USDF", "BRL", "BTC", "ETH", "MX", "BNB", "DAI", "TUSD", "EUR",
+          "USD");
 
   private MexcV3Symbols() {}
 
