@@ -691,8 +691,7 @@ public class OkxAdapters {
                   ? new BigDecimal(instrument.getContractMultiplier())
                   : new BigDecimal(instrument.getContractValue()))
               : null;
-      instrumentMetaData.put(
-          pair,
+      InstrumentMetaData meta =
           InstrumentMetaData.builder()
               .minimumAmount(
                   (isContractDerivative(instrument))
@@ -722,7 +721,16 @@ public class OkxAdapters {
                       numberOfDecimals(new BigDecimal(instrument.getTickSize()))))
               .tradingFeeCurrency(Objects.requireNonNull(pair).getCounter())
               .marketOrderEnabled(true)
-              .build());
+              .build();
+      instrumentMetaData.put(pair, meta);
+      if (OkxInstType.OPTION.name().equals(instrument.getInstrumentType())) {
+        // The native adapter preserves the exact expTime while the instId parse keeps local
+        // midnight; register the metadata under both keys so callers using either shape resolve it.
+        Instrument nativePair = adaptOkxInstrument(instrument);
+        if (nativePair != null && !nativePair.equals(pair)) {
+          instrumentMetaData.put(nativePair, meta);
+        }
+      }
     }
 
     if (currs != null) {

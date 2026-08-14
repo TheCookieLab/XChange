@@ -249,16 +249,18 @@ public class OkxInstrumentMetadataTest {
 
   @Test
   public void testAggregateInstrumentFamiliesPopulatesIdMapWithoutCollisions() throws IOException {
-    OkxExchange.aggregateInstrumentFamilies(
-        Arrays.asList(
-            loadInstruments("instrumentsSpot.json5"),
-            loadInstruments("instrumentsSwap.json5"),
-            loadInstruments("instrumentsMargin.json5"),
-            loadInstruments("instrumentsFutures.json5"),
-            loadInstruments("instrumentsOption.json5")));
+    List<OkxInstrument> aggregated =
+        OkxExchange.aggregateInstrumentFamilies(
+            Arrays.asList(
+                loadInstruments("instrumentsSpot.json5"),
+                loadInstruments("instrumentsSwap.json5"),
+                loadInstruments("instrumentsMargin.json5"),
+                loadInstruments("instrumentsFutures.json5"),
+                loadInstruments("instrumentsOption.json5")));
 
     Map<Instrument, Long> idMap = OkxAdapters.instrumentToInstrumentIdMap;
-    assertThat(idMap).hasSize(8);
+    // 8 parsed keys plus the exact-expiry option aliases registered for the native adapter
+    assertThat(idMap).hasSize(10);
     assertThat(idMap)
         .containsEntry(new CurrencyPair("BTC", "USDT"), 3L)
         .containsEntry(new CurrencyPair("ETH", "USDT"), 12L)
@@ -269,7 +271,10 @@ public class OkxInstrumentMetadataTest {
         // options keys are built with the same TZ-sensitive parsing as the map population, so
         // derive the expected key the same way instead of constructing a Date here
         .containsEntry(OkxAdapters.adaptOkxInstrumentId("BTC-USD-260828-110000-C"), 273778L)
-        .containsEntry(OkxAdapters.adaptOkxInstrumentId("ETH-USD-260828-2000-P"), 273779L);
+        .containsEntry(OkxAdapters.adaptOkxInstrumentId("ETH-USD-260828-2000-P"), 273779L)
+        // the exact-expiry native contracts resolve the same codes
+        .containsEntry(OkxAdapters.adaptOkxInstrument(aggregated.get(6)), 273778L)
+        .containsEntry(OkxAdapters.adaptOkxInstrument(aggregated.get(7)), 273779L);
   }
 
   @Test
@@ -324,7 +329,8 @@ public class OkxInstrumentMetadataTest {
 
     Map<Instrument, InstrumentMetaData> metadata =
         OkxAdapters.adaptToExchangeMetaData(instruments, null).getInstruments();
-    assertThat(metadata).hasSize(8);
+    // 8 parsed keys plus the exact-expiry option aliases for the native adapter
+    assertThat(metadata).hasSize(10);
 
     InstrumentMetaData spot = metadata.get(new CurrencyPair("BTC", "USDT"));
     assertThat(spot).isNotNull();
@@ -357,6 +363,15 @@ public class OkxInstrumentMetadataTest {
     // Option sizes convert by ctMult (0.01): minSz of 1 contract = 0.01 BTC
     assertThat(option.getContractValue()).isEqualByComparingTo("0.01");
     assertThat(option.getMinimumAmount()).isEqualByComparingTo("0.01");
+
+    // Callers using the native adapter (exact expTime) resolve the same metadata entry
+    Instrument nativeOption =
+        OkxAdapters.adaptOkxInstrument(
+            instruments.stream()
+                .filter(i -> "BTC-USD-260828-110000-C".equals(i.getInstrumentId()))
+                .findFirst()
+                .orElseThrow());
+    assertThat(metadata.get(nativeOption)).isSameAs(option);
   }
 
   @Test

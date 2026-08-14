@@ -11,6 +11,7 @@ import java.util.Map;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okx.dto.OkxInstType;
 import org.knowm.xchange.okx.dto.marketdata.OkxCurrency;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
@@ -179,10 +180,18 @@ public class OkxExchange extends BaseExchange {
     List<OkxInstrument> instruments = new ArrayList<>(byInstrumentId.values());
     instruments.forEach(
         instrument -> {
-          if (instrument.getInstIdCode() != null)
+          if (instrument.getInstIdCode() != null) {
             OkxAdapters.instrumentToInstrumentIdMap.put(
                 adaptOkxInstrumentId(instrument.getInstrumentId()),
                 Long.parseLong(instrument.getInstIdCode()));
+            // The native adapter preserves the exact expTime while the instId parse keeps local
+            // midnight; register the code under both keys so callers using either shape resolve it.
+            Instrument nativeInstrument = OkxAdapters.adaptOkxInstrument(instrument);
+            if (nativeInstrument != null) {
+              OkxAdapters.instrumentToInstrumentIdMap.putIfAbsent(
+                  nativeInstrument, Long.parseLong(instrument.getInstIdCode()));
+            }
+          }
         });
     return instruments;
   }
