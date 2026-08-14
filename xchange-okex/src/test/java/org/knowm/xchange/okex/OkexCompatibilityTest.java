@@ -38,6 +38,7 @@ import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
 import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.okex.service.OkexAccountService;
 import org.knowm.xchange.okex.service.OkexAccountServiceRaw;
+import org.knowm.xchange.okex.service.OkexCandleStickPeriodType;
 import org.knowm.xchange.okex.service.OkexMarketDataService;
 import org.knowm.xchange.okex.service.OkexMarketDataServiceRaw;
 import org.knowm.xchange.okex.service.OkexTradeService;
@@ -50,6 +51,7 @@ import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk;
 import org.knowm.xchange.okx.dto.marketdata.OkxInstrument;
 import org.knowm.xchange.okx.service.OkxAccountServiceRaw;
+import org.knowm.xchange.okx.service.OkxCandleStickPeriodType;
 import org.knowm.xchange.okx.service.OkxMarketDataServiceRaw;
 import org.knowm.xchange.okx.service.OkxTradeServiceRaw;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
@@ -107,6 +109,17 @@ public class OkexCompatibilityTest {
     assertThat(exchange.getMarketDataService()).isInstanceOf(OkexMarketDataService.class);
     assertThat(exchange.getAccountService()).isInstanceOf(OkexAccountService.class);
     assertThat(exchange.getTradeService()).isInstanceOf(OkexTradeService.class);
+  }
+
+  @Test
+  public void legacyCandleStickPeriodTypeDelegatesToCanonicalEnum() {
+    assertThat(OkexCandleStickPeriodType.class.getAnnotation(Deprecated.class)).isNotNull();
+    assertThat(OkexCandleStickPeriodType.CANDLE_STICK_1M.getFieldValue()).isEqualTo("1m");
+    assertThat(OkexCandleStickPeriodType.CANDLE_STICK_2H.getFieldValue()).isEqualTo("2H");
+    assertThat(OkexCandleStickPeriodType.CANDLE_STICK_1H.getFieldValue()).isEqualTo("1H");
+    // Delegation must mirror the canonical period set (seconds, not minutes).
+    assertThat(OkexCandleStickPeriodType.getSupportedPeriodsInSecs())
+        .isEqualTo(OkxCandleStickPeriodType.getSupportedPeriodsInSecs());
   }
 
   @Test
