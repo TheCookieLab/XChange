@@ -3,6 +3,8 @@ package org.knowm.xchange.okex;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
@@ -10,6 +12,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
+import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
 import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.okex.service.OkexAccountService;
 import org.knowm.xchange.okex.service.OkexAccountServiceRaw;
@@ -119,6 +122,22 @@ public class OkexCompatibilityTest {
     assertThat(shim).isInstanceOf(OkxException.class);
     assertThat(shim.getCode()).isEqualTo(7);
     assertThat(shim.getMessage()).isEqualTo("m");
+  }
+
+  @Test
+  public void legacyTickerRemainsNoArgAndJacksonConstructible() throws Exception {
+    // The pre-rename OkexTicker exposed a public no-arg constructor and was Jackson-deserializable
+    // from the flat ticker payload; compiled legacy clients and reflection-based tooling depend on
+    // both.
+    assertThat(new OkexTicker()).isNotNull();
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkexTicker ticker =
+        mapper.readValue(
+            "{\"instId\":\"BTC-USDT\",\"last\":\"1.5\",\"ts\":\"1610000000000\"}",
+            OkexTicker.class);
+    assertThat(ticker.getInstrumentId()).isEqualTo("BTC-USDT");
+    assertThat(ticker.getLast()).isEqualByComparingTo("1.5");
   }
 
   @Test

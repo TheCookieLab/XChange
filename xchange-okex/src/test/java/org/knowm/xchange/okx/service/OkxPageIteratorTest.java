@@ -34,6 +34,27 @@ public class OkxPageIteratorTest {
   }
 
   @Test
+  public void testBeforeBoundIsPreservedWhileAdvancingAfter() throws Exception {
+    List<OkxPageParams> seen = new ArrayList<>();
+    List<Item> page1 = List.of(item("a"), item("b"));
+    List<Item> page2 = List.of(item("c"));
+    OkxPageIterator.ThrowingPageFetcher<Item> fetcher =
+        page -> {
+          seen.add(page);
+          return seen.size() == 1 ? page1 : page2;
+        };
+
+    List<Item> result =
+        OkxPageIterator.fetchAll(fetcher, Item::id, new OkxPageParams(null, "B", 2));
+
+    assertThat(result).extracting(Item::id).containsExactly("a", "b", "c");
+    assertThat(seen).extracting(OkxPageParams::getAfter).containsExactly(null, "b");
+    // The caller's before bound must survive cursor advancement; clearing it lets subsequent pages
+    // run past the requested range into older records.
+    assertThat(seen).extracting(OkxPageParams::getBefore).containsExactly("B", "B");
+  }
+
+  @Test
   public void testFullPagesThenPartialPageAccumulatesAndStops() throws Exception {
     List<String> cursors = new ArrayList<>();
     List<Item> page1 = List.of(item("a"), item("b"), item("c"));

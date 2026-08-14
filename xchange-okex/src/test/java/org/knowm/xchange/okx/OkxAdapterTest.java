@@ -10,13 +10,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.Fee;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
+import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 
 public class OkxAdapterTest {
   @Test
@@ -60,5 +66,32 @@ public class OkxAdapterTest {
     //    assertThat(OkxAdapters.adaptTradingFee(okxSwapTradeFee,SWAP, new
     // FuturesContract("BTC/USD/SWAP")))
     //        .isEqualTo(new Fee(new BigDecimal("-0.0002"),new BigDecimal("-0.0005")));
+  }
+
+  @Test
+  public void testAdaptOrderResolvesUnifiedUsdInstrumentCode() {
+    // Remote init keys the code map by the adapted wire instrument (BTC/USD since the unified USD
+    // orderbook revamp), while legacy callers still trade the BTC/USDC pair; the map lookup must
+    // fall back to the adapted wire instrument instead of NPE-ing.
+    OkxAdapters.instrumentToInstrumentIdMap.put(new CurrencyPair("BTC/USD"), 1234567890L);
+    try {
+      LimitOrder order =
+          new LimitOrder(
+              Order.OrderType.BID,
+              new BigDecimal("0.1"),
+              new CurrencyPair("BTC/USDC"),
+              "order-1",
+              new Date(),
+              new BigDecimal("60000"));
+      OkxOrderRequest request =
+          OkxAdapters.adaptOrder(
+              order,
+              new ExchangeMetaData(Collections.emptyMap(), Collections.emptyMap(), null, null, null),
+              "1");
+      assertThat(request.getInstrumentId()).isEqualTo("BTC-USD");
+      assertThat(request.getInstIdCode()).isEqualTo("1234567890");
+    } finally {
+      OkxAdapters.instrumentToInstrumentIdMap.remove(new CurrencyPair("BTC/USD"));
+    }
   }
 }
