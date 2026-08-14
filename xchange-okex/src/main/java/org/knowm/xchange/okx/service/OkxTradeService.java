@@ -76,19 +76,31 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
     return SPOT.name();
   }
 
-  private OkxException orderException(
-      OkxResponse<List<OkxOrderResponse>> response, String endpoint) {
-    OkxOrderResponse failed = response.getData().get(0);
-    String requestId =
-        failed.getClientOrderId() != null ? failed.getClientOrderId() : failed.getOrderId();
+  /** Testable seam backing order-placement error mapping (see {@link OkxTradeServiceTest}). */
+  OkxException orderException(OkxResponse<List<OkxOrderResponse>> response, String endpoint) {
+    String code;
+    String message;
+    String requestId = null;
+    List<OkxOrderResponse> data = response.getData();
+    if (data != null && !data.isEmpty()) {
+      OkxOrderResponse failed = data.get(0);
+      code = failed.getCode();
+      message = failed.getMessage();
+      requestId =
+          failed.getClientOrderId() != null ? failed.getClientOrderId() : failed.getOrderId();
+    } else {
+      // Top-level failure (authentication, request-wide validation): no per-order entry.
+      code = response.getCode();
+      message = response.getMsg();
+    }
     return OkxException.builder()
-        .message(redact(failed.getMessage()))
-        .code(OkxException.parseCode(failed.getCode()))
+        .message(redact(message))
+        .code(OkxException.parseCode(code))
         .domain("trade")
         .endpoint(endpoint)
         .requestId(requestId)
         .transportState(OkxException.TransportState.BUSINESS_ERROR)
-        .retryClassification(OkxException.classify(failed.getMessage(), failed.getCode()))
+        .retryClassification(OkxException.classify(message, code))
         .build();
   }
 
@@ -232,12 +244,14 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
 
   public List<String> changeOrder(List<LimitOrder> limitOrders)
       throws IOException, FundsExceededException {
-    return amendOkxOrder(
+    OkxResponse<List<OkxOrderResponse>> okxResponse =
+        amendOkxOrder(
             limitOrders.stream()
                 .map(order -> OkxAdapters.adaptAmendOrder(order, exchange.getExchangeMetaData()))
-                .collect(Collectors.toList()))
-        .getData()
-        .stream()
+                .collect(Collectors.toList()));
+    if (!okxResponse.isSuccess())
+      throw orderException(okxResponse, OkxAuthenticated.amendOrderPath);
+    return okxResponse.getData().stream()
         .map(OkxOrderResponse::getOrderId)
         .collect(Collectors.toList());
   }
@@ -281,7 +295,8 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
   }
 
   public List<Boolean> cancelOrder(List<CancelOrderParams> params) throws IOException {
-    return cancelOkxOrder(
+    OkxResponse<List<OkxOrderResponse>> okxResponse =
+        cancelOkxOrder(
             params.stream()
                 .map(
                     param ->
@@ -291,9 +306,10 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
                                 OkxAdapters.adaptInstrument(
                                     ((CancelOrderByInstrument) param).getInstrument()))
                             .build())
-                .collect(Collectors.toList()))
-        .getData()
-        .stream()
+                .collect(Collectors.toList()));
+    if (!okxResponse.isSuccess())
+      throw orderException(okxResponse, OkxAuthenticated.cancelOrderPath);
+    return okxResponse.getData().stream()
         .map(result -> "0".equals(result.getCode()))
         .collect(Collectors.toList());
   }
