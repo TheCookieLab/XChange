@@ -87,8 +87,7 @@ public class OkxExchange extends BaseExchange {
 
   @Override
   public void remoteInit() throws IOException {
-    remoteInit(
-        (OkxMarketDataServiceRaw) marketDataService, (OkxAccountServiceRaw) accountService);
+    remoteInit((OkxMarketDataServiceRaw) marketDataService, (OkxAccountServiceRaw) accountService);
   }
 
   /**
@@ -119,11 +118,7 @@ public class OkxExchange extends BaseExchange {
         && exchangeSpecification.getExchangeSpecificParametersItem("passphrase") != null) {
       currencies = marketDataServiceRaw.getOkxCurrencies().getData();
       accountLevel =
-          accountServiceRaw
-              .getOkxAccountConfiguration()
-              .getData()
-              .get(0)
-              .getAccountLevel();
+          accountServiceRaw.getOkxAccountConfiguration().getData().get(0).getAccountLevel();
     }
 
     exchangeMetaData = OkxAdapters.adaptToExchangeMetaData(instruments, currencies);
