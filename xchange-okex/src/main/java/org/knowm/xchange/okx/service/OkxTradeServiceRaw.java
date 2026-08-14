@@ -639,6 +639,45 @@ public class OkxTradeServiceRaw extends OkxBaseService {
     return placeOkxOrderWithReconciliation(orders);
   }
 
+  /**
+   * Validates that every per-order entry of a batch order-operation response reports success.
+   *
+   * <p>A success envelope can still carry per-order rejections (nonzero {@code sCode}, no {@code
+   * ordId}); surface the provider error instead of returning a null order id alongside successes.
+   *
+   * @param batchResponse the batch order-operation response envelope
+   * @param operation the operation name used in the error message (e.g. {@code "order"} or {@code
+   *     "amendment"})
+   * @throws ExchangeException when any entry is missing or reports a nonzero code
+   */
+  static void validatePerOrderSuccess(
+      OkxResponse<List<OkxOrderResponse>> batchResponse, String operation) {
+    List<OkxOrderResponse> placed = batchResponse.getData();
+    if (placed == null || placed.isEmpty()) {
+      throw new ExchangeException(
+          "OKX batch " + operation + " returned no per-order results: " + batchResponse.getMsg());
+    }
+    for (int index = 0; index < placed.size(); index++) {
+      OkxOrderResponse placedOrder = placed.get(index);
+      if (placedOrder == null
+          || placedOrder.getCode() == null
+          || !placedOrder.getCode().equals("0")) {
+        throw new ExchangeException(
+            "OKX rejected batch "
+                + operation
+                + " "
+                + (placedOrder == null ? "(missing response)" : placedOrder.getClientOrderId())
+                + " at index "
+                + index
+                + " with code "
+                + (placedOrder == null ? "(missing)" : placedOrder.getCode())
+                + (placedOrder != null && placedOrder.getMessage() != null
+                    ? ": " + placedOrder.getMessage()
+                    : ""));
+      }
+    }
+  }
+
   /** Testable seam backing {@link #placeOkxOrder(List)}. */
   OkxResponse<List<OkxOrderResponse>> placeOkxOrderWithReconciliation(List<OkxOrderRequest> orders)
       throws IOException {
@@ -677,25 +716,9 @@ public class OkxTradeServiceRaw extends OkxBaseService {
                 + " submitted orders: "
                 + batchResponse.getMsg());
       }
+      validatePerOrderSuccess(batchResponse, "order");
       for (int index = 0; index < toPlaceIndexes.size(); index++) {
-        OkxOrderResponse placedOrder = placed.get(index);
-        // A success envelope can still carry per-order rejections (nonzero sCode, no ordId);
-        // surface the provider error instead of returning a null order id alongside successes.
-        if (placedOrder == null
-            || placedOrder.getCode() == null
-            || !placedOrder.getCode().equals("0")) {
-          throw new ExchangeException(
-              "OKX rejected batch order "
-                  + (placedOrder == null ? "(missing response)" : placedOrder.getClientOrderId())
-                  + " at index "
-                  + index
-                  + " with code "
-                  + (placedOrder == null ? "(missing)" : placedOrder.getCode())
-                  + (placedOrder != null && placedOrder.getMessage() != null
-                      ? ": " + placedOrder.getMessage()
-                      : ""));
-        }
-        responses.set(toPlaceIndexes.get(index), placedOrder);
+        responses.set(toPlaceIndexes.get(index), placed.get(index));
       }
     }
     return new OkxResponse<>(null, "0", null, responses);

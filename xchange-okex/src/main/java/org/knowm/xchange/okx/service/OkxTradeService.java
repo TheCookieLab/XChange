@@ -268,6 +268,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
                 .collect(Collectors.toList()));
     if (!okxResponse.isSuccess())
       throw orderException(okxResponse, OkxAuthenticated.amendOrderPath);
+    validatePerOrderSuccess(okxResponse, "amendment");
     return okxResponse.getData().stream()
         .map(OkxOrderResponse::getOrderId)
         .collect(Collectors.toList());

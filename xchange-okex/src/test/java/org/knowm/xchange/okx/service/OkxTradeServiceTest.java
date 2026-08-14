@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
@@ -17,6 +18,7 @@ import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.okx.OkxAuthenticated;
 import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.dto.OkxException;
@@ -59,6 +61,12 @@ public class OkxTradeServiceTest {
 
     @Override
     public OkxResponse<List<OkxOrderResponse>> amendOkxOrder(OkxAmendOrderRequest order)
+        throws IOException {
+      return amendResponse;
+    }
+
+    @Override
+    public OkxResponse<List<OkxOrderResponse>> amendOkxOrder(List<OkxAmendOrderRequest> orders)
         throws IOException {
       return amendResponse;
     }
@@ -264,6 +272,67 @@ public class OkxTradeServiceTest {
             e ->
                 assertThat(((OkxException) e).getEndpoint())
                     .isEqualTo(OkxAuthenticated.cancelOrderPath));
+  }
+
+  @Test
+  public void changeOrderBatchRejectsPerItemFailure() throws Exception {
+    StubTradeService service = stubService();
+    OkxOrderResponse ok = orderResponse("{\"sCode\":\"0\",\"sMsg\":\"\",\"ordId\":\"100\"}");
+    OkxOrderResponse rejected =
+        orderResponse("{\"sCode\":\"51001\",\"sMsg\":\"Order not found\",\"clOrdId\":\"cl-2\"}");
+    service.amendResponse = new OkxResponse<>(null, "0", null, Arrays.asList(ok, rejected));
+
+    assertThatThrownBy(
+            () ->
+                service.changeOrder(
+                    Arrays.asList(
+                        new LimitOrder(
+                            Order.OrderType.BID,
+                            new BigDecimal("0.001"),
+                            new CurrencyPair("BTC/USDT"),
+                            "id-1",
+                            null,
+                            new BigDecimal("60000")),
+                        new LimitOrder(
+                            Order.OrderType.BID,
+                            new BigDecimal("0.002"),
+                            new CurrencyPair("BTC/USDT"),
+                            "id-2",
+                            null,
+                            new BigDecimal("61000")))))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("OKX rejected batch amendment")
+        .hasMessageContaining("cl-2")
+        .hasMessageContaining("index 1")
+        .hasMessageContaining("51001")
+        .hasMessageContaining("Order not found");
+  }
+
+  @Test
+  public void changeOrderBatchReturnsAllOrderIdsWhenPerOrderCodesZero() throws Exception {
+    StubTradeService service = stubService();
+    OkxOrderResponse first = orderResponse("{\"sCode\":\"0\",\"sMsg\":\"\",\"ordId\":\"100\"}");
+    OkxOrderResponse second = orderResponse("{\"sCode\":\"0\",\"sMsg\":\"\",\"ordId\":\"200\"}");
+    service.amendResponse = new OkxResponse<>(null, "0", null, Arrays.asList(first, second));
+
+    assertThat(
+            service.changeOrder(
+                Arrays.asList(
+                    new LimitOrder(
+                        Order.OrderType.BID,
+                        new BigDecimal("0.001"),
+                        new CurrencyPair("BTC/USDT"),
+                        "id-1",
+                        null,
+                        new BigDecimal("60000")),
+                    new LimitOrder(
+                        Order.OrderType.BID,
+                        new BigDecimal("0.002"),
+                        new CurrencyPair("BTC/USDT"),
+                        "id-2",
+                        null,
+                        new BigDecimal("61000")))))
+        .containsExactly("100", "200");
   }
 
   @Test
