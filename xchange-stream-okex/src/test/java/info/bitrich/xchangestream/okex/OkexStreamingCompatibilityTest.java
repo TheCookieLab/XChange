@@ -2,8 +2,13 @@ package info.bitrich.xchangestream.okex;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.core.StreamingTradeService;
+import info.bitrich.xchangestream.okex.dto.OkexLoginMessage;
+import info.bitrich.xchangestream.okex.dto.OkexSubscribeMessage;
+import info.bitrich.xchangestream.okex.dto.OkexSubscriptionTopic;
+import info.bitrich.xchangestream.okex.dto.OkexWebsocketPlaceOrderPayload;
 import info.bitrich.xchangestream.okx.OkxBusinessStreamingService;
 import info.bitrich.xchangestream.okx.OkxPrivateStreamingService;
 import info.bitrich.xchangestream.okx.OkxStreamingExchange;
@@ -18,6 +23,7 @@ import java.util.stream.Collectors;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.okex.OkexExchange;
+import org.knowm.xchange.okex.dto.OkexInstType;
 
 public class OkexStreamingCompatibilityTest {
 
@@ -89,6 +95,40 @@ public class OkexStreamingCompatibilityTest {
         .isEqualTo(OkxPrivateStreamingService.CHANGE_ORDER);
     assertThat(OkexPrivateStreamingService.CANCEL_ORDER)
         .isEqualTo(OkxPrivateStreamingService.CANCEL_ORDER);
+  }
+
+  @Test
+  public void legacyDtoShimsDeserializeWithPreRenameWireKeys() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+
+    OkexLoginMessage login = mapper.readValue("{\"op\":\"login\"}", OkexLoginMessage.class);
+    assertThat(login.getOp()).isEqualTo("login");
+    assertThat(login.getArgs()).isEmpty();
+    OkexLoginMessage.LoginArg arg = new OkexLoginMessage.LoginArg("k", "p", "1", "s");
+    assertThat(arg.getApiKey()).isEqualTo("k");
+    assertThat(arg.getSign()).isEqualTo("s");
+
+    OkexSubscribeMessage<String> subscribe =
+        new OkexSubscribeMessage<>("1", "subscribe", Arrays.asList("a"));
+    assertThat(subscribe.getOp()).isEqualTo("subscribe");
+    assertThat(subscribe.getArgs()).containsExactly("a");
+
+    OkexSubscriptionTopic topic =
+        new OkexSubscriptionTopic("tickers", OkexInstType.SPOT, "", "BTC-USDT");
+    assertThat(topic.getInstType()).isEqualTo(OkexInstType.SPOT);
+    assertThat(topic.getInstId()).isEqualTo("BTC-USDT");
+    assertThat(mapper.writeValueAsString(topic))
+        .isEqualTo(
+            "{\"channel\":\"tickers\",\"instType\":\"SPOT\",\"uly\":\"\",\"instId\":\"BTC-USDT\"}");
+
+    OkexWebsocketPlaceOrderPayload payload =
+        mapper.readValue(
+            "{\"instId\":\"BTC-USDT\",\"tdMode\":\"cash\",\"side\":\"buy\",\"ordType\":\"limit\","
+                + "\"sz\":\"1\",\"px\":\"100\"}",
+            OkexWebsocketPlaceOrderPayload.class);
+    assertThat(payload.getInstId()).isEqualTo("BTC-USDT");
+    assertThat(payload.getTdMode()).isEqualTo("cash");
+    assertThat(payload.getSz()).isEqualTo("1");
   }
 
   private static void assertSurfaceCovered(Class<?> canonical, Class<?> shim) {
