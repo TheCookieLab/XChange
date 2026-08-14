@@ -25,20 +25,31 @@ public class OkxBookContinuityTest {
 
   /**
    * Independent re-implementation of the OKX checksum spec used to build expected fixtures: CRC32
-   * of the first 25 bids and asks, interleaved as bid1, ask1, bid2, ask2, with no separator between
-   * levels.
+   * of the first 25 bids and asks, interleaved as bid1, ask1, bid2, ask2, with every price and size
+   * token colon-delimited ({@code bidPx:bidSz:askPx:askSz:...}).
    */
   private static long expectedChecksum(String[][] bids, String[][] asks) {
     CRC32 crc = new CRC32();
+    boolean firstToken = true;
     for (int index = 0; index < 25 && (index < bids.length || index < asks.length); index++) {
       if (index < bids.length) {
-        crc.update((bids[index][0] + ":" + bids[index][1]).getBytes(StandardCharsets.UTF_8));
+        firstToken = appendChecksumTokens(crc, bids[index][0], bids[index][1], firstToken);
       }
       if (index < asks.length) {
-        crc.update((asks[index][0] + ":" + asks[index][1]).getBytes(StandardCharsets.UTF_8));
+        firstToken = appendChecksumTokens(crc, asks[index][0], asks[index][1], firstToken);
       }
     }
     return crc.getValue();
+  }
+
+  private static boolean appendChecksumTokens(CRC32 crc, String price, String size, boolean first) {
+    if (!first) {
+      crc.update((int) ':');
+    }
+    crc.update(price.getBytes(StandardCharsets.UTF_8));
+    crc.update((int) ':');
+    crc.update(size.getBytes(StandardCharsets.UTF_8));
+    return false;
   }
 
   private JsonNode data(long seqId, long checksum, String[][] bids, String[][] asks) {
@@ -66,10 +77,10 @@ public class OkxBookContinuityTest {
 
   @Test
   public void testChecksumAlgorithmMatchesDocumentedVector() {
-    // Bids "100.0:10" + asks "101.0:5" concatenate to "100.0:10101.0:5" (no separator).
+    // Bids "100.0:10" + asks "101.0:5" join as "100.0:10:101.0:5" (colon between every token).
     ArrayNode bids = mapper.createArrayNode().add(mapper.createArrayNode().add("100.0").add("10"));
     ArrayNode asks = mapper.createArrayNode().add(mapper.createArrayNode().add("101.0").add("5"));
-    assertThat(OkxBookContinuity.checksum(bids, asks)).isEqualTo(2511280408L);
+    assertThat(OkxBookContinuity.checksum(bids, asks)).isEqualTo(2138071360L);
   }
 
   @Test

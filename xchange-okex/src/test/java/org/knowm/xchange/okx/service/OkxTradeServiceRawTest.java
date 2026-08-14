@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.okx.OkxExchange;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.trade.OkxAlgoOrderDetails;
 import org.knowm.xchange.okx.dto.trade.OkxFill;
@@ -131,10 +133,16 @@ public class OkxTradeServiceRawTest {
           null, "0", null, algoHistoryPages.getOrDefault(after, Collections.emptyList()));
     }
 
+    /** When non-null, the lookup seam throws OKX 51603 (order does not exist) for this client id. */
+    String notFoundClientOrderId;
+
     @Override
-    OkxResponse<List<OkxOrderDetails>> getOkxOrderByClientOrderId(
-        String instrumentId, String clientOrderId) {
+    OkxResponse<List<OkxOrderDetails>> fetchOrderDetails(
+        String instrumentId, String orderId, String clientOrderId) throws IOException {
       orderLookups.add(clientOrderId);
+      if (clientOrderId != null && clientOrderId.equals(notFoundClientOrderId)) {
+        throw new OkxException("Order does not exist", 51603);
+      }
       if (clientOrderId != null && clientOrderId.equals(existingClientOrderId)) {
         return existingOrderResponse;
       }
@@ -311,6 +319,44 @@ public class OkxTradeServiceRawTest {
     assertThat(service.placeSingleCalls).isEqualTo(1);
     assertThat(service.lastPlacedSingle.getClientOrderId()).isEqualTo("cl-new");
     assertThat(result.getData()).hasSize(1);
+  }
+
+  @Test
+  public void testPlaceOrderTreatsMissingOrderLookupAsNotFound() throws Exception {
+    // OKX returns 51603 ("Order does not exist") for a fresh clOrdId lookup; that must be treated
+    // as an empty lookup so a brand-new replay-safe order can still be placed.
+    service.notFoundClientOrderId = "cl-fresh";
+    service.placeSingleResponse =
+        new OkxResponse<>(null, "0", null, List.of(OkxOrderResponse.replay("ord-new", "cl-fresh")));
+
+    OkxResponse<List<OkxOrderResponse>> result = service.placeOkxOrder(orderRequest("cl-fresh"));
+
+    assertThat(service.orderLookups).containsExactly("cl-fresh");
+    assertThat(service.placeSingleCalls).isEqualTo(1);
+    assertThat(result.getData()).hasSize(1);
+    assertThat(result.getData().get(0).getOrderId()).isEqualTo("ord-new");
+  }
+
+  @Test
+  public void testPlaceBatchTreatsMissingOrderLookupAsNotFound() throws Exception {
+    service.notFoundClientOrderId = "cl-2";
+    service.existingClientOrderId = "cl-1";
+    service.existingOrderResponse =
+        new OkxResponse<>(null, "0", null, List.of(orderDetails("ord-existing", "cl-1")));
+    service.placeBatchResponse =
+        new OkxResponse<>(null, "0", null, List.of(OkxOrderResponse.replay("ord-new-2", "cl-2")));
+
+    OkxResponse<List<OkxOrderResponse>> result =
+        service.placeOkxOrder(List.of(orderRequest("cl-1"), orderRequest("cl-2")));
+
+    // cl-1 is replayed; the 51603 lookup for cl-2 is an empty lookup, so cl-2 is placed.
+    assertThat(service.placeBatchCalls).isEqualTo(1);
+    assertThat(service.lastPlacedBatch)
+        .extracting(OkxOrderRequest::getClientOrderId)
+        .containsExactly("cl-2");
+    assertThat(result.getData())
+        .extracting(OkxOrderResponse::getOrderId)
+        .containsExactly("ord-existing", "ord-new-2");
   }
 
   @Test

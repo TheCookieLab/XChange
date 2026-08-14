@@ -1,15 +1,21 @@
 package info.bitrich.xchangestream.okx;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Observable;
 import org.junit.Before;
 import org.junit.Test;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.marketdata.CandleStickInterval;
 
 /** Offline lifecycle tests for the unified three-socket {@link OkxStreamingExchange}. */
 public class OkxStreamingExchangeLifecycleTest {
@@ -206,5 +212,37 @@ public class OkxStreamingExchangeLifecycleTest {
     verify(streamingService).connect();
     verify(privateStreamingService, never()).connect();
     verify(businessStreamingService, never()).connect();
+  }
+
+  @Test
+  public void marketDataFacadeIsRebuiltWhenBusinessTransportIsEnabledLater() throws Exception {
+    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    exchange.setStreamingService(streamingService);
+    exchange.setRequiredTransports(TransportRole.PUBLIC);
+    when(streamingService.connect()).thenReturn(Completable.complete());
+    exchange.connect().blockingAwait();
+
+    // The business transport becomes available only on the next connection generation.
+    exchange.setBusinessStreamingService(businessStreamingService);
+    exchange.setRequiredTransports(TransportRole.PUBLIC, TransportRole.BUSINESS);
+    when(businessStreamingService.connect()).thenReturn(Completable.complete());
+    exchange.connect().blockingAwait();
+
+    JsonNode candleMessage =
+        new ObjectMapper()
+            .readTree(
+                OkxStreamingMarketDataServiceTest.class.getResourceAsStream(
+                    "/getCandleStickResponse.json"));
+    when(businessStreamingService.subscribeChannel(anyString()))
+        .thenReturn(Observable.just(candleMessage));
+
+    // The facade must route candle sticks through the business socket instead of the stale
+    // public-only facade failing with NotConnectedException.
+    exchange
+        .getStreamingMarketDataService()
+        .getCandleStick(CurrencyPair.BTC_USDT, CandleStickInterval.m5)
+        .test()
+        .assertValueCount(1)
+        .assertNoErrors();
   }
 }
