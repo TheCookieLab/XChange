@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
@@ -262,5 +263,29 @@ public class OkxStreamingExchangeLifecycleTest {
         .test()
         .assertValueCount(1)
         .assertNoErrors();
+  }
+
+  @Test
+  public void marketDataFacadeDropsBusinessTransportAfterPublicOnlyReconnect() throws Exception {
+    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    injectAllServices();
+    exchange.setRequiredTransports(TransportRole.PUBLIC, TransportRole.BUSINESS);
+    when(streamingService.connect()).thenReturn(Completable.complete());
+    when(businessStreamingService.connect()).thenReturn(Completable.complete());
+    exchange.connect().blockingAwait();
+
+    // The business service object is retained across connects, but a public-only reconnect must
+    // not route candle sticks to its closed socket: availability follows the current transports.
+    exchange.setRequiredTransports(TransportRole.PUBLIC);
+    when(businessStreamingService.hasActiveChannels()).thenReturn(false);
+    when(streamingService.connect()).thenReturn(Completable.complete());
+    exchange.connect().blockingAwait();
+
+    exchange
+        .getStreamingMarketDataService()
+        .getCandleStick(CurrencyPair.BTC_USDT, CandleStickInterval.m5)
+        .test()
+        .assertNoValues()
+        .assertError(NotConnectedException.class);
   }
 }

@@ -94,20 +94,29 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
           new OkxBusinessStreamingService(getBusinessApiUrl(), exchangeSpecification);
       applyStreamingSpecification(exchangeSpecification, businessStreamingService);
     }
-    boolean businessAvailable = businessStreamingService != null;
+    // Availability tracks the current connect's transports, not mere object existence: after a
+    // public-only reconnect, a retained business/private service object is disconnected and the
+    // facades must not route to its closed socket.
+    boolean businessAvailable =
+        businessStreamingService != null && transports.contains(TransportRole.BUSINESS);
     if (streamingMarketDataService == null
         || marketDataFacadeHasBusinessTransport != businessAvailable) {
       streamingMarketDataService =
           new OkxStreamingMarketDataService(
-              streamingService, businessStreamingService, exchangeMetaData);
+              streamingService,
+              businessAvailable ? businessStreamingService : null,
+              exchangeMetaData);
       marketDataFacadeHasBusinessTransport = businessAvailable;
     }
-    boolean privateAvailable = privateStreamingService != null;
+    boolean privateAvailable =
+        privateStreamingService != null && transports.contains(TransportRole.PRIVATE);
     if (streamingTradeService == null
         || tradeServiceFacadeHasPrivateTransport != privateAvailable) {
       streamingTradeService =
           new OkxStreamingTradeService(
-              privateStreamingService, exchangeMetaData, getResilienceRegistries());
+              privateAvailable ? privateStreamingService : null,
+              exchangeMetaData,
+              getResilienceRegistries());
       tradeServiceFacadeHasPrivateTransport = privateAvailable;
     }
     List<Completable> completableList = new ArrayList<>();
