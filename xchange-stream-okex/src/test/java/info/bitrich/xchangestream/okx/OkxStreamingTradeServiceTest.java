@@ -53,6 +53,7 @@ public class OkxStreamingTradeServiceTest {
   @Before
   public void setUp() {
     privateStreamingService = mock(OkxPrivateStreamingService.class);
+    when(privateStreamingService.isLoginDone()).thenReturn(true);
     Map<Instrument, InstrumentMetaData> instruments = new HashMap<>();
     instruments.put(SPOT, InstrumentMetaData.builder().build());
     instruments.put(SWAP, InstrumentMetaData.builder().contractValue(BigDecimal.ONE).build());
@@ -384,5 +385,49 @@ public class OkxStreamingTradeServiceTest {
     assertThatThrownBy(() -> tradeService.placeLimitOrder(limitOrder("client-1")))
         .isInstanceOf(ExchangeException.class)
         .hasMessageContaining("not authorized");
+  }
+
+  @Test
+  public void testPrivateReadStreamsThrowExchangeExceptionWhenPrivateTransportUnavailable() {
+    OkxStreamingTradeService publicOnlyTradeService =
+        new OkxStreamingTradeService(
+            null,
+            new ExchangeMetaData(
+                Collections.singletonMap(SPOT, InstrumentMetaData.builder().build()),
+                Collections.emptyMap(),
+                null,
+                null,
+                null),
+            OkxResilience.createRegistries());
+
+    TestObserver<org.knowm.xchange.dto.Order> orders =
+        publicOnlyTradeService.getOrderChanges(SPOT).test();
+    orders.assertError(
+        e -> e instanceof ExchangeException && e.getMessage().contains("not authorized"));
+
+    TestObserver<UserTrade> trades = publicOnlyTradeService.getUserTrades(SPOT).test();
+    trades.assertError(
+        e -> e instanceof ExchangeException && e.getMessage().contains("not authorized"));
+
+    TestObserver<OpenPosition> positions = publicOnlyTradeService.getPositionChanges(SWAP).test();
+    positions.assertError(
+        e -> e instanceof ExchangeException && e.getMessage().contains("not authorized"));
+  }
+
+  @Test
+  public void testPrivateReadStreamsThrowExchangeExceptionWhenNotAuthorized() {
+    when(privateStreamingService.isLoginDone()).thenReturn(false);
+
+    TestObserver<org.knowm.xchange.dto.Order> orders = tradeService.getOrderChanges(SPOT).test();
+    orders.assertError(
+        e -> e instanceof ExchangeException && e.getMessage().contains("not authorized"));
+
+    TestObserver<UserTrade> trades = tradeService.getUserTrades(SPOT).test();
+    trades.assertError(
+        e -> e instanceof ExchangeException && e.getMessage().contains("not authorized"));
+
+    TestObserver<OpenPosition> positions = tradeService.getPositionChanges(SWAP).test();
+    positions.assertError(
+        e -> e instanceof ExchangeException && e.getMessage().contains("not authorized"));
   }
 }

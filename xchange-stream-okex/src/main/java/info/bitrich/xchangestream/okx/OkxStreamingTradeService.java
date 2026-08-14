@@ -76,6 +76,9 @@ public class OkxStreamingTradeService implements StreamingTradeService {
 
     return Observable.defer(
         () -> {
+          if (privateStreamingService == null || !privateStreamingService.isLoginDone()) {
+            throw new ExchangeException("privateStreamingService not authorized");
+          }
           OkxEventDeduplicator deduplicator = new OkxEventDeduplicator(dedupeCacheSize);
           return privateStreamingService
               .subscribeChannel(channelUniqueId)
@@ -106,6 +109,9 @@ public class OkxStreamingTradeService implements StreamingTradeService {
 
     return Observable.defer(
         () -> {
+          if (privateStreamingService == null || !privateStreamingService.isLoginDone()) {
+            throw new ExchangeException("privateStreamingService not authorized");
+          }
           OkxEventDeduplicator deduplicator = new OkxEventDeduplicator(dedupeCacheSize);
           return privateStreamingService
               .subscribeChannel(channelUniqueId)
@@ -141,6 +147,9 @@ public class OkxStreamingTradeService implements StreamingTradeService {
 
     return Observable.defer(
         () -> {
+          if (privateStreamingService == null || !privateStreamingService.isLoginDone()) {
+            throw new ExchangeException("privateStreamingService not authorized");
+          }
           OkxEventDeduplicator deduplicator = new OkxEventDeduplicator(dedupeCacheSize);
           return privateStreamingService
               .subscribeChannel(channelUniqueId)
