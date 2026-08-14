@@ -334,4 +334,25 @@ public class OkxTradeServiceRawTest {
     assertThat(result.getData()).hasSize(3);
     assertThat(result.getData().get(0).getOrderId()).isEqualTo("ord-existing");
   }
+  
+  @Test
+  public void testPlaceBatchPreservesInputOrderWhenExistingOrderIsNotFirst() throws Exception {
+    service.existingClientOrderId = "cl-existing";
+    service.existingOrderResponse =
+        new OkxResponse<>(
+            null, "0", null, List.of(orderDetails("ord-existing", "cl-existing")));
+    service.placeBatchResponse =
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            List.of(OkxOrderResponse.replay("ord-new", "cl-new")));
+
+    OkxResponse<List<OkxOrderResponse>> result =
+        service.placeOkxOrder(List.of(orderRequest("cl-new"), orderRequest("cl-existing")));
+
+    assertThat(result.getData())
+        .extracting(OkxOrderResponse::getClientOrderId)
+        .containsExactly("cl-new", "cl-existing");
+  }
 }
