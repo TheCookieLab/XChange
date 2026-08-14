@@ -12,11 +12,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import io.reactivex.rxjava3.observers.TestObserver;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URI;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.mexc.v3.config.MexcV3Configuration;
+import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 
 /** Streaming exchange wiring: default URI, connect lifecycle, and service accessors. */
 class MexcV3StreamingExchangeTest {
@@ -33,6 +38,28 @@ class MexcV3StreamingExchangeTest {
   @Test
   void defaultWebsocketUriMatchesMexcDocs() {
     assertEquals("wss://wbs-api.mexc.com/ws", MexcV3StreamingExchange.DEFAULT_WEBSOCKET_URI);
+  }
+
+  @Test
+  void typedStreamBaseUrlControlsConnectionEndpoint() throws Exception {
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3Configuration.STREAM_BASE_URL_KEY, "wss://127.0.0.1:1/typed");
+    exchange.applySpecification(spec);
+
+    TestObserver<Void> observer = exchange.connect().test();
+    Field serviceField = MexcV3StreamingExchange.class.getDeclaredField("streamingService");
+    serviceField.setAccessible(true);
+    MexcV3StreamingService service =
+        (MexcV3StreamingService) serviceField.get(exchange);
+    Field uriField = NettyStreamingService.class.getDeclaredField("uri");
+    uriField.setAccessible(true);
+    assertEquals(URI.create("wss://127.0.0.1:1/typed"), uriField.get(service));
+
+    observer.dispose();
+    exchange.disconnect().onErrorComplete().blockingAwait();
   }
 
   @Test
