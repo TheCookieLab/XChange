@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.trade.OkxPageParams;
 
@@ -19,7 +20,9 @@ import org.knowm.xchange.okx.dto.trade.OkxPageParams;
  *       is the final page);
  *   <li>a page returns the same last record ID as the previous page (no progress);
  *   <li>a record ID cannot be extracted from the last item (cannot advance the cursor); or
- *   <li>the maximum page bound is reached.
+ *   <li>the maximum page bound is reached while the last fetched page is still full — an {@link
+ *       OkxException} is thrown because more records may exist beyond the ceiling and silently
+ *       returning a truncated history would hide them.
  * </ul>
  *
  * <p>The caller supplies the per-item ID extractor matching the endpoint's pagination key (for
@@ -78,6 +81,8 @@ public final class OkxPageIterator {
    * @param initial the first page's params
    * @param maxPages the maximum number of pages to fetch; must be positive
    * @throws IOException if the page fetcher throws
+   * @throws OkxException if the page bound is exhausted while the last fetched page is still full
+   *     (more records may exist beyond the ceiling)
    */
   public static <T> List<T> fetchAll(
       ThrowingPageFetcher<T> pageFetcher,
@@ -97,18 +102,18 @@ public final class OkxPageIterator {
     for (int pageIndex = 0; pageIndex < maxPages; pageIndex++) {
       List<T> batch = pageFetcher.apply(page);
       if (batch == null || batch.isEmpty()) {
-        break;
+        return items;
       }
 
       String lastId = idExtractor.apply(batch.get(batch.size() - 1));
       if (lastId == null) {
         // Cannot extract a cursor for the next page; consume what we have and stop.
         items.addAll(batch);
-        break;
+        return items;
       }
       if (lastId.equals(previousLastId)) {
         // A full batch that repeats the previous last record means no forward progress.
-        break;
+        return items;
       }
 
       items.addAll(batch);
@@ -116,11 +121,18 @@ public final class OkxPageIterator {
 
       // Only keep iterating while the page returned a full batch (a partial page is the end).
       if (batch.size() < page.getLimit()) {
-        break;
+        return items;
       }
       page = page.advanceAfter(lastId);
     }
 
-    return items;
+    // The loop exhausted the page bound, so every fetched page was full and more records may
+    // exist; fail loudly rather than silently returning truncated history.
+    throw new OkxException(
+        "OKX history pagination reached its ceiling of "
+            + maxPages
+            + " pages while the last page was still full; narrow the query or raise the page"
+            + " bound to avoid silently truncated results",
+        0);
   }
 }

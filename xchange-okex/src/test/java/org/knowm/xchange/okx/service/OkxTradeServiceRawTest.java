@@ -319,6 +319,26 @@ public class OkxTradeServiceRawTest {
         .satisfies(e -> assertThat(((OkxException) e.getCause()).getCode()).isEqualTo(51001));
   }
 
+  @Test
+  public void testGetOrderHistoryThrowsAtPageCeilingWithFullFinalPage() throws Exception {
+    // Ten full pages exhaust DEFAULT_MAX_PAGES with the final page still full; the history may
+    // continue, so a fabricated success response must not be returned.
+    for (int i = 0; i < 10; i++) {
+      String after = i == 0 ? null : String.valueOf(i * 2);
+      service.orderHistoryPages.put(
+          after,
+          List.of(
+              orderDetails(String.valueOf(i * 2 + 1), "c" + (i * 2 + 1)),
+              orderDetails(String.valueOf(i * 2 + 2), "c" + (i * 2 + 2))));
+    }
+
+    assertThatThrownBy(() -> service.getOrderHistory("SPOT", "BTC-USDT", null, OkxPageParams.of(2)))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("ceiling of 10 pages")
+        .hasMessageContaining("last page was still full");
+    assertThat(service.orderHistoryCursors).hasSize(10);
+  }
+
   // ---------- Algo order history pagination ----------
 
   @Test
@@ -491,7 +511,13 @@ public class OkxTradeServiceRawTest {
     service.existingOrderResponse =
         new OkxResponse<>(null, "0", null, List.of(orderDetails("ord-existing", "cl-1")));
     service.placeBatchResponse =
-        new OkxResponse<>(null, "0", null, List.of(new OkxOrderResponse(), new OkxOrderResponse()));
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            List.of(
+                OkxOrderResponse.replay("ord-new-2", "cl-2"),
+                OkxOrderResponse.replay("ord-new-3", "cl-3")));
 
     OkxResponse<List<OkxOrderResponse>> result =
         service.placeOkxOrder(
@@ -575,6 +601,27 @@ public class OkxTradeServiceRawTest {
             () -> service.placeOkxOrder(List.of(orderRequest("cl-1"), orderRequest("cl-2"))))
         .isInstanceOf(ExchangeException.class)
         .hasMessageContaining("returned 1 results for 2 submitted orders");
+    assertThat(service.placeBatchCalls).isEqualTo(1);
+  }
+
+  @Test
+  public void testPlaceBatchPropagatesPerItemRejection() throws Exception {
+    // A success envelope can still reject an individual order via nonzero sCode; the rejection
+    // must surface instead of a null order id next to the successful placements.
+    OkxOrderResponse rejected =
+        mapper.readValue(
+            "{\"sCode\":\"51008\",\"sMsg\":\"Insufficient balance\",\"clOrdId\":\"cl-2\"}",
+            new TypeReference<OkxOrderResponse>() {});
+    service.placeBatchResponse =
+        new OkxResponse<>(
+            null, "0", null, List.of(OkxOrderResponse.replay("ord-new-1", "cl-1"), rejected));
+
+    assertThatThrownBy(
+            () -> service.placeOkxOrder(List.of(orderRequest("cl-1"), orderRequest("cl-2"))))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("cl-2")
+        .hasMessageContaining("51008")
+        .hasMessageContaining("Insufficient balance");
     assertThat(service.placeBatchCalls).isEqualTo(1);
   }
 }

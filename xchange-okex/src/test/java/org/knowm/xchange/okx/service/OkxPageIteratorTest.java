@@ -1,12 +1,14 @@
 package org.knowm.xchange.okx.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
+import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.trade.OkxPageParams;
 
 /** Offline unit tests for the cursor-paginated iteration used by history endpoints. */
@@ -121,7 +123,7 @@ public class OkxPageIteratorTest {
   }
 
   @Test
-  public void testMaxPagesBoundIsEnforced() throws Exception {
+  public void testCeilingWithFullFinalPageThrows() throws Exception {
     List<String> cursors = new ArrayList<>();
     List<Item> page1 = List.of(item("a"), item("b"), item("c"));
     List<Item> page2 = List.of(item("d"), item("e"), item("f"));
@@ -129,9 +131,28 @@ public class OkxPageIteratorTest {
     OkxPageIterator.ThrowingPageFetcher<Item> fetcher =
         recordingFetcher(cursors, Arrays.asList(page1, page2, page3));
 
+    // Two full pages exhaust the bound while the last page is still full: more records may
+    // exist, so a truncated success must not be fabricated.
+    assertThatThrownBy(() -> OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3), 2))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("ceiling of 2 pages")
+        .hasMessageContaining("last page was still full");
+    assertThat(cursors).containsExactly(null, "c");
+  }
+
+  @Test
+  public void testCeilingWithPartialFinalPageReturnsItems() throws Exception {
+    List<String> cursors = new ArrayList<>();
+    List<Item> page1 = List.of(item("a"), item("b"), item("c"));
+    List<Item> page2 = List.of(item("d"), item("e"));
+    OkxPageIterator.ThrowingPageFetcher<Item> fetcher =
+        recordingFetcher(cursors, Arrays.asList(page1, page2));
+
+    // The bound is reached only after the partial-page rule ended the iteration, so the result
+    // is complete and must be returned without error.
     List<Item> result = OkxPageIterator.fetchAll(fetcher, Item::id, OkxPageParams.of(3), 2);
 
-    assertThat(result).extracting(Item::id).containsExactly("a", "b", "c", "d", "e", "f");
+    assertThat(result).extracting(Item::id).containsExactly("a", "b", "c", "d", "e");
     assertThat(cursors).containsExactly(null, "c");
   }
 
