@@ -45,19 +45,22 @@ public class OkxAdapters {
   static final Map<Instrument, Long> instrumentToInstrumentIdMap = new HashMap<>();
 
   /**
-   * Resolves the OKX numeric instrument code for an instrument, falling back to the adapted wire
-   * instrument when the direct key is absent. After the unified USD orderbook revamp, remote init
-   * registers the server's {@code BTC/USD} code while legacy callers still trade {@code BTC/USDC};
-   * {@link #adaptInstrument(Instrument)} maps that pair to the wire {@code BTC-USD}, which the
-   * reverse adaptation resolves to the registered key.
+   * Resolves the OKX numeric instrument code for an instrument, preferring the adapted wire
+   * instrument and falling back to the direct key. After the unified USD orderbook revamp, remote
+   * init registers the server's {@code BTC/USD} code while legacy callers still trade {@code
+   * BTC/USDC}; {@link #adaptInstrument(Instrument)} maps that pair to the wire {@code BTC-USD},
+   * whose reverse adaptation resolves to the registered key. The wire key is preferred so a
+   * currency-pair caller always receives the code that matches the {@code instId} sent on the
+   * wire (a direct {@code BTC/USDC} registration, if present, belongs to a different instrument
+   * type and would not be valid for the adapted {@code BTC-USD} request).
    *
    * @param instrument the instrument to resolve
    * @return the numeric instrument code, or {@code null} when unresolvable
    */
   static Long instrumentCode(Instrument instrument) {
-    Long code = instrumentToInstrumentIdMap.get(instrument);
+    Long code = instrumentToInstrumentIdMap.get(adaptOkxInstrumentId(adaptInstrument(instrument)));
     if (code == null) {
-      code = instrumentToInstrumentIdMap.get(adaptOkxInstrumentId(adaptInstrument(instrument)));
+      code = instrumentToInstrumentIdMap.get(instrument);
     }
     return code;
   }

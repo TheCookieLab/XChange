@@ -12,7 +12,9 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -20,6 +22,7 @@ import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
 import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
@@ -72,7 +75,10 @@ public class OkxAdapterTest {
   public void testAdaptOrderResolvesUnifiedUsdInstrumentCode() {
     // Remote init keys the code map by the adapted wire instrument (BTC/USD since the unified USD
     // orderbook revamp), while legacy callers still trade the BTC/USDC pair; the map lookup must
-    // fall back to the adapted wire instrument instead of NPE-ing.
+    // resolve the adapted wire instrument instead of NPE-ing. The map is shared static state that
+    // other tests (including a live remoteInit) may populate, so snapshot and restore it.
+    Map<Instrument, Long> original = new HashMap<>(OkxAdapters.instrumentToInstrumentIdMap);
+    OkxAdapters.instrumentToInstrumentIdMap.clear();
     OkxAdapters.instrumentToInstrumentIdMap.put(new CurrencyPair("BTC/USD"), 1234567890L);
     try {
       LimitOrder order =
@@ -92,7 +98,30 @@ public class OkxAdapterTest {
       assertThat(request.getInstrumentId()).isEqualTo("BTC-USD");
       assertThat(request.getInstIdCode()).isEqualTo("1234567890");
     } finally {
+      OkxAdapters.instrumentToInstrumentIdMap.clear();
+      OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
+    }
+  }
+
+  @Test
+  public void testInstrumentCodePrefersAdaptedWireKeyOverDirectKey() {
+    // A currency-pair caller must get the code matching the wire instId (BTC-USD), not a direct
+    // BTC/USDC registration which would belong to a different instrument type; the direct key is
+    // only a fallback when no adapted key exists.
+    Map<Instrument, Long> original = new HashMap<>(OkxAdapters.instrumentToInstrumentIdMap);
+    OkxAdapters.instrumentToInstrumentIdMap.clear();
+    try {
+      OkxAdapters.instrumentToInstrumentIdMap.put(new CurrencyPair("BTC/USD"), 1234567890L);
+      OkxAdapters.instrumentToInstrumentIdMap.put(new CurrencyPair("BTC/USDC"), 987654321L);
+      assertThat(OkxAdapters.instrumentCode(new CurrencyPair("BTC/USDC")))
+          .isEqualTo(1234567890L);
       OkxAdapters.instrumentToInstrumentIdMap.remove(new CurrencyPair("BTC/USD"));
+      assertThat(OkxAdapters.instrumentCode(new CurrencyPair("BTC/USDC")))
+          .isEqualTo(987654321L);
+      assertThat(OkxAdapters.instrumentCode(new CurrencyPair("ETH/USDT"))).isNull();
+    } finally {
+      OkxAdapters.instrumentToInstrumentIdMap.clear();
+      OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
     }
   }
 }
