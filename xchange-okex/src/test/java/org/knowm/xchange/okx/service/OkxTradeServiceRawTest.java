@@ -349,5 +349,29 @@ public class OkxTradeServiceRawTest {
     assertThat(result.getData())
         .extracting(OkxOrderResponse::getClientOrderId)
         .containsExactly("cl-new", "cl-existing");
+  @Test
+  public void testPlaceBatchKeepsResponsesAlignedWhenExistingOrderIsInTheMiddle() throws Exception {
+    service.existingClientOrderId = "cl-2";
+    service.existingOrderResponse =
+        new OkxResponse<>(null, "0", null, List.of(orderDetails("ord-existing", "cl-2")));
+    service.placeBatchResponse =
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            List.of(
+                OkxOrderResponse.replay("ord-new-1", "cl-1"),
+                OkxOrderResponse.replay("ord-new-3", "cl-3")));
+
+    OkxResponse<List<OkxOrderResponse>> result =
+        service.placeOkxOrder(
+            List.of(orderRequest("cl-1"), orderRequest("cl-2"), orderRequest("cl-3")));
+
+    assertThat(result.getData())
+        .extracting(OkxOrderResponse::getClientOrderId)
+        .containsExactly("cl-1", "cl-2", "cl-3");
+    assertThat(result.getData())
+        .extracting(OkxOrderResponse::getOrderId)
+        .containsExactly("ord-new-1", "ord-existing", "ord-new-3");
   }
 }
