@@ -1,5 +1,7 @@
 package org.knowm.xchange.okex.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.knowm.xchange.okx.dto.OkxResponse;
 
 /**
@@ -22,7 +24,12 @@ public class OkexResponse<T> {
    * @param msg the response message
    * @param data the payload
    */
-  public OkexResponse(String id, String code, String msg, T data) {
+  @JsonCreator
+  public OkexResponse(
+      @JsonProperty("id") String id,
+      @JsonProperty("code") String code,
+      @JsonProperty("msg") String msg,
+      @JsonProperty("data") T data) {
     this.delegate = new OkxResponse<>(id, code, msg, data);
   }
 
