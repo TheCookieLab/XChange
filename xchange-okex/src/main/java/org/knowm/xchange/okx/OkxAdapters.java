@@ -945,6 +945,10 @@ public class OkxAdapters {
       case SPOT:
         return adaptTradingFeeSPOT(okxTradeFee, instrument);
       case SWAP:
+      case FUTURES:
+      case OPTION:
+        // Margined derivatives (perpetual, dated futures and options) share the same fee
+        // selection by margin currency: USDT/USDC-margined use the U-denominated rates.
         return adaptTradingFeeSWAP(okxTradeFee, instrument);
     }
     return null;

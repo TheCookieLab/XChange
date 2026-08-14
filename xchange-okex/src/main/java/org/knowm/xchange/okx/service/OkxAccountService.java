@@ -3,6 +3,8 @@ package org.knowm.xchange.okx.service;
 import static org.knowm.xchange.okx.OkxAdapters.adaptInstrument;
 import static org.knowm.xchange.okx.OkxAdapters.adaptTradeMode;
 import static org.knowm.xchange.okx.OkxAdapters.adaptTradingFee;
+import static org.knowm.xchange.okx.dto.OkxInstType.FUTURES;
+import static org.knowm.xchange.okx.dto.OkxInstType.OPTION;
 import static org.knowm.xchange.okx.dto.OkxInstType.SPOT;
 import static org.knowm.xchange.okx.dto.OkxInstType.SWAP;
 
@@ -10,9 +12,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.instrument.Instrument;
@@ -78,8 +82,8 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
   }
 
   /**
-   * @param category Optional, instrument category ("SPOT" or "SWAP"). If not specified, return all
-   *     instruments trading fees.
+   * @param category Optional, instrument category ("SPOT", "SWAP", "FUTURES" or "OPTION"). If not
+   *     specified, return all instruments trading fees.
    */
   @Override
   public Map<Instrument, Fee> getDynamicTradingFeesByInstrument(String... category)
@@ -90,10 +94,16 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
         return getTradeFeesSPOT();
       } else if (OkxInstType.SWAP.name().equals(category[0])) {
         return getTradeFeesSWAP();
+      } else if (OkxInstType.FUTURES.name().equals(category[0])) {
+        return getTradeFeesFUTURES();
+      } else if (OkxInstType.OPTION.name().equals(category[0])) {
+        return getTradeFeesOPTIONS();
       }
     } else {
       result.putAll(getTradeFeesSPOT());
       result.putAll(getTradeFeesSWAP());
+      result.putAll(getTradeFeesFUTURES());
+      result.putAll(getTradeFeesOPTIONS());
     }
     return result;
   }
@@ -126,6 +136,40 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
     for (Instrument instrument : exchange.getExchangeMetaData().getInstruments().keySet()) {
       if (instrument instanceof FuturesContract && ((FuturesContract) instrument).isPerpetual()) {
         result.put(instrument, adaptTradingFee(okxTradeFee, SWAP, instrument));
+      }
+    }
+    return result;
+  }
+
+  private Map<Instrument, Fee> getTradeFeesFUTURES() throws IOException {
+    Map<Instrument, Fee> result = new ConcurrentHashMap<>();
+    Map<String, OkxTradeFee> feesByUnderlying = new ConcurrentHashMap<>();
+    for (Instrument instrument : exchange.getExchangeMetaData().getInstruments().keySet()) {
+      if (instrument instanceof FuturesContract && !((FuturesContract) instrument).isPerpetual()) {
+        String underlying = adaptInstrument(((FuturesContract) instrument).getCurrencyPair());
+        OkxTradeFee okxTradeFee = feesByUnderlying.get(underlying);
+        if (okxTradeFee == null) {
+          okxTradeFee = getTradeFee(FUTURES.name(), null, underlying, null).getData().get(0);
+          feesByUnderlying.put(underlying, okxTradeFee);
+        }
+        result.put(instrument, adaptTradingFee(okxTradeFee, FUTURES, instrument));
+      }
+    }
+    return result;
+  }
+
+  private Map<Instrument, Fee> getTradeFeesOPTIONS() throws IOException {
+    Map<Instrument, Fee> result = new ConcurrentHashMap<>();
+    Map<String, OkxTradeFee> feesByFamily = new ConcurrentHashMap<>();
+    for (Instrument instrument : exchange.getExchangeMetaData().getInstruments().keySet()) {
+      if (instrument instanceof OptionsContract) {
+        String instFamily = adaptInstrument(((OptionsContract) instrument).getCurrencyPair());
+        OkxTradeFee okxTradeFee = feesByFamily.get(instFamily);
+        if (okxTradeFee == null) {
+          okxTradeFee = getTradeFee(OPTION.name(), null, null, instFamily).getData().get(0);
+          feesByFamily.put(instFamily, okxTradeFee);
+        }
+        result.put(instrument, adaptTradingFee(okxTradeFee, OPTION, instrument));
       }
     }
     return result;

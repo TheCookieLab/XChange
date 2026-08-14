@@ -1,6 +1,8 @@
 package org.knowm.xchange.okx;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.knowm.xchange.okx.dto.OkxInstType.FUTURES;
+import static org.knowm.xchange.okx.dto.OkxInstType.OPTION;
 import static org.knowm.xchange.okx.dto.OkxInstType.SPOT;
 import static org.knowm.xchange.okx.dto.OkxInstType.SWAP;
 
@@ -35,6 +37,7 @@ import org.knowm.xchange.okex.dto.trade.OkexAttachAlgoOrder;
 import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
 import org.knowm.xchange.okex.service.OkexTradeServiceRaw;
 import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.account.OkxDepositAddress;
 import org.knowm.xchange.okx.dto.account.OkxPosition;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
 import org.knowm.xchange.okx.dto.marketdata.OkxOrderbook;
@@ -385,6 +388,20 @@ public class OkxAdapterTest {
     JsonNode node = new ObjectMapper().readTree(new ObjectMapper().writeValueAsString(request));
     assertThat(node.get("triggerPx").asText()).isEqualTo("65000");
     assertThat(node.get("orderPx").asText()).isEqualTo("64000");
+  }
+
+  @Test
+  public void testDepositAddressBindsCurrencyFromCcy() throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkxDepositAddress address =
+        mapper.readValue(
+            "{\"chain\":\"Bitcoin\",\"ctAddr\":\"\",\"ccy\":\"BTC\",\"to\":\"6\",\"addr\":\"addr-1\","
+                + "\"selected\":true,\"pmtId\":\"123\"}",
+            OkxDepositAddress.class);
+    assertThat(address.getCurrency()).isEqualTo("BTC");
+    assertThat(address.getPaymentId()).isEqualTo("123");
+    assertThat(address.getAddress()).isEqualTo("addr-1");
   }
 
   @Test
