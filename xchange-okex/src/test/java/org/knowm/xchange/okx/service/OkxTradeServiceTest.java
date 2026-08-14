@@ -1,9 +1,12 @@
 package org.knowm.xchange.okx.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
@@ -11,10 +14,18 @@ import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
+import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.okx.OkxAuthenticated;
 import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.trade.OkxAmendOrderRequest;
+import org.knowm.xchange.okx.dto.trade.OkxCancelOrderRequest;
+import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
+import org.knowm.xchange.okx.dto.trade.OkxTradeParams;
 
 /** Verifies the {@code instType} mapping used for order-history queries. */
 public class OkxTradeServiceTest {
@@ -25,6 +36,49 @@ public class OkxTradeServiceTest {
     OkxExchange exchange = new OkxExchange();
     exchange.applySpecification(exchange.getDefaultExchangeSpecification());
     return new OkxTradeService(exchange, new ResilienceRegistries());
+  }
+
+  /**
+   * Testable subclass that answers single-order operations from canned envelopes instead of
+   * reaching the authenticated REST endpoints.
+   */
+  private static class StubTradeService extends OkxTradeService {
+    OkxResponse<List<OkxOrderResponse>> placeResponse;
+    OkxResponse<List<OkxOrderResponse>> amendResponse;
+    OkxResponse<List<OkxOrderResponse>> cancelResponse;
+
+    StubTradeService(OkxExchange exchange) {
+      super(exchange, new ResilienceRegistries());
+    }
+
+    @Override
+    public OkxResponse<List<OkxOrderResponse>> placeOkxOrder(OkxOrderRequest order)
+        throws IOException {
+      return placeResponse;
+    }
+
+    @Override
+    public OkxResponse<List<OkxOrderResponse>> amendOkxOrder(OkxAmendOrderRequest order)
+        throws IOException {
+      return amendResponse;
+    }
+
+    @Override
+    public OkxResponse<List<OkxOrderResponse>> cancelOkxOrder(OkxCancelOrderRequest order)
+        throws IOException {
+      return cancelResponse;
+    }
+  }
+
+  private StubTradeService stubService() {
+    OkxExchange exchange = new OkxExchange();
+    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    return new StubTradeService(exchange);
+  }
+
+  private OkxOrderResponse orderResponse(String json) throws IOException {
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    return mapper.readValue(json, OkxOrderResponse.class);
   }
 
   @Test
@@ -75,5 +129,195 @@ public class OkxTradeServiceTest {
     assertThat(exception.getCode()).isEqualTo(51001);
     assertThat(exception.getMessage()).contains("Order not found");
     assertThat(exception.getRequestId()).isEqualTo("123");
+  }
+
+  @Test
+  public void perOrderSucceededRequiresZeroPerOrderCode() throws Exception {
+    OkxOrderResponse ok = orderResponse("{\"sCode\":\"0\",\"sMsg\":\"\",\"ordId\":\"123\"}");
+    OkxOrderResponse rejected =
+        orderResponse("{\"sCode\":\"51008\",\"sMsg\":\"Insufficient balance\"}");
+    OkxOrderResponse missingCode = orderResponse("{\"sMsg\":\"Insufficient balance\"}");
+
+    assertThat(
+            OkxTradeService.perOrderSucceeded(
+                new OkxResponse<>(null, "0", null, Collections.singletonList(ok))))
+        .isTrue();
+    assertThat(
+            OkxTradeService.perOrderSucceeded(
+                new OkxResponse<>(null, "0", null, Collections.singletonList(rejected))))
+        .isFalse();
+    assertThat(
+            OkxTradeService.perOrderSucceeded(
+                new OkxResponse<>(null, "0", null, Collections.singletonList(missingCode))))
+        .isFalse();
+    assertThat(
+            OkxTradeService.perOrderSucceeded(
+                new OkxResponse<>(null, "0", null, Collections.emptyList())))
+        .isFalse();
+    assertThat(OkxTradeService.perOrderSucceeded(new OkxResponse<>(null, "0", null, null)))
+        .isFalse();
+  }
+
+  @Test
+  public void placeMarketOrderRejectsPerOrderFailure() throws Exception {
+    StubTradeService service = stubService();
+    service.placeResponse =
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            Collections.singletonList(
+                orderResponse(
+                    "{\"sCode\":\"51008\",\"sMsg\":\"Insufficient balance\",\"clOrdId\":\"cl-1\"}")));
+
+    assertThatThrownBy(
+            () ->
+                service.placeMarketOrder(
+                    new MarketOrder(
+                        Order.OrderType.BID,
+                        new BigDecimal("0.001"),
+                        new CurrencyPair("BTC/USDT"))))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Insufficient balance")
+        .satisfies(
+            e -> {
+              assertThat(((OkxException) e).getCode()).isEqualTo(51008);
+              assertThat(((OkxException) e).getEndpoint())
+                  .isEqualTo(OkxAuthenticated.placeOrderPath);
+              assertThat(((OkxException) e).getRequestId()).isEqualTo("cl-1");
+            });
+  }
+
+  @Test
+  public void placeLimitOrderRejectsPerOrderFailure() throws Exception {
+    StubTradeService service = stubService();
+    service.placeResponse =
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            Collections.singletonList(
+                orderResponse("{\"sCode\":\"51008\",\"sMsg\":\"Insufficient balance\"}")));
+
+    assertThatThrownBy(
+            () ->
+                service.placeLimitOrder(
+                    new LimitOrder(
+                        Order.OrderType.BID,
+                        new BigDecimal("0.001"),
+                        new CurrencyPair("BTC/USDT"),
+                        "id-1",
+                        null,
+                        new BigDecimal("60000"))))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Insufficient balance");
+  }
+
+  @Test
+  public void changeOrderRejectsPerOrderFailure() throws Exception {
+    StubTradeService service = stubService();
+    service.amendResponse =
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            Collections.singletonList(
+                orderResponse("{\"sCode\":\"51401\",\"sMsg\":\"Order not found\"}")));
+
+    assertThatThrownBy(
+            () ->
+                service.changeOrder(
+                    new LimitOrder(
+                        Order.OrderType.BID,
+                        new BigDecimal("0.001"),
+                        new CurrencyPair("BTC/USDT"),
+                        "id-1",
+                        null,
+                        new BigDecimal("60000"))))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Order not found")
+        .satisfies(
+            e ->
+                assertThat(((OkxException) e).getEndpoint())
+                    .isEqualTo(OkxAuthenticated.amendOrderPath));
+  }
+
+  @Test
+  public void cancelOrderRejectsPerOrderFailure() throws Exception {
+    StubTradeService service = stubService();
+    service.cancelResponse =
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            Collections.singletonList(
+                orderResponse("{\"sCode\":\"51401\",\"sMsg\":\"Order not found\"}")));
+
+    assertThatThrownBy(
+            () ->
+                service.cancelOrder(
+                    new OkxTradeParams.OkxCancelOrderParams(
+                        new CurrencyPair("BTC/USDT"), "order-1")))
+        .isInstanceOf(OkxException.class)
+        .hasMessageContaining("Order not found")
+        .satisfies(
+            e ->
+                assertThat(((OkxException) e).getEndpoint())
+                    .isEqualTo(OkxAuthenticated.cancelOrderPath));
+  }
+
+  @Test
+  public void singleOrderOperationsReturnSuccessWhenPerOrderCodeIsZero() throws Exception {
+    StubTradeService service = stubService();
+    service.placeResponse =
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            Collections.singletonList(
+                orderResponse("{\"sCode\":\"0\",\"sMsg\":\"\",\"ordId\":\"123\"}")));
+    service.amendResponse =
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            Collections.singletonList(
+                orderResponse("{\"sCode\":\"0\",\"sMsg\":\"\",\"ordId\":\"123\"}")));
+    service.cancelResponse =
+        new OkxResponse<>(
+            null,
+            "0",
+            null,
+            Collections.singletonList(orderResponse("{\"sCode\":\"0\",\"sMsg\":\"\"}")));
+
+    assertThat(
+            service.placeMarketOrder(
+                new MarketOrder(
+                    Order.OrderType.BID, new BigDecimal("0.001"), new CurrencyPair("BTC/USDT"))))
+        .isEqualTo("123");
+    assertThat(
+            service.placeLimitOrder(
+                new LimitOrder(
+                    Order.OrderType.BID,
+                    new BigDecimal("0.001"),
+                    new CurrencyPair("BTC/USDT"),
+                    "id-1",
+                    null,
+                    new BigDecimal("60000"))))
+        .isEqualTo("123");
+    assertThat(
+            service.changeOrder(
+                new LimitOrder(
+                    Order.OrderType.BID,
+                    new BigDecimal("0.001"),
+                    new CurrencyPair("BTC/USDT"),
+                    "id-1",
+                    null,
+                    new BigDecimal("60000"))))
+        .isEqualTo("123");
+    assertThat(
+            service.cancelOrder(
+                new OkxTradeParams.OkxCancelOrderParams(new CurrencyPair("BTC/USDT"), "order-1")))
+        .isTrue();
   }
 }

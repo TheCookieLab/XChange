@@ -197,6 +197,20 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
     return result;
   }
 
+  /**
+   * Returns whether a single-order operation actually succeeded: the envelope must carry a
+   * per-order entry whose {@code sCode} is {@code "0"}. OKX can return a top-level code of {@code
+   * 0} while rejecting the individual order with a nonzero {@code sCode}, in which case the
+   * response must not be treated as a successful placement.
+   *
+   * @param response the order-operation response envelope
+   * @return {@code true} when the first per-order entry reports success
+   */
+  static boolean perOrderSucceeded(OkxResponse<List<OkxOrderResponse>> response) {
+    List<OkxOrderResponse> data = response.getData();
+    return data != null && !data.isEmpty() && "0".equals(data.get(0).getCode());
+  }
+
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
     OkxResponse<List<OkxOrderResponse>> okxResponse =
@@ -204,7 +218,8 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
             OkxAdapters.adaptOrder(
                 marketOrder, exchange.getExchangeMetaData(), exchange.accountLevel));
 
-    if (okxResponse.isSuccess()) return okxResponse.getData().get(0).getOrderId();
+    if (okxResponse.isSuccess() && perOrderSucceeded(okxResponse))
+      return okxResponse.getData().get(0).getOrderId();
     else throw orderException(okxResponse, OkxAuthenticated.placeOrderPath);
   }
 
@@ -215,7 +230,8 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
             OkxAdapters.adaptOrder(
                 limitOrder, exchange.getExchangeMetaData(), exchange.accountLevel));
 
-    if (okxResponse.isSuccess()) return okxResponse.getData().get(0).getOrderId();
+    if (okxResponse.isSuccess() && perOrderSucceeded(okxResponse))
+      return okxResponse.getData().get(0).getOrderId();
     else throw orderException(okxResponse, OkxAuthenticated.placeOrderPath);
   }
 
@@ -238,7 +254,8 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
   public String changeOrder(LimitOrder limitOrder) throws IOException, FundsExceededException {
     OkxResponse<List<OkxOrderResponse>> okxResponse =
         amendOkxOrder(OkxAdapters.adaptAmendOrder(limitOrder, exchange.getExchangeMetaData()));
-    if (okxResponse.isSuccess()) return okxResponse.getData().get(0).getOrderId();
+    if (okxResponse.isSuccess() && perOrderSucceeded(okxResponse))
+      return okxResponse.getData().get(0).getOrderId();
     else throw orderException(okxResponse, OkxAuthenticated.amendOrderPath);
   }
 
@@ -281,7 +298,7 @@ public class OkxTradeService extends OkxTradeServiceRaw implements TradeService 
               .clientOrderId(userReference)
               .build();
       OkxResponse<List<OkxOrderResponse>> okxResponse = cancelOkxOrder(req);
-      if (okxResponse.isSuccess()) return true;
+      if (okxResponse.isSuccess() && perOrderSucceeded(okxResponse)) return true;
       else throw orderException(okxResponse, OkxAuthenticated.cancelOrderPath);
     } else {
       throw new IOException(
