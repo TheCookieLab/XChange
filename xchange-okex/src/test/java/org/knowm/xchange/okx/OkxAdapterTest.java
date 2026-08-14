@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.knowm.xchange.okx.dto.OkxInstType.SPOT;
 import static org.knowm.xchange.okx.dto.OkxInstType.SWAP;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,21 +23,30 @@ import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.Fee;
+import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
+import org.knowm.xchange.okex.dto.trade.OkexAmendAlgoRequest;
 import org.knowm.xchange.okex.dto.trade.OkexAttachAlgoOrder;
 import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
+import org.knowm.xchange.okex.service.OkexTradeServiceRaw;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxPosition;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
+import org.knowm.xchange.okx.dto.marketdata.OkxOrderbook;
 import org.knowm.xchange.okx.dto.marketdata.OkxPublicOrder;
 import org.knowm.xchange.okx.dto.marketdata.OkxTrade;
+import org.knowm.xchange.okx.dto.trade.OkxAlgoOrderRequest;
+import org.knowm.xchange.okx.dto.trade.OkxAmendAlgoRequest;
 import org.knowm.xchange.okx.dto.trade.OkxAttachAlgoOrder;
 import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
 import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
+import org.knowm.xchange.okx.service.OkxTradeServiceRaw;
+import si.mazi.rescu.ParamsDigest;
 
 public class OkxAdapterTest {
   @Test
@@ -305,6 +316,89 @@ public class OkxAdapterTest {
         null,
         null,
         null);
+  }
+
+  @Test
+  public void testAdaptTradesResolvesMetadataThroughWireInstrument() throws IOException {
+    // After the unified USD orderbook revamp remote init registers BTC/USD while callers keep
+    // trading BTC/USDC; the metadata lookup must resolve the alias or the first trade NPEs.
+    ExchangeMetaData metaData =
+        new ExchangeMetaData(
+            Map.of(new CurrencyPair("BTC/USD"), InstrumentMetaData.builder().build()),
+            Collections.emptyMap(),
+            null,
+            null,
+            null);
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    OkxTrade trade =
+        mapper.readValue(
+            "{\"tradeId\":\"t1\",\"instId\":\"BTC-USD\",\"px\":50000,\"side\":\"buy\","
+                + "\"sz\":1,\"ts\":1690000000000}",
+            OkxTrade.class);
+    Trades trades =
+        OkxAdapters.adaptTrades(List.of(trade), new CurrencyPair("BTC/USDC"), metaData);
+    assertThat(trades.getTrades().get(0).getOriginalAmount()).isEqualByComparingTo("1");
+  }
+
+  @Test
+  public void testAdaptOrderBookResolvesMetadataThroughWireInstrument() {
+    ExchangeMetaData metaData =
+        new ExchangeMetaData(
+            Map.of(new CurrencyPair("BTC/USD"), InstrumentMetaData.builder().build()),
+            Collections.emptyMap(),
+            null,
+            null,
+            null);
+    OkxOrderbook orderbook =
+        new OkxOrderbook(
+            List.of(new OkxPublicOrder(new BigDecimal("50000"), new BigDecimal("1"), 0, 0)),
+            List.of(new OkxPublicOrder(new BigDecimal("49000"), new BigDecimal("2"), 0, 0)),
+            "1690000000000");
+    OrderBook book =
+        OkxAdapters.adaptOrderBook(List.of(orderbook), new CurrencyPair("BTC/USDC"), metaData);
+    assertThat(book.getAsks()).hasSize(1);
+    assertThat(book.getBids()).hasSize(1);
+    assertThat(book.getAsks().get(0).getOriginalAmount()).isEqualByComparingTo("1");
+  }
+
+  @Test
+  public void testAlgoOrderRequestSerializesTriggerWireKeys() throws JsonProcessingException {
+    OkxAlgoOrderRequest request =
+        OkxAlgoOrderRequest.builder()
+            .instrumentId("BTC-USDT-SWAP")
+            .tradeMode("cross")
+            .side("buy")
+            .orderType("trigger")
+            .amount("1")
+            .triggerPrice("65000")
+            .orderPrice("64000")
+            .build();
+    JsonNode node = new ObjectMapper().readTree(new ObjectMapper().writeValueAsString(request));
+    assertThat(node.get("triggerPx").asText()).isEqualTo("65000");
+    assertThat(node.get("orderPx").asText()).isEqualTo("64000");
+  }
+
+  @Test
+  public void testAmendAlgoOrderTakesSingleRequest() throws NoSuchMethodException {
+    // /trade/amend-algos accepts one amendment object per request; a List parameter would make
+    // Rescu serialize a JSON array and every amend call would be rejected.
+    assertThat(
+            OkxAuthenticated.class.getMethod(
+                "amendAlgoOrders",
+                String.class,
+                ParamsDigest.class,
+                String.class,
+                String.class,
+                String.class,
+                OkxAmendAlgoRequest.class))
+        .isNotNull();
+    assertThat(OkxTradeServiceRaw.class.getMethod("amendOkxAlgoOrder", OkxAmendAlgoRequest.class))
+        .isNotNull();
+    assertThat(
+            OkexTradeServiceRaw.class.getMethod(
+                "amendOkexAlgoOrder", OkexAmendAlgoRequest.class))
+        .isNotNull();
   }
 
   @Test
