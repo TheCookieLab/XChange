@@ -12,6 +12,8 @@ import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -65,6 +67,23 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
 
   public MexcV3StreamingService(String apiUrl, int maxFramePayloadLength) {
     super(apiUrl, maxFramePayloadLength);
+  }
+
+  /**
+   * The user-data stream URI carries the listen key as a {@code listenKey} query parameter; it
+   * must reach the server for private-channel authorization but must never appear in logs.
+   */
+  @Override
+  protected URI getLogSafeUri() {
+    String redacted = uri.toString().replaceAll("([?&]listenKey=)[^&]*", "$1REDACTED");
+    if (redacted.equals(uri.toString())) {
+      return uri;
+    }
+    try {
+      return new URI(redacted);
+    } catch (URISyntaxException e) {
+      return uri;
+    }
   }
 
   /** Handles text frames: subscription acks, PING/PONG keepalive, and (defensively) text pushes. */

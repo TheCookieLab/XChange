@@ -153,7 +153,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                 // Every connection attempt (initial and reconnects) establishes a new generation,
                 // so consumers can reject messages delivered by a superseded socket.
                 generation.incrementAndGet();
-                LOG.info("Connecting to {}", uri.toString());
+                LOG.info("Connecting to {}", getLogSafeUri());
 
                 String scheme = uri.getScheme() == null ? "ws" : uri.getScheme();
 
@@ -298,6 +298,17 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
               connectionStateModel.setState(State.OPEN);
               connectionSuccessEmitters.onNext(new Object());
             });
+  }
+
+  /**
+   * URI to include in connect logs. Subclasses whose URIs embed credentials (for example a
+   * listen-key query parameter) should override this to return a redacted form; the default
+   * returns the full URI to preserve existing adapter behavior.
+   *
+   * @return the URI to log for this connection attempt
+   */
+  protected URI getLogSafeUri() {
+    return uri;
   }
 
   protected void scheduleReconnect() {

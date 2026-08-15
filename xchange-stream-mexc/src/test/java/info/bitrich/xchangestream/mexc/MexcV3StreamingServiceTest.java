@@ -103,6 +103,20 @@ class MexcV3StreamingServiceTest {
   }
 
   @Test
+  void logSafeUriMasksListenKeyQueryValue() throws Exception {
+    MexcV3StreamingService service =
+        new MexcV3StreamingService(
+            "wss://wbs-api.mexc.com/ws?listenKey=top-secret-listen-key&extra=1");
+    assertEquals(
+        new URI("wss://wbs-api.mexc.com/ws?listenKey=REDACTED&extra=1"),
+        service.getLogSafeUri(),
+        "the listen key must never be logged");
+    // A public (keyless) URI is logged as-is.
+    MexcV3StreamingService publicService = new MexcV3StreamingService("wss://wbs-api.mexc.com/ws");
+    assertEquals(new URI("wss://wbs-api.mexc.com/ws"), publicService.getLogSafeUri());
+  }
+
+  @Test
   void serverPingIsAnsweredWithPong() {
     CapturingService service = new CapturingService();
     service.messageHandler("{\"method\":\"PING\"}");
