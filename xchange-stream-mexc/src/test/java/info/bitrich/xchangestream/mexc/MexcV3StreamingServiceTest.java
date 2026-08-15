@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.ExchangeSecurityException;
 
 /** Message routing, keepalive, subscription-cap, and binary-frame delivery tests. */
 class MexcV3StreamingServiceTest {
@@ -35,7 +36,11 @@ class MexcV3StreamingServiceTest {
     final List<String> sent = new ArrayList<>();
 
     CapturingService() {
-      super("wss://wbs-api.mexc.com/ws");
+      this("wss://wbs-api.mexc.com/ws");
+    }
+
+    CapturingService(String uri) {
+      super(uri);
     }
 
     @Override
@@ -247,6 +252,26 @@ class MexcV3StreamingServiceTest {
     Observable<String> resubscribed = service.subscribeChannel(CHANNEL);
     assertNotSame(first, resubscribed);
     resubscribed.test();
+    assertEquals(1, service.channelCount());
+  }
+
+  @Test
+  void privateChannelWithoutListenKeyFailsImmediatelyWithSecurityException() {
+    CapturingService service = new CapturingService();
+
+    service
+        .subscribeChannel("spot@private.orders.v3.api.pb")
+        .test()
+        .assertError(ExchangeSecurityException.class);
+    assertEquals(0, service.channelCount());
+  }
+
+  @Test
+  void privateChannelWithListenKeyIsNotRejected() throws Exception {
+    CapturingService service = new CapturingService("wss://wbs-api.mexc.com/ws?listenKey=abc");
+    forceOpenChannel(service);
+
+    service.subscribeChannel("spot@private.orders.v3.api.pb").test().assertNoErrors();
     assertEquals(1, service.channelCount());
   }
 

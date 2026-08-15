@@ -141,7 +141,7 @@ class MexcV3StreamingTradeServiceTest {
   @Test
   void twoConsumersShareOnePrivateChannelSubscriptionAndFilterIndependently() throws Exception {
     MexcV3StreamingServiceTest.CapturingService service =
-        new MexcV3StreamingServiceTest.CapturingService();
+        new MexcV3StreamingServiceTest.CapturingService("wss://wbs-api.mexc.com/ws?listenKey=abc");
     MexcV3StreamingServiceTest.forceOpenChannel(service);
     MexcV3StreamingTradeService tradeService = new MexcV3StreamingTradeService(service);
 

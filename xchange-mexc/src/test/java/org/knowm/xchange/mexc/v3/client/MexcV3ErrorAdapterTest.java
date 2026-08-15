@@ -89,6 +89,26 @@ public class MexcV3ErrorAdapterTest {
   }
 
   @Test
+  public void unmappedCodeWithRateLimitHttpStatusMapsToRateLimitExceeded() {
+    assertThat(exception(99999, 429, "rate limited").adapt())
+        .isInstanceOf(RateLimitExceededException.class);
+    assertThat(exception(99999, 418, "ip banned").adapt())
+        .isInstanceOf(RateLimitExceededException.class);
+  }
+
+  @Test
+  public void unmappedCodeWithServerErrorHttpStatusMapsToUnavailable() {
+    assertThat(exception(99999, 503, "provider outage").adapt())
+        .isInstanceOf(ExchangeUnavailableException.class);
+  }
+
+  @Test
+  public void unmappedCodeWithAuthHttpStatusMapsToSecurity() {
+    assertThat(exception(99999, 403, "denied").adapt())
+        .isInstanceOf(ExchangeSecurityException.class);
+  }
+
+  @Test
   public void classificationCoversHttpAndCodeSemantics() {
     assertThat(exception(429, 429, "").getRetryClassification())
         .isEqualTo(RetryClassification.RATE_LIMITED);

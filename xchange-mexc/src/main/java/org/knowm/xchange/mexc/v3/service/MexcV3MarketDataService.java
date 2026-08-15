@@ -143,6 +143,8 @@ public class MexcV3MarketDataService extends MexcV3MarketDataServiceRaw
         return MexcV3KlineInterval.H4;
       case 86400:
         return MexcV3KlineInterval.D1;
+      case 604800:
+        return MexcV3KlineInterval.WEEK1;
       case 2592000:
         return MexcV3KlineInterval.MONTH1;
       default:

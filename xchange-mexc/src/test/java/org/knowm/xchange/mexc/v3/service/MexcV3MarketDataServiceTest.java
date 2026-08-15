@@ -1,9 +1,12 @@
 package org.knowm.xchange.mexc.v3.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -142,6 +145,30 @@ public class MexcV3MarketDataServiceTest extends BaseMexcV3WiremockTest {
     assertThat(candle.getVolume()).isEqualByComparingTo("206116.70000000");
     assertThat(candle.getQuotaVolume()).isEqualByComparingTo("688.20000000");
     assertThat(candle.isCompleted()).isTrue();
+  }
+
+  @Test
+  public void getCandleStickDataMapsWeeklyPeriod() throws IOException {
+    stubFor(
+        get(urlPathEqualTo("/api/v3/klines"))
+            .willReturn(
+                aResponse()
+                    .withBody(
+                        "[[1551000000000,\"0.0030\",\"0.0037\",\"0.0035\",\"0.0035\","
+                            + "\"206116.70000000\",1551046400000,\"688.20000000\"]]")));
+
+    MexcV3Exchange exchange = createExchange();
+    CandleStickData data =
+        exchange
+            .getMarketDataService()
+            .getCandleStickData(
+                CurrencyPair.BTC_USDT,
+                new DefaultCandleStickParamWithLimit(null, null, 604800L, 1));
+
+    assertThat(data.getCandleSticks()).hasSize(1);
+    verify(
+        getRequestedFor(urlPathEqualTo("/api/v3/klines"))
+            .withQueryParam("interval", equalTo("1W")));
   }
 
   @Test

@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -149,9 +150,19 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
    * Rejects new wire subscriptions beyond the per-connection cap instead of silently exceeding
    * it, while still serving additional consumers of channels that are already subscribed (the
    * cap governs wire subscriptions, not observers of an existing shared stream).
+   *
+   * <p>Private channels ({@code spot@private.*}) are rejected when the connection carries no
+   * listen key: without one the server cannot authorize them, so instead of an observable that
+   * silently never emits, subscribers get an immediate {@link ExchangeSecurityException}.
    */
   @Override
   public Observable<String> subscribeChannel(String channelName, Object... args) {
+    if (channelName.startsWith("spot@private.") && !uri.toString().contains("listenKey=")) {
+      return Observable.error(
+          new ExchangeSecurityException(
+              "MEXC Spot v3 private channel " + channelName + " requires a listen key; "
+                  + "configure an API key before connecting"));
+    }
     Observable<String> shared = sharedChannels.get(channelName);
     if (shared != null) {
       // Cache hit: the wire subscription already exists, so no new wire subscription is needed

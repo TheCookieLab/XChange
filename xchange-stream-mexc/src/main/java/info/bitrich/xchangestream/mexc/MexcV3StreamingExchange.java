@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.mexc.v3.MexcV3Exchange;
 import org.knowm.xchange.mexc.v3.config.MexcV3Configuration;
 import org.knowm.xchange.mexc.v3.client.MexcV3Redactor;
@@ -144,12 +145,26 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
 
   @Override
   public StreamingAccountService getStreamingAccountService() {
+    requirePrivateStream();
     return streamingAccountService;
   }
 
   @Override
   public StreamingTradeService getStreamingTradeService() {
+    requirePrivateStream();
     return streamingTradeService;
+  }
+
+  /**
+   * Private streams require an API key; without one no listen key can ever be attached and the
+   * user-data channels would silently receive nothing on the public socket.
+   */
+  private void requirePrivateStream() {
+    if (getExchangeSpecification().getApiKey() == null) {
+      throw new ExchangeSecurityException(
+          "MEXC Spot v3 private streams require an API key; configure the exchange "
+              + "specification before connecting");
+    }
   }
 
   @Override

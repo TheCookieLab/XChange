@@ -10,9 +10,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -25,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.mexc.v3.config.MexcV3Configuration;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 
@@ -38,6 +41,23 @@ class MexcV3StreamingExchangeTest {
     if (wireMock != null) {
       wireMock.stop();
     }
+  }
+
+  @Test
+  void privateStreamAccessorsRequireApiKey() {
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(spec);
+
+    assertThrows(ExchangeSecurityException.class, () -> exchange.getStreamingAccountService());
+    assertThrows(ExchangeSecurityException.class, () -> exchange.getStreamingTradeService());
+
+    spec.setApiKey("test-key");
+    spec.setSecretKey("test-secret");
+    exchange.applySpecification(spec);
+    assertDoesNotThrow(() -> exchange.getStreamingAccountService());
+    assertDoesNotThrow(() -> exchange.getStreamingTradeService());
   }
 
   @Test

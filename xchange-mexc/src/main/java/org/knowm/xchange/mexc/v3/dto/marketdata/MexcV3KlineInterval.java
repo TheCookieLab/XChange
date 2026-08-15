@@ -16,6 +16,8 @@ public enum MexcV3KlineInterval {
   H4("4h"),
   /** 1 day. */
   D1("1d"),
+  /** 1 week. */
+  WEEK1("1W"),
   /** 1 month. */
   MONTH1("1M");
 
@@ -47,6 +49,8 @@ public enum MexcV3KlineInterval {
         return "Hour4";
       case D1:
         return "Day1";
+      case WEEK1:
+        return "Week1";
       case MONTH1:
         return "Month1";
       default:

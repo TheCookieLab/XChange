@@ -13,9 +13,9 @@ import org.knowm.xchange.exceptions.RateLimitExceededException;
 /**
  * Maps MEXC Spot v3 provider failures to the XChange exception hierarchy.
  *
- * <p>Code mapping follows the provider error table; HTTP status semantics refine the fallback
- * classes. Unmapped codes surface as a generic {@link ExchangeException} carrying the sanitized
- * provider message.
+ * <p>Code mapping follows the provider error table; unmapped codes fall back to the HTTP status
+ * semantics documented by {@link MexcV3Exception} (401/403 authentication or permission, 418/429
+ * rate limiting, 5xx provider-side) before surfacing as a generic {@link ExchangeException}.
  */
 public final class MexcV3ErrorAdapter {
 
@@ -66,6 +66,20 @@ public final class MexcV3ErrorAdapter {
       case 503: // service unavailable
         return new ExchangeUnavailableException(message, e);
       default:
+        // Fall back to the documented HTTP status semantics when the provider body code is not
+        // mapped: 401/403 authentication or permission, 418/429 rate limiting, 5xx provider-side.
+        // This keeps rate-limit and availability handling reliable for high-level callers even
+        // when a rate-limit or outage response uses a provider-specific body code.
+        int httpStatus = e.getHttpStatus();
+        if (httpStatus == 401 || httpStatus == 403) {
+          return new ExchangeSecurityException(message, e);
+        }
+        if (httpStatus == 418 || httpStatus == 429) {
+          return new RateLimitExceededException(message, e);
+        }
+        if (httpStatus >= 500) {
+          return new ExchangeUnavailableException(message, e);
+        }
         return new ExchangeException(message, e);
     }
   }
