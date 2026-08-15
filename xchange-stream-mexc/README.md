@@ -26,7 +26,7 @@ exchange.connect(subscription).blockingAwait();
 
 exchange.getStreamingMarketDataService().getOrderBook(CurrencyPair.BTC_USDT).subscribe(System.out::println);
 exchange.getStreamingTradeService().getOrderChanges(CurrencyPair.BTC_USDT).subscribe(System.out::println);
-exchange.getStreamingAccountService().getBalanceChanges().subscribe(System.out::println);
+exchange.getStreamingAccountService().getBalanceChanges(null).subscribe(System.out::println);
 ```
 
 ## Protocol and guarantees
