@@ -136,7 +136,8 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                                       .subscribeOn(Schedulers.io())
                                       .onErrorComplete();
                                 }
-                                return streamingService.connect();
+                                return connectAndInvalidateAfterDisconnect(
+                                    streamingService.connect(), generation);
                               }));
                 }
                 // A previous attempt created a listen key and its keepalive is still running;
@@ -162,7 +163,8 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                           return Completable.complete();
                         }
                         buildStreamingService(withListenKey(resolvedUri, listenKey));
-                        return streamingService.connect();
+                        return connectAndInvalidateAfterDisconnect(
+                            streamingService.connect(), generation);
                       }
                     });
               });
@@ -190,22 +192,54 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                   } else {
                     buildStreamingService(resolvedUri);
                   }
-                  return streamingService.connect();
+                  return connectAndInvalidateAfterDisconnect(
+                      streamingService.connect(), generation);
                 }
               });
     } else {
       buildStreamingService(uri);
-      attempt = streamingService.connect();
+      attempt =
+          connectAndInvalidateAfterDisconnect(streamingService.connect(), generation);
     }
     // cache() makes the attempt single-flight: the first subscription executes it and every
     // concurrent subscription shares the same result instead of building a second transport.
-    inFlightConnect = attempt.cache().doOnTerminate(this::clearInFlightConnect);
+    inFlightConnect = attempt.cache().doOnTerminate(() -> clearInFlightConnect(attempt));
     return inFlightConnect;
   }
 
-  private synchronized void clearInFlightConnect() {
-    // The attempt settled; a later subscription may start a fresh one (e.g. a retry).
-    inFlightConnect = null;
+  private synchronized void clearInFlightConnect(Completable attempt) {
+    // The shared attempt fires onTerminate once per subscriber; only clear the field when the
+    // settled attempt is still the one cached there. An error handler could have started and
+    // cached a replacement attempt before a later subscriber's callback runs; clearing
+    // unconditionally would erase that replacement and let another caller start a competing
+    // transport instead of joining it.
+    if (inFlightConnect == attempt) {
+      inFlightConnect = null;
+    }
+  }
+
+  /**
+   * Connects the service and tears the transport down if a disconnect executed while the connect
+   * was in flight.
+   *
+   * <p>{@link NettyStreamingService#disconnect()} cannot cancel an in-progress connect: before
+   * the TCP connect completes the channel is not assigned yet, so the delegated disconnect
+   * reports completion without cancelling anything, and the connect listener then assigns the
+   * channel and finishes the handshake — leaving the exchange alive after the disconnect
+   * completed. The in-flight operation is therefore invalidated at its asynchronous completion:
+   * once the connect settles (its channel is assigned by then), a moved generation tears the
+   * transport down immediately.
+   */
+  private Completable connectAndInvalidateAfterDisconnect(Completable connect, long generation) {
+    return connect.doOnTerminate(
+        () -> {
+          if (generation != connectGeneration) {
+            MexcV3StreamingService service = streamingService;
+            if (service != null && service.isSocketOpen()) {
+              service.disconnect().onErrorComplete().subscribe();
+            }
+          }
+        });
   }
 
   /** Extracts the {@code listenKey} query parameter from a stream URI, or {@code null}. */

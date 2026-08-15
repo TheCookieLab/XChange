@@ -21,13 +21,29 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.common.FileSource;
+import com.github.tomakehurst.wiremock.extension.Parameters;
+import com.github.tomakehurst.wiremock.extension.ResponseTransformer;
+import com.github.tomakehurst.wiremock.http.Request;
+import com.github.tomakehurst.wiremock.http.Response;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.observers.TestObserver;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
@@ -588,16 +604,46 @@ class MexcV3StreamingExchangeTest {
 
   @Test
   void disconnectCancelsAnInFlightPrivateConnectionAttempt() throws Exception {
-    // The key-creation POST is delayed so the disconnect lands while the attempt is genuinely
-    // in flight: the transport does not exist yet, so a disconnect that only tears down the
-    // current service would report complete and leave the attempt to open a socket and keep a
-    // key afterwards.
-    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    // Deterministic seam: the key-creation POST blocks inside a WireMock response transformer
+    // until the test releases it. No fixed server delay or polling is involved — the test
+    // observes the exact moment the POST is in flight (postStarted) and resolves it only after
+    // the disconnect has been launched.
+    CountDownLatch postStarted = new CountDownLatch(1);
+    CountDownLatch releasePost = new CountDownLatch(1);
+    wireMock =
+        new WireMockServer(
+            wireMockConfig()
+                .dynamicPort()
+                .extensions(
+                    new ResponseTransformer() {
+                      @Override
+                      public Response transform(
+                          Request request, Response response, FileSource files, Parameters p) {
+                        if ("POST".equals(request.getMethod().value())
+                            && "/api/v3/userDataStream".equals(request.getUrl())) {
+                          postStarted.countDown();
+                          try {
+                            if (!releasePost.await(10, TimeUnit.SECONDS)) {
+                              throw new IllegalStateException(
+                                  "timed out waiting for the test to release the userDataStream POST");
+                            }
+                          } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new IllegalStateException(e);
+                          }
+                        }
+                        return response;
+                      }
+
+                      @Override
+                      public String getName() {
+                        return "blocking-user-data-stream-post";
+                      }
+                    }));
     wireMock.start();
     wireMock.stubFor(
         post(urlEqualTo("/api/v3/userDataStream"))
-            .willReturn(
-                aResponse().withFixedDelay(500).withBody("{\"listenKey\":\"created-key\"}")));
+            .willReturn(aResponse().withBody("{\"listenKey\":\"created-key\"}")));
     wireMock.stubFor(
         delete(urlEqualTo("/api/v3/userDataStream?listenKey=created-key"))
             .willReturn(aResponse().withBody("{\"listenKey\":\"created-key\"}")));
@@ -615,18 +661,27 @@ class MexcV3StreamingExchangeTest {
     exchange.applySpecification(spec);
 
     TestObserver<Void> observer = exchange.connect().test();
+    // The key-creation POST is guaranteed to be in flight here (the transformer is inside it).
+    assertTrue(postStarted.await(10, TimeUnit.SECONDS));
 
-    // Wait until the delayed key-creation POST is in flight, then disconnect: the disconnect
-    // must invalidate the pending attempt instead of letting it finish its side effects.
-    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-    while (wireMock.findAll(postRequestedFor(urlEqualTo("/api/v3/userDataStream"))).isEmpty()
-        && System.nanoTime() < deadline) {
-      sleepQuietly(10L);
-    }
-    assertFalse(
-        wireMock.findAll(postRequestedFor(urlEqualTo("/api/v3/userDataStream"))).isEmpty());
-
-    exchange.disconnect().onErrorComplete().blockingAwait();
+    // Disconnect while the POST is in flight. The disconnect body is synchronized with the key
+    // creation, so it blocks until the POST completes, then invalidates the attempt; it runs on
+    // its own thread so the release below can proceed.
+    AtomicReference<Throwable> disconnectFailure = new AtomicReference<>();
+    Thread disconnectThread =
+        new Thread(
+            () -> {
+              try {
+                exchange.disconnect().blockingAwait();
+              } catch (Throwable t) {
+                disconnectFailure.set(t);
+              }
+            });
+    disconnectThread.start();
+    releasePost.countDown();
+    disconnectThread.join(TimeUnit.SECONDS.toMillis(10));
+    assertFalse(disconnectThread.isAlive(), "disconnect did not complete in time");
+    assertNull(disconnectFailure.get());
     observer.awaitDone(10, TimeUnit.SECONDS);
 
     // No socket is open and the created key is closed: the disconnect left nothing behind even
@@ -649,6 +704,128 @@ class MexcV3StreamingExchangeTest {
     wireMock.verify(2, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
 
     exchange.disconnect().onErrorComplete().blockingAwait();
+  }
+
+  @Test
+  void disconnectClosesAnInFlightTransportConnectThatCompletesAfterwards() throws Exception {
+    // Deterministic seam: a backlog-1 raw TCP server. A filler connection fills the accept
+    // queue, so the client's SYN is dropped and its TCP connect stays pending; the disconnect
+    // therefore runs while the transport connect is genuinely in progress (no channel is
+    // assigned yet, so NettyStreamingService.disconnect() cannot cancel it). Releasing the
+    // queue lets the client's retried SYN through, the WebSocket handshake completes, and
+    // only the post-completion invalidation can tear the socket down afterwards.
+    ServerSocket serverSocket = new ServerSocket(0, 1);
+    CountDownLatch releaseQueue = new CountDownLatch(1);
+    CountDownLatch tcpAccepted = new CountDownLatch(1);
+    CountDownLatch releaseUpgrade = new CountDownLatch(1);
+    CountDownLatch socketClosed = new CountDownLatch(1);
+    Thread serverThread =
+        new Thread(
+            () -> {
+              // Hold the queue full until the test's disconnect has run with the connect
+              // still pending; accepting the filler frees the queue for the retried SYN.
+              try {
+                if (!releaseQueue.await(10, TimeUnit.SECONDS)) {
+                  throw new IllegalStateException(
+                      "timed out waiting for the test to release the accept queue");
+                }
+                Socket filler = serverSocket.accept();
+                filler.close();
+                try (Socket socket = serverSocket.accept()) {
+                  tcpAccepted.countDown();
+                  InputStream in = socket.getInputStream();
+                  ByteArrayOutputStream request = new ByteArrayOutputStream();
+                  byte[] buffer = new byte[1024];
+                  while (!request.toString(StandardCharsets.UTF_8).contains("\r\n\r\n")) {
+                    int n = in.read(buffer);
+                    if (n < 0) {
+                      return;
+                    }
+                    request.write(buffer, 0, n);
+                  }
+                  String key = null;
+                  for (String line : request.toString(StandardCharsets.UTF_8).split("\r\n")) {
+                    if (line.regionMatches(true, 0, "sec-websocket-key:", 0, 18)) {
+                      key = line.substring(18).trim();
+                    }
+                  }
+                  if (!releaseUpgrade.await(10, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException(
+                        "timed out waiting for the test to release the WebSocket upgrade");
+                  }
+                  if (key != null) {
+                    String accept =
+                        Base64.getEncoder()
+                            .encodeToString(
+                                MessageDigest.getInstance("SHA-1")
+                                    .digest(
+                                        (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+                                            .getBytes(StandardCharsets.UTF_8)));
+                    OutputStream out = socket.getOutputStream();
+                    out.write(
+                        ("HTTP/1.1 101 Switching Protocols\r\n"
+                                + "Upgrade: websocket\r\n"
+                                + "Connection: Upgrade\r\n"
+                                + "Sec-WebSocket-Accept: "
+                                + accept
+                                + "\r\n\r\n")
+                            .getBytes(StandardCharsets.UTF_8));
+                    out.flush();
+                  }
+                  // EOF means the client closed the socket; the only close source is the
+                  // post-completion teardown, so its arrival is the deterministic signal.
+                  while (in.read(buffer) >= 0) {
+                    // drain until the client closes
+                  }
+                  socketClosed.countDown();
+                }
+              } catch (Throwable t) {
+                // leave the latches unsatisfied: the test's awaits fail and surface the failure
+              } finally {
+                try {
+                  serverSocket.close();
+                } catch (Exception ignored) {
+                  // best-effort cleanup
+                }
+              }
+            });
+    serverThread.setDaemon(true);
+    serverThread.start();
+
+    // Fills the accept queue: while it stays full the client's SYN is dropped, so the
+    // exchange's transport connect cannot complete.
+    Socket filler = new Socket();
+    filler.connect(new InetSocketAddress("127.0.0.1", serverSocket.getLocalPort()));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
+        "ws://127.0.0.1:" + serverSocket.getLocalPort() + "/ws");
+    exchange.applySpecification(spec);
+
+    TestObserver<Void> observer = exchange.connect().test();
+    // The transport connect is guaranteed in flight here: the queue is still full, so the SYN
+    // is dropped and the retry cannot complete until the server accepts the filler.
+    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
+    releaseQueue.countDown();
+    // The client's retried SYN lands once the queue frees; TCP is established only now, after
+    // the disconnect already completed.
+    assertTrue(tcpAccepted.await(10, TimeUnit.SECONDS));
+
+    // The disconnect cannot cancel the in-progress connect; it must complete and let the
+    // connect finish, then tear the socket down at the connect's asynchronous completion.
+    releaseUpgrade.countDown();
+
+    observer.awaitDone(10, TimeUnit.SECONDS).assertComplete();
+    // Without the post-completion invalidation no close would ever be issued and the server
+    // would drain forever, so this latch only opens when the connect's completion tore the
+    // transport down.
+    assertTrue(socketClosed.await(10, TimeUnit.SECONDS));
+    assertFalse(exchange.isAlive());
+    serverThread.join(TimeUnit.SECONDS.toMillis(10));
+    filler.close();
   }
 
   private static String listenKeyInstance(MexcV3StreamingExchange exchange) throws Exception {
