@@ -10,6 +10,8 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.subjects.PublishSubject;
+import io.reactivex.rxjava3.subjects.Subject;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.ExchangeSpecification;
@@ -74,6 +76,21 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
    * transport must not open a socket or create a listen key after the disconnect completed.
    */
   private volatile long connectGeneration;
+  /**
+   * Lifecycle events of every transport this exchange creates, forwarded from each new service.
+   * Subscribers that start observing before the transport exists (the transport is built
+   * lazily on connect) must still see the events of the first connection; returning the current
+   * service's stream directly would hand them an immediately-completing empty observable.
+   */
+  private final Subject<Throwable> reconnectFailureRelay = PublishSubject.create();
+  private final Subject<Object> connectionSuccessRelay = PublishSubject.create();
+  private final Subject<Object> disconnectRelay = PublishSubject.create();
+  /**
+   * Compression preference for the WebSocket transport. Stored on the exchange because the
+   * transport is built lazily on connect: the only reliable time to configure the initial
+   * pipeline is before the transport exists, and a live transport is updated directly as well.
+   */
+  private boolean compressedMessages;
 
   @Override
   public Completable connect(ProductSubscription... args) {
@@ -355,23 +372,17 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
 
   @Override
   public Observable<Throwable> reconnectFailure() {
-    return streamingService == null
-        ? Observable.empty()
-        : streamingService.subscribeReconnectFailure();
+    return reconnectFailureRelay.share();
   }
 
   @Override
   public Observable<Object> connectionSuccess() {
-    return streamingService == null
-        ? Observable.empty()
-        : streamingService.subscribeConnectionSuccess();
+    return connectionSuccessRelay.share();
   }
 
   @Override
   public Observable<Object> disconnectObservable() {
-    return streamingService == null
-        ? Observable.empty()
-        : streamingService.subscribeDisconnect();
+    return disconnectRelay.share();
   }
 
   @Override
@@ -405,6 +416,10 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
 
   @Override
   public void useCompressedMessages(boolean compressedMessages) {
+    // Store the preference so it survives until transport creation: the transport is built
+    // lazily on connect, and the only reliable time to configure the initial WebSocket
+    // pipeline is before the transport exists. A live transport is updated directly as well.
+    this.compressedMessages = compressedMessages;
     if (streamingService != null) {
       streamingService.useCompressedMessages(compressedMessages);
     }
@@ -604,6 +619,12 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     }
     streamingService = new MexcV3StreamingService(uri);
     applyStreamingSpecification(getExchangeSpecification(), streamingService);
+    streamingService.useCompressedMessages(compressedMessages);
+    // Forward this transport's lifecycle events into the exchange-level relays: subscribers
+    // that started observing before the transport existed must still see the first connection.
+    streamingService.subscribeReconnectFailure().subscribe(reconnectFailureRelay::onNext);
+    streamingService.subscribeConnectionSuccess().subscribe(connectionSuccessRelay::onNext);
+    streamingService.subscribeDisconnect().subscribe(disconnectRelay::onNext);
     streamingMarketDataService =
         new MexcV3StreamingMarketDataService(
             streamingService, (MexcV3MarketDataServiceRaw) getMarketDataService());

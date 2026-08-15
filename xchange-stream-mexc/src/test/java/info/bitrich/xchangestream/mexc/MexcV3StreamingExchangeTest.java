@@ -275,6 +275,13 @@ class MexcV3StreamingExchangeTest {
     channelField.set(service, new io.netty.channel.embedded.EmbeddedChannel());
   }
 
+  private static boolean compressedMessagesInstance(Object service) throws Exception {
+    java.lang.reflect.Field compressedField =
+        NettyStreamingService.class.getDeclaredField("compressedMessages");
+    compressedField.setAccessible(true);
+    return compressedField.getBoolean(service);
+  }
+
   @Test
   void keepaliveTransientFailureRetriesAndScheduleSurvives() throws Exception {
     wireMock = new WireMockServer(wireMockConfig().dynamicPort());
@@ -999,6 +1006,116 @@ class MexcV3StreamingExchangeTest {
     assertTrue(socketClosed.await(10, TimeUnit.SECONDS));
     assertFalse(exchange.isAlive());
     filler.close();
+  }
+
+  @Test
+  void preConnectLifecycleObserversObserveTheFirstConnection() throws Exception {
+    // Lifecycle observers subscribed before any connect (the transport is built lazily on
+    // connect) must stay subscribed instead of receiving an immediately-completing empty
+    // observable: they have to observe the events of the first connection. A real upgrade
+    // server makes the initial connection succeed deterministically.
+    ServerSocket serverSocket = new ServerSocket(0, 1);
+    CountDownLatch releaseQueue = new CountDownLatch(1);
+    CountDownLatch tcpAccepted = new CountDownLatch(1);
+    CountDownLatch releaseUpgrade = new CountDownLatch(1);
+    CountDownLatch socketClosed = new CountDownLatch(1);
+    startUpgradeServer(serverSocket, releaseQueue, tcpAccepted, releaseUpgrade, socketClosed, true);
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
+        "ws://127.0.0.1:" + serverSocket.getLocalPort() + "/ws");
+    exchange.applySpecification(spec);
+
+    // Fills the accept queue so the helper's first accept() consumes the filler, not the
+    // client's connection.
+    Socket filler = new Socket();
+    filler.connect(new InetSocketAddress("127.0.0.1", serverSocket.getLocalPort()));
+
+    TestObserver<Throwable> reconnectFailure = exchange.reconnectFailure().test();
+    TestObserver<Object> connectionSuccess = exchange.connectionSuccess().test();
+    TestObserver<Object> disconnect = exchange.disconnectObservable().test();
+    // No transport exists yet; the observers must stay subscribed instead of completing.
+    reconnectFailure.assertNotComplete();
+    connectionSuccess.assertNotComplete();
+    disconnect.assertNotComplete();
+
+    TestObserver<Void> connect = exchange.connect().test();
+    releaseQueue.countDown();
+    assertTrue(tcpAccepted.await(10, TimeUnit.SECONDS));
+    releaseUpgrade.countDown();
+    connect.awaitDone(10, TimeUnit.SECONDS).assertComplete();
+    // The pre-connect subscriber observes the first connection.
+    connectionSuccess.awaitCount(1);
+    assertTrue(connectionSuccess.values().size() >= 1);
+
+    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
+    disconnect.awaitCount(1);
+    assertTrue(disconnect.values().size() >= 1);
+    assertTrue(socketClosed.await(10, TimeUnit.SECONDS));
+    assertFalse(exchange.isAlive());
+    filler.close();
+  }
+
+  @Test
+  void reconnectFailureObserverReceivesAFailedConnect() throws Exception {
+    // A reconnect-failure observer subscribed before the connect observes the failure of the
+    // first connect attempt (the refused URI surfaces a ConnectException on the netty layer).
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+
+    TestObserver<Throwable> reconnectFailure = exchange.reconnectFailure().test();
+    exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+
+    reconnectFailure.awaitCount(1);
+    assertTrue(reconnectFailure.values().get(0) instanceof IOException);
+  }
+
+  @Test
+  void compressionPreferenceSurvivesUntilTransportCreation() throws Exception {
+    // useCompressedMessages(true) before connect() — the only reliable time to configure the
+    // initial WebSocket pipeline — must not be discarded: the transport is built lazily on
+    // connect, so the preference has to be stored on the exchange and applied to the service
+    // when it is created.
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlPathEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"K1\"}")));
+    wireMock.stubFor(
+        delete(urlPathEqualTo("/api/v3/userDataStream")).willReturn(aResponse().withBody("{}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+    exchange.keepAliveIntervalSeconds = 3600L;
+
+    // No transport exists yet: the preference must be retained until the connect builds one.
+    exchange.useCompressedMessages(true);
+
+    exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+
+    MexcV3StreamingService service = (MexcV3StreamingService) streamingServiceInstance(exchange);
+    assertNotNull(service);
+    assertTrue(compressedMessagesInstance(service));
+    // A live transport is updated directly as well.
+    exchange.useCompressedMessages(false);
+    assertFalse(compressedMessagesInstance(service));
+    exchange.disconnect().onErrorComplete().blockingAwait();
   }
 
   @Test
