@@ -11,9 +11,11 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
  * Trade-history parameters for {@code GET /api/v3/myTrades}.
  *
  * <p>The MEXC endpoint requires a symbol; {@code orderId}, {@code startTime}/{@code endTime}
- * (inclusive) are optional. {@code limit} caps the total number of returned trades (per-request
- * pages of up to 1000 are fetched and stitched by advancing {@code startTime} past the newest
- * trade seen, stopping on a short page or a window that does not advance).
+ * (inclusive) are optional. {@code limit} caps the total number of returned trades. Requests
+ * are partitioned to the provider's per-request constraints: at most 100 trades per request
+ * and at most one month of history per request window; pages are fetched and stitched by
+ * advancing {@code startTime} past the newest trade seen, stopping on a short page or a
+ * window that does not advance.
  */
 public class MexcV3TradeHistoryParams extends DefaultTradeHistoryParamCurrencyPair
     implements TradeHistoryParamOrderId, TradeHistoryParamsTimeSpan, TradeHistoryParamLimit {

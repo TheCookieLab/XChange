@@ -17,6 +17,7 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.slf4j.Logger;
@@ -59,8 +60,26 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
    * keeping subscription deduplication and reconnect re-registration semantics; the entry is
    * evicted when the last consumer disposes (so a later subscribe builds a fresh wrapper), which
    * the base's own refCount mirrors by removing the channel and unsubscribing.
+   *
+   * <p>An entry is created when the observable is handed out (so repeated calls for the same
+   * channel share one object), but it reserves a per-connection subscription slot only once the
+   * first consumer actually subscribes; observables that are never subscribed therefore do not
+   * count against the 30-channel cap (see {@link #onFirstConsumer}).
    */
-  private final Map<String, Observable<String>> sharedChannels = new ConcurrentHashMap<>();
+  private final Map<String, ChannelEntry> sharedChannels = new ConcurrentHashMap<>();
+
+  /**
+   * Number of distinct channels with at least one active observer — i.e. channels whose wire
+   * subscription is currently registered. All transitions happen under the {@link
+   * #sharedChannels} lock so the cap is decided atomically.
+   */
+  private final AtomicInteger subscribedChannelCount = new AtomicInteger();
+
+  /** A channel's shared observable plus the consumer count that decides when it is evicted. */
+  private static final class ChannelEntry {
+    final AtomicReference<Observable<String>> observable = new AtomicReference<>();
+    final AtomicInteger consumers = new AtomicInteger();
+  }
 
   public MexcV3StreamingService(String apiUrl) {
     super(apiUrl);
@@ -173,11 +192,12 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
    * it, while still serving additional consumers of channels that are already subscribed (the
    * cap governs reserved distinct channels, not observers of an existing shared stream).
    *
-   * <p>The slot is reserved atomically at creation time: the base registers the wire subscription
-   * only when the first consumer subscribes, so counting the cap against the base's registered
-   * channels would let callers create observables for more than 30 distinct channels (or race
-   * concurrent creations) and exceed the cap once everything subscribes. Reservation and the
-   * cap check happen under one lock on {@link #sharedChannels}.
+   * <p>A slot is reserved only when the first consumer of a channel subscribes ({@link
+   * #onFirstConsumer}), not when the observable is created: the base registers the wire
+   * subscription lazily at first subscribe, so reserving at creation would let callers block the
+   * cap with observables they never subscribe. The cap check and the first-subscribe transition
+   * happen under one lock on {@link #sharedChannels}, so concurrent first subscriptions cannot
+   * both pass the check and exceed the cap.
    *
    * <p>Private channels ({@code spot@private.*}) are rejected when the connection carries no
    * listen key: without one the server cannot authorize them, so instead of an observable that
@@ -191,45 +211,83 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
               "MEXC Spot v3 private channel " + channelName + " requires a listen key; "
                   + "configure an API key before connecting"));
     }
-    Observable<String> shared = sharedChannels.get(channelName);
-    if (shared != null) {
+    ChannelEntry entry = sharedChannels.get(channelName);
+    if (entry != null) {
       // Cache hit: the wire subscription already exists, so no new wire subscription is needed
       // and the per-connection cap does not apply.
-      return shared;
+      return entry.observable.get();
     }
     synchronized (sharedChannels) {
-      shared = sharedChannels.get(channelName);
-      if (shared != null) {
-        return shared;
+      entry = sharedChannels.get(channelName);
+      if (entry != null) {
+        return entry.observable.get();
       }
-      if (sharedChannels.size() >= MAX_SUBSCRIPTIONS_PER_CONNECTION) {
-        return Observable.error(
-            new ExchangeException(
-                "MEXC Spot v3 allows at most "
-                    + MAX_SUBSCRIPTIONS_PER_CONNECTION
-                    + " subscriptions per connection; disconnect and reconnect to rotate"));
-      }
-      AtomicInteger consumers = new AtomicInteger();
-      java.util.concurrent.atomic.AtomicReference<Observable<String>> holder =
-          new java.util.concurrent.atomic.AtomicReference<>();
+      ChannelEntry created = new ChannelEntry();
+      // One base instance per channel: its share() is what makes additional consumers join the
+      // existing wire subscription instead of opening their own.
+      Observable<String> base = super.subscribeChannel(channelName, args);
       Observable<String> channelObservable =
-          super.subscribeChannel(channelName, args)
-              .doOnSubscribe(s -> consumers.incrementAndGet())
-              .doOnDispose(
-                  () -> {
-                    if (consumers.decrementAndGet() == 0) {
-                      synchronized (sharedChannels) {
-                        // Precise removal: a fresh wrapper may have been installed since the
-                        // last consumer left; removing by key alone would evict that new
-                        // subscription and leave its wire subscription unrouted.
-                        sharedChannels.computeIfPresent(
-                            channelName, (key, current) -> current == holder.get() ? null : current);
-                      }
-                    }
-                  });
-      holder.set(channelObservable);
-      sharedChannels.put(channelName, channelObservable);
+          Observable.defer(
+              () -> {
+                // The cap is decided before the base is subscribed: on a full connection the
+                // observer is failed without ever touching the base, so no wire subscription
+                // is registered and nothing has to be unwound.
+                if (!onFirstConsumer(channelName, created)) {
+                  return Observable.error(
+                      new ExchangeException(
+                          "MEXC Spot v3 allows at most "
+                              + MAX_SUBSCRIPTIONS_PER_CONNECTION
+                              + " subscriptions per connection; disconnect and reconnect to rotate"));
+                }
+                return base.doOnDispose(() -> onLastConsumerDispose(channelName, created));
+              });
+      created.observable.set(channelObservable);
+      sharedChannels.put(channelName, created);
       return channelObservable;
+    }
+  }
+
+  /**
+   * Runs when an observer subscribes to a channel's shared observable. The first observer
+   * acquires the per-connection slot; when the cap is already reached the observer is refused
+   * ({@code false}) and the channel entry is reset and evicted so a later subscribe builds a
+   * fresh wrapper and retries from scratch.
+   *
+   * @return {@code true} when the slot was acquired, {@code false} when the cap is full
+   */
+  private boolean onFirstConsumer(String channelName, ChannelEntry entry) {
+    if (entry.consumers.incrementAndGet() != 1) {
+      return true; // additional observer of an already-subscribed channel
+    }
+    synchronized (sharedChannels) {
+      if (subscribedChannelCount.get() >= MAX_SUBSCRIPTIONS_PER_CONNECTION) {
+        entry.consumers.set(0);
+        sharedChannels.computeIfPresent(
+            channelName, (key, current) -> current == entry ? null : current);
+        return false;
+      }
+      subscribedChannelCount.incrementAndGet();
+      return true;
+    }
+  }
+
+  /**
+   * Runs when an observer disposes its subscription. The last observer releases the channel's
+   * per-connection slot and evicts the shared entry so a later subscribe builds a fresh wrapper;
+   * the base mirror-removes the channel and sends UNSUBSCRIPTION. A concurrent first observer
+   * that subscribed between the decrement and the lock keeps the entry alive.
+   */
+  private void onLastConsumerDispose(String channelName, ChannelEntry entry) {
+    if (entry.consumers.get() == 0 || entry.consumers.decrementAndGet() != 0) {
+      return; // already released, or other observers remain
+    }
+    synchronized (sharedChannels) {
+      if (entry.consumers.get() != 0) {
+        return; // a new observer subscribed while the lock was contended
+      }
+      subscribedChannelCount.decrementAndGet();
+      sharedChannels.computeIfPresent(
+          channelName, (key, current) -> current == entry ? null : current);
     }
   }
 

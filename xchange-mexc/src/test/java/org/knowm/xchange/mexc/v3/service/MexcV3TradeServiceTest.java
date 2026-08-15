@@ -503,42 +503,86 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
   @Test
   public void getTradeHistoryPagesForwardRespectingExplicitLimit() throws IOException {
     // WireMock matches the most recently added stub first, so the generic first-page stub is
-    // declared before the window-specific second-page stub.
+    // declared before the window-specific stubs. Page size is capped at the provider maximum
+    // of 100 per request.
     stubFor(
-        get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(1000, 1000))));
+        get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(1000, 100))));
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades"))
-            .withQueryParam("startTime", equalTo("2000"))
-            .withQueryParam("limit", equalTo("500"))
-            .willReturn(aResponse().withBody(myTradesBody(2000, 500))));
+            .withQueryParam("startTime", equalTo("1100"))
+            .withQueryParam("limit", equalTo("100"))
+            .willReturn(aResponse().withBody(myTradesBody(2000, 100))));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("2100"))
+            .withQueryParam("limit", equalTo("50"))
+            .willReturn(aResponse().withBody(myTradesBody(3000, 50))));
 
     MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
     history.setCurrencyPair(CurrencyPair.BTC_USDT);
-    history.setLimit(1500);
+    history.setLimit(250);
 
     UserTrades trades = tradeService().getTradeHistory(history);
 
-    assertThat(trades.getUserTrades()).hasSize(1500);
+    assertThat(trades.getUserTrades()).hasSize(250);
     assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("1000");
-    assertThat(trades.getUserTrades().get(1499).getId()).isEqualTo("2499");
-    verify(2, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    assertThat(trades.getUserTrades().get(249).getId()).isEqualTo("3049");
+    verify(3, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
     verify(
         getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
-            .withQueryParam("startTime", equalTo("2000")));
+            .withQueryParam("startTime", equalTo("1100"))
+            .withQueryParam("limit", equalTo("100")));
+  }
+
+  @Test
+  public void getTradeHistoryPartitionsLongSpanIntoProviderWindows() throws IOException {
+    // A span longer than the provider's one-month per-request window must be split into
+    // 30-day windows before paging, otherwise the first request would exceed the endpoint's
+    // queryable range and be rejected.
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody("[]")));
+
+    long start = 1_700_000_000_000L; // 2023-11-14, well in the past
+    long windowMs = 30L * 24 * 60 * 60 * 1000;
+    MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
+    history.setCurrencyPair(CurrencyPair.BTC_USDT);
+    history.setStartTime(new java.util.Date(start));
+    history.setEndTime(new java.util.Date(start + 3 * windowMs));
+
+    UserTrades trades = tradeService().getTradeHistory(history);
+
+    assertThat(trades.getUserTrades()).isEmpty();
+    java.util.List<com.github.tomakehurst.wiremock.verification.LoggedRequest> requests =
+        wireMockRule.findAll(getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    assertThat(requests).hasSize(3);
+    assertThat(
+            requests.stream()
+                .map(e -> e.queryParameter("startTime").firstValue())
+                .collect(java.util.stream.Collectors.toList()))
+        .containsExactly(
+            String.valueOf(start), String.valueOf(start + windowMs), String.valueOf(start + 2 * windowMs));
+    assertThat(
+            requests.stream()
+                .map(e -> e.queryParameter("endTime").firstValue())
+                .collect(java.util.stream.Collectors.toList()))
+        .containsExactly(
+            String.valueOf(start + windowMs - 1),
+            String.valueOf(start + 2 * windowMs - 1),
+            String.valueOf(start + 3 * windowMs));
   }
 
   @Test
   public void getTradeHistoryStopsWhenWindowDoesNotAdvance() throws IOException {
     // A full page whose newest trade never moves simulates a provider that ignores startTime
     // (orderId-scoped queries): the no-progress guard must stop the loop after the repeat.
-    stubFor(get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(5000, 1000))));
+    stubFor(get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(5000, 100))));
 
     MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
     history.setCurrencyPair(CurrencyPair.BTC_USDT);
 
     UserTrades trades = tradeService().getTradeHistory(history);
 
-    assertThat(trades.getUserTrades()).hasSize(1000);
+    assertThat(trades.getUserTrades()).hasSize(100);
     verify(2, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
   }
 

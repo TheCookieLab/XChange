@@ -320,62 +320,94 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
     final Integer queryLimit = limit;
     return execute(
         () -> {
-          final int maxPageSize = 1000; // MEXC v3 myTrades per-request cap
+          // Provider limits (mexc.com spot-v3 myTrades): limit is capped at 100 per request,
+          // and one request may span at most the provider's queryable window (the last month
+          // of records). Partition an explicit startTime..endTime span into provider-sized
+          // windows and page forward within each; a request without startTime is a single
+          // open-ended window.
+          final int maxPageSize = 100; // MEXC v3 myTrades per-request cap (default 100, max 100)
+          final long windowMs = 30L * 24 * 60 * 60 * 1000; // provider queryable window: 1 month
           int remaining = queryLimit == null ? Integer.MAX_VALUE : queryLimit;
           List<UserTrade> trades = new ArrayList<>();
           Long windowStart = queryStartTime == null ? null : queryStartTime.getTime();
           Long windowEnd = queryEndTime == null ? null : queryEndTime.getTime();
           while (remaining > 0) {
-            int pageLimit = Math.min(remaining, maxPageSize);
-            List<MexcV3MyTrade> raw =
-                mexcV3Authenticated.myTrades(
-                    apiKey,
-                    MexcV3Symbols.toMexcSymbol(queryPair),
-                    queryOrderId,
-                    windowStart,
-                    windowEnd,
-                    pageLimit,
-                    recvWindowMs,
-                    timestampFactory,
-                    signatureCreator);
-            if (raw.isEmpty()) {
+            if (windowStart != null && windowStart > System.currentTimeMillis()) {
+              break; // nothing after the current time
+            }
+            boolean lastWindow;
+            Long requestEnd;
+            if (windowStart == null) {
+              // No explicit start: a single open-ended window, as before.
+              requestEnd = windowEnd;
+              lastWindow = true;
+            } else if (windowEnd == null || windowStart + windowMs >= windowEnd) {
+              // No explicit end, or the remaining span fits in one provider window.
+              requestEnd = windowEnd;
+              lastWindow = true;
+            } else {
+              requestEnd = windowStart + windowMs - 1;
+              lastWindow = false;
+            }
+            boolean windowExhausted = false; // short or empty page within this window
+            while (remaining > 0 && !windowExhausted) {
+              int pageLimit = Math.min(remaining, maxPageSize);
+              List<MexcV3MyTrade> raw =
+                  mexcV3Authenticated.myTrades(
+                      apiKey,
+                      MexcV3Symbols.toMexcSymbol(queryPair),
+                      queryOrderId,
+                      windowStart,
+                      requestEnd,
+                      pageLimit,
+                      recvWindowMs,
+                      timestampFactory,
+                      signatureCreator);
+              if (raw.isEmpty()) {
+                windowExhausted = true;
+                break;
+              }
+              int pageStartIndex = trades.size();
+              long newest = Long.MIN_VALUE;
+              for (MexcV3MyTrade trade : raw) {
+                newest = Math.max(newest, trade.getTime());
+                trades.add(
+                    UserTrade.builder()
+                        .id(String.valueOf(trade.getId()))
+                        .orderId(trade.getOrderId())
+                        .orderUserReference(trade.getClientOrderId())
+                        .instrument(queryPair)
+                        .originalAmount(new java.math.BigDecimal(trade.getQty()))
+                        .price(new java.math.BigDecimal(trade.getPrice()))
+                        .timestamp(new Date(trade.getTime()))
+                        .type(trade.isBuyer() ? OrderType.BID : OrderType.ASK)
+                        .feeAmount(new java.math.BigDecimal(trade.getCommission()))
+                        .feeCurrency(
+                            org.knowm.xchange.currency.Currency.getInstance(
+                                trade.getCommissionAsset()))
+                        .build());
+              }
+              remaining -= raw.size();
+              if (raw.size() < pageLimit) {
+                windowExhausted = true;
+                break; // short page: the window is exhausted
+              }
+              // Page forward past the newest trade seen. Stop when the window did not advance:
+              // that means the provider ignored startTime (orderId-scoped queries) and repeated
+              // the same full page, which would otherwise loop forever. The repeated page is
+              // stale (all trades predate the current window), so drop it instead of returning
+              // duplicates; later windows would repeat it too, so the whole span is done.
+              long nextStart = newest + 1;
+              if (windowStart != null && nextStart <= windowStart) {
+                trades.subList(pageStartIndex, trades.size()).clear();
+                return new UserTrades(trades, TradeSortType.SortByID);
+              }
+              windowStart = nextStart;
+            }
+            if (lastWindow) {
               break;
             }
-            int pageStartIndex = trades.size();
-            long newest = Long.MIN_VALUE;
-            for (MexcV3MyTrade trade : raw) {
-              newest = Math.max(newest, trade.getTime());
-              trades.add(
-                  UserTrade.builder()
-                      .id(String.valueOf(trade.getId()))
-                      .orderId(trade.getOrderId())
-                      .orderUserReference(trade.getClientOrderId())
-                      .instrument(queryPair)
-                      .originalAmount(new java.math.BigDecimal(trade.getQty()))
-                      .price(new java.math.BigDecimal(trade.getPrice()))
-                      .timestamp(new Date(trade.getTime()))
-                      .type(trade.isBuyer() ? OrderType.BID : OrderType.ASK)
-                      .feeAmount(new java.math.BigDecimal(trade.getCommission()))
-                      .feeCurrency(
-                          org.knowm.xchange.currency.Currency.getInstance(
-                              trade.getCommissionAsset()))
-                      .build());
-            }
-            remaining -= raw.size();
-            if (raw.size() < pageLimit) {
-              break; // short page: the window is exhausted
-            }
-            // Page forward past the newest trade seen. Stop when the window did not advance:
-            // that means the provider ignored startTime (orderId-scoped queries) and repeated
-            // the same full page, which would otherwise loop forever. The repeated page is
-            // stale (all trades predate the current window), so drop it instead of returning
-            // duplicates.
-            long nextStart = newest + 1;
-            if (windowStart != null && nextStart <= windowStart) {
-              trades.subList(pageStartIndex, trades.size()).clear();
-              break;
-            }
-            windowStart = nextStart;
+            windowStart = requestEnd + 1;
           }
           return new UserTrades(trades, TradeSortType.SortByID);
         },

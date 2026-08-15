@@ -299,12 +299,15 @@ class MexcV3StreamingServiceTest {
     CapturingService service = new CapturingService();
     forceOpenChannel(service);
     Observable<String> channelZero = null;
+    io.reactivex.rxjava3.observers.TestObserver<String> channelZeroObserver = null;
     for (int i = 0; i < MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION; i++) {
       Observable<String> channel = service.subscribeChannel("channel-" + i);
       if (i == 0) {
         channelZero = channel;
+        channelZeroObserver = channel.test();
+      } else {
+        channel.subscribe();
       }
-      channel.subscribe();
     }
     assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
     service
@@ -320,28 +323,37 @@ class MexcV3StreamingServiceTest {
     // The cap governs new wire subscriptions; an additional observer of an already-subscribed
     // channel is still served from the shared cache without registering a new subscription.
     assertSame(channelZero, service.subscribeChannel("channel-0"));
-    service.subscribeChannel("channel-0").test().assertNoErrors();
+    io.reactivex.rxjava3.observers.TestObserver<String> channelZeroSecond =
+        service.subscribeChannel("channel-0").test();
+    assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
+
+    // Releasing the last observers of a channel frees its slot: the overflow channel then
+    // subscribes on first observer, because a slot is acquired at subscribe time, not at
+    // observable creation.
+    channelZeroObserver.dispose();
+    channelZeroSecond.dispose();
+    assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION - 1, service.channelCount());
+    service.subscribeChannel("channel-overflow").test().assertNoErrors();
     assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
   }
 
   @Test
-  void unsubscribedObservablesReserveCapSlots() {
+  void unsubscribedObservablesDoNotReserveCapSlots() throws Exception {
     CapturingService service = new CapturingService();
+    forceOpenChannel(service);
     for (int i = 0; i < MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION; i++) {
-      // Creating the observable reserves the slot; the wire subscription is only registered
-      // when the first consumer subscribes.
+      // Handing out the observable must not send wire messages or reserve a cap slot; the
+      // wire subscription and its slot are acquired only when the first consumer subscribes.
       assertNotNull(service.subscribeChannel("channel-" + i));
     }
     assertTrue(service.sent.isEmpty(), "creating observables must not send wire messages");
 
-    // The 31st distinct channel is rejected even though none of the 30 are subscribed yet.
-    service
-        .subscribeChannel("channel-overflow")
-        .test()
-        .assertError(
-            t -> t instanceof ExchangeException && t.getMessage().contains("at most 30"));
+    // The 31st distinct channel is accepted and subscribes normally: none of the 30 created
+    // observables was ever subscribed, so none holds a slot.
+    service.subscribeChannel("channel-overflow").test().assertNoErrors();
+    assertEquals(1, service.channelCount());
 
-    // Cache hits keep working at the cap.
+    // Cache hits still share one observable per channel.
     assertSame(service.subscribeChannel("channel-0"), service.subscribeChannel("channel-0"));
   }
 
