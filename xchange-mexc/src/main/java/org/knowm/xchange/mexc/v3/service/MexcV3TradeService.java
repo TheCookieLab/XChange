@@ -372,13 +372,13 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
               }
               int pageStartIndex = trades.size();
               long newest = Long.MIN_VALUE;
-              boolean pageAddedNew = false;
+              int added = 0;
               for (MexcV3MyTrade trade : raw) {
                 newest = Math.max(newest, trade.getTime());
                 if (!seenTradeIds.add(trade.getId())) {
                   continue; // inclusive boundary re-fetch: already collected this trade
                 }
-                pageAddedNew = true;
+                added++;
                 trades.add(
                     UserTrade.builder()
                         .id(String.valueOf(trade.getId()))
@@ -395,7 +395,10 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
                                 trade.getCommissionAsset()))
                         .build());
               }
-              remaining -= raw.size();
+              // Count only newly collected trades toward the caller's limit: boundary
+              // re-fetches that seenTradeIds discards must not consume the budget, or a limit
+              // just past a full page would stop short on a duplicated one-row request.
+              remaining -= added;
               if (raw.size() < pageLimit) {
                 windowExhausted = true;
                 break; // short page: the window is exhausted
@@ -408,7 +411,7 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
               // otherwise loop forever; the repeated page is stale (all trades predate the
               // current window), so drop it and end the span.
               long nextStart = newest;
-              if (windowStart != null && nextStart <= windowStart && !pageAddedNew) {
+              if (windowStart != null && nextStart <= windowStart && added == 0) {
                 trades.subList(pageStartIndex, trades.size()).clear();
                 return new UserTrades(trades, TradeSortType.SortByID);
               }

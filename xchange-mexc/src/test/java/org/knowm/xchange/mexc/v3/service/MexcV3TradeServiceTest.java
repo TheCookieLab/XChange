@@ -507,7 +507,9 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     // declared before the window-specific stubs. Page size is capped at the provider maximum
     // of 100 per request. The cursor is inclusive: each next page re-fetches the boundary
     // millisecond, so the second page starts at the first page's newest trade time (1099) and
-    // the boundary trade (id 1099) is deduplicated rather than skipped.
+    // the boundary trade (id 1099) is deduplicated rather than skipped. Only newly collected
+    // trades count toward the caller's limit: after two full pages the budget is 51, so the
+    // third request pages with limit 51 and a short reply (40 rows) exhausts the window.
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(1000, 100))));
     stubFor(
@@ -518,8 +520,8 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades"))
             .withQueryParam("startTime", equalTo("1198"))
-            .withQueryParam("limit", equalTo("50"))
-            .willReturn(aResponse().withBody(myTradesBody(1198, 50))));
+            .withQueryParam("limit", equalTo("51"))
+            .willReturn(aResponse().withBody(myTradesBody(1198, 40))));
 
     MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
     history.setCurrencyPair(CurrencyPair.BTC_USDT);
@@ -527,14 +529,18 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
 
     UserTrades trades = tradeService().getTradeHistory(history);
 
-    assertThat(trades.getUserTrades()).hasSize(248); // boundary ids 1099 and 1198 deduplicated
+    assertThat(trades.getUserTrades()).hasSize(238); // 100 + 99 + 39; boundary ids deduplicated
     assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("1000");
-    assertThat(trades.getUserTrades().get(247).getId()).isEqualTo("1247");
+    assertThat(trades.getUserTrades().get(237).getId()).isEqualTo("1237");
     verify(3, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
     verify(
         getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
             .withQueryParam("startTime", equalTo("1099"))
             .withQueryParam("limit", equalTo("100")));
+    verify(
+        getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1198"))
+            .withQueryParam("limit", equalTo("51")));
   }
 
   @Test
@@ -712,6 +718,37 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
         .append(",\"isBuyer\":true,\"isMaker\":false,\"isBestMatch\":true,")
         .append("\"isSelfTrade\":false,\"clientOrderId\":\"ref-").append(id).append("\"}")
         .toString();
+  }
+
+  @Test
+  public void getTradeHistoryDoesNotSpendTheLimitOnBoundaryDuplicates() throws IOException {
+    // limit=150 with a full first page (100) and a second page of 50 that re-fetches the
+    // boundary trade (id 1099, deduplicated): 49 new trades. Only those 49 count toward the
+    // budget, so one unit remains and the next one-row request returns a new fill (1149).
+    // Charging the duplicate against the caller's limit (raw page size 50) would leave the
+    // budget at zero and wrongly stop at 149 trades.
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(1000, 100))));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1099"))
+            .withQueryParam("limit", equalTo("50"))
+            .willReturn(aResponse().withBody(myTradesBody(1099, 50))));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1148"))
+            .withQueryParam("limit", equalTo("1"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1149L, 1149, 1))));
+
+    MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
+    history.setCurrencyPair(CurrencyPair.BTC_USDT);
+    history.setLimit(150);
+
+    UserTrades trades = tradeService().getTradeHistory(history);
+
+    assertThat(trades.getUserTrades()).hasSize(150);
+    assertThat(trades.getUserTrades().get(149).getId()).isEqualTo("1149");
+    verify(3, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
   }
 
   @Test
