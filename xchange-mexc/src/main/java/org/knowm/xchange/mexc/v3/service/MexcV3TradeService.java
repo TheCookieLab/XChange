@@ -154,6 +154,17 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
     }
   }
 
+  /**
+   * MEXC Spot v3 rejects cancellations without the symbol, so generic callers need both the
+   * order-ID and instrument parameter interfaces to build a usable cancellation request.
+   *
+   * @return the parameter interfaces a cancellation request must satisfy
+   */
+  @Override
+  public Class[] getRequiredCancelOrderParamClasses() {
+    return new Class[] {CancelOrderByIdParams.class, CancelOrderByInstrument.class};
+  }
+
   @Override
   public boolean cancelOrder(CancelOrderParams orderParams) throws IOException {
     String symbol = null;
@@ -263,9 +274,19 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
         ReplaySafety.READ);
   }
 
+  /**
+   * MEXC Spot v3 rejects order queries without the symbol, so generic callers must build params
+   * carrying an instrument rather than the ID-only default.
+   *
+   * @return the parameter interface that carries the required instrument
+   */
   @Override
-  public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {
-    if (orderQueryParams == null || orderQueryParams.length == 0) {
+  public Class getRequiredOrderQueryParamClass() {
+    return OrderQueryParamInstrument.class;
+  }
+
+  @Override
+  public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {    if (orderQueryParams == null || orderQueryParams.length == 0) {
       return Collections.emptyList();
     }
     List<Order> result = new ArrayList<>(orderQueryParams.length);

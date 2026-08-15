@@ -39,6 +39,7 @@ import org.knowm.xchange.mexc.v3.dto.trade.MexcV3OrderType;
 import org.knowm.xchange.service.trade.params.CancelAllOrders;
 import org.knowm.xchange.service.trade.params.CancelOrderByCurrencyPair;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
+import org.knowm.xchange.service.trade.params.CancelOrderByInstrument;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.DefaultCancelAllOrdersByInstrument;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
@@ -48,6 +49,7 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
+import org.knowm.xchange.service.trade.params.orders.OrderQueryParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 
 /** Placement replay-safety, cancel, order query and history coverage (WireMock). */
@@ -882,6 +884,18 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
         postRequestedFor(urlPathEqualTo("/api/v3/order/test"))
             .withQueryParam("symbol", com.github.tomakehurst.wiremock.client.WireMock.equalTo("BTCUSDT"))
             .withQueryParam("type", com.github.tomakehurst.wiremock.client.WireMock.equalTo("LIMIT")));
+  }
+
+  @Test
+  public void requiredParamClassesAdvertiseSymbolAndInstrument() throws IOException {
+    MexcV3TradeService service = tradeService();
+
+    // Generic callers build query/cancel params from these advertised interfaces; MEXC rejects
+    // both operations without the symbol, so ID-only defaults must not be advertised.
+    assertThat(service.getRequiredOrderQueryParamClass())
+        .isEqualTo(OrderQueryParamInstrument.class);
+    assertThat(service.getRequiredCancelOrderParamClasses())
+        .containsExactly(CancelOrderByIdParams.class, CancelOrderByInstrument.class);
   }
 
   /** Adapter bundling the cancel-param interfaces the service recognizes. */
