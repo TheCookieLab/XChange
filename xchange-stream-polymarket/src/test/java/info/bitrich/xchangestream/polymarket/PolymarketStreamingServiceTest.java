@@ -8,10 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +90,7 @@ class PolymarketStreamingServiceTest {
   @Test
   void marketSubscribeFrameCarriesTheTokenIds() throws Exception {
     CapturingService service = new CapturingService(null, null, null);
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID);
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID);
 
     assertEquals(1, service.sent.size());
     JsonNode frame = MAPPER.readTree(service.sent.get(0));
@@ -101,7 +104,7 @@ class PolymarketStreamingServiceTest {
   @Test
   void userSubscribeFrameCarriesTheL2AuthAndConditionIds() throws Exception {
     CapturingService service = new CapturingService("key", "secret", "passphrase");
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_USER, CONDITION_ID);
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_USER, CONDITION_ID);
 
     assertEquals(1, service.sent.size());
     JsonNode frame = MAPPER.readTree(service.sent.get(0));
@@ -129,8 +132,8 @@ class PolymarketStreamingServiceTest {
   @Test
   void laterSubscriptionsUseDynamicUpdateFrames() throws Exception {
     CapturingService service = new CapturingService(null, null, null);
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID);
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID_B);
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID);
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID_B);
 
     assertEquals(2, service.sent.size());
     JsonNode first = MAPPER.readTree(service.sent.get(0));
@@ -149,8 +152,8 @@ class PolymarketStreamingServiceTest {
   @Test
   void userChannelFollowsTheSameInitialThenUpdateShape() throws Exception {
     CapturingService service = new CapturingService("key", "secret", "passphrase");
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_USER, CONDITION_ID);
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_USER, CONDITION_ID + "2");
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_USER, CONDITION_ID);
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_USER, CONDITION_ID + "2");
 
     JsonNode first = MAPPER.readTree(service.sent.get(0));
     assertEquals("user", first.path("type").asText());
@@ -347,7 +350,7 @@ class PolymarketStreamingServiceTest {
   @Test
   void reconnectResubscriptionRestartsWithTheInitialFrame() throws Exception {
     CapturingService service = new CapturingService(null, null, null);
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID);
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID);
     assertEquals(1, service.sent.size());
     assertEquals("market", MAPPER.readTree(service.sent.get(0)).path("type").asText());
 
@@ -362,7 +365,7 @@ class PolymarketStreamingServiceTest {
     assertEquals(TOKEN_ID, resent.path("assets_ids").get(0).asText());
 
     // The next subscription on the reconnected connection is a dynamic update again.
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID_B);
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID_B);
     JsonNode third = MAPPER.readTree(service.sent.get(2));
     assertEquals("subscribe", third.path("operation").asText());
     assertEquals(TOKEN_ID_B, third.path("assets_ids").get(0).asText());
@@ -371,8 +374,8 @@ class PolymarketStreamingServiceTest {
   @Test
   void reconnectResubscriptionSendsExactlyOneInitialFrame() throws Exception {
     CapturingService service = new CapturingService("key", "secret", "passphrase");
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID);
-    subscribeWhileDisconnected(service, PolymarketStreamingService.CHANNEL_USER, CONDITION_ID);
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_MARKET, TOKEN_ID);
+    subscribeOnOpenChannel(service, PolymarketStreamingService.CHANNEL_USER, CONDITION_ID);
     assertEquals(2, service.sent.size());
 
     // The channel registry is a ConcurrentHashMap, so resubscribe order is not insertion order:
@@ -402,8 +405,25 @@ class PolymarketStreamingServiceTest {
     return sent.stream().filter(PolymarketStreamingService.PING_TEXT::equals).count();
   }
 
-  private static Disposable subscribeWhileDisconnected(
-      PolymarketStreamingService service, String channel, String arg) {
+  /**
+   * Subscribes on a fake open channel. The base {@code subscribeChannel} terminal-errors a closed
+   * socket without registering or emitting a frame, so protocol tests open the channel through
+   * {@link #forceOpenChannel} and only the subscriber then sees the real frame stream.
+   */
+  private static Disposable subscribeOnOpenChannel(
+      PolymarketStreamingService service, String channel, String arg) throws Exception {
+    forceOpenChannel(service);
     return service.subscribeChannel(channel, arg).subscribe(ignored -> {}, error -> {});
+  }
+
+  /**
+   * Pokes an always-open channel into the base class: {@code webSocketChannel} is private with no
+   * setter, so the test replaces it via reflection (the same technique as the MEXC streaming
+   * tests).
+   */
+  private static void forceOpenChannel(PolymarketStreamingService service) throws Exception {
+    Field channelField = NettyStreamingService.class.getDeclaredField("webSocketChannel");
+    channelField.setAccessible(true);
+    channelField.set(service, new EmbeddedChannel());
   }
 }
