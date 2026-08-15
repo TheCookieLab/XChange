@@ -136,8 +136,9 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                                       .subscribeOn(Schedulers.io())
                                       .onErrorComplete();
                                 }
+                                MexcV3StreamingService service = streamingService;
                                 return connectAndInvalidateAfterDisconnect(
-                                    streamingService.connect(), generation);
+                                    service.connect(), generation, service);
                               }));
                 }
                 // A previous attempt created a listen key and its keepalive is still running;
@@ -163,8 +164,9 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                           return Completable.complete();
                         }
                         buildStreamingService(withListenKey(resolvedUri, listenKey));
+                        MexcV3StreamingService service = streamingService;
                         return connectAndInvalidateAfterDisconnect(
-                            streamingService.connect(), generation);
+                            service.connect(), generation, service);
                       }
                     });
               });
@@ -192,19 +194,27 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                   } else {
                     buildStreamingService(resolvedUri);
                   }
+                  MexcV3StreamingService service = streamingService;
                   return connectAndInvalidateAfterDisconnect(
-                      streamingService.connect(), generation);
+                      service.connect(), generation, service);
                 }
               });
     } else {
       buildStreamingService(uri);
-      attempt =
-          connectAndInvalidateAfterDisconnect(streamingService.connect(), generation);
+      MexcV3StreamingService service = streamingService;
+      attempt = connectAndInvalidateAfterDisconnect(service.connect(), generation, service);
     }
     // cache() makes the attempt single-flight: the first subscription executes it and every
     // concurrent subscription shares the same result instead of building a second transport.
-    inFlightConnect = attempt.cache().doOnTerminate(() -> clearInFlightConnect(attempt));
-    return inFlightConnect;
+    // The field stores the cached attempt itself, and the termination callback compares the
+    // same instance: the identity guard exists to preserve a replacement attempt cached by an
+    // error handler, not to keep the slot occupied forever. The returned wrapper carries the
+    // per-subscriber cleanup; storing the wrapper in the field would make the guard compare the
+    // wrapper against its own inner attempt, which never matches, and the slot would never
+    // clear.
+    Completable shared = attempt.cache();
+    inFlightConnect = shared;
+    return shared.doOnTerminate(() -> clearInFlightConnect(shared));
   }
 
   private synchronized void clearInFlightConnect(Completable attempt) {
@@ -229,15 +239,17 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
    * completed. The in-flight operation is therefore invalidated at its asynchronous completion:
    * once the connect settles (its channel is assigned by then), a moved generation tears the
    * transport down immediately.
+   *
+   * <p>The service is captured at wrap time: by the time the attempt settles, a newer connect
+   * may have replaced {@link #streamingService}, and tearing down the attempt must touch only
+   * the transport it owns.
    */
-  private Completable connectAndInvalidateAfterDisconnect(Completable connect, long generation) {
+  private Completable connectAndInvalidateAfterDisconnect(
+      Completable connect, long generation, MexcV3StreamingService service) {
     return connect.doOnTerminate(
         () -> {
-          if (generation != connectGeneration) {
-            MexcV3StreamingService service = streamingService;
-            if (service != null && service.isSocketOpen()) {
-              service.disconnect().onErrorComplete().subscribe();
-            }
+          if (generation != connectGeneration && service != null && service.isSocketOpen()) {
+            service.disconnect().onErrorComplete().subscribe();
           }
         });
   }
