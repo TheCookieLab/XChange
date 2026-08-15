@@ -24,15 +24,21 @@ public final class MexcV3Signing {
   /**
    * The canonical payload a MEXC Spot v3 request signature covers.
    *
+   * <p>An absent request body signs as the empty string: rescu leaves the entity {@code null} for
+   * requests whose parameters are entirely in the query string, and Java string concatenation
+   * would sign the literal {@code "null"} instead of nothing, which MEXC rejects as an invalid
+   * signature.
+   *
    * @return query string (without {@code signature}) plus request body, concatenated without a
-   *     separator.
+   *     separator; a missing body contributes nothing.
    */
   public static String signingPayload(RestInvocation restInvocation) {
     final Params p = Params.of();
     restInvocation.getParamsMap().get(QueryParam.class).asHttpHeaders().entrySet().stream()
         .filter(e -> !SIGNATURE_PARAM.equals(e.getKey()))
         .forEach(e -> p.add(e.getKey(), e.getValue()));
-    return p.asQueryString() + restInvocation.getRequestBody();
+    String body = restInvocation.getRequestBody();
+    return p.asQueryString() + (body == null ? "" : body);
   }
 
   /**
