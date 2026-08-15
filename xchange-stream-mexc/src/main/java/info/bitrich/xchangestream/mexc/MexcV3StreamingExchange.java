@@ -57,6 +57,8 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
   private MexcV3StreamingTradeService streamingTradeService;
   private String listenKey;
   private Disposable keepAliveDisposable;
+  /** Shared connection attempt while it is in flight; cleared when it settles. */
+  private Completable inFlightConnect;
 
   @Override
   public Completable connect(ProductSubscription... args) {
@@ -68,9 +70,15 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     return Completable.defer(this::connectNow);
   }
 
-  private Completable connectNow() {
+  private synchronized Completable connectNow() {
     if (isAlive()) {
       return Completable.complete();
+    }
+    if (inFlightConnect != null) {
+      // A sibling subscription already started a connection attempt that has not settled; share
+      // that attempt instead of building a second transport. Building again now would disconnect
+      // the in-flight service and leave the first caller connected to an orphaned one.
+      return inFlightConnect;
     }
     ExchangeSpecification specification = getExchangeSpecification();
     String uri = getConfiguration().getStreamBaseUrl();
@@ -83,39 +91,86 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
       }
     }
     final String resolvedUri = uri;
+    Completable attempt;
     if (specification.getApiKey() != null && !uri.contains("listenKey=")) {
       // The state check runs when the returned Completable is subscribed, not when connect() is
       // called: subscribing the same chain twice must not create a second listen key (the first
       // would be orphaned until its 60-minute expiry).
-      return Completable.defer(
-          () -> {
-            if (listenKey == null) {
-              // Private connection: create a listen key, attach it to the URI, and keep it alive.
-              return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
-                  .subscribeOn(Schedulers.io())
-                  .andThen(Completable.defer(() -> streamingService.connect()));
-            }
-            // A previous attempt created a listen key and its keepalive is still running; reuse
-            // that key instead of creating a second one. Creating a new key on every retry would
-            // orphan the previous one until its 60-minute expiry and repeated connection failures
-            // could accumulate keys up to MEXC's per-user limit. The key must NOT be closed when
-            // a connect attempt fails: the base service keeps reconnecting with the URI it was
-            // built with, and the keepalive keeps that key valid for those reconnects.
-            return Completable.defer(
-                () -> {
-                  if (isAlive()) {
-                    // The first subscription of this chain already connected; subscribing the
-                    // chain again must not rebuild the service, because buildStreamingService
-                    // disconnects the current transport and would tear down the active streams.
-                    return Completable.complete();
-                  }
-                  buildStreamingService(withListenKey(resolvedUri, listenKey));
-                  return streamingService.connect();
-                });
-          });
+      attempt =
+          Completable.defer(
+              () -> {
+                if (listenKey == null) {
+                  // Private connection: create a listen key, attach it to the URI, and keep it
+                  // alive.
+                  return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
+                      .subscribeOn(Schedulers.io())
+                      .andThen(Completable.defer(() -> streamingService.connect()));
+                }
+                // A previous attempt created a listen key and its keepalive is still running;
+                // reuse that key instead of creating a second one. Creating a new key on every
+                // retry would orphan the previous one until its 60-minute expiry and repeated
+                // connection failures could accumulate keys up to MEXC's per-user limit. The key
+                // must NOT be closed when a connect attempt fails: the base service keeps
+                // reconnecting with the URI it was built with, and the keepalive keeps that key
+                // valid for those reconnects.
+                return Completable.defer(
+                    () -> {
+                      if (isAlive()) {
+                        // The first subscription of this chain already connected; subscribing
+                        // the chain again must not rebuild the service, because
+                        // buildStreamingService disconnects the current transport and would tear
+                        // down the active streams.
+                        return Completable.complete();
+                      }
+                      buildStreamingService(withListenKey(resolvedUri, listenKey));
+                      return streamingService.connect();
+                    });
+              });
+    } else if (specification.getApiKey() != null) {
+      // The configured URI already carries a listen key. Adopt it into the refresh and cleanup
+      // lifecycle instead of treating the connection as public: without a keepalive the key
+      // expires after 60 minutes and private streams stop, and disconnect() could not close it.
+      final String suppliedKey = listenKeyIn(uri);
+      attempt =
+          Completable.defer(
+              () -> {
+                if (isAlive()) {
+                  return Completable.complete();
+                }
+                if (listenKey == null) {
+                  listenKey = suppliedKey;
+                  buildStreamingService(resolvedUri);
+                  startKeepAlive((MexcV3AccountService) getAccountService());
+                } else {
+                  buildStreamingService(resolvedUri);
+                }
+                return streamingService.connect();
+              });
+    } else {
+      buildStreamingService(uri);
+      attempt = streamingService.connect();
     }
-    buildStreamingService(uri);
-    return streamingService.connect();
+    // cache() makes the attempt single-flight: the first subscription executes it and every
+    // concurrent subscription shares the same result instead of building a second transport.
+    inFlightConnect = attempt.cache().doOnTerminate(this::clearInFlightConnect);
+    return inFlightConnect;
+  }
+
+  private synchronized void clearInFlightConnect() {
+    // The attempt settled; a later subscription may start a fresh one (e.g. a retry).
+    inFlightConnect = null;
+  }
+
+  /** Extracts the {@code listenKey} query parameter from a stream URI, or {@code null}. */
+  private static String listenKeyIn(String uri) {
+    int keyIndex = uri.indexOf("listenKey=");
+    if (keyIndex < 0) {
+      return null;
+    }
+    int valueStart = keyIndex + "listenKey=".length();
+    int valueEnd = uri.indexOf('&', valueStart);
+    String key = valueEnd < 0 ? uri.substring(valueStart) : uri.substring(valueStart, valueEnd);
+    return key.isEmpty() ? null : key;
   }
 
   @Override

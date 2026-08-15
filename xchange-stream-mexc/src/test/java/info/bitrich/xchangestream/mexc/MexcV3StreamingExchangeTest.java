@@ -475,6 +475,75 @@ class MexcV3StreamingExchangeTest {
         1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key")));
   }
 
+  @Test
+  void simultaneousConnectSubscriptionsShareOneInFlightAttempt() throws Exception {
+    // RFC 5737 TEST-NET addresses are unroutable: the TCP connect stays pending until the
+    // connect timeout, so the attempt is deterministically in flight and isAlive() false
+    // while both chains subscribe.
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://192.0.2.1:80/ws");
+    exchange.applySpecification(spec);
+
+    Completable first = exchange.connect();
+    first.test(); // builds the transport; the attempt stays in flight (connect pending)
+    Object serviceAfterFirst = streamingServiceInstance(exchange);
+    assertNotNull(serviceAfterFirst);
+
+    // A second subscription while the first attempt is in flight must share it: building
+    // again would disconnect the in-flight transport and leave the first caller connected
+    // to an orphaned service.
+    Completable second = exchange.connect();
+    second.test();
+    assertSame(serviceAfterFirst, streamingServiceInstance(exchange));
+
+    exchange.disconnect().onErrorComplete().blockingAwait();
+  }
+
+  @Test
+  void keyedStreamUriAdoptsSuppliedKeyIntoLifecycle() throws Exception {
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"created-key\"}")));
+    wireMock.stubFor(
+        delete(urlEqualTo("/api/v3/userDataStream?listenKey=supplied-key"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"supplied-key\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
+        "ws://127.0.0.1:1/ws?listenKey=supplied-key");
+    exchange.applySpecification(spec);
+
+    exchange
+        .connect()
+        .test()
+        .awaitDone(10, TimeUnit.SECONDS)
+        .assertError(IOException.class);
+
+    // The supplied key is adopted into the lifecycle: no key is created, the keepalive is
+    // scheduled (the key would expire after 60 minutes without it), and disconnect closes
+    // exactly the supplied key.
+    assertEquals("supplied-key", listenKeyInstance(exchange));
+    assertNotNull(keepAliveDisposableInstance(exchange));
+    wireMock.verify(0, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+
+    exchange.disconnect().onErrorComplete().blockingAwait();
+    wireMock.verify(
+        1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=supplied-key")));
+  }
+
   private static String listenKeyInstance(MexcV3StreamingExchange exchange) throws Exception {
     java.lang.reflect.Field keyField = MexcV3StreamingExchange.class.getDeclaredField("listenKey");
     keyField.setAccessible(true);
