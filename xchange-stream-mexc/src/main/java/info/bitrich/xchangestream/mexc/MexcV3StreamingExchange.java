@@ -7,6 +7,7 @@ import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.IOException;
@@ -29,8 +30,8 @@ import org.slf4j.LoggerFactory;
  * user-data stream via {@code POST /api/v3/userDataStream} and appends the listen key to the
  * WebSocket URI ({@code ?listenKey=...}) so private channels (account/orders/deals) are
  * authorized; the key is kept alive every 30 minutes ({@code PUT /api/v3/userDataStream}, keys
- * expire after 60 minutes) and closed on {@link #disconnect()} ({@code DELETE
- * /api/v3/userDataStream}).
+ * expire after 60 minutes), reused across connection retries, and closed on {@link
+ * #disconnect()} ({@code DELETE /api/v3/userDataStream}).
  */
 public class MexcV3StreamingExchange extends MexcV3Exchange implements StreamingExchange {
 
@@ -46,6 +47,8 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
   static final int KEEPALIVE_ATTEMPTS = 3;
   /** Test seam: refresh cadence; package-private for keepalive lifecycle tests. */
   long keepAliveIntervalSeconds = KEEPALIVE_INTERVAL_SECONDS;
+  /** Test seam: scheduler driving keepalive ticks; package-private for deterministic lifecycle tests. */
+  Scheduler keepAliveScheduler = Schedulers.computation();
 
   private MexcV3StreamingService streamingService;
   private MexcV3StreamingMarketDataService streamingMarketDataService;
@@ -71,10 +74,20 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     }
     final String resolvedUri = uri;
     if (specification.getApiKey() != null && !uri.contains("listenKey=")) {
-      // Private connection: create a listen key, attach it to the URI, and keep it alive.
-      return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
-          .subscribeOn(Schedulers.io())
-          .andThen(Completable.defer(() -> streamingService.connect()));
+      if (listenKey == null) {
+        // Private connection: create a listen key, attach it to the URI, and keep it alive.
+        return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
+            .subscribeOn(Schedulers.io())
+            .andThen(Completable.defer(() -> streamingService.connect()));
+      }
+      // A previous attempt created a listen key and its keepalive is still running; reuse that
+      // key instead of creating a second one. Creating a new key on every retry would orphan
+      // the previous one until its 60-minute expiry and repeated connection failures could
+      // accumulate keys up to MEXC's per-user limit. The key must NOT be closed when a connect
+      // attempt fails: the base service keeps reconnecting with the URI it was built with, and
+      // the keepalive keeps that key valid for those reconnects.
+      buildStreamingService(withListenKey(resolvedUri, listenKey));
+      return Completable.defer(() -> streamingService.connect());
     }
     buildStreamingService(uri);
     return streamingService.connect();
@@ -150,8 +163,7 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     try {
       MexcV3AccountService accountService = (MexcV3AccountService) getAccountService();
       listenKey = accountService.createListenKey().getListenKey();
-      buildStreamingService(
-          uri + (uri.contains("?") ? "&" : "?") + "listenKey=" + listenKey);
+      buildStreamingService(withListenKey(uri, listenKey));
       startKeepAlive(accountService);
     } catch (IOException e) {
       throw new ExchangeException(
@@ -161,10 +173,14 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     }
   }
 
+  private static String withListenKey(String uri, String key) {
+    return uri + (uri.contains("?") ? "&" : "?") + "listenKey=" + key;
+  }
+
   private void startKeepAlive(MexcV3AccountService accountService) {
     stopKeepAlive();
     keepAliveDisposable =
-        Observable.interval(keepAliveIntervalSeconds, TimeUnit.SECONDS)
+        Observable.interval(keepAliveIntervalSeconds, TimeUnit.SECONDS, keepAliveScheduler)
             .concatMapCompletable(
                 tick ->
                     Completable.defer(

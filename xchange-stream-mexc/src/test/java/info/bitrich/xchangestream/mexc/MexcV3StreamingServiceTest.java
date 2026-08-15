@@ -251,10 +251,16 @@ class MexcV3StreamingServiceTest {
   }
 
   @Test
-  void subscriptionCapRejectsThirtyFirstChannel() {
+  void subscriptionCapRejectsThirtyFirstChannel() throws Exception {
     CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+    Observable<String> channelZero = null;
     for (int i = 0; i < MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION; i++) {
-      service.subscribeChannel("channel-" + i).subscribe();
+      Observable<String> channel = service.subscribeChannel("channel-" + i);
+      if (i == 0) {
+        channelZero = channel;
+      }
+      channel.subscribe();
     }
     assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
     service
@@ -265,6 +271,12 @@ class MexcV3StreamingServiceTest {
                 t instanceof ExchangeException
                     && t.getMessage().contains("at most 30")
                     && t.getMessage().contains("reconnect"));
+    assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
+
+    // The cap governs new wire subscriptions; an additional observer of an already-subscribed
+    // channel is still served from the shared cache without registering a new subscription.
+    assertSame(channelZero, service.subscribeChannel("channel-0"));
+    service.subscribeChannel("channel-0").test().assertNoErrors();
     assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
   }
 }

@@ -23,6 +23,7 @@ import org.knowm.xchange.mexc.v3.MexcV3OrderFlags;
 import org.knowm.xchange.mexc.v3.MexcV3Symbols;
 import org.knowm.xchange.mexc.v3.client.MexcV3Exception;
 import org.knowm.xchange.mexc.v3.client.ReplaySafety;
+import org.knowm.xchange.mexc.v3.client.RetryClassification;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3MyTrade;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3Order;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3OrderResponse;
@@ -61,31 +62,43 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
    * <p>The provider requires {@code symbol}, {@code side}, {@code type}, {@code quantity} and
    * {@code price}; {@code newClientOrderId} carries the order's user reference when set, and a
    * generated correlation id otherwise so ambiguous placement outcomes stay reconcilable by client
-   * order id. The provider order id is returned.
+   * order id. The provider order id is returned. When the placement round-trip fails at the
+   * transport layer (outcome unknown), a single bounded {@code GET /order} lookup by client order
+   * id reconciles the outcome before surfacing a failure.
    */
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
     final String clientOrderId = resolveClientOrderId(limitOrder.getUserReference());
-    return execute(
-        () ->
-            mexcV3Authenticated
-                .placeOrder(
-                    apiKey,
-                    MexcV3Symbols.toMexcSymbol(limitOrder.getInstrument()),
-                    limitOrder.getType() == OrderType.ASK
-                        ? MexcV3OrderSide.SELL
-                        : MexcV3OrderSide.BUY,
-                    MexcV3OrderType.LIMIT,
-                    limitOrder.getOriginalAmount().toPlainString(),
-                    null,
-                    limitOrder.getLimitPrice().toPlainString(),
-                    clientOrderId,
-                    recvWindowMs,
-                    timestampFactory,
-                    signatureCreator)
-                .getOrderId(),
-        ReplaySafety.PLACEMENT,
-        clientOrderId);
+    final String symbol = MexcV3Symbols.toMexcSymbol(limitOrder.getInstrument());
+    try {
+      return execute(
+          () ->
+              mexcV3Authenticated
+                  .placeOrder(
+                      apiKey,
+                      symbol,
+                      limitOrder.getType() == OrderType.ASK
+                          ? MexcV3OrderSide.SELL
+                          : MexcV3OrderSide.BUY,
+                      MexcV3OrderType.LIMIT,
+                      limitOrder.getOriginalAmount().toPlainString(),
+                      null,
+                      limitOrder.getLimitPrice().toPlainString(),
+                      clientOrderId,
+                      recvWindowMs,
+                      timestampFactory,
+                      signatureCreator)
+                  .getOrderId(),
+          ReplaySafety.PLACEMENT,
+          clientOrderId);
+    } catch (MexcV3Exception ambiguous) {
+      // execute() adapts every provider error envelope; only the programmatic AMBIGUOUS failure
+      // escapes it, so a MexcV3Exception landing here is the unknown-outcome placement.
+      if (ambiguous.getRetryClassification() != RetryClassification.AMBIGUOUS) {
+        throw ambiguous;
+      }
+      return reconcileAmbiguousPlacement(symbol, clientOrderId, ambiguous);
+    }
   }
 
   /**
@@ -96,7 +109,8 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
    * {@code originalAmount} in the base asset, so both sides send {@code quantity} by default;
    * setting {@link MexcV3OrderFlags#QUOTE_ORDER_QTY} on a market BUY switches it to a
    * quote-denominated spend ({@code quoteOrderQty}). MEXC only prices market SELL orders in base
-   * quantity, so the flag is rejected on asks. The provider order id is returned.
+   * quantity, so the flag is rejected on asks. The provider order id is returned; an ambiguous
+   * transport outcome is reconciled by a single bounded client-order-id lookup.
    */
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
@@ -110,24 +124,32 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
               + " is only valid on market BUY orders");
     }
     final String clientOrderId = resolveClientOrderId(marketOrder.getUserReference());
-    return execute(
-        () ->
-            mexcV3Authenticated
-                .placeOrder(
-                    apiKey,
-                    MexcV3Symbols.toMexcSymbol(marketOrder.getInstrument()),
-                    buy ? MexcV3OrderSide.BUY : MexcV3OrderSide.SELL,
-                    MexcV3OrderType.MARKET,
-                    quoteDenominated ? null : marketOrder.getOriginalAmount().toPlainString(),
-                    quoteDenominated ? marketOrder.getOriginalAmount().toPlainString() : null,
-                    null,
-                    clientOrderId,
-                    recvWindowMs,
-                    timestampFactory,
-                    signatureCreator)
-                .getOrderId(),
-        ReplaySafety.PLACEMENT,
-        clientOrderId);
+    final String symbol = MexcV3Symbols.toMexcSymbol(marketOrder.getInstrument());
+    try {
+      return execute(
+          () ->
+              mexcV3Authenticated
+                  .placeOrder(
+                      apiKey,
+                      symbol,
+                      buy ? MexcV3OrderSide.BUY : MexcV3OrderSide.SELL,
+                      MexcV3OrderType.MARKET,
+                      quoteDenominated ? null : marketOrder.getOriginalAmount().toPlainString(),
+                      quoteDenominated ? marketOrder.getOriginalAmount().toPlainString() : null,
+                      null,
+                      clientOrderId,
+                      recvWindowMs,
+                      timestampFactory,
+                      signatureCreator)
+                  .getOrderId(),
+          ReplaySafety.PLACEMENT,
+          clientOrderId);
+    } catch (MexcV3Exception ambiguous) {
+      if (ambiguous.getRetryClassification() != RetryClassification.AMBIGUOUS) {
+        throw ambiguous;
+      }
+      return reconcileAmbiguousPlacement(symbol, clientOrderId, ambiguous);
+    }
   }
 
   @Override
@@ -360,6 +382,45 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
         recvWindowMs,
         timestampFactory,
         signatureCreator);
+  }
+
+  /**
+   * Resolves an ambiguous placement outcome with exactly one bounded lookup.
+   *
+   * <p>The placement round-trip failed at the transport layer, so the exchange may or may not
+   * have accepted the order. A single {@code GET /order} by {@code symbol} + {@code
+   * origClientOrderId} decides the outcome: a match returns the provider order id; a provider
+   * rejection (for example code 20116 "order does not exist") proves the order is absent and
+   * adapts to the exception hierarchy; a lookup transport failure leaves the outcome unknown, so
+   * the original ambiguous failure is rethrown (never a misleading absence).
+   *
+   * @param symbol the MEXC symbol the placement targeted
+   * @param clientOrderId the {@code newClientOrderId} the placement carried
+   * @param ambiguous the original ambiguous placement failure
+   * @return the provider order id when the lookup proves the placement applied
+   * @throws IOException when the lookup itself fails at the transport layer
+   */
+  private String reconcileAmbiguousPlacement(
+      String symbol, String clientOrderId, MexcV3Exception ambiguous) throws IOException {
+    try {
+      MexcV3Order order =
+          mexcV3Authenticated.order(
+              apiKey,
+              symbol,
+              clientOrderId,
+              null,
+              recvWindowMs,
+              timestampFactory,
+              signatureCreator);
+      // Found: the placement actually applied; surface the provider order id.
+      return order.getOrderId();
+    } catch (MexcV3Exception notFound) {
+      // Provider rejected the lookup: the order is definitively absent.
+      throw notFound.adapt();
+    } catch (IOException lookupFailure) {
+      // Inconclusive: the placement may still have applied; keep the original ambiguity.
+      throw ambiguous;
+    }
   }
 
   /**

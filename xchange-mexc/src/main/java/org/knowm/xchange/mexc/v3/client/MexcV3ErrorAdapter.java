@@ -54,6 +54,7 @@ public final class MexcV3ErrorAdapter {
       case 700003: // timestamp outside recvWindow
         return new OperationTimeoutException(message, e);
       case -2011: // unknown order (cancel/query)
+      case 20116: // order does not exist (query by id/client id)
       case 30041: // current order type cannot place order
       case 33333: // wrong order parameters
       case 44444: // insufficient order quantity

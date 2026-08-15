@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,6 +27,7 @@ import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.OrderAmountUnderMinimumException;
+import org.knowm.xchange.exceptions.OrderNotValidException;
 import org.knowm.xchange.mexc.v3.BaseMexcV3WiremockTest;
 import org.knowm.xchange.mexc.v3.MexcV3OrderFlags;
 import org.knowm.xchange.mexc.v3.client.MexcV3Exception;
@@ -203,6 +205,10 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     stubFor(
         post(urlPathEqualTo("/api/v3/order"))
             .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+    // The reconciliation lookup also fails at the transport layer: outcome stays unknown.
+    stubFor(
+        get(urlPathEqualTo("/api/v3/order"))
+            .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
 
     LimitOrder order =
         new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
@@ -219,6 +225,63 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
             e ->
                 assertThat(e.getRetryClassification())
                     .isEqualTo(RetryClassification.AMBIGUOUS));
+    // Exactly one reconciliation lookup by the generated correlation id; no orderId query.
+    verify(
+        getRequestedFor(urlPathEqualTo("/api/v3/order"))
+            .withQueryParam(
+                "origClientOrderId",
+                com.github.tomakehurst.wiremock.client.WireMock.matching("[a-f0-9]{32}"))
+            .withoutQueryParam("orderId"));
+  }
+
+  @Test
+  public void ambiguousPlacementReconcilesFoundOrderByClientOrderId() throws IOException {
+    stubFor(
+        post(urlPathEqualTo("/api/v3/order"))
+            .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/order"))
+            .willReturn(aResponse().withBody(ORDER_BODY)));
+
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.001"))
+            .limitPrice(new BigDecimal("60000.00"))
+            .userReference("my-ref-1")
+            .build();
+
+    // The transport failure was inconclusive, but the lookup proves the order exists.
+    assertThat(tradeService().placeLimitOrder(order)).isEqualTo("123456789");
+    verify(
+        getRequestedFor(urlPathEqualTo("/api/v3/order"))
+            .withQueryParam("symbol", com.github.tomakehurst.wiremock.client.WireMock.equalTo("BTCUSDT"))
+            .withQueryParam(
+                "origClientOrderId",
+                com.github.tomakehurst.wiremock.client.WireMock.equalTo("my-ref-1")));
+  }
+
+  @Test
+  public void ambiguousPlacementLookupNotFoundAdaptsToOrderNotValid() throws IOException {
+    stubFor(
+        post(urlPathEqualTo("/api/v3/order"))
+            .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/order"))
+            .willReturn(
+                aResponse()
+                    .withStatus(400)
+                    .withBody("{\"code\":20116,\"msg\":\"Order does not exist\"}")));
+
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.001"))
+            .limitPrice(new BigDecimal("60000.00"))
+            .userReference("my-ref-1")
+            .build();
+
+    // The lookup proves the order is absent: the provider rejection is definitive.
+    assertThatThrownBy(() -> tradeService().placeLimitOrder(order))
+        .isInstanceOf(OrderNotValidException.class);
   }
 
   @Test

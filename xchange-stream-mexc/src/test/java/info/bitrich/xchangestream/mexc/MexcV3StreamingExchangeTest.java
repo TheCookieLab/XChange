@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import io.reactivex.rxjava3.observers.TestObserver;
+import io.reactivex.rxjava3.schedulers.TestScheduler;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
@@ -173,6 +174,8 @@ class MexcV3StreamingExchangeTest {
         MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
     exchange.applySpecification(spec);
     exchange.keepAliveIntervalSeconds = 1L;
+    TestScheduler keepAliveTicks = new TestScheduler();
+    exchange.keepAliveScheduler = keepAliveTicks;
 
     exchange
         .connect()
@@ -181,16 +184,71 @@ class MexcV3StreamingExchangeTest {
         .assertError(IOException.class);
 
     // Every refresh tick fails (500) after KEEPALIVE_ATTEMPTS bounded retries; the schedule must
-    // survive so later ticks keep retrying instead of dying on the first failure.
+    // survive so later ticks keep retrying instead of dying on the first failure. Ticks are
+    // driven deterministically by the TestScheduler (each advance fires the next cadence signal
+    // once the previous tick's work completed); the bounded real waits below only cover the
+    // inherently asynchronous real HTTP requests to WireMock.
     int keepaliveCalls = countKeepaliveCalls();
     long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
     while (keepaliveCalls < MexcV3StreamingExchange.KEEPALIVE_ATTEMPTS * 2L && System.nanoTime() < deadline) {
-      sleepQuietly(100L);
+      keepAliveTicks.advanceTimeBy(1, TimeUnit.SECONDS);
+      sleepQuietly(50L);
       keepaliveCalls = countKeepaliveCalls();
     }
     assertTrue(
         keepaliveCalls >= MexcV3StreamingExchange.KEEPALIVE_ATTEMPTS * 2L,
         "keepalive schedule must survive failing ticks, saw " + keepaliveCalls + " PUTs");
+
+    exchange.disconnect().onErrorComplete().blockingAwait();
+
+    wireMock.verify(
+        1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key")));
+  }
+
+  @Test
+  void retriedConnectReusesExistingListenKey() {
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"test-listen-key\"}")));
+    wireMock.stubFor(
+        delete(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"test-listen-key\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+    // Never advance: the keepalive schedule must not fire during this test.
+    exchange.keepAliveScheduler = new TestScheduler();
+
+    // First attempt: listen key created, WebSocket connect fails.
+    exchange
+        .connect()
+        .test()
+        .awaitDone(10, TimeUnit.SECONDS)
+        .assertError(IOException.class);
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+
+    // A caller retry must reuse the existing key (and its keepalive) instead of creating a
+    // second key; creating a new key per retry would orphan the previous one until its 60-minute
+    // expiry and could accumulate keys up to MEXC's per-user limit.
+    exchange
+        .connect()
+        .test()
+        .awaitDone(10, TimeUnit.SECONDS)
+        .assertError(IOException.class);
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+    wireMock.verify(
+        0, putRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key")));
 
     exchange.disconnect().onErrorComplete().blockingAwait();
 

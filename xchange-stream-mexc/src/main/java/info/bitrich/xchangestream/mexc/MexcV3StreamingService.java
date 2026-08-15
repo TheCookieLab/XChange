@@ -146,11 +146,18 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
   }
 
   /**
-   * Rejects subscriptions beyond the per-connection cap instead of silently exceeding it, and
-   * shares the single underlying channel observable across all consumers of the same channel.
+   * Rejects new wire subscriptions beyond the per-connection cap instead of silently exceeding
+   * it, while still serving additional consumers of channels that are already subscribed (the
+   * cap governs wire subscriptions, not observers of an existing shared stream).
    */
   @Override
   public Observable<String> subscribeChannel(String channelName, Object... args) {
+    Observable<String> shared = sharedChannels.get(channelName);
+    if (shared != null) {
+      // Cache hit: the wire subscription already exists, so no new wire subscription is needed
+      // and the per-connection cap does not apply.
+      return shared;
+    }
     if (channels.size() >= MAX_SUBSCRIPTIONS_PER_CONNECTION) {
       return Observable.error(
           new ExchangeException(
@@ -161,9 +168,9 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
     return sharedChannels.computeIfAbsent(
         channelName,
         name -> {
-          Observable<String> shared = super.subscribeChannel(name, args);
+          Observable<String> channelObservable = super.subscribeChannel(name, args);
           AtomicInteger consumers = new AtomicInteger();
-          return shared
+          return channelObservable
               .doOnSubscribe(s -> consumers.incrementAndGet())
               .doOnDispose(() -> {
                 if (consumers.decrementAndGet() == 0) {
