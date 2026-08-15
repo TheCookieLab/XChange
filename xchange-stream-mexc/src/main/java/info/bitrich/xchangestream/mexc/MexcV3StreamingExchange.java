@@ -290,36 +290,53 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     // 60 minutes later and no later disconnect could close it.
     return Completable.defer(
         () -> {
+          MexcV3StreamingService service;
+          String keyToClose;
+          Disposable keepAlive;
           synchronized (this) {
-            // Invalidate any in-flight attempt before reporting complete: an attempt that has
-            // not built its transport yet would otherwise create a listen key or open a socket
+            // Invalidate any in-flight attempt before reporting complete: an attempt that has not
+            // built its transport yet would otherwise create a listen key or open a socket
             // after the disconnect finished. The attempt chains capture the generation and
             // abort once it moves; an attempt already past its last check is torn down here
             // because streamingService is visible under this lock.
             inFlightConnect = null;
             connectGeneration++;
-          }
-          if (streamingService == null) {
-            return Completable.complete();
-          }
-          stopKeepAlive();
-          Completable closeKey = Completable.complete();
-          if (listenKey != null) {
-            String key = listenKey;
-            if (suppliedListenKey) {
-              // The key was adopted from the configured URI, which still carries it. A later
-              // connect() must not re-adopt this closed key: private subscriptions and the
-              // keepalive would use a key this exchange already deleted server-side.
-              closedSuppliedKey = key;
+            // Capture the transport, keepalive, and key state under the lock: a connect() that
+            // lands after the generation moved may install a replacement service and key, and
+            // this disconnect must tear down only the connection it captured — never the
+            // replacement the newer connect is using.
+            service = streamingService;
+            keepAlive = keepAliveDisposable;
+            keepAliveDisposable = null;
+            if (listenKey != null) {
+              keyToClose = listenKey;
+              if (suppliedListenKey) {
+                // The key was adopted from the configured URI, which still carries it. A later
+                // connect() must not re-adopt this closed key: private subscriptions and the
+                // keepalive would use a key this exchange already deleted server-side.
+                closedSuppliedKey = listenKey;
+              }
+              suppliedListenKey = false;
+              listenKey = null;
+            } else {
+              keyToClose = null;
             }
-            suppliedListenKey = false;
-            listenKey = null;
+          }
+          if (keepAlive != null) {
+            keepAlive.dispose();
+          }
+          Completable closeKey = Completable.complete();
+          if (keyToClose != null) {
+            String key = keyToClose;
             closeKey =
                 Completable.fromAction(() -> closeListenKey(key))
                     .subscribeOn(Schedulers.io())
                     .onErrorComplete();
           }
-          return closeKey.andThen(streamingService.disconnect());
+          if (service == null) {
+            return closeKey;
+          }
+          return closeKey.andThen(service.disconnect());
         });
   }
 

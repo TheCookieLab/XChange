@@ -26,7 +26,9 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.extension.ResponseTransformer;
 import com.github.tomakehurst.wiremock.http.Request;
 import com.github.tomakehurst.wiremock.http.Response;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.observers.TestObserver;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
 import java.io.ByteArrayOutputStream;
@@ -43,6 +45,7 @@ import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -699,6 +702,156 @@ class MexcV3StreamingExchangeTest {
     wireMock.verify(2, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
 
     exchange.disconnect().onErrorComplete().blockingAwait();
+  }
+
+  @Test
+  void disconnectOnlyTearsDownTheConnectionItCaptured() throws Exception {
+    // Deterministic seam for the disconnect/replacement-connect race: the keepalive disposable
+    // field is swapped for a fake whose first dispose() blocks until the test releases it. A
+    // disconnect that has already bumped the generation then pauses inside its keepalive
+    // cleanup — after its lock is released, before it reads the listen key and service — which
+    // is exactly the window in which a concurrent connect() installs a replacement connection.
+    // The replacement must not be torn down or have its key state cleared by the older
+    // disconnect.
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlPathEqualTo("/api/v3/userDataStream"))
+            .inScenario("createKey")
+            .whenScenarioStateIs(Scenario.STARTED)
+            .willReturn(aResponse().withBody("{\"listenKey\":\"K1\"}"))
+            .willSetStateTo("k2"));
+    wireMock.stubFor(
+        post(urlPathEqualTo("/api/v3/userDataStream"))
+            .inScenario("createKey")
+            .whenScenarioStateIs("k2")
+            .willReturn(aResponse().withBody("{\"listenKey\":\"K2\"}"))
+            .willSetStateTo("k3"));
+    wireMock.stubFor(
+        post(urlPathEqualTo("/api/v3/userDataStream"))
+            .inScenario("createKey")
+            .whenScenarioStateIs("k3")
+            .willReturn(aResponse().withBody("{\"listenKey\":\"K3\"}"))
+            .willSetStateTo("k4"));
+    wireMock.stubFor(
+        post(urlPathEqualTo("/api/v3/userDataStream"))
+            .inScenario("createKey")
+            .whenScenarioStateIs("k4")
+            .willReturn(aResponse().withBody("{\"listenKey\":\"K4\"}"))
+            .willSetStateTo("k5"));
+    wireMock.stubFor(
+        delete(urlPathEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"closed\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+
+    // Two failed private connections (K1, K2) establish the captured connection the disconnect
+    // will target.
+    exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+    exchange.disconnect().onErrorComplete().blockingAwait();
+    exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+    assertEquals("K2", listenKeyInstance(exchange));
+
+    // Swap in the blocking disposable: the next disconnect pauses inside its keepalive
+    // cleanup after releasing the lock.
+    CountDownLatch disposeEntered = new CountDownLatch(1);
+    CountDownLatch releaseDispose = new CountDownLatch(1);
+    AtomicBoolean firstDispose = new AtomicBoolean(true);
+    Disposable blockingDisposable =
+        new Disposable() {
+          private volatile boolean disposed;
+
+          @Override
+          public void dispose() {
+            // Only the first dispose blocks: the replacement connect's own startKeepAlive
+            // calls stopKeepAlive() while the disconnect is paused and must not deadlock on
+            // the same disposable.
+            if (firstDispose.compareAndSet(true, false)) {
+              disposeEntered.countDown();
+              try {
+                if (!releaseDispose.await(10, TimeUnit.SECONDS)) {
+                  throw new IllegalStateException(
+                      "timed out waiting to release the keepalive dispose");
+                }
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+              }
+            }
+            disposed = true;
+          }
+
+          @Override
+          public boolean isDisposed() {
+            return disposed;
+          }
+        };
+    Field disposableField = MexcV3StreamingExchange.class.getDeclaredField("keepAliveDisposable");
+    disposableField.setAccessible(true);
+    disposableField.set(exchange, blockingDisposable);
+
+    // The disconnect runs on its own thread and is guaranteed to be paused inside the
+    // keepalive dispose (disposeEntered) before the replacement connect starts.
+    AtomicReference<Throwable> disconnectFailure = new AtomicReference<>();
+    Thread disconnectThread =
+        new Thread(
+            () -> {
+              try {
+                exchange.disconnect().blockingAwait();
+              } catch (Throwable t) {
+                disconnectFailure.set(t);
+              }
+            });
+    disconnectThread.start();
+    assertTrue(disposeEntered.await(10, TimeUnit.SECONDS));
+
+    // Install a replacement connection (K3) while the older disconnect is paused. The
+    // replacement's key, keepalive, and service all land inside the older disconnect's
+    // post-lock window.
+    CountDownLatch replacementInstalled = new CountDownLatch(1);
+    Thread replacementThread =
+        new Thread(
+            () -> {
+              exchange.connect().test().awaitDone(15, TimeUnit.SECONDS);
+              replacementInstalled.countDown();
+            });
+    replacementThread.start();
+    assertTrue(replacementInstalled.await(15, TimeUnit.SECONDS));
+
+    releaseDispose.countDown();
+    disconnectThread.join(TimeUnit.SECONDS.toMillis(10));
+    assertFalse(disconnectThread.isAlive(), "disconnect did not complete in time");
+    assertNull(disconnectFailure.get());
+
+    // The older disconnect closed only the K2 connection it captured: the replacement's key
+    // and keepalive are intact and K3 was never closed.
+    assertEquals("K3", listenKeyInstance(exchange));
+    assertNotNull(keepAliveDisposableInstance(exchange));
+    wireMock.verify(1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=K2")));
+    wireMock.verify(0, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=K3")));
+
+    // The exchange still works end to end: a later disconnect closes the replacement's K3 key
+    // normally.
+    exchange.disconnect().onErrorComplete().blockingAwait();
+    wireMock.verify(1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=K3")));
+    assertNull(listenKeyInstance(exchange));
+    assertNull(keepAliveDisposableInstance(exchange));
+
+    // And a fresh connection starts a new lifecycle instead of reusing the closed key.
+    exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+    assertEquals("K4", listenKeyInstance(exchange));
+    exchange.disconnect().onErrorComplete().blockingAwait();
+    wireMock.verify(1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=K4")));
   }
 
   @Test
