@@ -25,6 +25,7 @@ import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.RateLimitExceededException;
 import org.knowm.xchange.mexc.v3.BaseMexcV3WiremockTest;
 import org.knowm.xchange.mexc.v3.MexcV3Exchange;
 import org.knowm.xchange.service.trade.params.DefaultCandleStickParam;
@@ -202,6 +203,20 @@ public class MexcV3MarketDataServiceTest extends BaseMexcV3WiremockTest {
 
     MexcV3Exchange exchange = createExchange();
     assertThat(exchange.getMarketDataService().getExchangeHealth().name()).isEqualTo("OFFLINE");
+  }
+
+  @Test
+  public void getTickerAdaptsProviderRateLimitToRateLimitExceededException() throws IOException {
+    stubFor(
+        get(urlPathEqualTo("/api/v3/ticker/24hr"))
+            .willReturn(
+                aResponse()
+                    .withStatus(429)
+                    .withBody("{\"code\":429,\"msg\":\"Too Many Requests\"}")));
+
+    MexcV3Exchange exchange = createExchange();
+    assertThatThrownBy(() -> exchange.getMarketDataService().getTicker(CurrencyPair.BTC_USDT))
+        .isInstanceOf(RateLimitExceededException.class);
   }
 
   @Test

@@ -106,16 +106,18 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
       sendMessage(PONG_MESSAGE);
       return;
     }
-    // Subscription confirmation: {"id":..,"code":200,"msg":"<channel>"} on success, or a PONG
-    // ack. MEXC uses HTTP-style codes: anything other than 200 is a rejection.
+    // Subscription confirmation: {"id":..,"code":0,"msg":"<channel>"} on success, or a PONG
+    // ack. MEXC documents code 0 as command success; HTTP-style 200 is accepted too. Anything
+    // else is a rejection.
     JsonNode ackCode = node.get("code");
-    if (ackCode != null && ackCode.asInt(200) != 200) {
+    int code = ackCode == null ? 0 : ackCode.asInt();
+    if (code != 0 && code != 200) {
       // Non-success command acknowledgement: the server rejected the subscription (invalid
       // channel, server-side subscription-limit rejection, ...). Fail the affected channel so
       // its subscribers get an error signal instead of waiting forever for events that cannot
       // arrive, and drop the channel so a later subscribe retries from scratch.
       String channel = node.path("msg").asText("");
-      LOG.warn("MEXC v3 rejected subscription {}: code {}", channel, ackCode.asInt());
+      LOG.warn("MEXC v3 rejected subscription {}: code {}", channel, code);
       Subscription subscription = channels.remove(channel);
       if (subscription != null) {
         sharedChannels.remove(channel);
@@ -123,7 +125,7 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
             .getEmitter()
             .onError(
                 new ExchangeException(
-                    "MEXC v3 rejected subscription " + channel + " (code " + ackCode.asInt() + ")"));
+                    "MEXC v3 rejected subscription " + channel + " (code " + code + ")"));
       }
       return;
     }

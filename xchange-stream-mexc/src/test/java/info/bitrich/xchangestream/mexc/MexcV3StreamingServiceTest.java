@@ -104,8 +104,26 @@ class MexcV3StreamingServiceTest {
   @Test
   void commandAckIsIgnoredWithoutRoutingOrReply() {
     CapturingService service = new CapturingService();
-    service.messageHandler("{\"id\":1,\"code\":200,\"msg\":\"" + CHANNEL + "\"}");
+    // MEXC documents code 0 as command success; HTTP-style 200 is accepted too.
+    service.messageHandler("{\"id\":1,\"code\":0,\"msg\":\"" + CHANNEL + "\"}");
+    service.messageHandler("{\"id\":2,\"code\":200,\"msg\":\"" + CHANNEL + "\"}");
     assertTrue(service.sent.isEmpty());
+  }
+
+  @Test
+  void zeroCodeAckDoesNotFailTheChannel() throws Exception {
+    CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+    TestObserver<String> observer = service.subscribeChannel(CHANNEL).test();
+
+    // A code-0 acknowledgement confirms the subscription; it must not error the channel or
+    // remove it, otherwise every successful subscription would terminate its observable.
+    service.messageHandler("{\"id\":1,\"code\":0,\"msg\":\"" + CHANNEL + "\"}");
+
+    observer.assertNoErrors().assertValueCount(0);
+    assertEquals(1, service.channelCount());
+    service.handleBinaryPush(dealsWrapper().toByteArray());
+    observer.assertValueCount(1);
   }
 
   @Test

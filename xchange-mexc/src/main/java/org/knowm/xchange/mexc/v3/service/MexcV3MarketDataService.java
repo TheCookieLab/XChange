@@ -122,7 +122,7 @@ public class MexcV3MarketDataService extends MexcV3MarketDataServiceRaw
     try {
       ping();
       return ExchangeHealth.ONLINE;
-    } catch (IOException | MexcV3Exception e) {
+    } catch (IOException | MexcV3Exception | ExchangeException e) {
       return ExchangeHealth.OFFLINE;
     }
   }
