@@ -12,6 +12,8 @@ import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +46,14 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
   private static final String PONG_MESSAGE = "{\"method\":\"PONG\"}";
 
   private final ObjectMapper objectMapper = StreamingObjectMapperHelper.getObjectMapper();
+
+  /**
+   * One shared observable per channel. {@link NettyStreamingService#subscribeChannel} stores a
+   * single emitter per channel, so every consumer must share that one subscription; otherwise a
+   * second consumer receives nothing and the underlying channel lifecycle gets ambiguous. Entries
+   * are dropped when the last consumer disposes, so a later resubscribe re-registers cleanly.
+   */
+  private final Map<String, Observable<String>> sharedChannels = new ConcurrentHashMap<>();
 
   public MexcV3StreamingService(String apiUrl) {
     super(apiUrl);
@@ -112,7 +122,10 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
     sendMessage(PING_MESSAGE);
   }
 
-  /** Rejects subscriptions beyond the per-connection cap instead of silently exceeding it. */
+  /**
+   * Rejects subscriptions beyond the per-connection cap instead of silently exceeding it, and
+   * shares the single underlying channel observable across all consumers of the same channel.
+   */
   @Override
   public Observable<String> subscribeChannel(String channelName, Object... args) {
     if (channels.size() >= MAX_SUBSCRIPTIONS_PER_CONNECTION) {
@@ -122,7 +135,15 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
                   + MAX_SUBSCRIPTIONS_PER_CONNECTION
                   + " subscriptions per connection; disconnect and reconnect to rotate"));
     }
-    return super.subscribeChannel(channelName, args);
+    return sharedChannels.computeIfAbsent(
+        channelName,
+        name -> {
+          Observable<String> shared = super.subscribeChannel(name, args).share();
+          // The action fires only when the cached observable's last consumer disposes, so
+          // removing by key can never evict a live replacement (a replacement is only cached
+          // after this removal ran); a later subscribe then re-registers cleanly.
+          return shared.doOnDispose(() -> sharedChannels.remove(channelName));
+        });
   }
 
   @Override

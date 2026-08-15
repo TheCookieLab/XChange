@@ -1,6 +1,8 @@
 package info.bitrich.xchangestream.mexc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -166,6 +168,72 @@ class MexcV3StreamingServiceTest {
     } finally {
       channel.finishAndReleaseAll();
     }
+  }
+
+  /**
+   * Fakes an open socket for {@code subscribeChannel}: the base service registers the
+   * subscription and emits into it only while {@code webSocketChannel} is open, and the field has
+   * no setter, so the test pokes it with a channel that is always open.
+   */
+  private static void forceOpenChannel(CapturingService service) throws Exception {
+    java.lang.reflect.Field channelField =
+        info.bitrich.xchangestream.service.netty.NettyStreamingService.class.getDeclaredField(
+            "webSocketChannel");
+    channelField.setAccessible(true);
+    channelField.set(service, new EmbeddedChannel());
+  }
+
+  @Test
+  void repeatedSubscribeChannelSharesOneSubscriptionForTheChannel() throws Exception {
+    CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+
+    Observable<String> first = service.subscribeChannel(CHANNEL);
+    Observable<String> second = service.subscribeChannel(CHANNEL);
+
+    assertSame(first, second);
+    first.test();
+    second.test();
+    assertEquals(1, service.channelCount());
+    assertEquals(
+        1,
+        service.sent.stream().filter(message -> message.contains("SUBSCRIPTION")).count());
+  }
+
+  @Test
+  void secondConsumerReceivesPushesFromSharedSubscription() throws Exception {
+    CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+
+    TestObserver<String> first = service.subscribeChannel(CHANNEL).test();
+    TestObserver<String> second = service.subscribeChannel(CHANNEL).test();
+
+    service.handleBinaryPush(dealsWrapper().toByteArray());
+
+    first
+        .assertValueCount(1)
+        .assertValue(json -> json.contains("\"channel\":\"" + CHANNEL + "\""));
+    second
+        .assertValueCount(1)
+        .assertValue(json -> json.contains("\"channel\":\"" + CHANNEL + "\""));
+  }
+
+  @Test
+  void lastConsumerDisposalClearsCacheAndAllowsCleanResubscribe() throws Exception {
+    CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+
+    Observable<String> first = service.subscribeChannel(CHANNEL);
+    TestObserver<String> observer = first.test();
+    assertEquals(1, service.channelCount());
+
+    observer.dispose();
+    assertEquals(0, service.channelCount());
+
+    Observable<String> resubscribed = service.subscribeChannel(CHANNEL);
+    assertNotSame(first, resubscribed);
+    resubscribed.test();
+    assertEquals(1, service.channelCount());
   }
 
   @Test

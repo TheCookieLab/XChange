@@ -19,6 +19,7 @@ import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.mexc.v3.MexcV3Adapters;
+import org.knowm.xchange.mexc.v3.MexcV3OrderFlags;
 import org.knowm.xchange.mexc.v3.MexcV3Symbols;
 import org.knowm.xchange.mexc.v3.client.MexcV3Exception;
 import org.knowm.xchange.mexc.v3.client.ReplaySafety;
@@ -58,11 +59,13 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
    * Places a limit order.
    *
    * <p>The provider requires {@code symbol}, {@code side}, {@code type}, {@code quantity} and
-   * {@code price}; {@code newClientOrderId} carries the order's user reference when set. The
-   * provider order id is returned.
+   * {@code price}; {@code newClientOrderId} carries the order's user reference when set, and a
+   * generated correlation id otherwise so ambiguous placement outcomes stay reconcilable by client
+   * order id. The provider order id is returned.
    */
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
+    final String clientOrderId = resolveClientOrderId(limitOrder.getUserReference());
     return execute(
         () ->
             mexcV3Authenticated
@@ -76,23 +79,37 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
                     limitOrder.getOriginalAmount().toPlainString(),
                     null,
                     limitOrder.getLimitPrice().toPlainString(),
-                    limitOrder.getUserReference(),
+                    clientOrderId,
                     recvWindowMs,
                     timestampFactory,
                     signatureCreator)
                 .getOrderId(),
-        ReplaySafety.PLACEMENT);
+        ReplaySafety.PLACEMENT,
+        clientOrderId);
   }
 
   /**
    * Places a market order.
    *
-   * <p>Per the provider documentation a market BUY is priced by {@code quoteOrderQty} and a market
-   * SELL by {@code quantity}; the other parameter stays unset. The provider order id is returned.
+   * <p>Per the provider documentation a market order accepts either {@code quantity} (base asset
+   * amount) or {@code quoteOrderQty} (quote asset amount). The XChange contract always prices
+   * {@code originalAmount} in the base asset, so both sides send {@code quantity} by default;
+   * setting {@link MexcV3OrderFlags#QUOTE_ORDER_QTY} on a market BUY switches it to a
+   * quote-denominated spend ({@code quoteOrderQty}). MEXC only prices market SELL orders in base
+   * quantity, so the flag is rejected on asks. The provider order id is returned.
    */
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
     boolean buy = marketOrder.getType() == OrderType.BID;
+    boolean quoteDenominated =
+        marketOrder.hasFlag(MexcV3OrderFlags.QUOTE_ORDER_QTY);
+    if (quoteDenominated && !buy) {
+      throw new IllegalArgumentException(
+          "MEXC Spot v3 prices market SELL orders in base quantity; "
+              + MexcV3OrderFlags.QUOTE_ORDER_QTY
+              + " is only valid on market BUY orders");
+    }
+    final String clientOrderId = resolveClientOrderId(marketOrder.getUserReference());
     return execute(
         () ->
             mexcV3Authenticated
@@ -101,15 +118,16 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
                     MexcV3Symbols.toMexcSymbol(marketOrder.getInstrument()),
                     buy ? MexcV3OrderSide.BUY : MexcV3OrderSide.SELL,
                     MexcV3OrderType.MARKET,
-                    buy ? null : marketOrder.getOriginalAmount().toPlainString(),
-                    buy ? marketOrder.getOriginalAmount().toPlainString() : null,
+                    quoteDenominated ? null : marketOrder.getOriginalAmount().toPlainString(),
+                    quoteDenominated ? marketOrder.getOriginalAmount().toPlainString() : null,
                     null,
-                    marketOrder.getUserReference(),
+                    clientOrderId,
                     recvWindowMs,
                     timestampFactory,
                     signatureCreator)
                 .getOrderId(),
-        ReplaySafety.PLACEMENT);
+        ReplaySafety.PLACEMENT,
+        clientOrderId);
   }
 
   @Override
@@ -204,11 +222,19 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
           List<MexcV3Order> raw =
               mexcV3Authenticated.openOrders(
                   apiKey, MexcV3Symbols.toMexcSymbol(queryPair), recvWindowMs, timestampFactory, signatureCreator);
-          List<LimitOrder> orders = new ArrayList<>(raw.size());
+          List<LimitOrder> limitOrders = new ArrayList<>(raw.size());
+          List<Order> otherOrders = new ArrayList<>();
           for (MexcV3Order order : raw) {
-            orders.add(MexcV3Adapters.adaptOrder(order, MexcV3Symbols.toCurrencyPair(order.getSymbol())));
+            Order adapted =
+                MexcV3Adapters.adaptOrder(
+                    order, MexcV3Symbols.toCurrencyPair(order.getSymbol()));
+            if (adapted instanceof LimitOrder) {
+              limitOrders.add((LimitOrder) adapted);
+            } else {
+              otherOrders.add(adapted);
+            }
           }
-          return new OpenOrders(orders);
+          return new OpenOrders(limitOrders, otherOrders);
         },
         ReplaySafety.READ);
   }
@@ -334,5 +360,23 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
         recvWindowMs,
         timestampFactory,
         signatureCreator);
+  }
+
+  /**
+   * Resolves the client order id sent as {@code newClientOrderId}: the caller's user reference
+   * when present, otherwise a fresh correlation id (32 hex characters) generated before the
+   * placement round-trip so an ambiguous transport outcome can be reconciled by client order id.
+   */
+  private static String resolveClientOrderId(String userReference) {
+    if (userReference != null && !userReference.isEmpty()) {
+      return userReference;
+    }
+    byte[] random = new byte[16];
+    new java.security.SecureRandom().nextBytes(random);
+    StringBuilder hex = new StringBuilder(32);
+    for (byte b : random) {
+      hex.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+    }
+    return hex.toString();
   }
 }

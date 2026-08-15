@@ -66,6 +66,18 @@ public class MexcV3BaseService extends BaseExchangeService implements BaseServic
    * reconcile by order id rather than replay the placement.
    */
   protected <T> T execute(MexcV3Call<T> call, ReplaySafety replaySafety) throws IOException {
+    return execute(call, replaySafety, null);
+  }
+
+  /**
+   * Executes a provider call with replay-safety classification, enriching ambiguous placement
+   * failures with the client order id the placement was sent under.
+   *
+   * @param clientOrderId the {@code newClientOrderId} the placement carried, or {@code null} for
+   *     non-placement calls; surfaced in the ambiguous failure so callers can reconcile.
+   */
+  protected <T> T execute(MexcV3Call<T> call, ReplaySafety replaySafety, String clientOrderId)
+      throws IOException {
     try {
       return call.call();
     } catch (MexcV3Exception e) {
@@ -75,7 +87,9 @@ public class MexcV3BaseService extends BaseExchangeService implements BaseServic
         throw MexcV3Exception.ambiguous(
             "MEXC Spot v3 placement outcome is ambiguous after transport failure ("
                 + MexcV3Redactor.sanitize(e.getMessage())
-                + "); reconcile by client/exchange order id, never replay blindly.");
+                + "); reconcile by client order id "
+                + clientOrderId
+                + " or exchange order id, never replay blindly.");
       }
       throw e;
     }

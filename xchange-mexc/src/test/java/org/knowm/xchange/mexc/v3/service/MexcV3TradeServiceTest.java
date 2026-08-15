@@ -27,6 +27,7 @@ import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.OrderAmountUnderMinimumException;
 import org.knowm.xchange.mexc.v3.BaseMexcV3WiremockTest;
+import org.knowm.xchange.mexc.v3.MexcV3OrderFlags;
 import org.knowm.xchange.mexc.v3.client.MexcV3Exception;
 import org.knowm.xchange.mexc.v3.client.RetryClassification;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3OrderSide;
@@ -90,7 +91,30 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
   }
 
   @Test
-  public void placeMarketOrderBuyUsesQuoteOrderQtyAndNoQuantity() throws IOException {
+  public void placeMarketOrderBuyDefaultsToBaseQuantity() throws IOException {
+    stubFor(
+        post(urlPathEqualTo("/api/v3/order"))
+            .willReturn(
+                aResponse()
+                    .withBody(
+                        "{\"symbol\":\"BTCUSDT\",\"orderId\":\"1\",\"orderListId\":-1,"
+                            + "\"price\":\"60000.00\",\"origQty\":\"0.001\",\"type\":\"MARKET\","
+                            + "\"side\":\"BUY\",\"transactTime\":1645539742000}")));
+
+    MarketOrder order =
+        new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.001"))
+            .build();
+
+    assertThat(tradeService().placeMarketOrder(order)).isEqualTo("1");
+    verify(
+        postRequestedFor(urlPathEqualTo("/api/v3/order"))
+            .withQueryParam("quantity", com.github.tomakehurst.wiremock.client.WireMock.equalTo("0.001"))
+            .withoutQueryParam("quoteOrderQty"));
+  }
+
+  @Test
+  public void placeMarketOrderBuyWithQuoteOrderQtyFlagSendsQuoteOrderQty() throws IOException {
     stubFor(
         post(urlPathEqualTo("/api/v3/order"))
             .willReturn(
@@ -103,6 +127,7 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     MarketOrder order =
         new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
             .originalAmount(new BigDecimal("60.00"))
+            .flag(MexcV3OrderFlags.QUOTE_ORDER_QTY)
             .build();
 
     assertThat(tradeService().placeMarketOrder(order)).isEqualTo("1");
@@ -110,6 +135,44 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
         postRequestedFor(urlPathEqualTo("/api/v3/order"))
             .withQueryParam("quoteOrderQty", com.github.tomakehurst.wiremock.client.WireMock.equalTo("60.00"))
             .withoutQueryParam("quantity"));
+  }
+
+  @Test
+  public void placeMarketOrderSellWithQuoteOrderQtyFlagIsRejected() throws IOException {
+    MarketOrder order =
+        new MarketOrder.Builder(OrderType.ASK, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.001"))
+            .flag(MexcV3OrderFlags.QUOTE_ORDER_QTY)
+            .build();
+
+    assertThatThrownBy(() -> tradeService().placeMarketOrder(order))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("only valid on market BUY");
+    verify(0, postRequestedFor(urlPathEqualTo("/api/v3/order")));
+  }
+
+  @Test
+  public void placeMarketOrderGeneratesCorrelationClientOrderId() throws IOException {
+    stubFor(
+        post(urlPathEqualTo("/api/v3/order"))
+            .willReturn(
+                aResponse()
+                    .withBody(
+                        "{\"symbol\":\"BTCUSDT\",\"orderId\":\"1\",\"orderListId\":-1,"
+                            + "\"price\":\"60000.00\",\"origQty\":\"0.001\",\"type\":\"MARKET\","
+                            + "\"side\":\"BUY\",\"transactTime\":1645539742000}")));
+
+    MarketOrder order =
+        new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.001"))
+            .build();
+
+    assertThat(tradeService().placeMarketOrder(order)).isEqualTo("1");
+    verify(
+        postRequestedFor(urlPathEqualTo("/api/v3/order"))
+            .withQueryParam(
+                "newClientOrderId",
+                com.github.tomakehurst.wiremock.client.WireMock.matching("[a-f0-9]{32}")));
   }
 
   @Test
@@ -256,6 +319,40 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     assertThat(order.getOriginalAmount()).isEqualByComparingTo("0.001");
     assertThat(order.getLimitPrice()).isEqualByComparingTo("60000.00");
     assertThat(order.getStatus()).isEqualTo(OrderStatus.NEW);
+  }
+
+  @Test
+  public void getOpenOrdersSplitsMarketAndLimitOrders() throws IOException {
+    stubFor(
+        get(urlPathEqualTo("/api/v3/openOrders"))
+            .willReturn(
+                aResponse()
+                    .withBody(
+                        "["
+                            + ORDER_BODY
+                            + ",{\"symbol\":\"BTCUSDT\",\"orderId\":\"777\",\"orderListId\":-1,"
+                            + "\"price\":\"0.0\",\"origQty\":\"0.002\",\"executedQty\":\"0.001\","
+                            + "\"cummulativeQuoteQty\":\"0.000\",\"status\":\"PARTIALLY_FILLED\","
+                            + "\"timeInForce\":\"GTC\",\"type\":\"MARKET\",\"side\":\"BUY\","
+                            + "\"stopPrice\":\"0.0\",\"icebergQty\":\"0.0\","
+                            + "\"time\":1645539743000,\"updateTime\":1645539743000,"
+                            + "\"isWorking\":true,\"origQuoteOrderQty\":\"0.000000\"}]")));
+
+    OpenOrdersParams params = new DefaultOpenOrdersParamCurrencyPair();
+    ((org.knowm.xchange.service.trade.params.orders.OpenOrdersParamCurrencyPair) params)
+        .setCurrencyPair(CurrencyPair.BTC_USDT);
+
+    OpenOrders openOrders = tradeService().getOpenOrders(params);
+
+    assertThat(openOrders.getOpenOrders()).hasSize(1);
+    assertThat(openOrders.getOpenOrders().get(0).getId()).isEqualTo("123456789");
+    assertThat(openOrders.getOpenOrders().get(0)).isInstanceOf(LimitOrder.class);
+    assertThat(openOrders.getAllOpenOrders()).hasSize(2);
+    org.knowm.xchange.dto.Order market = openOrders.getAllOpenOrders().get(1);
+    assertThat(market).isInstanceOf(MarketOrder.class);
+    assertThat(market.getId()).isEqualTo("777");
+    assertThat(market.getStatus()).isEqualTo(OrderStatus.PARTIALLY_FILLED);
+    assertThat(market.getCumulativeAmount()).isEqualByComparingTo("0.001");
   }
 
   @Test

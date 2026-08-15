@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.CandleStick;
@@ -21,6 +22,7 @@ import org.knowm.xchange.dto.meta.CurrencyMetaData;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.mexc.v3.dto.account.MexcV3Account;
 import org.knowm.xchange.mexc.v3.dto.account.MexcV3Balance;
@@ -36,6 +38,7 @@ import org.knowm.xchange.mexc.v3.dto.marketdata.MexcV3Ticker24h;
 import org.knowm.xchange.mexc.v3.dto.marketdata.MexcV3Trade;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3Order;
 import org.knowm.xchange.mexc.v3.dto.trade.MexcV3OrderStatus;
+import org.knowm.xchange.mexc.v3.dto.trade.MexcV3OrderType;
 
 /** Converts MEXC Spot v3 DTOs to XChange domain objects. */
 public final class MexcV3Adapters {
@@ -263,19 +266,31 @@ public final class MexcV3Adapters {
     }
   }
 
-  /** Converts an order query result into a limit order for {@code OrderBook} consumers. */
-  public static LimitOrder adaptOrder(MexcV3Order order, CurrencyPair pair) {
+  /**
+   * Converts an order query result into the XChange DTO matching the provider order type:
+   * {@link MarketOrder} for {@link MexcV3OrderType#MARKET} and {@link
+   * MexcV3OrderType#STOP_MARKET_ORDER}, {@link LimitOrder} otherwise.
+   */
+  public static Order adaptOrder(MexcV3Order order, CurrencyPair pair) {
     OrderType type =
         "SELL".equalsIgnoreCase(order.getSide().name()) ? OrderType.ASK : OrderType.BID;
-    return new LimitOrder.Builder(type, pair)
+    boolean market =
+        order.getType() == MexcV3OrderType.MARKET
+            || order.getType() == MexcV3OrderType.STOP_MARKET_ORDER;
+    Order.Builder builder =
+        market ? new MarketOrder.Builder(type, pair) : new LimitOrder.Builder(type, pair);
+    if (!market) {
+      ((LimitOrder.Builder) builder)
+          .limitPrice(
+              order.getPrice() == null || order.getPrice().isEmpty()
+                  ? null
+                  : new BigDecimal(order.getPrice()));
+    }
+    return builder
         .id(order.getOrderId())
         .userReference(order.getClientOrderId())
         .timestamp(new Date(order.getTime()))
         .orderStatus(adaptOrderStatus(order.getStatus()))
-        .limitPrice(
-            order.getPrice() == null || order.getPrice().isEmpty()
-                ? null
-                : new BigDecimal(order.getPrice()))
         .originalAmount(new BigDecimal(order.getOrigQty()))
         .cumulativeAmount(
             order.getExecutedQty() == null || order.getExecutedQty().isEmpty()
