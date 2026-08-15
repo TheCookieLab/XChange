@@ -14,7 +14,9 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
+import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
@@ -128,21 +130,23 @@ public class OkxStreamingServiceGenerationTest {
   }
 
   @Test
-  public void privateServiceTracksActiveChannels() {
+  public void privateServiceTracksActiveChannels() throws Exception {
     OkxPrivateStreamingService service =
         new OkxPrivateStreamingService("wss://localhost/ws", spec, mock(OkxExchange.class));
 
     assertThat(service.hasActiveChannels()).isFalse();
+    forceOpenChannel(service);
     service.subscribeChannel("orders-BTC-USDT").test();
     assertThat(service.hasActiveChannels()).isTrue();
   }
 
   @Test
-  public void businessServiceTracksActiveChannels() {
+  public void businessServiceTracksActiveChannels() throws Exception {
     OkxBusinessStreamingService service =
         new OkxBusinessStreamingService("wss://localhost/ws", spec);
 
     assertThat(service.hasActiveChannels()).isFalse();
+    forceOpenChannel(service);
     service.subscribeChannel("candle-BTC-USDT").test();
     assertThat(service.hasActiveChannels()).isTrue();
   }
@@ -164,6 +168,7 @@ public class OkxStreamingServiceGenerationTest {
   public void resubscribeChannelSendsUnsubscribeBeforeSubscribe() throws Exception {
     OkxStreamingService service = spy(new OkxStreamingService("wss://localhost/ws", spec));
     doNothing().when(service).sendMessage(anyString());
+    forceOpenChannel(service);
     service.subscribeChannel("booksBTC-USDT").test();
 
     service.resubscribeChannel("booksBTC-USDT");
@@ -196,5 +201,17 @@ public class OkxStreamingServiceGenerationTest {
     service.resubscribeChannel("booksBTC-UNKNOWN");
 
     verify(service, never()).sendMessage(anyString());
+  }
+
+  /**
+   * Fakes an open socket for {@code subscribeChannel}: the base service registers the
+   * subscription and emits into it only while {@code webSocketChannel} is open, and the field has
+   * no setter, so the test pokes it with a channel that is always open.
+   */
+  private static void forceOpenChannel(NettyStreamingService<?> service) throws Exception {
+    java.lang.reflect.Field channelField =
+        NettyStreamingService.class.getDeclaredField("webSocketChannel");
+    channelField.setAccessible(true);
+    channelField.set(service, new EmbeddedChannel());
   }
 }
