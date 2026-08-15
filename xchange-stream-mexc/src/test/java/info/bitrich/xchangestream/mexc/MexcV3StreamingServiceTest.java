@@ -375,4 +375,24 @@ class MexcV3StreamingServiceTest {
     assertEquals(1, service.channelCount());
     assertTrue(service.sent.stream().anyMatch(m -> m.contains("SUBSCRIPTION")));
   }
+
+  @Test
+  void rejectedSubscriptionAckReleasesTheCapSlot() throws Exception {
+    CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+    for (int i = 0; i < MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION; i++) {
+      service.subscribeChannel("channel-" + i).test();
+    }
+    assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
+
+    // The server rejects one channel: its wire subscription and cap slot are released, so the
+    // slot does not leak and eventually exhaust the connection's capacity.
+    service.messageHandler("{\"id\":1,\"code\":400,\"msg\":\"channel-5\"}");
+    assertEquals(
+        MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION - 1, service.channelCount());
+
+    // A new channel can take the released slot.
+    service.subscribeChannel("channel-overflow").test().assertNoErrors();
+    assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
+  }
 }

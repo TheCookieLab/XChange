@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.observers.TestObserver;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
 import java.io.IOException;
@@ -166,6 +167,36 @@ class MexcV3StreamingExchangeTest {
 
     wireMock.verify(
         1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key")));
+  }
+
+  @Test
+  void subscribingTheConnectChainTwiceCreatesOnlyOneListenKey() {
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"test-listen-key\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+
+    // The same connect chain subscribed twice must not create a second listen key: the first
+    // would be orphaned until its 60-minute expiry and repeated subscriptions could accumulate
+    // keys up to MEXC's per-user limit. Both subscriptions fail on the unreachable socket.
+    Completable connect = exchange.connect();
+    connect.test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+    connect.test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
   }
 
   @Test

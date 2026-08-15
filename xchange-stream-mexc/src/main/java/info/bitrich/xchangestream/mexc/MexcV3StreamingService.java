@@ -139,7 +139,13 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
       LOG.warn("MEXC v3 rejected subscription {}: code {}", channel, code);
       Subscription subscription = channels.remove(channel);
       if (subscription != null) {
-        sharedChannels.remove(channel);
+        // The wire subscription is gone, so its cap slot is released too; otherwise every
+        // server-side rejection would permanently consume one of the 30 slots and a connection
+        // full of rejected channels could no longer accept any real subscription.
+        synchronized (sharedChannels) {
+          sharedChannels.remove(channel);
+          subscribedChannelCount.decrementAndGet();
+        }
         subscription
             .getEmitter()
             .onError(
@@ -253,13 +259,24 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
    * ({@code false}) and the channel entry is reset and evicted so a later subscribe builds a
    * fresh wrapper and retries from scratch.
    *
+   * <p>The consumer transition and the cap check share one critical section: without it, two
+   * concurrent first observers of the same channel could have one observe {@code consumers == 2}
+   * and skip the check while the other is being rejected, registering an uncounted wire
+   * subscription past the cap.
+   *
    * @return {@code true} when the slot was acquired, {@code false} when the cap is full
    */
   private boolean onFirstConsumer(String channelName, ChannelEntry entry) {
-    if (entry.consumers.incrementAndGet() != 1) {
-      return true; // additional observer of an already-subscribed channel
-    }
     synchronized (sharedChannels) {
+      if (sharedChannels.get(channelName) == null) {
+        // The entry was evicted by a concurrent last-consumer dispose after subscribeChannel
+        // handed this wrapper out. Reinstall it so this observer keeps the channel's slot and
+        // later callers still share this wrapper's base instead of building a second wire.
+        sharedChannels.put(channelName, entry);
+      }
+      if (entry.consumers.incrementAndGet() != 1) {
+        return true; // additional observer of an already-subscribed channel
+      }
       if (subscribedChannelCount.get() >= MAX_SUBSCRIPTIONS_PER_CONNECTION) {
         entry.consumers.set(0);
         sharedChannels.computeIfPresent(

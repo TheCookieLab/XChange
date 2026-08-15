@@ -75,20 +75,26 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     }
     final String resolvedUri = uri;
     if (specification.getApiKey() != null && !uri.contains("listenKey=")) {
-      if (listenKey == null) {
-        // Private connection: create a listen key, attach it to the URI, and keep it alive.
-        return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
-            .subscribeOn(Schedulers.io())
-            .andThen(Completable.defer(() -> streamingService.connect()));
-      }
-      // A previous attempt created a listen key and its keepalive is still running; reuse that
-      // key instead of creating a second one. Creating a new key on every retry would orphan
-      // the previous one until its 60-minute expiry and repeated connection failures could
-      // accumulate keys up to MEXC's per-user limit. The key must NOT be closed when a connect
-      // attempt fails: the base service keeps reconnecting with the URI it was built with, and
-      // the keepalive keeps that key valid for those reconnects.
-      buildStreamingService(withListenKey(resolvedUri, listenKey));
-      return Completable.defer(() -> streamingService.connect());
+      // The state check runs when the returned Completable is subscribed, not when connect() is
+      // called: subscribing the same chain twice must not create a second listen key (the first
+      // would be orphaned until its 60-minute expiry).
+      return Completable.defer(
+          () -> {
+            if (listenKey == null) {
+              // Private connection: create a listen key, attach it to the URI, and keep it alive.
+              return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
+                  .subscribeOn(Schedulers.io())
+                  .andThen(Completable.defer(() -> streamingService.connect()));
+            }
+            // A previous attempt created a listen key and its keepalive is still running; reuse
+            // that key instead of creating a second one. Creating a new key on every retry would
+            // orphan the previous one until its 60-minute expiry and repeated connection failures
+            // could accumulate keys up to MEXC's per-user limit. The key must NOT be closed when
+            // a connect attempt fails: the base service keeps reconnecting with the URI it was
+            // built with, and the keepalive keeps that key valid for those reconnects.
+            buildStreamingService(withListenKey(resolvedUri, listenKey));
+            return Completable.defer(() -> streamingService.connect());
+          });
     }
     buildStreamingService(uri);
     return streamingService.connect();
@@ -174,7 +180,13 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     }
   }
 
-  private void openPrivateConnection(String uri) {
+  private synchronized void openPrivateConnection(String uri) {
+    if (listenKey != null) {
+      // A concurrent subscription of the same connect chain already created the key; reuse it
+      // instead of orphaning it.
+      buildStreamingService(withListenKey(uri, listenKey));
+      return;
+    }
     try {
       MexcV3AccountService accountService = (MexcV3AccountService) getAccountService();
       listenKey = accountService.createListenKey().getListenKey();
