@@ -41,7 +41,11 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
   /** Exchange-specific parameter key to override the WebSocket URI. */
   public static final String PARAM_WEBSOCKET_URI = "WebsocketUri";
   /** MEXC documents a 60-minute listen-key lifetime; refresh at half that to keep a full retry window. */
-  private static final long KEEPALIVE_INTERVAL_MINUTES = 30L;
+  private static final long KEEPALIVE_INTERVAL_SECONDS = 30L * 60L;
+  /** Refresh attempts per tick; a transient PUT failure must not kill the refresh schedule. */
+  static final int KEEPALIVE_ATTEMPTS = 3;
+  /** Test seam: refresh cadence; package-private for keepalive lifecycle tests. */
+  long keepAliveIntervalSeconds = KEEPALIVE_INTERVAL_SECONDS;
 
   private MexcV3StreamingService streamingService;
   private MexcV3StreamingMarketDataService streamingMarketDataService;
@@ -160,16 +164,33 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
   private void startKeepAlive(MexcV3AccountService accountService) {
     stopKeepAlive();
     keepAliveDisposable =
-        Observable.interval(KEEPALIVE_INTERVAL_MINUTES, TimeUnit.MINUTES)
-            .flatMapCompletable(
+        Observable.interval(keepAliveIntervalSeconds, TimeUnit.SECONDS)
+            .concatMapCompletable(
                 tick ->
-                    Completable.fromAction(() -> keepAliveListenKey(accountService))
-                        .subscribeOn(Schedulers.io()))
+                    Completable.defer(
+                            () ->
+                                Completable.fromAction(() -> keepAliveListenKey(accountService))
+                                    .subscribeOn(Schedulers.io()))
+                        // A transient PUT failure must not terminate the schedule: retry the
+                        // tick a bounded number of times, then swallow and let the next tick
+                        // refresh the key. Without this, one failure stopped all later refreshes
+                        // and the key expired 60 minutes later, taking the private stream down.
+                        .retry(KEEPALIVE_ATTEMPTS - 1)
+                        .onErrorComplete(
+                            e -> {
+                              LOG.warn(
+                                  "MEXC Spot v3 listenKey keepalive failed after {} attempts; "
+                                      + "the next refresh runs in {} seconds: {}",
+                                  KEEPALIVE_ATTEMPTS,
+                                  keepAliveIntervalSeconds,
+                                  String.valueOf(e.getMessage()));
+                              return true;
+                            }))
             .subscribe(
                 () -> {},
                 e ->
                     LOG.warn(
-                        "MEXC Spot v3 listenKey keepalive stopped: {}",
+                        "MEXC Spot v3 listenKey keepalive schedule stopped: {}",
                         String.valueOf(e.getMessage())));
   }
 

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.mxc.push.common.protobuf.PrivateDealsV3Api;
 import com.mxc.push.common.protobuf.PrivateOrdersV3Api;
 import com.mxc.push.common.protobuf.PushDataV3ApiWrapper;
+import io.reactivex.rxjava3.observers.TestObserver;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +32,7 @@ class MexcV3StreamingTradeServiceTest {
   private static final String ORDERS_CHANNEL = "spot@private.orders.v3.api.pb";
   private static final String DEALS_CHANNEL = "spot@private.deals.v3.api.pb";
 
-  private static String orderPushJson(String symbol) {
+  private static PushDataV3ApiWrapper orderPushWrapper(String symbol) {
     PrivateOrdersV3Api order =
         PrivateOrdersV3Api.newBuilder()
             .setId("order-42")
@@ -45,14 +46,16 @@ class MexcV3StreamingTradeServiceTest {
             .setStatus(2)
             .setCreateTime(1_712_345_678_901L)
             .build();
-    PushDataV3ApiWrapper wrapper =
-        PushDataV3ApiWrapper.newBuilder()
-            .setChannel(ORDERS_CHANNEL)
-            .setSymbol(symbol)
-            .setPrivateOrders(order)
-            .build();
+    return PushDataV3ApiWrapper.newBuilder()
+        .setChannel(ORDERS_CHANNEL)
+        .setSymbol(symbol)
+        .setPrivateOrders(order)
+        .build();
+  }
+
+  private static String orderPushJson(String symbol) {
     try {
-      return MexcV3ProtoCodec.toJson(wrapper);
+      return MexcV3ProtoCodec.toJson(orderPushWrapper(symbol));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
@@ -133,6 +136,33 @@ class MexcV3StreamingTradeServiceTest {
 
     Order all = tradeService.getOrderChanges((Instrument) null).blockingFirst();
     assertEquals(PAIR, all.getInstrument(), "null instrument receives every order event");
+  }
+
+  @Test
+  void twoConsumersShareOnePrivateChannelSubscriptionAndFilterIndependently() throws Exception {
+    MexcV3StreamingServiceTest.CapturingService service =
+        new MexcV3StreamingServiceTest.CapturingService();
+    MexcV3StreamingServiceTest.forceOpenChannel(service);
+    MexcV3StreamingTradeService tradeService = new MexcV3StreamingTradeService(service);
+
+    TestObserver<Order> btc = tradeService.getOrderChanges(PAIR).test();
+    TestObserver<Order> eth = tradeService.getOrderChanges(OTHER_PAIR).test();
+
+    service.handleBinaryPush(orderPushWrapper("BTCUSDT").toByteArray());
+    service.handleBinaryPush(orderPushWrapper("ETHUSDT").toByteArray());
+
+    btc.assertValueCount(1)
+        .assertValue(order -> PAIR.equals(order.getInstrument()));
+    eth.assertValueCount(1)
+        .assertValue(order -> OTHER_PAIR.equals(order.getInstrument()));
+    assertEquals(
+        1, service.channelCount(), "both consumers share one private-channel subscription");
+
+    // Disposing one consumer must not tear down the shared subscription of the other.
+    btc.dispose();
+    service.handleBinaryPush(orderPushWrapper("ETHUSDT").toByteArray());
+    eth.assertValueCount(2)
+        .assertValueAt(1, order -> OTHER_PAIR.equals(order.getInstrument()));
   }
 
   /** Captures subscribed channels and serves enqueued canned pushes. */

@@ -14,6 +14,7 @@ import io.reactivex.rxjava3.core.Observable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,10 +49,13 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
   private final ObjectMapper objectMapper = StreamingObjectMapperHelper.getObjectMapper();
 
   /**
-   * One shared observable per channel. {@link NettyStreamingService#subscribeChannel} stores a
-   * single emitter per channel, so every consumer must share that one subscription; otherwise a
-   * second consumer receives nothing and the underlying channel lifecycle gets ambiguous. Entries
-   * are dropped when the last consumer disposes, so a later resubscribe re-registers cleanly.
+   * One shared observable per channel. {@link NettyStreamingService#subscribeChannel} emits one
+   * event stream per channel, so every consumer of the same channel must share the same
+   * subscription; otherwise a second consumer registers a second emitter that the channel map
+   * never routes to. The cached observable wraps the base implementation's already-shared stream,
+   * keeping subscription deduplication and reconnect re-registration semantics; the entry is
+   * evicted when the last consumer disposes (so a later subscribe builds a fresh wrapper), which
+   * the base's own refCount mirrors by removing the channel and unsubscribing.
    */
   private final Map<String, Observable<String>> sharedChannels = new ConcurrentHashMap<>();
 
@@ -138,11 +142,15 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
     return sharedChannels.computeIfAbsent(
         channelName,
         name -> {
-          Observable<String> shared = super.subscribeChannel(name, args).share();
-          // The action fires only when the cached observable's last consumer disposes, so
-          // removing by key can never evict a live replacement (a replacement is only cached
-          // after this removal ran); a later subscribe then re-registers cleanly.
-          return shared.doOnDispose(() -> sharedChannels.remove(channelName));
+          Observable<String> shared = super.subscribeChannel(name, args);
+          AtomicInteger consumers = new AtomicInteger();
+          return shared
+              .doOnSubscribe(s -> consumers.incrementAndGet())
+              .doOnDispose(() -> {
+                if (consumers.decrementAndGet() == 0) {
+                  sharedChannels.remove(channelName);
+                }
+              });
         });
   }
 

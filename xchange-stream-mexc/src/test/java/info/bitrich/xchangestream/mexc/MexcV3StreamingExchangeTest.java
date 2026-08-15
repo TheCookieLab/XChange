@@ -5,11 +5,15 @@ import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import io.reactivex.rxjava3.observers.TestObserver;
@@ -144,8 +148,74 @@ class MexcV3StreamingExchangeTest {
   }
 
   @Test
-  void connectWithoutApiKeyNeverCallsUserDataStream() throws IOException {
+  void keepaliveTransientFailureRetriesAndScheduleSurvives() {
     wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"test-listen-key\"}")));
+    wireMock.stubFor(
+        put(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key"))
+            .willReturn(aResponse().withStatus(500)));
+    wireMock.stubFor(
+        delete(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"test-listen-key\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+    exchange.keepAliveIntervalSeconds = 1L;
+
+    exchange
+        .connect()
+        .test()
+        .awaitDone(10, TimeUnit.SECONDS)
+        .assertError(IOException.class);
+
+    // Every refresh tick fails (500) after KEEPALIVE_ATTEMPTS bounded retries; the schedule must
+    // survive so later ticks keep retrying instead of dying on the first failure.
+    int keepaliveCalls = countKeepaliveCalls();
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+    while (keepaliveCalls < MexcV3StreamingExchange.KEEPALIVE_ATTEMPTS * 2L && System.nanoTime() < deadline) {
+      sleepQuietly(100L);
+      keepaliveCalls = countKeepaliveCalls();
+    }
+    assertTrue(
+        keepaliveCalls >= MexcV3StreamingExchange.KEEPALIVE_ATTEMPTS * 2L,
+        "keepalive schedule must survive failing ticks, saw " + keepaliveCalls + " PUTs");
+
+    exchange.disconnect().onErrorComplete().blockingAwait();
+
+    wireMock.verify(
+        1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key")));
+  }
+
+  private int countKeepaliveCalls() {
+    // WireMock 3's RequestMethod.fromString always creates a new instance, so `==` against the
+    // static PUT constant never matches; findAll uses the same matching machinery as verify.
+    return wireMock
+        .findAll(putRequestedFor(urlPathEqualTo("/api/v3/userDataStream")))
+        .size();
+  }
+
+  private static void sleepQuietly(long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  @Test
+  void connectWithoutApiKeyNeverCallsUserDataStream() throws IOException {    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
     wireMock.start();
     MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
     ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();

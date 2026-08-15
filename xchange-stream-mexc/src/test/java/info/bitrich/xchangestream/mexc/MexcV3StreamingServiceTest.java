@@ -175,7 +175,7 @@ class MexcV3StreamingServiceTest {
    * subscription and emits into it only while {@code webSocketChannel} is open, and the field has
    * no setter, so the test pokes it with a channel that is always open.
    */
-  private static void forceOpenChannel(CapturingService service) throws Exception {
+  static void forceOpenChannel(CapturingService service) throws Exception {
     java.lang.reflect.Field channelField =
         info.bitrich.xchangestream.service.netty.NettyStreamingService.class.getDeclaredField(
             "webSocketChannel");
