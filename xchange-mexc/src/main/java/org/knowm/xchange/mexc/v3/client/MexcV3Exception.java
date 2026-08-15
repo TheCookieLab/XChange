@@ -112,13 +112,13 @@ public class MexcV3Exception extends HttpStatusExceptionSupport implements HttpR
   }
 
   /**
-   * Marks a placement whose transport outcome is unknown (timeout, connection reset, 5xx without a
-   * parseable error envelope).
+   * Marks a placement whose transport outcome is unknown (timeout, connection reset, or a
+   * transport-classified 5xx provider response).
    *
-   * <p>This is caller-side policy applied by the {@code ReplaySafety.PLACEMENT} execution wrapper,
-   * never derived from a provider payload: the exchange may have accepted the order even though no
-   * response arrived. Callers must reconcile the outcome by client/exchange order id instead of
-   * blindly re-issuing the placement.
+   * <p>This is caller-side policy applied by the {@code ReplaySafety.PLACEMENT} execution wrapper:
+   * the exchange may have accepted the order even though the placement round-trip failed. Callers
+   * must reconcile the outcome by client/exchange order id instead of blindly re-issuing the
+   * placement.
    */
   public static MexcV3Exception ambiguous(String detail) {
     MexcV3Exception exception = new MexcV3Exception(0, detail);

@@ -11,6 +11,7 @@ import org.knowm.xchange.mexc.v3.auth.MexcV3Signing;
 import org.knowm.xchange.mexc.v3.client.MexcV3Exception;
 import org.knowm.xchange.mexc.v3.client.MexcV3Redactor;
 import org.knowm.xchange.mexc.v3.client.ReplaySafety;
+import org.knowm.xchange.mexc.v3.client.RetryClassification;
 import org.knowm.xchange.service.BaseExchangeService;
 import org.knowm.xchange.service.BaseService;
 import org.knowm.xchange.utils.nonce.CurrentTimeIncrementalNonceFactory;
@@ -60,10 +61,12 @@ public class MexcV3BaseService extends BaseExchangeService implements BaseServic
    * ({@link IOException} that never produced a provider response) are rethrown as-is for {@link
    * ReplaySafety#READ} and {@link ReplaySafety#IDEMPOTENT_CANCELLATION} calls, where a retry cannot
    * double-apply the operation. For {@link ReplaySafety#PLACEMENT} calls the outcome is unknown —
-   * the exchange may have accepted the order despite the failed transport round-trip — so the
-   * failure surfaces as an explicitly ambiguous {@link MexcV3Exception} (classified {@link
+   * the exchange may have accepted the order despite the failed transport round-trip or a
+   * transport-classified provider response (gateway/service 5xx) — so the failure surfaces as an
+   * explicitly ambiguous {@link MexcV3Exception} (classified {@link
    * org.knowm.xchange.mexc.v3.client.RetryClassification#AMBIGUOUS}) that instructs callers to
-   * reconcile by order id rather than replay the placement.
+   * reconcile by order id rather than replay the placement. Non-placement calls keep the adapted
+   * {@link org.knowm.xchange.exceptions.ExchangeUnavailableException} for 5xx envelopes.
    */
   protected <T> T execute(MexcV3Call<T> call, ReplaySafety replaySafety) throws IOException {
     return execute(call, replaySafety, null);
@@ -81,6 +84,21 @@ public class MexcV3BaseService extends BaseExchangeService implements BaseServic
     try {
       return call.call();
     } catch (MexcV3Exception e) {
+      if (replaySafety == ReplaySafety.PLACEMENT
+          && e.getRetryClassification() == RetryClassification.TRANSPORT) {
+        // A transport-classified provider response (gateway/service 5xx) can arrive after MEXC
+        // accepted the order: like a connection failure, the placement outcome is unknown and
+        // must be reconciled by client order id, never surfaced as a retryable availability
+        // failure.
+        throw MexcV3Exception.ambiguous(
+            "MEXC Spot v3 placement outcome is ambiguous after provider failure (http "
+                + e.getHttpStatus()
+                + ": "
+                + MexcV3Redactor.sanitize(e.getMsg())
+                + "); reconcile by client order id "
+                + clientOrderId
+                + " or exchange order id, never replay blindly.");
+      }
       throw e.adapt();
     } catch (IOException e) {
       if (replaySafety == ReplaySafety.PLACEMENT) {

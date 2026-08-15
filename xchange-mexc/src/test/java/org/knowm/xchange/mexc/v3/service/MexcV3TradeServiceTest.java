@@ -337,6 +337,70 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
   }
 
   @Test
+  public void ambiguousPlacementWithProviderGatewayTimeoutReconcilesFoundOrder() throws IOException {
+    // A gateway timeout (503) can occur after MEXC accepted the order: the envelope must not
+    // surface as a retryable ExchangeUnavailableException; it enters the same client-order-id
+    // reconciliation path as a connection failure.
+    stubFor(
+        post(urlPathEqualTo("/api/v3/order"))
+            .willReturn(
+                aResponse()
+                    .withStatus(503)
+                    .withBody("{\"code\":503,\"msg\":\"service unavailable\"}")));
+    stubFor(get(urlPathEqualTo("/api/v3/order")).willReturn(aResponse().withBody(ORDER_BODY)));
+
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.001"))
+            .limitPrice(new BigDecimal("60000.00"))
+            .userReference("my-ref-1")
+            .build();
+
+    // The lookup proves the order exists despite the gateway timeout.
+    assertThat(tradeService().placeLimitOrder(order)).isEqualTo("123456789");
+    verify(
+        getRequestedFor(urlPathEqualTo("/api/v3/order"))
+            .withQueryParam(
+                "symbol", com.github.tomakehurst.wiremock.client.WireMock.equalTo("BTCUSDT"))
+            .withQueryParam(
+                "origClientOrderId",
+                com.github.tomakehurst.wiremock.client.WireMock.equalTo("my-ref-1")));
+  }
+
+  @Test
+  public void ambiguousPlacementWithProviderGatewayTimeoutLookupFailureKeepsAmbiguity()
+      throws IOException {
+    // A gateway timeout (504) where the reconciliation lookup also fails leaves the outcome
+    // unknown: the AMBIGUOUS classification must survive, never a retryable-looking error.
+    stubFor(
+        post(urlPathEqualTo("/api/v3/order"))
+            .willReturn(
+                aResponse()
+                    .withStatus(504)
+                    .withBody("{\"code\":504,\"msg\":\"gateway time-out\"}")));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/order"))
+            .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.001"))
+            .limitPrice(new BigDecimal("60000.00"))
+            .userReference("my-ref-1")
+            .build();
+
+    assertThatThrownBy(() -> tradeService().placeLimitOrder(order))
+        .isInstanceOf(MexcV3Exception.class)
+        .hasMessageContaining("outcome is ambiguous")
+        .hasMessageContaining("reconcile")
+        .isInstanceOfSatisfying(
+            MexcV3Exception.class,
+            e ->
+                assertThat(e.getRetryClassification())
+                    .isEqualTo(RetryClassification.AMBIGUOUS));
+  }
+
+  @Test
   public void cancelOrderByIdReturnsTrue() throws IOException {
     stubFor(delete(urlPathEqualTo("/api/v3/order")).willReturn(aResponse().withBody(ORDER_BODY)));
 

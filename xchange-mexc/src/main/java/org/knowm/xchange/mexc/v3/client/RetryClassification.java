@@ -2,7 +2,10 @@ package org.knowm.xchange.mexc.v3.client;
 
 /** Describes whether a failed MEXC Spot v3 operation is safe for callers to replay. */
 public enum RetryClassification {
-  /** Request failed before reaching the provider (local transport error). */
+  /**
+   * Request failed at the transport layer or returned a transport-classified provider failure
+   * (gateway/service 5xx); the request may or may not have been applied.
+   */
   TRANSPORT,
   /** Provider rejected the credentials or signature. */
   AUTHENTICATION,
