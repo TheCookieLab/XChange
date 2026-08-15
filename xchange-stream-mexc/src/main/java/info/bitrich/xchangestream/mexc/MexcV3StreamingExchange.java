@@ -60,6 +60,15 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
 
   @Override
   public Completable connect(ProductSubscription... args) {
+    // Cold Completable factory: nothing is built, replaced, or opened until the returned
+    // Completable is subscribed. Constructing (or composing) connection Completables before
+    // subscribing any of them must not tear down a transport: buildStreamingService disconnects
+    // the current service, so an eager build would cancel an in-flight or live connection owned
+    // by a sibling chain, orphaning its socket.
+    return Completable.defer(this::connectNow);
+  }
+
+  private Completable connectNow() {
     if (isAlive()) {
       return Completable.complete();
     }
@@ -111,20 +120,27 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
 
   @Override
   public Completable disconnect() {
-    if (streamingService == null) {
-      return Completable.complete();
-    }
-    stopKeepAlive();
-    Completable closeKey = Completable.complete();
-    if (listenKey != null) {
-      String key = listenKey;
-      listenKey = null;
-      closeKey =
-          Completable.fromAction(() -> closeListenKey(key))
-              .subscribeOn(Schedulers.io())
-              .onErrorComplete();
-    }
-    return closeKey.andThen(streamingService.disconnect());
+    // Cold Completable factory: the keepalive and listen-key state are only touched when the
+    // returned Completable actually executes. An abandoned disconnect must not stop the
+    // keepalive or discard the key reference while the socket stays open — the key would expire
+    // 60 minutes later and no later disconnect could close it.
+    return Completable.defer(
+        () -> {
+          if (streamingService == null) {
+            return Completable.complete();
+          }
+          stopKeepAlive();
+          Completable closeKey = Completable.complete();
+          if (listenKey != null) {
+            String key = listenKey;
+            listenKey = null;
+            closeKey =
+                Completable.fromAction(() -> closeListenKey(key))
+                    .subscribeOn(Schedulers.io())
+                    .onErrorComplete();
+          }
+          return closeKey.andThen(streamingService.disconnect());
+        });
   }
 
   @Override

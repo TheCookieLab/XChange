@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -395,5 +396,96 @@ class MexcV3StreamingExchangeTest {
 
     wireMock.verify(0, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
     exchange.disconnect().onErrorComplete().blockingAwait();
+  }
+
+  @Test
+  void constructingConnectWithoutSubscribingBuildsNoTransport() throws Exception {
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+
+    Completable first = exchange.connect();
+    Completable second = exchange.connect();
+
+    // connect() is a cold Completable factory: constructing it must not build (and thereby
+    // replace/disconnect) a transport. Otherwise composing two connection Completables before
+    // subscribing either one would let the second construction tear down the first's transport
+    // and orphan its socket.
+    assertNull(streamingServiceInstance(exchange));
+
+    // Subscribing a chain builds the transport and connects it (connection refused here).
+    first.test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+    Object serviceAfterFirst = streamingServiceInstance(exchange);
+    assertNotNull(serviceAfterFirst);
+
+    // A live transport is never replaced by a sibling chain: subscribing the second chain
+    // completes without rebuilding, which would disconnect the active streams.
+    forceSocketOpen(serviceAfterFirst);
+    second.test().awaitDone(10, TimeUnit.SECONDS).assertComplete();
+    assertSame(serviceAfterFirst, streamingServiceInstance(exchange));
+    exchange.disconnect().onErrorComplete().blockingAwait();
+  }
+
+  @Test
+  void constructingDisconnectWithoutSubscribingKeepsKeyAndKeepalive() throws Exception {
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"test-listen-key\"}")));
+    wireMock.stubFor(
+        delete(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"test-listen-key\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+
+    exchange
+        .connect()
+        .test()
+        .awaitDone(10, TimeUnit.SECONDS)
+        .assertError(IOException.class);
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+
+    // An unsubscribed disconnect must not stop the keepalive or discard the key reference: an
+    // abandoned disconnect would leave the socket open with a key nobody refreshes (it expires
+    // after 60 minutes), and a later disconnect could not close that key because its reference
+    // was already discarded.
+    Completable disconnect = exchange.disconnect();
+    assertEquals("test-listen-key", listenKeyInstance(exchange));
+    assertNotNull(keepAliveDisposableInstance(exchange));
+
+    // Subscribing the constructed disconnect executes the real lifecycle: keepalive stops, the
+    // key is closed exactly once, and the transport disconnects.
+    disconnect.onErrorComplete().blockingAwait();
+    assertNull(keepAliveDisposableInstance(exchange));
+    wireMock.verify(
+        1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key")));
+  }
+
+  private static String listenKeyInstance(MexcV3StreamingExchange exchange) throws Exception {
+    java.lang.reflect.Field keyField = MexcV3StreamingExchange.class.getDeclaredField("listenKey");
+    keyField.setAccessible(true);
+    return (String) keyField.get(exchange);
+  }
+
+  private static Object keepAliveDisposableInstance(MexcV3StreamingExchange exchange)
+      throws Exception {
+    java.lang.reflect.Field disposableField =
+        MexcV3StreamingExchange.class.getDeclaredField("keepAliveDisposable");
+    disposableField.setAccessible(true);
+    return disposableField.get(exchange);
   }
 }
