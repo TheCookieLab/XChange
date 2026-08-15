@@ -211,9 +211,9 @@ class MexcV3StreamingAdaptersTest {
     Balance balance = MexcV3StreamingAdapters.adaptAccountPush(toJson(wrapper));
 
     assertEquals(Currency.BTC, balance.getCurrency());
-    assertEquals(new BigDecimal("1.50000000"), balance.getTotal());
+    assertEquals(new BigDecimal("1.75000000"), balance.getTotal());
     assertEquals(new BigDecimal("0.25000000"), balance.getFrozen());
-    assertEquals(new BigDecimal("1.25000000"), balance.getAvailable());
+    assertEquals(new BigDecimal("1.50000000"), balance.getAvailable());
     assertEquals(Date.from(Instant.ofEpochMilli(1_712_345_678_901L)), balance.getTimestamp());
   }
 

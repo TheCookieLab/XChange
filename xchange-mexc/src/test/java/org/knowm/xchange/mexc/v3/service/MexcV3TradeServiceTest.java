@@ -2,6 +2,7 @@ package org.knowm.xchange.mexc.v3.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
@@ -497,6 +498,67 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     assertThat(trade.getPrice()).isEqualByComparingTo("33198.31");
     assertThat(trade.getFeeAmount()).isEqualByComparingTo("0.000001");
     assertThat(trade.getFeeCurrency().toString()).isEqualTo("BTC");
+  }
+
+  @Test
+  public void getTradeHistoryPagesForwardRespectingExplicitLimit() throws IOException {
+    // WireMock matches the most recently added stub first, so the generic first-page stub is
+    // declared before the window-specific second-page stub.
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(1000, 1000))));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("2000"))
+            .withQueryParam("limit", equalTo("500"))
+            .willReturn(aResponse().withBody(myTradesBody(2000, 500))));
+
+    MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
+    history.setCurrencyPair(CurrencyPair.BTC_USDT);
+    history.setLimit(1500);
+
+    UserTrades trades = tradeService().getTradeHistory(history);
+
+    assertThat(trades.getUserTrades()).hasSize(1500);
+    assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("1000");
+    assertThat(trades.getUserTrades().get(1499).getId()).isEqualTo("2499");
+    verify(2, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    verify(
+        getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("2000")));
+  }
+
+  @Test
+  public void getTradeHistoryStopsWhenWindowDoesNotAdvance() throws IOException {
+    // A full page whose newest trade never moves simulates a provider that ignores startTime
+    // (orderId-scoped queries): the no-progress guard must stop the loop after the repeat.
+    stubFor(get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(5000, 1000))));
+
+    MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
+    history.setCurrencyPair(CurrencyPair.BTC_USDT);
+
+    UserTrades trades = tradeService().getTradeHistory(history);
+
+    assertThat(trades.getUserTrades()).hasSize(1000);
+    verify(2, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+  }
+
+  /** Builds {@code count} myTrades rows with consecutive ids and times starting at {@code fromTime}. */
+  private static String myTradesBody(int fromTime, int count) {
+    StringBuilder body = new StringBuilder("[");
+    for (int i = 0; i < count; i++) {
+      if (i > 0) {
+        body.append(',');
+      }
+      long t = fromTime + i;
+      body.append("{\"symbol\":\"BTCUSDT\",\"id\":").append(t)
+          .append(",\"orderId\":\"order-").append(t)
+          .append("\",\"orderListId\":-1,\"price\":\"33198.31\",\"qty\":\"0.001\",")
+          .append("\"quoteQty\":\"33.19831\",\"commission\":\"0.000001\",")
+          .append("\"commissionAsset\":\"BTC\",\"time\":").append(t)
+          .append(",\"isBuyer\":true,\"isMaker\":false,\"isBestMatch\":true,")
+          .append("\"isSelfTrade\":false,\"clientOrderId\":\"ref-").append(t).append("\"}");
+    }
+    return body.append(']').toString();
   }
 
   @Test

@@ -128,8 +128,9 @@ public final class MexcV3StreamingAdapters {
 
   /**
    * Adapts a {@code spot@private.account.v3.api.pb} push. The provider pushes one event per
-   * currency; {@code total = balanceAmount}, {@code frozen = frozenAmount}, {@code available =
-   * total - frozen}, and the timestamp is the event time (epoch millis).
+   * currency; {@code available = balanceAmount}, {@code frozen = frozenAmount}, {@code total =
+   * available + frozen}, and the timestamp is the event time (epoch millis). This matches the REST
+   * account snapshot mapping ({@code free}/{@code locked} in {@code MexcV3Adapters.adaptWallet}).
    */
   public static Balance adaptAccountPush(String canonicalJson)
       throws InvalidProtocolBufferException {
@@ -139,12 +140,12 @@ public final class MexcV3StreamingAdapters {
           "Unexpected MEXC v3 push body for private.account channel: " + wrapper.getBodyCase());
     }
     PrivateAccountV3Api account = wrapper.getPrivateAccount();
-    BigDecimal total = new BigDecimal(account.getBalanceAmount());
+    BigDecimal available = new BigDecimal(account.getBalanceAmount());
     BigDecimal frozen = new BigDecimal(account.getFrozenAmount());
     return new Balance.Builder()
         .currency(Currency.getInstance(account.getVcoinName()))
-        .total(total)
-        .available(total.subtract(frozen))
+        .total(available.add(frozen))
+        .available(available)
         .frozen(frozen)
         .timestamp(new Date(account.getTime()))
         .build();

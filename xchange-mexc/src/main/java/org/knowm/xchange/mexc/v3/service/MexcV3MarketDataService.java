@@ -14,6 +14,7 @@ import org.knowm.xchange.dto.meta.ExchangeHealth;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.mexc.v3.MexcV3Adapters;
+import org.knowm.xchange.mexc.v3.client.MexcV3Exception;
 import org.knowm.xchange.mexc.v3.dto.marketdata.MexcV3KlineInterval;
 import org.knowm.xchange.mexc.v3.dto.marketdata.MexcV3Ticker24h;
 import org.knowm.xchange.service.marketdata.MarketDataService;
@@ -121,7 +122,7 @@ public class MexcV3MarketDataService extends MexcV3MarketDataServiceRaw
     try {
       ping();
       return ExchangeHealth.ONLINE;
-    } catch (IOException e) {
+    } catch (IOException | MexcV3Exception e) {
       return ExchangeHealth.OFFLINE;
     }
   }

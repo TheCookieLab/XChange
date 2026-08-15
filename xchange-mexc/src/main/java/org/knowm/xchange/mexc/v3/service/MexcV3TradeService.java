@@ -320,33 +320,62 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
     final Integer queryLimit = limit;
     return execute(
         () -> {
-          List<MexcV3MyTrade> raw =
-              mexcV3Authenticated.myTrades(
-                  apiKey,
-                  MexcV3Symbols.toMexcSymbol(queryPair),
-                  queryOrderId,
-                  queryStartTime == null ? null : queryStartTime.getTime(),
-                  queryEndTime == null ? null : queryEndTime.getTime(),
-                  queryLimit,
-                  recvWindowMs,
-                  timestampFactory,
-                  signatureCreator);
-          List<UserTrade> trades = new ArrayList<>(raw.size());
-          for (MexcV3MyTrade trade : raw) {
-            trades.add(
-                UserTrade.builder()
-                    .id(String.valueOf(trade.getId()))
-                    .orderId(trade.getOrderId())
-                    .orderUserReference(trade.getClientOrderId())
-                    .instrument(queryPair)
-                    .originalAmount(new java.math.BigDecimal(trade.getQty()))
-                    .price(new java.math.BigDecimal(trade.getPrice()))
-                    .timestamp(new Date(trade.getTime()))
-                    .type(trade.isBuyer() ? OrderType.BID : OrderType.ASK)
-                    .feeAmount(new java.math.BigDecimal(trade.getCommission()))
-                    .feeCurrency(
-                        org.knowm.xchange.currency.Currency.getInstance(trade.getCommissionAsset()))
-                    .build());
+          final int maxPageSize = 1000; // MEXC v3 myTrades per-request cap
+          int remaining = queryLimit == null ? Integer.MAX_VALUE : queryLimit;
+          List<UserTrade> trades = new ArrayList<>();
+          Long windowStart = queryStartTime == null ? null : queryStartTime.getTime();
+          Long windowEnd = queryEndTime == null ? null : queryEndTime.getTime();
+          while (remaining > 0) {
+            int pageLimit = Math.min(remaining, maxPageSize);
+            List<MexcV3MyTrade> raw =
+                mexcV3Authenticated.myTrades(
+                    apiKey,
+                    MexcV3Symbols.toMexcSymbol(queryPair),
+                    queryOrderId,
+                    windowStart,
+                    windowEnd,
+                    pageLimit,
+                    recvWindowMs,
+                    timestampFactory,
+                    signatureCreator);
+            if (raw.isEmpty()) {
+              break;
+            }
+            int pageStartIndex = trades.size();
+            long newest = Long.MIN_VALUE;
+            for (MexcV3MyTrade trade : raw) {
+              newest = Math.max(newest, trade.getTime());
+              trades.add(
+                  UserTrade.builder()
+                      .id(String.valueOf(trade.getId()))
+                      .orderId(trade.getOrderId())
+                      .orderUserReference(trade.getClientOrderId())
+                      .instrument(queryPair)
+                      .originalAmount(new java.math.BigDecimal(trade.getQty()))
+                      .price(new java.math.BigDecimal(trade.getPrice()))
+                      .timestamp(new Date(trade.getTime()))
+                      .type(trade.isBuyer() ? OrderType.BID : OrderType.ASK)
+                      .feeAmount(new java.math.BigDecimal(trade.getCommission()))
+                      .feeCurrency(
+                          org.knowm.xchange.currency.Currency.getInstance(
+                              trade.getCommissionAsset()))
+                      .build());
+            }
+            remaining -= raw.size();
+            if (raw.size() < pageLimit) {
+              break; // short page: the window is exhausted
+            }
+            // Page forward past the newest trade seen. Stop when the window did not advance:
+            // that means the provider ignored startTime (orderId-scoped queries) and repeated
+            // the same full page, which would otherwise loop forever. The repeated page is
+            // stale (all trades predate the current window), so drop it instead of returning
+            // duplicates.
+            long nextStart = newest + 1;
+            if (windowStart != null && nextStart <= windowStart) {
+              trades.subList(pageStartIndex, trades.size()).clear();
+              break;
+            }
+            windowStart = nextStart;
           }
           return new UserTrades(trades, TradeSortType.SortByID);
         },

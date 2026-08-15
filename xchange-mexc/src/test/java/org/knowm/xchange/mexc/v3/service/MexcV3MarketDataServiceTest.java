@@ -192,6 +192,19 @@ public class MexcV3MarketDataServiceTest extends BaseMexcV3WiremockTest {
   }
 
   @Test
+  public void getExchangeHealthReportsOfflineOnProviderError() throws IOException {
+    stubFor(
+        get(urlPathEqualTo("/api/v3/ping"))
+            .willReturn(
+                aResponse()
+                    .withStatus(429)
+                    .withBody("{\"code\":429,\"msg\":\"Too Many Requests\"}")));
+
+    MexcV3Exchange exchange = createExchange();
+    assertThat(exchange.getMarketDataService().getExchangeHealth().name()).isEqualTo("OFFLINE");
+  }
+
+  @Test
   public void remoteInitBuildsMetadataFromExchangeInfo() throws IOException {
     stubFor(
         get(urlPathEqualTo("/api/v3/exchangeInfo"))

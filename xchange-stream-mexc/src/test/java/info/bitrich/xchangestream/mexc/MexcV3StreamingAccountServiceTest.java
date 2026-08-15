@@ -51,9 +51,9 @@ class MexcV3StreamingAccountServiceTest {
     Balance balance = accountService.getBalanceChanges(Currency.BTC).blockingFirst();
 
     assertEquals(Currency.BTC, balance.getCurrency());
-    assertEquals(new BigDecimal("1.50000000"), balance.getTotal());
+    assertEquals(new BigDecimal("1.75000000"), balance.getTotal());
     assertEquals(new BigDecimal("0.25000000"), balance.getFrozen());
-    assertEquals(new BigDecimal("1.25000000"), balance.getAvailable());
+    assertEquals(new BigDecimal("1.50000000"), balance.getAvailable());
     assertTrue(service.subscribedChannels.contains(CHANNEL));
   }
 
