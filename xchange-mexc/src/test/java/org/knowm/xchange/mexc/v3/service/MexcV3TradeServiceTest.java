@@ -285,6 +285,35 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
   }
 
   @Test
+  public void ambiguousPlacementLookupRateLimitPreservesAmbiguity() throws IOException {
+    stubFor(
+        post(urlPathEqualTo("/api/v3/order"))
+            .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/order"))
+            .willReturn(
+                aResponse()
+                    .withStatus(429)
+                    .withBody("{\"code\":429,\"msg\":\"Too many requests\"}")));
+
+    LimitOrder order =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
+            .originalAmount(new BigDecimal("0.001"))
+            .limitPrice(new BigDecimal("60000.00"))
+            .userReference("my-ref-1")
+            .build();
+
+    // A rate-limit lookup does NOT prove absence: the order may still have been accepted, so the
+    // original AMBIGUOUS classification must survive and the caller must not retry blindly.
+    assertThatThrownBy(() -> tradeService().placeLimitOrder(order))
+        .isInstanceOf(MexcV3Exception.class)
+        .satisfies(
+            e ->
+                assertThat(((MexcV3Exception) e).getRetryClassification())
+                    .isEqualTo(RetryClassification.AMBIGUOUS));
+  }
+
+  @Test
   public void placementProviderErrorAdaptsToExceptionHierarchy() throws IOException {
     stubFor(
         post(urlPathEqualTo("/api/v3/order"))

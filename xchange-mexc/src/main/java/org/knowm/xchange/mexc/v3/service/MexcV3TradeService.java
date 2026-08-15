@@ -389,10 +389,11 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
    *
    * <p>The placement round-trip failed at the transport layer, so the exchange may or may not
    * have accepted the order. A single {@code GET /order} by {@code symbol} + {@code
-   * origClientOrderId} decides the outcome: a match returns the provider order id; a provider
-   * rejection (for example code 20116 "order does not exist") proves the order is absent and
-   * adapts to the exception hierarchy; a lookup transport failure leaves the outcome unknown, so
-   * the original ambiguous failure is rethrown (never a misleading absence).
+   * origClientOrderId} decides the outcome: a match returns the provider order id; an explicit
+   * unknown-order code (for example 20116 "order does not exist") proves the order is absent and
+   * adapts to the exception hierarchy; any other lookup failure (rate limit, outage, transport)
+   * leaves the outcome unknown, so the original ambiguous failure is rethrown (never a
+   * misleading absence or a retryable-looking error).
    *
    * @param symbol the MEXC symbol the placement targeted
    * @param clientOrderId the {@code newClientOrderId} the placement carried
@@ -415,8 +416,13 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
       // Found: the placement actually applied; surface the provider order id.
       return order.getOrderId();
     } catch (MexcV3Exception notFound) {
-      // Provider rejected the lookup: the order is definitively absent.
-      throw notFound.adapt();
+      // Only an explicit unknown-order code proves absence. A transient provider error (rate
+      // limit, outage) does not: the order may still have been accepted, and adapting it would
+      // make the caller retry safely and create a duplicate trade.
+      if (notFound.getCode() == -2011 || notFound.getCode() == 20116) {
+        throw notFound.adapt();
+      }
+      throw ambiguous;
     } catch (IOException lookupFailure) {
       // Inconclusive: the placement may still have applied; keep the original ambiguity.
       throw ambiguous;

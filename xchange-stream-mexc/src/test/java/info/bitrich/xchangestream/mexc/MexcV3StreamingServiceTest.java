@@ -1,6 +1,7 @@
 package info.bitrich.xchangestream.mexc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -303,5 +304,45 @@ class MexcV3StreamingServiceTest {
     assertSame(channelZero, service.subscribeChannel("channel-0"));
     service.subscribeChannel("channel-0").test().assertNoErrors();
     assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
+  }
+
+  @Test
+  void unsubscribedObservablesReserveCapSlots() {
+    CapturingService service = new CapturingService();
+    for (int i = 0; i < MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION; i++) {
+      // Creating the observable reserves the slot; the wire subscription is only registered
+      // when the first consumer subscribes.
+      assertNotNull(service.subscribeChannel("channel-" + i));
+    }
+    assertTrue(service.sent.isEmpty(), "creating observables must not send wire messages");
+
+    // The 31st distinct channel is rejected even though none of the 30 are subscribed yet.
+    service
+        .subscribeChannel("channel-overflow")
+        .test()
+        .assertError(
+            t -> t instanceof ExchangeException && t.getMessage().contains("at most 30"));
+
+    // Cache hits keep working at the cap.
+    assertSame(service.subscribeChannel("channel-0"), service.subscribeChannel("channel-0"));
+  }
+
+  @Test
+  void rejectedSubscriptionAckFailsTheAffectedChannel() throws Exception {
+    CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+    TestObserver<String> observer = service.subscribeChannel(CHANNEL).test();
+
+    service.messageHandler("{\"id\":1,\"code\":400,\"msg\":\"" + CHANNEL + "\"}");
+
+    // The subscriber gets an immediate error signal instead of waiting forever for events that
+    // cannot arrive, and the failed channel is dropped from both the wire registry and the
+    // shared cache so a retry re-subscribes from scratch.
+    observer.assertError(
+        t -> t instanceof ExchangeException && t.getMessage().contains("code 400"));
+    assertEquals(0, service.channelCount());
+    service.subscribeChannel(CHANNEL).test().assertNoErrors();
+    assertEquals(1, service.channelCount());
+    assertTrue(service.sent.stream().anyMatch(m -> m.contains("SUBSCRIPTION")));
   }
 }

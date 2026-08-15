@@ -106,7 +106,27 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
       sendMessage(PONG_MESSAGE);
       return;
     }
-    // Subscription confirmation: {"id":..,"code":..,"msg":"<channel>"}, or a PONG ack.
+    // Subscription confirmation: {"id":..,"code":200,"msg":"<channel>"} on success, or a PONG
+    // ack. MEXC uses HTTP-style codes: anything other than 200 is a rejection.
+    JsonNode ackCode = node.get("code");
+    if (ackCode != null && ackCode.asInt(200) != 200) {
+      // Non-success command acknowledgement: the server rejected the subscription (invalid
+      // channel, server-side subscription-limit rejection, ...). Fail the affected channel so
+      // its subscribers get an error signal instead of waiting forever for events that cannot
+      // arrive, and drop the channel so a later subscribe retries from scratch.
+      String channel = node.path("msg").asText("");
+      LOG.warn("MEXC v3 rejected subscription {}: code {}", channel, ackCode.asInt());
+      Subscription subscription = channels.remove(channel);
+      if (subscription != null) {
+        sharedChannels.remove(channel);
+        subscription
+            .getEmitter()
+            .onError(
+                new ExchangeException(
+                    "MEXC v3 rejected subscription " + channel + " (code " + ackCode.asInt() + ")"));
+      }
+      return;
+    }
     LOG.debug("MEXC v3 command ack: {}", message);
   }
 
@@ -149,7 +169,13 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
   /**
    * Rejects new wire subscriptions beyond the per-connection cap instead of silently exceeding
    * it, while still serving additional consumers of channels that are already subscribed (the
-   * cap governs wire subscriptions, not observers of an existing shared stream).
+   * cap governs reserved distinct channels, not observers of an existing shared stream).
+   *
+   * <p>The slot is reserved atomically at creation time: the base registers the wire subscription
+   * only when the first consumer subscribes, so counting the cap against the base's registered
+   * channels would let callers create observables for more than 30 distinct channels (or race
+   * concurrent creations) and exceed the cap once everything subscribes. Reservation and the
+   * cap check happen under one lock on {@link #sharedChannels}.
    *
    * <p>Private channels ({@code spot@private.*}) are rejected when the connection carries no
    * listen key: without one the server cannot authorize them, so instead of an observable that
@@ -169,26 +195,40 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
       // and the per-connection cap does not apply.
       return shared;
     }
-    if (channels.size() >= MAX_SUBSCRIPTIONS_PER_CONNECTION) {
-      return Observable.error(
-          new ExchangeException(
-              "MEXC Spot v3 allows at most "
-                  + MAX_SUBSCRIPTIONS_PER_CONNECTION
-                  + " subscriptions per connection; disconnect and reconnect to rotate"));
-    }
-    return sharedChannels.computeIfAbsent(
-        channelName,
-        name -> {
-          Observable<String> channelObservable = super.subscribeChannel(name, args);
-          AtomicInteger consumers = new AtomicInteger();
-          return channelObservable
+    synchronized (sharedChannels) {
+      shared = sharedChannels.get(channelName);
+      if (shared != null) {
+        return shared;
+      }
+      if (sharedChannels.size() >= MAX_SUBSCRIPTIONS_PER_CONNECTION) {
+        return Observable.error(
+            new ExchangeException(
+                "MEXC Spot v3 allows at most "
+                    + MAX_SUBSCRIPTIONS_PER_CONNECTION
+                    + " subscriptions per connection; disconnect and reconnect to rotate"));
+      }
+      AtomicInteger consumers = new AtomicInteger();
+      java.util.concurrent.atomic.AtomicReference<Observable<String>> holder =
+          new java.util.concurrent.atomic.AtomicReference<>();
+      Observable<String> channelObservable =
+          super.subscribeChannel(channelName, args)
               .doOnSubscribe(s -> consumers.incrementAndGet())
-              .doOnDispose(() -> {
-                if (consumers.decrementAndGet() == 0) {
-                  sharedChannels.remove(channelName);
-                }
-              });
-        });
+              .doOnDispose(
+                  () -> {
+                    if (consumers.decrementAndGet() == 0) {
+                      synchronized (sharedChannels) {
+                        // Precise removal: a fresh wrapper may have been installed since the
+                        // last consumer left; removing by key alone would evict that new
+                        // subscription and leave its wire subscription unrouted.
+                        sharedChannels.computeIfPresent(
+                            channelName, (key, current) -> current == holder.get() ? null : current);
+                      }
+                    }
+                  });
+      holder.set(channelObservable);
+      sharedChannels.put(channelName, channelObservable);
+      return channelObservable;
+    }
   }
 
   @Override
