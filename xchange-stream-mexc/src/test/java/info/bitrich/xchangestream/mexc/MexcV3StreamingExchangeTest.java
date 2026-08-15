@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -197,6 +198,56 @@ class MexcV3StreamingExchangeTest {
     connect.test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
 
     wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+  }
+
+  @Test
+  void resubscribingAConnectedChainKeepsTheTransportAndListenKey() throws Exception {
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"test-listen-key\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+
+    Completable connect = exchange.connect();
+    connect.test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+
+    // Simulate a connected transport: subscribing the same chain again must then complete
+    // without rebuilding the service. buildStreamingService disconnects the current transport
+    // and replaces all facades, which would tear down the active streams; the listen key must
+    // also stay at one.
+    Object serviceBefore = streamingServiceInstance(exchange);
+    forceSocketOpen(serviceBefore);
+    connect.test().awaitDone(10, TimeUnit.SECONDS).assertComplete();
+
+    assertSame(serviceBefore, streamingServiceInstance(exchange));
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+  }
+
+  private static Object streamingServiceInstance(MexcV3StreamingExchange exchange)
+      throws Exception {
+    java.lang.reflect.Field serviceField =
+        MexcV3StreamingExchange.class.getDeclaredField("streamingService");
+    serviceField.setAccessible(true);
+    return serviceField.get(exchange);
+  }
+
+  private static void forceSocketOpen(Object service) throws Exception {
+    java.lang.reflect.Field channelField =
+        NettyStreamingService.class.getDeclaredField("webSocketChannel");
+    channelField.setAccessible(true);
+    channelField.set(service, new io.netty.channel.embedded.EmbeddedChannel());
   }
 
   @Test

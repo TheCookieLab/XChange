@@ -92,8 +92,17 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
             // could accumulate keys up to MEXC's per-user limit. The key must NOT be closed when
             // a connect attempt fails: the base service keeps reconnecting with the URI it was
             // built with, and the keepalive keeps that key valid for those reconnects.
-            buildStreamingService(withListenKey(resolvedUri, listenKey));
-            return Completable.defer(() -> streamingService.connect());
+            return Completable.defer(
+                () -> {
+                  if (isAlive()) {
+                    // The first subscription of this chain already connected; subscribing the
+                    // chain again must not rebuild the service, because buildStreamingService
+                    // disconnects the current transport and would tear down the active streams.
+                    return Completable.complete();
+                  }
+                  buildStreamingService(withListenKey(resolvedUri, listenKey));
+                  return streamingService.connect();
+                });
           });
     }
     buildStreamingService(uri);
@@ -182,6 +191,11 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
 
   private synchronized void openPrivateConnection(String uri) {
     if (listenKey != null) {
+      if (streamingService != null && streamingService.isSocketOpen()) {
+        // A concurrent subscription of the same connect chain already connected; keep its
+        // transport instead of rebuilding (rebuilding disconnects active streams).
+        return;
+      }
       // A concurrent subscription of the same connect chain already created the key; reuse it
       // instead of orphaning it.
       buildStreamingService(withListenKey(uri, listenKey));

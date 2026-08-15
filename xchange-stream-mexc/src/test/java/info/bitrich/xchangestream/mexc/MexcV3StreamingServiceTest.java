@@ -275,6 +275,40 @@ class MexcV3StreamingServiceTest {
   }
 
   @Test
+  void staleWrapperSubscribedAfterReplacementFailsWithoutWiringSecondBase() throws Exception {
+    CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+
+    // A retained wrapper whose last observer disposed is evicted; a later subscribe creates a
+    // replacement entry and base for the same channel name.
+    Observable<String> stale = service.subscribeChannel(CHANNEL);
+    TestObserver<String> first = stale.test();
+    first.dispose();
+    assertEquals(0, service.channelCount());
+    Observable<String> replacement = service.subscribeChannel(CHANNEL);
+    TestObserver<String> replacementObserver = replacement.test();
+    assertEquals(1, service.channelCount());
+
+    // Re-subscribing the stale wrapper must fail instead of wiring its distinct base: two wire
+    // subscriptions under one channel name would leave one observer silent (NettyStreamingService
+    // keeps one emitter per channel) and disposing the stale base would mirror-remove the
+    // replacement's live subscription.
+    stale
+        .test()
+        .assertError(
+            t ->
+                t instanceof ExchangeException
+                    && t.getMessage().contains("replaced")
+                    && t.getMessage().contains("re-subscribe"));
+
+    // The replacement's wire subscription is untouched: still the only registered channel, and
+    // pushes still reach its observer.
+    assertEquals(1, service.channelCount());
+    service.handleBinaryPush(dealsWrapper().toByteArray());
+    replacementObserver.assertValueCount(1);
+  }
+
+  @Test
   void privateChannelWithoutListenKeyFailsImmediatelyWithSecurityException() {
     CapturingService service = new CapturingService();
 

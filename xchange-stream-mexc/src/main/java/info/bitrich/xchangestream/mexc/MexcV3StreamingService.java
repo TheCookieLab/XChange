@@ -268,7 +268,19 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
    */
   private boolean onFirstConsumer(String channelName, ChannelEntry entry) {
     synchronized (sharedChannels) {
-      if (sharedChannels.get(channelName) == null) {
+      ChannelEntry cached = sharedChannels.get(channelName);
+      if (cached != null && cached != entry) {
+        // A retained observable outlived its cache entry: a last-consumer dispose evicted it and
+        // a later subscribe created a replacement for the same channel name. Subscribing this
+        // stale wrapper's base would register a second wire subscription while NettyStreamingService
+        // keeps one emitter per channel, so one observer would silently receive nothing and
+        // disposing the stale base would mirror-remove the replacement's live subscription.
+        throw new ExchangeException(
+            "Stale MEXC Spot v3 channel wrapper for "
+                + channelName
+                + ": the channel entry was replaced; re-subscribe through the exchange");
+      }
+      if (cached == null) {
         // The entry was evicted by a concurrent last-consumer dispose after subscribeChannel
         // handed this wrapper out. Reinstall it so this observer keeps the channel's slot and
         // later callers still share this wrapper's base instead of building a second wire.

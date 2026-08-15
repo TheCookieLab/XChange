@@ -25,6 +25,7 @@ import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.OrderAmountUnderMinimumException;
@@ -504,19 +505,21 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
   public void getTradeHistoryPagesForwardRespectingExplicitLimit() throws IOException {
     // WireMock matches the most recently added stub first, so the generic first-page stub is
     // declared before the window-specific stubs. Page size is capped at the provider maximum
-    // of 100 per request.
+    // of 100 per request. The cursor is inclusive: each next page re-fetches the boundary
+    // millisecond, so the second page starts at the first page's newest trade time (1099) and
+    // the boundary trade (id 1099) is deduplicated rather than skipped.
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(1000, 100))));
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades"))
-            .withQueryParam("startTime", equalTo("1100"))
+            .withQueryParam("startTime", equalTo("1099"))
             .withQueryParam("limit", equalTo("100"))
-            .willReturn(aResponse().withBody(myTradesBody(2000, 100))));
+            .willReturn(aResponse().withBody(myTradesBody(1099, 100))));
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades"))
-            .withQueryParam("startTime", equalTo("2100"))
+            .withQueryParam("startTime", equalTo("1198"))
             .withQueryParam("limit", equalTo("50"))
-            .willReturn(aResponse().withBody(myTradesBody(3000, 50))));
+            .willReturn(aResponse().withBody(myTradesBody(1198, 50))));
 
     MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
     history.setCurrencyPair(CurrencyPair.BTC_USDT);
@@ -524,14 +527,102 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
 
     UserTrades trades = tradeService().getTradeHistory(history);
 
-    assertThat(trades.getUserTrades()).hasSize(250);
+    assertThat(trades.getUserTrades()).hasSize(248); // boundary ids 1099 and 1198 deduplicated
     assertThat(trades.getUserTrades().get(0).getId()).isEqualTo("1000");
-    assertThat(trades.getUserTrades().get(249).getId()).isEqualTo("3049");
+    assertThat(trades.getUserTrades().get(247).getId()).isEqualTo("1247");
     verify(3, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
     verify(
         getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
-            .withQueryParam("startTime", equalTo("1100"))
+            .withQueryParam("startTime", equalTo("1099"))
             .withQueryParam("limit", equalTo("100")));
+  }
+
+  @Test
+  public void getTradeHistoryKeepsFillsSharingTheBoundaryMillisecond() throws IOException {
+    // A full page whose newest fills share one millisecond must not skip the rest: the cursor
+    // re-fetches from the boundary timestamp (inclusive) and deduplicates by trade id. The
+    // second page (10 rows at t=1000) is short, so the window is exhausted and the unseen ids
+    // are all collected.
+    StringBuilder firstPage = new StringBuilder("[");
+    for (int i = 1; i <= 97; i++) {
+      if (i > 1) {
+        firstPage.append(',');
+      }
+      firstPage.append(myTradeRow(999L, i));
+    }
+    for (int i = 98; i <= 100; i++) {
+      firstPage.append(',').append(myTradeRow(1000L, i));
+    }
+    firstPage.append(']');
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .willReturn(aResponse().withBody(firstPage.toString())));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1000"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1000L, 98, 10))));
+
+    MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
+    history.setCurrencyPair(CurrencyPair.BTC_USDT);
+
+    UserTrades trades = tradeService().getTradeHistory(history);
+
+    assertThat(trades.getUserTrades()).hasSize(107); // 97 + 3 + 7 remaining at t=1000
+    java.util.Set<String> ids =
+        trades.getUserTrades().stream()
+            .map(UserTrade::getId)
+            .collect(java.util.stream.Collectors.toSet());
+    assertThat(ids).hasSize(107); // no duplicates from the inclusive boundary re-fetch
+    assertThat(ids).contains("98", "100", "101", "107");
+    verify(2, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1000")));
+  }
+
+  @Test
+  public void getTradeHistoryContinuesPastABoundaryMillisecondOnFullPages() throws IOException {
+    // The reviewer-grade case: a full page ends with fills at t=1000, and 97 more fills share
+    // that same millisecond. An exclusive cursor would skip them; the inclusive cursor re-fetches
+    // from t=1000, and because the second page is full (100 rows, 3 seen + 97 new) the loop must
+    // keep going until a repeated page adds nothing new.
+    StringBuilder firstPage = new StringBuilder("[");
+    for (int i = 1; i <= 97; i++) {
+      if (i > 1) {
+        firstPage.append(',');
+      }
+      firstPage.append(myTradeRow(999L, i));
+    }
+    for (int i = 98; i <= 100; i++) {
+      firstPage.append(',').append(myTradeRow(1000L, i));
+    }
+    firstPage.append(']');
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .willReturn(aResponse().withBody(firstPage.toString())));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1000"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1000L, 98, 100))));
+
+    MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
+    history.setCurrencyPair(CurrencyPair.BTC_USDT);
+
+    UserTrades trades = tradeService().getTradeHistory(history);
+
+    assertThat(trades.getUserTrades()).hasSize(197); // 97 + 3 + 97 more at t=1000
+    java.util.Set<String> ids =
+        trades.getUserTrades().stream()
+            .map(UserTrade::getId)
+            .collect(java.util.stream.Collectors.toSet());
+    assertThat(ids).hasSize(197); // no duplicates from the inclusive boundary re-fetch
+    assertThat(ids).contains("98", "100", "101", "194", "197");
+    verify(3, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    verify(
+        2,
+        getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1000")));
   }
 
   @Test
@@ -594,15 +685,33 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
         body.append(',');
       }
       long t = fromTime + i;
-      body.append("{\"symbol\":\"BTCUSDT\",\"id\":").append(t)
-          .append(",\"orderId\":\"order-").append(t)
-          .append("\",\"orderListId\":-1,\"price\":\"33198.31\",\"qty\":\"0.001\",")
-          .append("\"quoteQty\":\"33.19831\",\"commission\":\"0.000001\",")
-          .append("\"commissionAsset\":\"BTC\",\"time\":").append(t)
-          .append(",\"isBuyer\":true,\"isMaker\":false,\"isBestMatch\":true,")
-          .append("\"isSelfTrade\":false,\"clientOrderId\":\"ref-").append(t).append("\"}");
+      body.append(myTradeRow(t, t));
     }
     return body.append(']').toString();
+  }
+
+  /** Builds {@code count} myTrades rows with ids {@code startId..startId+count-1}, all at {@code time}. */
+  private static String myTradesAtTime(long time, long startId, int count) {
+    StringBuilder body = new StringBuilder("[");
+    for (int i = 0; i < count; i++) {
+      if (i > 0) {
+        body.append(',');
+      }
+      body.append(myTradeRow(time, startId + i));
+    }
+    return body.append(']').toString();
+  }
+
+  private static String myTradeRow(long time, long id) {
+    return new StringBuilder("{\"symbol\":\"BTCUSDT\",\"id\":")
+        .append(id)
+        .append(",\"orderId\":\"order-").append(id)
+        .append("\",\"orderListId\":-1,\"price\":\"33198.31\",\"qty\":\"0.001\",")
+        .append("\"quoteQty\":\"33.19831\",\"commission\":\"0.000001\",")
+        .append("\"commissionAsset\":\"BTC\",\"time\":").append(time)
+        .append(",\"isBuyer\":true,\"isMaker\":false,\"isBestMatch\":true,")
+        .append("\"isSelfTrade\":false,\"clientOrderId\":\"ref-").append(id).append("\"}")
+        .toString();
   }
 
   @Test

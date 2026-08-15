@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -329,6 +331,7 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
           final long windowMs = 30L * 24 * 60 * 60 * 1000; // provider queryable window: 1 month
           int remaining = queryLimit == null ? Integer.MAX_VALUE : queryLimit;
           List<UserTrade> trades = new ArrayList<>();
+          Set<Long> seenTradeIds = new HashSet<>();
           Long windowStart = queryStartTime == null ? null : queryStartTime.getTime();
           Long windowEnd = queryEndTime == null ? null : queryEndTime.getTime();
           while (remaining > 0) {
@@ -369,8 +372,13 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
               }
               int pageStartIndex = trades.size();
               long newest = Long.MIN_VALUE;
+              boolean pageAddedNew = false;
               for (MexcV3MyTrade trade : raw) {
                 newest = Math.max(newest, trade.getTime());
+                if (!seenTradeIds.add(trade.getId())) {
+                  continue; // inclusive boundary re-fetch: already collected this trade
+                }
+                pageAddedNew = true;
                 trades.add(
                     UserTrade.builder()
                         .id(String.valueOf(trade.getId()))
@@ -392,13 +400,15 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
                 windowExhausted = true;
                 break; // short page: the window is exhausted
               }
-              // Page forward past the newest trade seen. Stop when the window did not advance:
-              // that means the provider ignored startTime (orderId-scoped queries) and repeated
-              // the same full page, which would otherwise loop forever. The repeated page is
-              // stale (all trades predate the current window), so drop it instead of returning
-              // duplicates; later windows would repeat it too, so the whole span is done.
-              long nextStart = newest + 1;
-              if (windowStart != null && nextStart <= windowStart) {
+              // Page forward to (not past) the newest trade seen: an inclusive cursor re-fetches
+              // the fills that share the boundary millisecond instead of skipping them, so the
+              // dedupe above is what keeps them out of the result. Stop when a full page neither
+              // advanced the window nor added a new trade: that means the provider ignored
+              // startTime (orderId-scoped queries) and repeated the same page, which would
+              // otherwise loop forever; the repeated page is stale (all trades predate the
+              // current window), so drop it and end the span.
+              long nextStart = newest;
+              if (windowStart != null && nextStart <= windowStart && !pageAddedNew) {
                 trades.subList(pageStartIndex, trades.size()).clear();
                 return new UserTrades(trades, TradeSortType.SortByID);
               }
