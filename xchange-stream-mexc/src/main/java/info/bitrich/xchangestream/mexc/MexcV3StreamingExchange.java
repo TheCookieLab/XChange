@@ -59,6 +59,12 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
   private Disposable keepAliveDisposable;
   /** Shared connection attempt while it is in flight; cleared when it settles. */
   private Completable inFlightConnect;
+  /**
+   * Incremented every time a disconnect executes. Connection attempts capture the generation
+   * when they are created and abort once it moves: an attempt that has not yet built its
+   * transport must not open a socket or create a listen key after the disconnect completed.
+   */
+  private volatile long connectGeneration;
 
   @Override
   public Completable connect(ProductSubscription... args) {
@@ -90,7 +96,12 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
         uri = legacyUri;
       }
     }
+    // An empty listenKey parameter is not a key: adopting it into the refresh/cleanup lifecycle
+    // would leave nothing to refresh or close. Drop the empty parameter and fall through to the
+    // private path, which creates a key.
+    uri = withoutEmptyListenKey(uri);
     final String resolvedUri = uri;
+    final long generation = connectGeneration;
     Completable attempt;
     if (specification.getApiKey() != null && !uri.contains("listenKey=")) {
       // The state check runs when the returned Completable is subscribed, not when connect() is
@@ -102,9 +113,31 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                 if (listenKey == null) {
                   // Private connection: create a listen key, attach it to the URI, and keep it
                   // alive.
-                  return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
-                      .subscribeOn(Schedulers.io())
-                      .andThen(Completable.defer(() -> streamingService.connect()));
+                  return Completable.defer(
+                          () -> {
+                            if (generation != connectGeneration) {
+                              // A disconnect executed before this chain reached the key
+                              // creation; it already reported complete, so nothing may be
+                              // created or opened after it.
+                              return Completable.complete();
+                            }
+                            return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
+                                .subscribeOn(Schedulers.io());
+                          })
+                      .andThen(
+                          Completable.defer(
+                              () -> {
+                                if (generation != connectGeneration) {
+                                  // A disconnect executed while the key was being created or the
+                                  // transport built. The disconnect could not see the transport
+                                  // and already reported complete, so release the private
+                                  // connection here instead of opening a socket after it.
+                                  return Completable.fromAction(this::releasePrivateConnection)
+                                      .subscribeOn(Schedulers.io())
+                                      .onErrorComplete();
+                                }
+                                return streamingService.connect();
+                              }));
                 }
                 // A previous attempt created a listen key and its keepalive is still running;
                 // reuse that key instead of creating a second one. Creating a new key on every
@@ -115,15 +148,22 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                 // valid for those reconnects.
                 return Completable.defer(
                     () -> {
-                      if (isAlive()) {
-                        // The first subscription of this chain already connected; subscribing
-                        // the chain again must not rebuild the service, because
-                        // buildStreamingService disconnects the current transport and would tear
-                        // down the active streams.
-                        return Completable.complete();
+                      synchronized (MexcV3StreamingExchange.this) {
+                        if (generation != connectGeneration) {
+                          // A disconnect executed while this chain waited to build; it already
+                          // reported complete, so no socket may open after it.
+                          return Completable.complete();
+                        }
+                        if (isAlive()) {
+                          // The first subscription of this chain already connected; subscribing
+                          // the chain again must not rebuild the service, because
+                          // buildStreamingService disconnects the current transport and would
+                          // tear down the active streams.
+                          return Completable.complete();
+                        }
+                        buildStreamingService(withListenKey(resolvedUri, listenKey));
+                        return streamingService.connect();
                       }
-                      buildStreamingService(withListenKey(resolvedUri, listenKey));
-                      return streamingService.connect();
                     });
               });
     } else if (specification.getApiKey() != null) {
@@ -134,17 +174,24 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
       attempt =
           Completable.defer(
               () -> {
-                if (isAlive()) {
-                  return Completable.complete();
+                synchronized (MexcV3StreamingExchange.this) {
+                  if (generation != connectGeneration) {
+                    // A disconnect executed while this chain waited to build; it already
+                    // reported complete, so no socket may open after it.
+                    return Completable.complete();
+                  }
+                  if (isAlive()) {
+                    return Completable.complete();
+                  }
+                  if (listenKey == null) {
+                    listenKey = suppliedKey;
+                    buildStreamingService(resolvedUri);
+                    startKeepAlive((MexcV3AccountService) getAccountService());
+                  } else {
+                    buildStreamingService(resolvedUri);
+                  }
+                  return streamingService.connect();
                 }
-                if (listenKey == null) {
-                  listenKey = suppliedKey;
-                  buildStreamingService(resolvedUri);
-                  startKeepAlive((MexcV3AccountService) getAccountService());
-                } else {
-                  buildStreamingService(resolvedUri);
-                }
-                return streamingService.connect();
               });
     } else {
       buildStreamingService(uri);
@@ -181,6 +228,15 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     // 60 minutes later and no later disconnect could close it.
     return Completable.defer(
         () -> {
+          synchronized (this) {
+            // Invalidate any in-flight attempt before reporting complete: an attempt that has
+            // not built its transport yet would otherwise create a listen key or open a socket
+            // after the disconnect finished. The attempt chains capture the generation and
+            // abort once it moves; an attempt already past its last check is torn down here
+            // because streamingService is visible under this lock.
+            inFlightConnect = null;
+            connectGeneration++;
+          }
           if (streamingService == null) {
             return Completable.complete();
           }
@@ -287,6 +343,47 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
 
   private static String withListenKey(String uri, String key) {
     return uri + (uri.contains("?") ? "&" : "?") + "listenKey=" + key;
+  }
+
+  /**
+   * Removes a {@code listenKey=} query parameter whose value is empty, if present. An empty
+   * value must not be adopted as a supplied key: {@link #listenKeyIn} reads it as {@code null},
+   * so nothing would ever be refreshed or closed and the socket would connect without
+   * authorization. The empty parameter is dropped and the caller falls through to the private
+   * path, which creates a key.
+   */
+  private static String withoutEmptyListenKey(String uri) {
+    if (uri.endsWith("?listenKey=")) {
+      return uri.substring(0, uri.length() - "?listenKey=".length());
+    }
+    if (uri.endsWith("&listenKey=")) {
+      return uri.substring(0, uri.length() - "&listenKey=".length());
+    }
+    if (uri.contains("?listenKey=&")) {
+      return uri.replace("?listenKey=&", "?");
+    }
+    if (uri.contains("&listenKey=&")) {
+      return uri.replace("&listenKey=&", "&");
+    }
+    return uri;
+  }
+
+  /**
+   * Releases a private connection whose listen key was created while a disconnect was already
+   * executing: the disconnect could not see the transport (it did not exist yet) and already
+   * reported complete, so the key and keepalive must still be released here or the key would be
+   * orphaned until its 60-minute expiry. No socket was opened for this connection.
+   */
+  private synchronized void releasePrivateConnection() {
+    stopKeepAlive();
+    String key = listenKey;
+    listenKey = null;
+    if (key != null) {
+      closeListenKey(key);
+    }
+    if (streamingService != null) {
+      streamingService.disconnect().onErrorComplete().subscribe();
+    }
   }
 
   private void startKeepAlive(MexcV3AccountService accountService) {

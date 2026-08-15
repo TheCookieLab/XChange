@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -542,6 +543,112 @@ class MexcV3StreamingExchangeTest {
     exchange.disconnect().onErrorComplete().blockingAwait();
     wireMock.verify(
         1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=supplied-key")));
+  }
+
+  @Test
+  void emptyListenKeyInUriFallsBackToCreatingAKey() throws Exception {
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"created-key\"}")));
+    wireMock.stubFor(
+        delete(urlEqualTo("/api/v3/userDataStream?listenKey=created-key"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"created-key\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws?listenKey=");
+    exchange.applySpecification(spec);
+
+    exchange
+        .connect()
+        .test()
+        .awaitDone(10, TimeUnit.SECONDS)
+        .assertError(IOException.class);
+
+    // The empty parameter must not be adopted as a supplied key: there would be nothing to
+    // refresh or close, and the socket would connect without authorization. A key is created
+    // instead, and the normal private lifecycle (keepalive, close on disconnect) applies.
+    assertEquals("created-key", listenKeyInstance(exchange));
+    assertNotNull(keepAliveDisposableInstance(exchange));
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+
+    exchange.disconnect().onErrorComplete().blockingAwait();
+    wireMock.verify(
+        1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=created-key")));
+  }
+
+  @Test
+  void disconnectCancelsAnInFlightPrivateConnectionAttempt() throws Exception {
+    // The key-creation POST is delayed so the disconnect lands while the attempt is genuinely
+    // in flight: the transport does not exist yet, so a disconnect that only tears down the
+    // current service would report complete and leave the attempt to open a socket and keep a
+    // key afterwards.
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(
+                aResponse().withFixedDelay(500).withBody("{\"listenKey\":\"created-key\"}")));
+    wireMock.stubFor(
+        delete(urlEqualTo("/api/v3/userDataStream?listenKey=created-key"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"created-key\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+
+    TestObserver<Void> observer = exchange.connect().test();
+
+    // Wait until the delayed key-creation POST is in flight, then disconnect: the disconnect
+    // must invalidate the pending attempt instead of letting it finish its side effects.
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+    while (wireMock.findAll(postRequestedFor(urlEqualTo("/api/v3/userDataStream"))).isEmpty()
+        && System.nanoTime() < deadline) {
+      sleepQuietly(10L);
+    }
+    assertFalse(
+        wireMock.findAll(postRequestedFor(urlEqualTo("/api/v3/userDataStream"))).isEmpty());
+
+    exchange.disconnect().onErrorComplete().blockingAwait();
+    observer.awaitDone(10, TimeUnit.SECONDS);
+
+    // No socket is open and the created key is closed: the disconnect left nothing behind even
+    // though the transport did not exist when it ran.
+    assertFalse(exchange.isAlive());
+    assertNull(listenKeyInstance(exchange));
+    assertNull(keepAliveDisposableInstance(exchange));
+    wireMock.verify(
+        1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=created-key")));
+
+    // The cancelled attempt was invalidated: a new connect starts a fresh attempt (new key and
+    // transport) instead of sharing the dead one.
+    Object cancelledService = streamingServiceInstance(exchange);
+    exchange
+        .connect()
+        .test()
+        .awaitDone(10, TimeUnit.SECONDS)
+        .assertError(IOException.class);
+    assertNotSame(cancelledService, streamingServiceInstance(exchange));
+    wireMock.verify(2, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+
+    exchange.disconnect().onErrorComplete().blockingAwait();
   }
 
   private static String listenKeyInstance(MexcV3StreamingExchange exchange) throws Exception {

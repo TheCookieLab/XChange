@@ -509,9 +509,12 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     // declared before the window-specific stubs. Page size is capped at the provider maximum
     // of 100 per request. The cursor is inclusive: each next page re-fetches the boundary
     // millisecond, so the second page starts at the first page's newest trade time (1099) and
-    // the boundary trade (id 1099) is deduplicated rather than skipped. Only newly collected
-    // trades count toward the caller's limit: after two full pages the budget is 51, so the
-    // third request pages with limit 51 and a short reply (40 rows) exhausts the window.
+    // the boundary trade (id 1099) is deduplicated rather than skipped. Every page requests
+    // the full provider maximum even when the remaining budget is smaller: a shrunk request
+    // could return only the already-seen boundary fill and the no-progress advance would skip
+    // unseen fills at that millisecond. After two full pages the budget is 51, so the third
+    // request still asks for 100 and the short reply (40 rows) exhausts the window; the
+    // result is capped to the caller's limit.
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(1000, 100))));
     stubFor(
@@ -522,7 +525,7 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades"))
             .withQueryParam("startTime", equalTo("1198"))
-            .withQueryParam("limit", equalTo("51"))
+            .withQueryParam("limit", equalTo("100"))
             .willReturn(aResponse().withBody(myTradesBody(1198, 40))));
 
     MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
@@ -542,7 +545,7 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     verify(
         getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
             .withQueryParam("startTime", equalTo("1198"))
-            .withQueryParam("limit", equalTo("51")));
+            .withQueryParam("limit", equalTo("100")));
   }
 
   @Test
@@ -821,23 +824,19 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
 
   @Test
   public void getTradeHistoryDoesNotSpendTheLimitOnBoundaryDuplicates() throws IOException {
-    // limit=150 with a full first page (100) and a second page of 50 that re-fetches the
-    // boundary trade (id 1099, deduplicated): 49 new trades. Only those 49 count toward the
-    // budget, so one unit remains and the next one-row request returns a new fill (1149).
-    // Charging the duplicate against the caller's limit (raw page size 50) would leave the
-    // budget at zero and wrongly stop at 149 trades.
+    // limit=150 with a full first page (100) and a second page of 100 that re-fetches the
+    // boundary trade (id 1099, deduplicated): 99 new trades, so 199 unique fills are collected
+    // in two requests. The second page overshoots the caller's budget, so the output is
+    // truncated to the newest 150 trades — the boundary duplicate did not consume the budget
+    // and the oldest excess (ids 1150..1198) is dropped. A shrunk second request (limit 50)
+    // would have returned only the already-seen boundary fill and skipped unseen fills.
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(1000, 100))));
     stubFor(
         get(urlPathEqualTo("/api/v3/myTrades"))
             .withQueryParam("startTime", equalTo("1099"))
-            .withQueryParam("limit", equalTo("50"))
-            .willReturn(aResponse().withBody(myTradesBody(1099, 50))));
-    stubFor(
-        get(urlPathEqualTo("/api/v3/myTrades"))
-            .withQueryParam("startTime", equalTo("1148"))
-            .withQueryParam("limit", equalTo("1"))
-            .willReturn(aResponse().withBody(myTradesAtTime(1149L, 1149, 1))));
+            .withQueryParam("limit", equalTo("100"))
+            .willReturn(aResponse().withBody(myTradesBody(1099, 100))));
 
     MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
     history.setCurrencyPair(CurrencyPair.BTC_USDT);
@@ -847,7 +846,59 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
 
     assertThat(trades.getUserTrades()).hasSize(150);
     assertThat(trades.getUserTrades().get(149).getId()).isEqualTo("1149");
-    verify(3, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    verify(2, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    verify(
+        getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1099"))
+            .withQueryParam("limit", equalTo("100")));
+  }
+
+  @Test
+  public void getTradeHistoryFetchesPastBoundaryDuplicatesBeforeApplyingTheLimit() throws IOException {
+    // limit=101 with a full first page whose last millisecond (t=1099) holds two fills (ids
+    // 1099, 1100) but only one fits in the page. A request shrunk to the remaining budget of 1
+    // returns only the already-seen boundary fill; the no-progress advance would then skip the
+    // unseen fill (id 1100) even though a full request would have returned it. The pager must
+    // request the full page past the boundary group and then cap the output to the limit.
+    StringBuilder firstPage = new StringBuilder("[");
+    for (int i = 1000; i <= 1098; i++) {
+      if (i > 1000) {
+        firstPage.append(',');
+      }
+      firstPage.append(myTradeRow(i, i));
+    }
+    firstPage.append(',').append(myTradeRow(1099L, 1099)).append(']');
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .willReturn(aResponse().withBody(firstPage.toString())));
+    // What a limit=1 request (the old shrunk-budget behavior) would have returned: the seen
+    // boundary fill only.
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1099"))
+            .withQueryParam("limit", equalTo("1"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1099L, 1099, 1))));
+    // A full-page request passes the whole boundary group: both fills at t=1099.
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1099"))
+            .withQueryParam("limit", equalTo("100"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1099L, 1099, 2))));
+
+    MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
+    history.setCurrencyPair(CurrencyPair.BTC_USDT);
+    history.setLimit(101);
+
+    UserTrades trades = tradeService().getTradeHistory(history);
+
+    assertThat(trades.getUserTrades()).hasSize(101);
+    assertThat(trades.getUserTrades().get(100).getId()).isEqualTo("1100");
+    verify(2, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1099"))
+            .withQueryParam("limit", equalTo("100")));
   }
 
   @Test

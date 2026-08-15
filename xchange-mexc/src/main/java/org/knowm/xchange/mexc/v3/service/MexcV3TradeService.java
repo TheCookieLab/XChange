@@ -385,7 +385,12 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
             }
             boolean windowExhausted = false; // short or empty page within this window
             while (remaining > 0 && !windowExhausted) {
-              int pageLimit = Math.min(remaining, maxPageSize);
+              // Always request a full provider page, even when the caller's remaining budget is
+              // smaller: the inclusive startTime cursor re-fetches every fill at the newest
+              // millisecond, and a request shrunk to the remaining budget can return only the
+              // already-seen boundary fill — the no-progress advance below would then skip the
+              // unseen fills sharing that millisecond even though a full request would have
+              // returned them. The output is capped to the caller's limit below.
               List<MexcV3MyTrade> raw =
                   mexcV3Authenticated.myTrades(
                       apiKey,
@@ -393,7 +398,7 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
                       queryOrderId,
                       windowStart,
                       requestEnd,
-                      pageLimit,
+                      maxPageSize,
                       recvWindowMs,
                       timestampFactory,
                       signatureCreator);
@@ -428,9 +433,15 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
               }
               // Count only newly collected trades toward the caller's limit: boundary
               // re-fetches that seenTradeIds discards must not consume the budget, or a limit
-              // just past a full page would stop short on a duplicated one-row request.
+              // just past a full page would stop short on a duplicated one-row request. A full
+              // page can also overshoot the budget (it passed the boundary group); the output
+              // is then capped to the caller's limit, keeping the newest fills at the front of
+              // the list.
               remaining -= added;
-              if (raw.size() < pageLimit) {
+              if (queryLimit != null && trades.size() > queryLimit) {
+                trades.subList(queryLimit, trades.size()).clear();
+              }
+              if (raw.size() < maxPageSize) {
                 windowExhausted = true;
                 break; // short page: the window is exhausted
               }
