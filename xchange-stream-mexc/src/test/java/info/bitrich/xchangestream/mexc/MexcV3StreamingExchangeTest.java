@@ -714,7 +714,8 @@ class MexcV3StreamingExchangeTest {
     CountDownLatch tcpAccepted = new CountDownLatch(1);
     CountDownLatch releaseUpgrade = new CountDownLatch(1);
     CountDownLatch socketClosed = new CountDownLatch(1);
-    startUpgradeServer(serverSocket, releaseQueue, tcpAccepted, releaseUpgrade, socketClosed);
+    startUpgradeServer(
+        serverSocket, releaseQueue, tcpAccepted, releaseUpgrade, socketClosed, true);
 
     // Fills the accept queue: while it stays full the client's SYN is dropped, so the
     // exchange's transport connect cannot complete.
@@ -784,6 +785,133 @@ class MexcV3StreamingExchangeTest {
   }
 
   @Test
+  void settlingAttemptClearsTheSlotEvenWhenItsInitiatorDisposed() throws Exception {
+    // Reviewer scenario: the observer that initiated the connection disposes before the attempt
+    // settles. cache() keeps the upstream attempt running and retains its terminal result, so
+    // the slot must clear when the cached attempt itself settles: a per-subscriber callback
+    // never runs for the disposed initiator, and every later connect() would replay the cached
+    // failure instead of retrying.
+    ServerSocket serverSocket = new ServerSocket(0, 1);
+    CountDownLatch releaseQueue = new CountDownLatch(1);
+    CountDownLatch tcpAccepted = new CountDownLatch(1);
+    CountDownLatch releaseUpgrade = new CountDownLatch(1);
+    CountDownLatch socketClosed = new CountDownLatch(1);
+    // No 101: the server closes the connection after reading the upgrade request, so the
+    // pending attempt settles with a handshake failure.
+    startUpgradeServer(
+        serverSocket, releaseQueue, tcpAccepted, releaseUpgrade, socketClosed, false);
+
+    // Fills the accept queue: while it stays full the client's SYN is dropped, so the
+    // exchange's transport connect cannot complete.
+    Socket filler = new Socket();
+    filler.connect(new InetSocketAddress("127.0.0.1", serverSocket.getLocalPort()));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
+        "ws://127.0.0.1:" + serverSocket.getLocalPort() + "/ws");
+    exchange.applySpecification(spec);
+
+    TestObserver<Void> initiator = exchange.connect().test();
+    // The transport connect is guaranteed pending here (the queue is still full); dispose the
+    // initiating observer before the attempt settles.
+    initiator.dispose();
+
+    // A joining subscriber receives the settled error; it captures the exact cached instance
+    // that a stale slot would replay to later callers.
+    AtomicReference<Throwable> settledError = new AtomicReference<>();
+    CountDownLatch settled = new CountDownLatch(1);
+    exchange
+        .connect()
+        .subscribe(
+            () -> settled.countDown(),
+            t -> {
+              settledError.set(t);
+              settled.countDown();
+            });
+
+    releaseQueue.countDown();
+    assertTrue(tcpAccepted.await(10, TimeUnit.SECONDS));
+    assertTrue(
+        socketClosed.await(10, TimeUnit.SECONDS),
+        "server never closed the client socket");
+    assertTrue(settled.await(10, TimeUnit.SECONDS));
+    assertNotNull(settledError.get());
+
+    // The settled attempt must have cleared the slot: the retry runs a fresh transport attempt
+    // instead of replaying the cached failure. Point the URI at a refused port so the fresh
+    // attempt settles deterministically (the helper's server socket is closed by now).
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    AtomicReference<Throwable> retryError = new AtomicReference<>();
+    exchange
+        .connect()
+        .test()
+        .awaitDone(10, TimeUnit.SECONDS)
+        .assertError(t -> retryError.compareAndSet(null, t));
+    assertNotNull(retryError.get());
+    assertNotSame(settledError.get(), retryError.get());
+    assertFalse(exchange.isAlive());
+    filler.close();
+  }
+
+  @Test
+  void reconnectingAfterDisconnectCreatesAFreshKeyForAClosedSuppliedKey() throws Exception {
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"fresh-key\"}")));
+    wireMock.stubFor(
+        delete(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"test-listen-key\"}")));
+    wireMock.stubFor(
+        delete(urlEqualTo("/api/v3/userDataStream?listenKey=fresh-key"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"fresh-key\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
+        "ws://127.0.0.1:1/ws?listenKey=test-listen-key");
+    exchange.applySpecification(spec);
+
+    // The supplied key is adopted into the lifecycle without creating one.
+    exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+    wireMock.verify(0, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+    assertEquals("test-listen-key", listenKeyInstance(exchange));
+
+    // Disconnect closes the supplied key.
+    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
+    wireMock.verify(
+        1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key")));
+
+    // Reconnecting must not re-adopt the key this exchange already closed: the configured URI
+    // still carries it, but private streams and the keepalive would use a deleted key. A fresh
+    // key is created and replaces the stale one in the URI.
+    exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+    assertEquals("fresh-key", listenKeyInstance(exchange));
+
+    // The fresh key is owned by this exchange: disconnecting closes it, and a third connect
+    // creates another fresh key instead of reusing the closed one.
+    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
+    wireMock.verify(
+        1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=fresh-key")));
+    exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+    wireMock.verify(2, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+    exchange.disconnect().onErrorComplete().blockingAwait();
+  }
+
+  @Test
   void staleAttemptTeardownTouchesOnlyItsOwnTransport() throws Exception {
     // Two backlog-1 TCP servers: the first connection attempt stays pending (its queue is
     // full), a disconnect invalidates it, and a second attempt starts on a fresh service while
@@ -800,9 +928,15 @@ class MexcV3StreamingExchangeTest {
     CountDownLatch secondAccepted = new CountDownLatch(1);
     CountDownLatch releaseSecondUpgrade = new CountDownLatch(1);
     CountDownLatch secondClosed = new CountDownLatch(1);
-    startUpgradeServer(firstServer, releaseFirstQueue, firstAccepted, releaseFirstUpgrade, firstClosed);
     startUpgradeServer(
-        secondServer, releaseSecondQueue, secondAccepted, releaseSecondUpgrade, secondClosed);
+        firstServer, releaseFirstQueue, firstAccepted, releaseFirstUpgrade, firstClosed, true);
+    startUpgradeServer(
+        secondServer,
+        releaseSecondQueue,
+        secondAccepted,
+        releaseSecondUpgrade,
+        secondClosed,
+        true);
 
     // Fill both accept queues before any client connects.
     Socket filler1 = new Socket();
@@ -861,16 +995,19 @@ class MexcV3StreamingExchangeTest {
    *
    * <p>Holds the accept queue full until {@code releaseQueue} fires (the queued filler keeps the
    * client's SYN dropped, so its TCP connect stays pending), accepts the filler plus one client,
-   * reads the client's upgrade request, withholds the 101 until {@code releaseUpgrade} fires,
-   * then drains the client socket until EOF and opens {@code closed}. Latches are left
-   * unsatisfied on failure so the test's awaits surface it.
+   * reads the client's upgrade request, and — when {@code send101} is set — withholds the 101
+   * until {@code releaseUpgrade} fires. It then drains the client socket until EOF and opens
+   * {@code closed}. Without {@code send101} the request is answered with an HTTP 400, failing
+   * the client's WebSocket handshake. Latches are left unsatisfied on failure so the test's
+   * awaits surface it.
    */
   private static void startUpgradeServer(
       ServerSocket serverSocket,
       CountDownLatch releaseQueue,
       CountDownLatch accepted,
       CountDownLatch releaseUpgrade,
-      CountDownLatch closed) {
+      CountDownLatch closed,
+      boolean send101) {
     Thread serverThread =
         new Thread(
             () -> {
@@ -899,26 +1036,41 @@ class MexcV3StreamingExchangeTest {
                       key = line.substring(18).trim();
                     }
                   }
-                  if (!releaseUpgrade.await(10, TimeUnit.SECONDS)) {
-                    throw new IllegalStateException(
-                        "timed out waiting for the test to release the WebSocket upgrade");
-                  }
-                  if (key != null) {
-                    String accept =
-                        Base64.getEncoder()
-                            .encodeToString(
-                                MessageDigest.getInstance("SHA-1")
-                                    .digest(
-                                        (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
-                                            .getBytes(StandardCharsets.UTF_8)));
+                  if (send101) {
+                    if (!releaseUpgrade.await(10, TimeUnit.SECONDS)) {
+                      throw new IllegalStateException(
+                          "timed out waiting for the test to release the WebSocket upgrade");
+                    }
+                    if (key != null) {
+                      String accept =
+                          Base64.getEncoder()
+                              .encodeToString(
+                                  MessageDigest.getInstance("SHA-1")
+                                      .digest(
+                                          (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+                                              .getBytes(StandardCharsets.UTF_8)));
+                      OutputStream out = socket.getOutputStream();
+                      out.write(
+                          ("HTTP/1.1 101 Switching Protocols\r\n"
+                                  + "Upgrade: websocket\r\n"
+                                  + "Connection: Upgrade\r\n"
+                                  + "Sec-WebSocket-Accept: "
+                                  + accept
+                                  + "\r\n\r\n")
+                              .getBytes(StandardCharsets.UTF_8));
+                      out.flush();
+                    }
+                  } else {
+                    // Fail the client's WebSocket handshake: answer the upgrade request with an
+                    // HTTP error instead of the 101. The client's handshake future fails
+                    // deterministically (a bare close would only fire channelInactive, which
+                    // this pipeline does not turn into a handshake failure).
                     OutputStream out = socket.getOutputStream();
                     out.write(
-                        ("HTTP/1.1 101 Switching Protocols\r\n"
-                                + "Upgrade: websocket\r\n"
-                                + "Connection: Upgrade\r\n"
-                                + "Sec-WebSocket-Accept: "
-                                + accept
-                                + "\r\n\r\n")
+                        ("HTTP/1.1 400 Bad Request\r\n"
+                                + "Content-Length: 0\r\n"
+                                + "Connection: close\r\n"
+                                + "\r\n")
                             .getBytes(StandardCharsets.UTF_8));
                     out.flush();
                   }

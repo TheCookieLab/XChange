@@ -56,6 +56,15 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
   private MexcV3StreamingAccountService streamingAccountService;
   private MexcV3StreamingTradeService streamingTradeService;
   private String listenKey;
+  /** True while {@link #listenKey} was adopted from the configured URI instead of created. */
+  private volatile boolean suppliedListenKey;
+  /**
+   * Supplied listen key this exchange has already closed. A later connect() reads the unchanged
+   * configured URI, which still carries that key; re-adopting it would keepalive and subscribe
+   * with a key this exchange already deleted server-side. A URI key equal to this value is
+   * treated as stale and replaced by a freshly created key.
+   */
+  private volatile String closedSuppliedKey;
   private Disposable keepAliveDisposable;
   /** Shared connection attempt while it is in flight; cleared when it settles. */
   private Completable inFlightConnect;
@@ -102,8 +111,12 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     uri = withoutEmptyListenKey(uri);
     final String resolvedUri = uri;
     final long generation = connectGeneration;
+    String suppliedKeyInUri = listenKeyIn(uri);
+    boolean staleSuppliedKey =
+        suppliedKeyInUri != null && suppliedKeyInUri.equals(closedSuppliedKey);
     Completable attempt;
-    if (specification.getApiKey() != null && !uri.contains("listenKey=")) {
+    if (specification.getApiKey() != null
+        && (!uri.contains("listenKey=") || staleSuppliedKey)) {
       // The state check runs when the returned Completable is subscribed, not when connect() is
       // called: subscribing the same chain twice must not create a second listen key (the first
       // would be orphaned until its 60-minute expiry).
@@ -174,7 +187,7 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
       // The configured URI already carries a listen key. Adopt it into the refresh and cleanup
       // lifecycle instead of treating the connection as public: without a keepalive the key
       // expires after 60 minutes and private streams stop, and disconnect() could not close it.
-      final String suppliedKey = listenKeyIn(uri);
+      final String suppliedKey = suppliedKeyInUri;
       attempt =
           Completable.defer(
               () -> {
@@ -189,6 +202,7 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                   }
                   if (listenKey == null) {
                     listenKey = suppliedKey;
+                    suppliedListenKey = true;
                     buildStreamingService(resolvedUri);
                     startKeepAlive((MexcV3AccountService) getAccountService());
                   } else {
@@ -206,15 +220,17 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     }
     // cache() makes the attempt single-flight: the first subscription executes it and every
     // concurrent subscription shares the same result instead of building a second transport.
-    // The field stores the cached attempt itself, and the termination callback compares the
-    // same instance: the identity guard exists to preserve a replacement attempt cached by an
-    // error handler, not to keep the slot occupied forever. The returned wrapper carries the
-    // per-subscriber cleanup; storing the wrapper in the field would make the guard compare the
-    // wrapper against its own inner attempt, which never matches, and the slot would never
-    // clear.
-    Completable shared = attempt.cache();
+    // The cleanup is attached to the source BEFORE caching so it fires exactly once when the
+    // cached attempt settles, independent of any individual observer: a subscriber that
+    // disposes before the attempt finishes would skip a per-subscriber callback, leaving the
+    // slot occupied and replaying the cached terminal result to every later connect() call.
+    // The holder captures this call's exact cached instance for the identity guard: a newer
+    // connect() that replaced the field must not be erased by a stale attempt's settle.
+    Completable[] slot = new Completable[1];
+    Completable shared = attempt.doOnTerminate(() -> clearInFlightConnect(slot[0])).cache();
+    slot[0] = shared;
     inFlightConnect = shared;
-    return shared.doOnTerminate(() -> clearInFlightConnect(shared));
+    return shared;
   }
 
   private synchronized void clearInFlightConnect(Completable attempt) {
@@ -290,6 +306,13 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
           Completable closeKey = Completable.complete();
           if (listenKey != null) {
             String key = listenKey;
+            if (suppliedListenKey) {
+              // The key was adopted from the configured URI, which still carries it. A later
+              // connect() must not re-adopt this closed key: private subscriptions and the
+              // keepalive would use a key this exchange already deleted server-side.
+              closedSuppliedKey = key;
+            }
+            suppliedListenKey = false;
             listenKey = null;
             closeKey =
                 Completable.fromAction(() -> closeListenKey(key))
@@ -377,6 +400,7 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     try {
       MexcV3AccountService accountService = (MexcV3AccountService) getAccountService();
       listenKey = accountService.createListenKey().getListenKey();
+      suppliedListenKey = false;
       buildStreamingService(withListenKey(uri, listenKey));
       startKeepAlive(accountService);
     } catch (IOException e) {
@@ -388,6 +412,16 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
   }
 
   private static String withListenKey(String uri, String key) {
+    // Replace an existing listenKey parameter instead of appending a second one: a stale
+    // supplied key in the configured URI must not survive next to the freshly created key
+    // (the exchange would take the stale value).
+    int keyIndex = uri.indexOf("listenKey=");
+    if (keyIndex >= 0) {
+      int valueEnd = uri.indexOf('&', keyIndex + "listenKey=".length());
+      String head = uri.substring(0, keyIndex);
+      String tail = valueEnd < 0 ? "" : uri.substring(valueEnd);
+      return head + "listenKey=" + key + tail;
+    }
     return uri + (uri.contains("?") ? "&" : "?") + "listenKey=" + key;
   }
 
