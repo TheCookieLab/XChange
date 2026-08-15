@@ -7,6 +7,15 @@ import org.knowm.xchange.mexc.service.MEXCAccountService;
 import org.knowm.xchange.mexc.service.MEXCMarketDataService;
 import org.knowm.xchange.mexc.service.MEXCTradeService;
 
+/**
+ * Legacy MEXC Spot adapter for the obsolete {@code /open/api/v2} surface.
+ *
+ * @deprecated MEXC Spot v2 is frozen for compatibility; use the Spot v3 implementation in {@code
+ *     org.knowm.xchange.mexc.v3} ({@code MexcV3Exchange}) instead. This class keeps its original
+ *     endpoint semantics and will be removed after the documented v2 grace period (see the
+ *     xchange-mexc README migration notes).
+ */
+@Deprecated
 public class MEXCExchange extends BaseExchange implements Exchange {
 
   @Override

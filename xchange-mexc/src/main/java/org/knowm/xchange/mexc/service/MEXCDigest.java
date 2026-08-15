@@ -15,6 +15,12 @@ import si.mazi.rescu.Params;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.RestInvocation;
 
+/**
+ * @deprecated MEXC Spot v2 ({@code /open/api/v2}) is frozen for compatibility; use the Spot v3
+ *     implementation in {@code org.knowm.xchange.mexc.v3} instead. See the xchange-mexc README
+ *     migration notes for the removal policy.
+ */
+@Deprecated
 public class MEXCDigest extends BaseParamsDigest {
 
   private static final String API_KEY = "ApiKey";

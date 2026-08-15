@@ -8,9 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.reactivex.rxjava3.disposables.Disposable;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -75,7 +78,7 @@ class KalshiStreamingServiceTest {
   @Test
   void orderBookSubscribeFramePinsUseYesPriceExactly() throws Exception {
     CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
-    subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_ORDERBOOK, TICKER);
+    subscribeOnOpenChannel(service, KalshiStreamingService.CHANNEL_ORDERBOOK, TICKER);
 
     assertEquals(1, service.sent.size());
     JsonNode frame = MAPPER.readTree(service.sent.get(0));
@@ -91,7 +94,7 @@ class KalshiStreamingServiceTest {
   @Test
   void nonOrderBookSubscribeFramesOmitUseYesPrice() throws Exception {
     CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
-    subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_TRADE, TICKER);
+    subscribeOnOpenChannel(service, KalshiStreamingService.CHANNEL_TRADE, TICKER);
 
     assertEquals(1, service.sent.size());
     JsonNode frame = MAPPER.readTree(service.sent.get(0));
@@ -146,7 +149,7 @@ class KalshiStreamingServiceTest {
   @Test
   void acknowledgementBindsSidToTheSubscription() throws Exception {
     CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
-    subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_ORDERBOOK, TICKER);
+    subscribeOnOpenChannel(service, KalshiStreamingService.CHANNEL_ORDERBOOK, TICKER);
     service.messageHandler(
         "{\"id\":1,\"type\":\"subscribed\",\"msg\":{\"channel\":\"orderbook_delta\",\"sid\":7}}");
 
@@ -164,7 +167,7 @@ class KalshiStreamingServiceTest {
   @Test
   void subscriptionErrorConsumesThePendingRequest() throws Exception {
     CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
-    subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_FILL, TICKER);
+    subscribeOnOpenChannel(service, KalshiStreamingService.CHANNEL_FILL, TICKER);
     service.messageHandler(
         "{\"id\":1,\"type\":\"error\",\"msg\":{\"code\":12,\"msg\":\"not authorized\"}}");
 
@@ -179,7 +182,7 @@ class KalshiStreamingServiceTest {
   @Test
   void unsubscribeFrameCarriesTheServerSidOnlyAfterAcknowledgement() throws Exception {
     CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
-    subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_TRADE, TICKER);
+    subscribeOnOpenChannel(service, KalshiStreamingService.CHANNEL_TRADE, TICKER);
 
     assertNull(
         service.getUnsubscribeMessage("trade_" + TICKER, TICKER),
@@ -197,8 +200,8 @@ class KalshiStreamingServiceTest {
   @Test
   void resubscribeChannelsResendsFreshSubscribeFrames() throws Exception {
     CapturingService service = new CapturingService("test-key-id", digest, () -> 0L);
-    subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_ORDERBOOK, TICKER);
-    subscribeWhileDisconnected(service, KalshiStreamingService.CHANNEL_TICKER, TICKER);
+    subscribeOnOpenChannel(service, KalshiStreamingService.CHANNEL_ORDERBOOK, TICKER);
+    subscribeOnOpenChannel(service, KalshiStreamingService.CHANNEL_TICKER, TICKER);
     service.messageHandler(
         "{\"id\":1,\"type\":\"subscribed\",\"msg\":{\"channel\":\"orderbook_delta\",\"sid\":7}}");
     service.messageHandler(
@@ -240,11 +243,24 @@ class KalshiStreamingServiceTest {
   }
 
   /**
-   * Subscribes without a socket: the base class still registers the channel and emits the
-   * subscribe frame, only the subscriber itself sees the expected NotConnectedException.
+   * Subscribes on a fake open channel. The base {@code subscribeChannel} terminal-errors a closed
+   * socket without registering or emitting a frame, so protocol tests open the channel through
+   * {@link #forceOpenChannel} and only the subscriber then sees the real frame stream.
    */
-  private static Disposable subscribeWhileDisconnected(
-      KalshiStreamingService service, String channel, String ticker) {
+  private static Disposable subscribeOnOpenChannel(
+      KalshiStreamingService service, String channel, String ticker) throws Exception {
+    forceOpenChannel(service);
     return service.subscribeChannel(channel, ticker).subscribe(ignored -> {}, error -> {});
+  }
+
+  /**
+   * Pokes an always-open channel into the base class: {@code webSocketChannel} is private with no
+   * setter, so the test replaces it via reflection (the same technique as the MEXC streaming
+   * tests).
+   */
+  private static void forceOpenChannel(KalshiStreamingService service) throws Exception {
+    Field channelField = NettyStreamingService.class.getDeclaredField("webSocketChannel");
+    channelField.setAccessible(true);
+    channelField.set(service, new EmbeddedChannel());
   }
 }

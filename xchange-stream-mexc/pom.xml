@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.github.thecookielab.xchange</groupId>
+        <artifactId>xchange-parent</artifactId>
+        <version>1.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>xchange-stream-mexc</artifactId>
+    <name>XChange MEXC Stream</name>
+
+    <!--
+      Protobuf tooling is intentionally module-local: the MEXC Spot v3 WebSocket API
+      pushes binary PushDataV3ApiWrapper frames (pinned .proto files under
+      src/main/proto from mexcdevelop/websocket-proto@7b8ac7a6), and the parent POM
+      does not manage protobuf versions or the protoc plugin.
+    -->
+    <properties>
+        <version.os-maven-plugin>1.7.1</version.os-maven-plugin>
+        <version.protobuf>3.25.5</version.protobuf>
+        <version.protobuf-maven-plugin>0.6.1</version.protobuf-maven-plugin>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.github.thecookielab.xchange</groupId>
+            <artifactId>xchange-mexc</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.thecookielab.xchange</groupId>
+            <artifactId>xchange-stream-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.thecookielab.xchange</groupId>
+            <artifactId>xchange-stream-service-netty</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${version.protobuf}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>${version.protobuf}</version>
+            <exclusions>
+                <!--
+                  Annotation-only artifacts with no runtime use: protobuf-java-util's declared
+                  guava transitively requires older versions while the repo-managed guava
+                  33.6.0-jre requires newer ones, which breaks the enforcer
+                  dependency-convergence check. guava 33.6.0-jre still supplies its own copies.
+                -->
+                <exclusion>
+                    <groupId>com.google.j2objc</groupId>
+                    <artifactId>j2objc-annotations</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.errorprone</groupId>
+                    <artifactId>error_prone_annotations</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.checkerframework</groupId>
+                    <artifactId>checker-qual</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>${version.protobuf-maven-plugin}</version>
+                <configuration>
+                    <protocArtifact>com.google.protobuf:protoc:${version.protobuf}:exe:${os.detected.classifier}</protocArtifact>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>${version.os-maven-plugin}</version>
+            </extension>
+        </extensions>
+    </build>
+</project>
