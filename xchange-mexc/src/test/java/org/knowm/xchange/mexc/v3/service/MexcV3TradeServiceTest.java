@@ -675,6 +675,47 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
   }
 
   @Test
+  public void getTradeHistoryPartitionsStartOnlySpanToThePresent() throws IOException {
+    // A startTime without endTime means "everything from the start to now". The span must be
+    // partitioned into provider-sized windows ending at the current time: an old start sent as
+    // one unbounded request would be clamped by the provider to its one-month queryable
+    // lookback, silently losing every trade older than that.
+    stubFor(get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody("[]")));
+
+    long windowMs = 30L * 24 * 60 * 60 * 1000;
+    long now = System.currentTimeMillis();
+    long start = now - 2 * windowMs - 3_600_000L; // comfortably inside the second window
+    MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
+    history.setCurrencyPair(CurrencyPair.BTC_USDT);
+    history.setStartTime(new java.util.Date(start));
+
+    UserTrades trades = tradeService().getTradeHistory(history);
+
+    assertThat(trades.getUserTrades()).isEmpty();
+    java.util.List<com.github.tomakehurst.wiremock.verification.LoggedRequest> requests =
+        wireMockRule.findAll(getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    assertThat(requests).hasSize(3);
+    assertThat(
+            requests.stream()
+                .map(e -> e.queryParameter("startTime").firstValue())
+                .collect(java.util.stream.Collectors.toList()))
+        .containsExactly(
+            String.valueOf(start),
+            String.valueOf(start + windowMs),
+            String.valueOf(start + 2 * windowMs));
+    java.util.List<String> endTimes =
+        requests.stream()
+            .map(e -> e.queryParameter("endTime").firstValue())
+            .collect(java.util.stream.Collectors.toList());
+    assertThat(endTimes.get(0)).isEqualTo(String.valueOf(start + windowMs - 1));
+    assertThat(endTimes.get(1)).isEqualTo(String.valueOf(start + 2 * windowMs - 1));
+    long lastEnd = Long.parseLong(endTimes.get(2));
+    assertThat(lastEnd)
+        .isGreaterThanOrEqualTo(start + 2 * windowMs)
+        .isLessThanOrEqualTo(now + 60_000L); // the present, within execution drift
+  }
+
+  @Test
   public void getTradeHistoryStopsWhenWindowDoesNotAdvance() throws IOException {
     // A full page whose newest trade never moves simulates a provider that ignores startTime:
     // the first repeated page could still be a same-millisecond overflow, so the pager probes

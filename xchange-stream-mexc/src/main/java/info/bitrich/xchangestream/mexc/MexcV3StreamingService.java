@@ -141,10 +141,17 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
       if (subscription != null) {
         // The wire subscription is gone, so its cap slot is released too; otherwise every
         // server-side rejection would permanently consume one of the 30 slots and a connection
-        // full of rejected channels could no longer accept any real subscription.
+        // full of rejected channels could no longer accept any real subscription. Marking the
+        // entry released (consumers to zero) is what makes the terminal doFinally cleanup below
+        // skip its own decrement: emitter.onError() terminates the base and runs
+        // onLastConsumerDispose for every observer, and without the marker each rejected channel
+        // would release its slot twice, drifting the counter below the real registration count
+        // and eventually letting the connection exceed the 30-channel cap.
         synchronized (sharedChannels) {
-          sharedChannels.remove(channel);
-          subscribedChannelCount.decrementAndGet();
+          ChannelEntry released = sharedChannels.remove(channel);
+          if (released != null && released.consumers.getAndSet(0) > 0) {
+            subscribedChannelCount.decrementAndGet();
+          }
         }
         subscription
             .getEmitter()

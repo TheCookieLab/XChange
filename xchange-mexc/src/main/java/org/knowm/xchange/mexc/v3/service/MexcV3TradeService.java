@@ -345,8 +345,17 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
               // No explicit start: a single open-ended window, as before.
               requestEnd = windowEnd;
               lastWindow = true;
-            } else if (windowEnd == null || windowStart + windowMs >= windowEnd) {
-              // No explicit end, or the remaining span fits in one provider window.
+            } else if (windowEnd == null) {
+              // Start-only range: the span extends to the present. An unbounded request would
+              // be clamped (or rejected) by the provider to its one-month queryable lookback,
+              // silently losing every trade older than that, so the span is bounded with the
+              // current time and partitioned into provider-sized windows like an explicit end.
+              long now = System.currentTimeMillis();
+              long spanEnd = windowStart + windowMs;
+              requestEnd = spanEnd >= now ? now : spanEnd - 1;
+              lastWindow = spanEnd >= now;
+            } else if (windowStart + windowMs >= windowEnd) {
+              // The remaining span fits in one provider window.
               requestEnd = windowEnd;
               lastWindow = true;
             } else {

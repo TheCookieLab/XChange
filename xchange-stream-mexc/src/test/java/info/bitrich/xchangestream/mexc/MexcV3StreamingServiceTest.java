@@ -508,4 +508,38 @@ class MexcV3StreamingServiceTest {
     service.subscribeChannel("channel-overflow").test().assertNoErrors();
     assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
   }
+
+  @Test
+  void repeatedAckRejectionsReleaseEachCapSlotExactlyOnce() throws Exception {
+    CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+    for (int i = 0; i < MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION; i++) {
+      service.subscribeChannel("channel-" + i).test();
+    }
+    // Reject ten channels: each rejection must release its wire subscription and its cap slot
+    // exactly once. The terminal onError fired by the rejection also runs every wrapper's
+    // doFinally cleanup; unless the entry is marked released first, that path decrements the
+    // counter a second time per rejection and the count drifts below the real registration
+    // count — invisible after one rejection, but after several the connection can exceed the
+    // 30-channel cap.
+    for (int i = 0; i < 10; i++) {
+      service.messageHandler("{\"id\":" + (i + 1) + ",\"code\":400,\"msg\":\"channel-" + i + "\"}");
+    }
+    assertEquals(
+        MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION - 10, capSlotCount(service));
+    assertEquals(
+        MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION - 10, service.channelCount());
+
+    // The released slots are usable again and the cap still holds at the true count: exactly
+    // ten refills fit, the eleventh is refused.
+    for (int i = 0; i < 10; i++) {
+      service.subscribeChannel("refill-" + i).test().assertNoErrors();
+    }
+    assertEquals(MexcV3StreamingService.MAX_SUBSCRIPTIONS_PER_CONNECTION, service.channelCount());
+    service
+        .subscribeChannel("refill-overflow")
+        .test()
+        .assertError(
+            t -> t instanceof ExchangeException && t.getMessage().contains("at most 30"));
+  }
 }
