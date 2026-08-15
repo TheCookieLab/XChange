@@ -611,6 +611,12 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
         get(urlPathEqualTo("/api/v3/myTrades"))
             .withQueryParam("startTime", equalTo("1000"))
             .willReturn(aResponse().withBody(myTradesAtTime(1000L, 98, 100))));
+    // After the repeated t=1000 page the pager skips the unqueryable millisecond and probes
+    // t=1001; a startTime-honoring provider answers with an empty page and the span ends.
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1001"))
+            .willReturn(aResponse().withBody("[]")));
 
     MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
     history.setCurrencyPair(CurrencyPair.BTC_USDT);
@@ -624,7 +630,7 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
             .collect(java.util.stream.Collectors.toSet());
     assertThat(ids).hasSize(197); // no duplicates from the inclusive boundary re-fetch
     assertThat(ids).contains("98", "100", "101", "194", "197");
-    verify(3, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    verify(4, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
     verify(
         2,
         getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
@@ -670,8 +676,10 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
 
   @Test
   public void getTradeHistoryStopsWhenWindowDoesNotAdvance() throws IOException {
-    // A full page whose newest trade never moves simulates a provider that ignores startTime
-    // (orderId-scoped queries): the no-progress guard must stop the loop after the repeat.
+    // A full page whose newest trade never moves simulates a provider that ignores startTime:
+    // the first repeated page could still be a same-millisecond overflow, so the pager probes
+    // one millisecond ahead; a second consecutive repeat proves startTime is ignored and the
+    // no-progress guard must stop the loop.
     stubFor(get(urlPathEqualTo("/api/v3/myTrades")).willReturn(aResponse().withBody(myTradesBody(5000, 100))));
 
     MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
@@ -680,7 +688,55 @@ public class MexcV3TradeServiceTest extends BaseMexcV3WiremockTest {
     UserTrades trades = tradeService().getTradeHistory(history);
 
     assertThat(trades.getUserTrades()).hasSize(100);
-    verify(2, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    verify(3, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+  }
+
+  @Test
+  public void getTradeHistorySkipsPastAnUnqueryableMillisecondAndKeepsCollecting() throws IOException {
+    // More than one full page of fills share the newest millisecond (150 at t=1000): the
+    // inclusive cursor re-fetches the same first page and adds nothing. myTrades has no
+    // trade-id cursor and caps pages at 100, so the remaining fills at t=1000 are not
+    // queryable — the pager must skip that millisecond and keep collecting the older span
+    // (t=1005, t=1010) instead of stopping at the repeat, which would abandon it.
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1000L, 1, 100))));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1000"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1000L, 1, 100))));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1001"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1005L, 200, 100))));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1005"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1005L, 200, 100))));
+    stubFor(
+        get(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1006"))
+            .willReturn(aResponse().withBody(myTradesAtTime(1010L, 300, 50))));
+
+    MexcV3TradeHistoryParams history = new MexcV3TradeHistoryParams();
+    history.setCurrencyPair(CurrencyPair.BTC_USDT);
+
+    UserTrades trades = tradeService().getTradeHistory(history);
+
+    assertThat(trades.getUserTrades()).hasSize(250); // 100 + 100 + 50
+    java.util.Set<String> ids =
+        trades.getUserTrades().stream()
+            .map(UserTrade::getId)
+            .collect(java.util.stream.Collectors.toSet());
+    assertThat(ids).hasSize(250);
+    assertThat(ids).contains("1", "100", "200", "300", "349");
+    // The fills beyond the first page of t=1000 (ids 101..150) are unqueryable by design.
+    assertThat(ids).doesNotContain("101");
+    verify(5, getRequestedFor(urlPathEqualTo("/api/v3/myTrades")));
+    verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/api/v3/myTrades"))
+            .withQueryParam("startTime", equalTo("1001")));
   }
 
   /** Builds {@code count} myTrades rows with consecutive ids and times starting at {@code fromTime}. */

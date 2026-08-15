@@ -19,9 +19,17 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.observers.TestObserver;
+import info.bitrich.xchangestream.service.exception.NotConnectedException;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
@@ -389,6 +397,77 @@ class MexcV3StreamingServiceTest {
 
     // Cache hits still share one observable per channel.
     assertSame(service.subscribeChannel("channel-0"), service.subscribeChannel("channel-0"));
+  }
+
+  @Test
+  void baseFailureReleasesCapSlotAndEvictsChannelWithoutExplicitDispose() throws Exception {
+    // No socket: subscribing the base immediately fails with NotConnectedException. The failure
+    // must release the cap slot and evict the cached entry. A terminal event is not an explicit
+    // dispose, so cleanup hooked to disposal alone would leave the poisoned entry cached and its
+    // slot occupied: later subscribers would join the dead stream after reconnect while the slot
+    // silently counts against the 30-channel cap.
+    CapturingService service = new CapturingService();
+
+    TestObserver<String> observer = service.subscribeChannel(CHANNEL).test();
+    observer.assertError(NotConnectedException.class);
+    assertEquals(0, service.channelCount());
+    assertEquals(0, capSlotCount(service));
+
+    // A later subscribe builds a fresh entry instead of joining the dead one, and no slot was
+    // leaked by the failed subscription.
+    service.subscribeChannel(CHANNEL).test().assertError(NotConnectedException.class);
+    assertEquals(0, service.channelCount());
+    assertEquals(0, capSlotCount(service));
+  }
+
+  @Test
+  void concurrentLastDisposeAndFirstSubscribeDoNotLeakCapSlots() throws Exception {
+    // The last-observer dispose and the first-consumer transition must share one critical
+    // section. If the decrement ran outside the lock, a disposer could decrement to zero, then
+    // a concurrent first consumer could increment and take a fresh slot while the disposer, once
+    // inside the lock, sees a nonzero count and never releases the old one; repeated races would
+    // leak slots until valid subscriptions are rejected at the 30-channel cap.
+    CapturingService service = new CapturingService();
+    forceOpenChannel(service);
+
+    List<TestObserver<String>> observers = new ArrayList<>();
+    for (int i = 0; i < 150; i++) {
+      Observable<String> channel = service.subscribeChannel("race-channel");
+      TestObserver<String> first = channel.test();
+      ExecutorService pool = Executors.newFixedThreadPool(2);
+      CountDownLatch go = new CountDownLatch(1);
+      Future<?> disposer =
+          pool.submit(
+              () -> {
+                go.await();
+                first.dispose();
+                return null;
+              });
+      Future<?> subscriber =
+          pool.submit(
+              () -> {
+                go.await();
+                observers.add(channel.test());
+                return null;
+              });
+      go.countDown();
+      disposer.get(10, TimeUnit.SECONDS);
+      subscriber.get(10, TimeUnit.SECONDS);
+      pool.shutdown();
+    }
+    for (TestObserver<String> observer : observers) {
+      observer.dispose();
+    }
+
+    // Every slot must be released: any leaked slot would keep the count above zero and
+    // eventually reject valid subscriptions at the cap.
+    assertEquals(0, capSlotCount(service));
+  }
+
+  private static int capSlotCount(MexcV3StreamingService service) throws Exception {
+    Field field = MexcV3StreamingService.class.getDeclaredField("subscribedChannelCount");
+    field.setAccessible(true);
+    return ((AtomicInteger) field.get(service)).get();
   }
 
   @Test

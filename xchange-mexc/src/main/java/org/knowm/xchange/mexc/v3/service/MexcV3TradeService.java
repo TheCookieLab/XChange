@@ -330,6 +330,7 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
           final int maxPageSize = 100; // MEXC v3 myTrades per-request cap (default 100, max 100)
           final long windowMs = 30L * 24 * 60 * 60 * 1000; // provider queryable window: 1 month
           int remaining = queryLimit == null ? Integer.MAX_VALUE : queryLimit;
+          int consecutiveNoNewPages = 0; // full pages that added no new trades, back to back
           List<UserTrade> trades = new ArrayList<>();
           Set<Long> seenTradeIds = new HashSet<>();
           Long windowStart = queryStartTime == null ? null : queryStartTime.getTime();
@@ -405,16 +406,26 @@ public class MexcV3TradeService extends MexcV3BaseService implements TradeServic
               }
               // Page forward to (not past) the newest trade seen: an inclusive cursor re-fetches
               // the fills that share the boundary millisecond instead of skipping them, so the
-              // dedupe above is what keeps them out of the result. Stop when a full page neither
-              // advanced the window nor added a new trade: that means the provider ignored
-              // startTime (orderId-scoped queries) and repeated the same page, which would
-              // otherwise loop forever; the repeated page is stale (all trades predate the
-              // current window), so drop it and end the span.
+              // dedupe above is what keeps them out of the result. A full page whose every trade
+              // was already collected means the page is one of several sharing the newest
+              // millisecond: myTrades has no trade-id cursor (no fromId in the provider's
+              // parameter table, and CCXT pages by startTime/limit only) and caps pages at 100,
+              // so fills beyond the first page of a millisecond cannot be queried. Skip that
+              // millisecond and keep collecting the rest of the span — stopping here would
+              // abandon every older page. Two such pages in a row prove the provider ignored
+              // startTime (orderId-scoped queries repeat one page forever); then the repeated
+              // page is stale (all trades predate the current window), so drop it and end the
+              // span instead of looping.
               long nextStart = newest;
               if (windowStart != null && nextStart <= windowStart && added == 0) {
-                trades.subList(pageStartIndex, trades.size()).clear();
-                return new UserTrades(trades, TradeSortType.SortByID);
+                if (queryOrderId != null || ++consecutiveNoNewPages >= 2) {
+                  trades.subList(pageStartIndex, trades.size()).clear();
+                  return new UserTrades(trades, TradeSortType.SortByID);
+                }
+                windowStart = nextStart + 1;
+                continue; // skip the windowStart assignment below
               }
+              consecutiveNoNewPages = 0;
               windowStart = nextStart;
             }
             if (lastWindow) {

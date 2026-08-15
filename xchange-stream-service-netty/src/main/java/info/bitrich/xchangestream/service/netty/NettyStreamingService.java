@@ -438,6 +438,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
             e -> {
               if (webSocketChannel == null || !webSocketChannel.isOpen()) {
                 e.onError(new NotConnectedException());
+                return; // terminal error: never register the dead subscription
               }
               channels.computeIfAbsent(
                   subscriptionUniqueId,

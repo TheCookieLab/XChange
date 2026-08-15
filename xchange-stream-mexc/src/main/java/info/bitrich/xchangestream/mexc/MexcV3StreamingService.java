@@ -245,7 +245,12 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
                               + MAX_SUBSCRIPTIONS_PER_CONNECTION
                               + " subscriptions per connection; disconnect and reconnect to rotate"));
                 }
-                return base.doOnDispose(() -> onLastConsumerDispose(channelName, created));
+                // doFinally (not doOnDispose) so cleanup also runs on terminal events: the base
+                // fails immediately with NotConnectedException when the socket is closed, and a
+                // terminal event never reaches a dispose hook — without this the failed channel
+                // would stay cached, its slot would count against the cap, and later subscribers
+                // would join the dead stream after reconnect.
+                return base.doFinally(() -> onLastConsumerDispose(channelName, created));
               });
       created.observable.set(channelObservable);
       sharedChannels.put(channelName, created);
@@ -301,18 +306,25 @@ public class MexcV3StreamingService extends NettyStreamingService<String> {
   }
 
   /**
-   * Runs when an observer disposes its subscription. The last observer releases the channel's
-   * per-connection slot and evicts the shared entry so a later subscribe builds a fresh wrapper;
-   * the base mirror-removes the channel and sends UNSUBSCRIPTION. A concurrent first observer
-   * that subscribed between the decrement and the lock keeps the entry alive.
+   * Runs when an observer's subscription ends, whether by explicit dispose or by a terminal event
+   * on the base stream. The last observer releases the channel's per-connection slot and evicts
+   * the shared entry so a later subscribe builds a fresh wrapper; the base mirror-removes the
+   * channel and sends UNSUBSCRIPTION.
+   *
+   * <p>The decrement, the release, and the eviction share the {@code sharedChannels} critical
+   * section with the first-consumer transition in {@link #onFirstConsumer}. If the decrement ran
+   * outside the lock, a concurrent first consumer could observe zero consumers, re-increment, and
+   * acquire a slot while this disposer — now inside the lock — sees a nonzero count and returns
+   * without releasing anything: the old slot would leak and valid subscriptions would eventually
+   * hit the 30-channel cap.
    */
   private void onLastConsumerDispose(String channelName, ChannelEntry entry) {
-    if (entry.consumers.get() == 0 || entry.consumers.decrementAndGet() != 0) {
-      return; // already released, or other observers remain
-    }
     synchronized (sharedChannels) {
-      if (entry.consumers.get() != 0) {
-        return; // a new observer subscribed while the lock was contended
+      if (entry.consumers.get() == 0) {
+        return; // already released (explicit dispose, terminal event, or ack rejection)
+      }
+      if (entry.consumers.decrementAndGet() != 0) {
+        return; // other observers remain subscribed
       }
       subscribedChannelCount.decrementAndGet();
       sharedChannels.computeIfPresent(
