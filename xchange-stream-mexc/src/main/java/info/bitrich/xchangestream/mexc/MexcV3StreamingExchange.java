@@ -120,6 +120,12 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
       // The state check runs when the returned Completable is subscribed, not when connect() is
       // called: subscribing the same chain twice must not create a second listen key (the first
       // would be orphaned until its 60-minute expiry).
+      // Holder for the resources this attempt creates: the deferred release runs after a
+      // disconnect that could not see the transport, and by then a replacement connect may
+      // have installed a new key, keepalive, and transport. The release must tear down only
+      // what this attempt created, so openPrivateConnection captures its own resources into
+      // this holder under the lock (the lock also publishes the write to the release).
+      PrivateConnectionAttempt[] created = new PrivateConnectionAttempt[1];
       attempt =
           Completable.defer(
               () -> {
@@ -134,7 +140,8 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                               // created or opened after it.
                               return Completable.complete();
                             }
-                            return Completable.fromAction(() -> openPrivateConnection(resolvedUri))
+                            return Completable.fromAction(
+                                    () -> openPrivateConnection(resolvedUri, created))
                                 .subscribeOn(Schedulers.io());
                           })
                       .andThen(
@@ -145,7 +152,8 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                                   // transport built. The disconnect could not see the transport
                                   // and already reported complete, so release the private
                                   // connection here instead of opening a socket after it.
-                                  return Completable.fromAction(this::releasePrivateConnection)
+                                  return Completable.fromAction(
+                                          () -> releasePrivateConnection(created[0]))
                                       .subscribeOn(Schedulers.io())
                                       .onErrorComplete();
                                 }
@@ -402,7 +410,8 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     }
   }
 
-  private synchronized void openPrivateConnection(String uri) {
+  private synchronized void openPrivateConnection(
+      String uri, PrivateConnectionAttempt[] created) {
     if (listenKey != null) {
       if (streamingService != null && streamingService.isSocketOpen()) {
         // A concurrent subscription of the same connect chain already connected; keep its
@@ -420,6 +429,12 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
       suppliedListenKey = false;
       buildStreamingService(withListenKey(uri, listenKey));
       startKeepAlive(accountService);
+      // Capture the resources this attempt created before releasing the lock: a disconnect may
+      // land between the key creation and the chain's next check, and by the time the release
+      // runs a replacement connect may have installed a new key, keepalive, and transport. The
+      // release reads this capture instead of the mutable fields so it tears down exactly this
+      // attempt's connection.
+      created[0] = new PrivateConnectionAttempt(listenKey, streamingService, keepAliveDisposable);
     } catch (IOException e) {
       throw new ExchangeException(
           "Failed to open MEXC Spot v3 private stream: "
@@ -466,20 +481,58 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
   }
 
   /**
-   * Releases a private connection whose listen key was created while a disconnect was already
-   * executing: the disconnect could not see the transport (it did not exist yet) and already
-   * reported complete, so the key and keepalive must still be released here or the key would be
-   * orphaned until its 60-minute expiry. No socket was opened for this connection.
+   * Resources created by one private connection attempt: the listen key it created, the
+   * transport built for it, and the keepalive refreshing its key. Captured under the lock at
+   * the end of {@link #openPrivateConnection(String, PrivateConnectionAttempt[])} so a stale
+   * attempt's release can tear down exactly the connection it created — never the mutable
+   * fields, which a replacement connect may have already replaced.
    */
-  private synchronized void releasePrivateConnection() {
-    stopKeepAlive();
-    String key = listenKey;
-    listenKey = null;
-    if (key != null) {
-      closeListenKey(key);
+  private static final class PrivateConnectionAttempt {
+    final String key;
+    final MexcV3StreamingService service;
+    final Disposable keepAlive;
+
+    PrivateConnectionAttempt(String key, MexcV3StreamingService service, Disposable keepAlive) {
+      this.key = key;
+      this.service = service;
+      this.keepAlive = keepAlive;
     }
-    if (streamingService != null) {
-      streamingService.disconnect().onErrorComplete().subscribe();
+  }
+
+  /**
+   * Releases the private connection created by an invalidated connect attempt: a disconnect
+   * that landed while the attempt was creating its key could not see the transport (it did not
+   * exist yet) and already reported complete, so the key, keepalive, and transport must still
+   * be released here or the key would be orphaned until its 60-minute expiry. No socket was
+   * opened for this connection.
+   *
+   * <p>Only the resources captured at creation time are released. By the time this runs, a
+   * replacement connect may have installed a new listen key, keepalive, and transport; reading
+   * the mutable fields would tear down the replacement connection. The field clears are
+   * identity-guarded so a replacement's state survives, and the captured keepalive dispose and
+   * service disconnect are idempotent if a replacement (or a disconnect) already released them.
+   *
+   * @param attempt the resources the invalidated attempt created, or {@code null} if it created
+   *     none (for example it reused the key of an earlier attempt)
+   */
+  private synchronized void releasePrivateConnection(PrivateConnectionAttempt attempt) {
+    if (attempt == null) {
+      return;
+    }
+    if (attempt.keepAlive != null) {
+      attempt.keepAlive.dispose();
+      if (keepAliveDisposable == attempt.keepAlive) {
+        keepAliveDisposable = null;
+      }
+    }
+    if (attempt.key != null) {
+      if (listenKey != null && listenKey.equals(attempt.key)) {
+        listenKey = null;
+      }
+      closeListenKey(attempt.key);
+    }
+    if (attempt.service != null) {
+      attempt.service.disconnect().onErrorComplete().subscribe();
     }
   }
 

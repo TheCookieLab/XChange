@@ -28,8 +28,10 @@ import com.github.tomakehurst.wiremock.http.Request;
 import com.github.tomakehurst.wiremock.http.Response;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.observers.TestObserver;
+import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,6 +44,7 @@ import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayDeque;
 import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -61,6 +64,7 @@ class MexcV3StreamingExchangeTest {
 
   @AfterEach
   void tearDown() {
+    RxJavaPlugins.setIoSchedulerHandler(null);
     if (wireMock != null) {
       wireMock.stop();
     }
@@ -855,6 +859,98 @@ class MexcV3StreamingExchangeTest {
   }
 
   @Test
+  void stalePrivateCleanupReleasesOnlyTheAttemptThatCreatedIt() throws Exception {
+    // Deterministic seam for the deferred-release/replacement-connect race: the IO scheduler
+    // (which runs key creation and the deferred release) is gated, so the test dispatches each
+    // io task in the exact order that reproduces the race. The first attempt passes its
+    // generation check and queues its key creation while the exchange lock is held; the
+    // disconnect then bumps the generation (it can see nothing: the attempt has not created
+    // anything yet) and reports complete; the replacement attempt queues its own key creation
+    // with the post-disconnect generation. The replacement's key creation runs first and
+    // installs a fresh connection; the first attempt's key creation then finds that key and
+    // reuses it; and the first attempt's deferred release — which fires because its generation
+    // moved — runs last, after the replacement connection is fully installed. The release must
+    // tear down only the connection the invalidated attempt created, never the replacement's
+    // key, keepalive, or transport.
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlPathEqualTo("/api/v3/userDataStream"))
+            .inScenario("createKey")
+            .whenScenarioStateIs(Scenario.STARTED)
+            .willReturn(aResponse().withBody("{\"listenKey\":\"K2\"}"))
+            .willSetStateTo("k1"));
+    wireMock.stubFor(
+        post(urlPathEqualTo("/api/v3/userDataStream"))
+            .inScenario("createKey")
+            .whenScenarioStateIs("k1")
+            .willReturn(aResponse().withBody("{\"listenKey\":\"K1\"}"))
+            .willSetStateTo("kDone"));
+    wireMock.stubFor(
+        delete(urlPathEqualTo("/api/v3/userDataStream")).willReturn(aResponse().withBody("{}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+    // Keepalive ticks must not fire during the test.
+    exchange.keepAliveIntervalSeconds = 3600L;
+
+    GatedScheduler io = new GatedScheduler();
+    RxJavaPlugins.setIoSchedulerHandler(scheduler -> io);
+    try {
+      TestObserver<Void> first;
+      TestObserver<Void> replacement;
+      synchronized (exchange) {
+        first = exchange.connect().test();
+        exchange.disconnect().blockingAwait();
+        replacement = exchange.connect().test();
+      }
+
+      // Replacement key creation first: it installs the fresh K2 connection. The first
+      // attempt's key creation then finds K2 already installed and reuses it (no second key),
+      // and its deferred release runs last, after the replacement connection is fully in
+      // place.
+      io.dispatchLast();
+      io.dispatchFirst();
+      io.dispatchFirst();
+
+      replacement.awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+      first.awaitDone(10, TimeUnit.SECONDS).assertComplete();
+
+      // The stale release touched only the invalidated attempt: the replacement's key,
+      // keepalive, and transport are intact, and no key was closed.
+      assertEquals("K2", listenKeyInstance(exchange));
+      assertNotNull(keepAliveDisposableInstance(exchange));
+      wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+      wireMock.verify(0, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=K2")));
+
+      // The exchange still works end to end: a later disconnect closes the replacement's K2
+      // key normally.
+      io.open();
+      exchange.disconnect().onErrorComplete().blockingAwait();
+      assertNull(listenKeyInstance(exchange));
+      assertNull(keepAliveDisposableInstance(exchange));
+      wireMock.verify(1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=K2")));
+
+      // And a fresh connection starts a new lifecycle instead of reusing the closed key.
+      exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+      assertEquals("K1", listenKeyInstance(exchange));
+      exchange.disconnect().onErrorComplete().blockingAwait();
+      wireMock.verify(1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=K1")));
+    } finally {
+      RxJavaPlugins.setIoSchedulerHandler(null);
+    }
+  }
+
+  @Test
   void disconnectClosesAnInFlightTransportConnectThatCompletesAfterwards() throws Exception {
     // Deterministic seam: a backlog-1 raw TCP server. A filler connection fills the accept
     // queue, so the client's SYN is dropped and its TCP connect stays pending; the disconnect
@@ -1260,5 +1356,88 @@ class MexcV3StreamingExchangeTest {
         MexcV3StreamingExchange.class.getDeclaredField("keepAliveDisposable");
     disposableField.setAccessible(true);
     return disposableField.get(exchange);
+  }
+
+  /**
+   * Test seam for {@code Schedulers.io()}: every task is queued while the gate is closed, and
+   * dispatched by the test on the calling thread in a chosen order, so a race between deferred
+   * io tasks is reproduced deterministically. Once {@link #open()} is called, tasks run
+   * immediately on the scheduler thread.
+   */
+  private static final class GatedScheduler extends Scheduler {
+    private final Object gate = new Object();
+    private final ArrayDeque<Runnable> pending = new ArrayDeque<>();
+    private boolean open;
+
+    @Override
+    public Disposable scheduleDirect(Runnable run, long delay, TimeUnit unit) {
+      if (delay != 0) {
+        throw new AssertionError("Unexpected delayed IO task: " + delay + " " + unit);
+      }
+      return scheduleDirect(run);
+    }
+
+    @Override
+    public Disposable scheduleDirect(Runnable run) {
+      boolean runNow;
+      synchronized (gate) {
+        runNow = open;
+        if (!open) {
+          pending.addLast(run);
+        }
+      }
+      if (runNow) {
+        run.run();
+      }
+      return new Disposable() {
+        @Override
+        public void dispose() {
+          // Tasks run synchronously on the dispatch thread and are never cancelled.
+        }
+
+        @Override
+        public boolean isDisposed() {
+          return false;
+        }
+      };
+    }
+
+    @Override
+    public Worker createWorker() {
+      throw new AssertionError("Unexpected IO worker creation");
+    }
+
+    /** Runs the first queued task on the calling thread. */
+    void dispatchFirst() {
+      Runnable run;
+      synchronized (gate) {
+        run = pending.pollFirst();
+      }
+      if (run != null) {
+        run.run();
+      }
+    }
+
+    /** Runs the last queued task on the calling thread. */
+    void dispatchLast() {
+      Runnable run;
+      synchronized (gate) {
+        run = pending.pollLast();
+      }
+      if (run != null) {
+        run.run();
+      }
+    }
+
+    /** Runs queued tasks immediately from now on. */
+    void open() {
+      Runnable run;
+      synchronized (gate) {
+        open = true;
+        while ((run = pending.pollFirst()) != null) {
+          run.run();
+        }
+      }
+    }
   }
 }
