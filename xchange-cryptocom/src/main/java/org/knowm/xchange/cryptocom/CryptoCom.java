@@ -25,7 +25,8 @@ public interface CryptoCom {
 
   @GET
   @Path("public/get-instruments")
-  CryptoComResponse getInstruments() throws IOException, CryptoComException;
+  CryptoComResponse getInstruments(@QueryParam("cursor") String cursor)
+      throws IOException, CryptoComException;
 
   @GET
   @Path("public/get-book")
@@ -43,6 +44,33 @@ public interface CryptoCom {
   @Path("public/get-tickers")
   CryptoComResponse getTickers(@QueryParam("instrument_name") String instrumentName)
       throws IOException, CryptoComException;
+
+  /**
+   * Candlestick history. Either {@code count} or the {@code startTs}/{@code endTs} window may be
+   * supplied; official parameter names are used verbatim (including the millisecond-unix {@code
+   * start_ts}/{@code end_ts} form).
+   */
+  @GET
+  @Path("public/get-candlestick")
+  CryptoComResponse getCandlestick(
+      @QueryParam("instrument_name") String instrumentName,
+      @QueryParam("timeframe") String timeframe,
+      @QueryParam("count") Integer count,
+      @QueryParam("start_ts") Long startTs,
+      @QueryParam("end_ts") Long endTs)
+      throws IOException, CryptoComException;
+
+  /** Expired settlement reference prices for dated instruments (official params: instrument_type, page). */
+  @GET
+  @Path("public/get-expired-settlement-price")
+  CryptoComResponse getExpiredSettlementPrice(
+      @QueryParam("instrument_type") String instrumentType, @QueryParam("page") Integer page)
+      throws IOException, CryptoComException;
+
+  /** Smart Cross Margin derivative risk reference data. */
+  @GET
+  @Path("public/get-risk-parameters")
+  CryptoComResponse getRiskParameters() throws IOException, CryptoComException;
 
   @POST
   @Path("private/user-balance")
@@ -109,4 +137,48 @@ public interface CryptoCom {
   @Consumes(MediaType.APPLICATION_JSON)
   CryptoComResponse createWithdrawal(CryptoComRequest request)
       throws IOException, CryptoComException;
+
+  /** Trigger/advanced order types (STOP_LOSS, STOP_LIMIT, TAKE_PROFIT, TAKE_PROFIT_LIMIT). */
+  @POST
+  @Path("private/advanced/create-order")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CryptoComResponse createAdvancedOrder(CryptoComRequest request)
+      throws IOException, CryptoComException;
+
+  @POST
+  @Path("private/get-positions")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CryptoComResponse getPositions(CryptoComRequest request) throws IOException, CryptoComException;
+
+  @POST
+  @Path("private/get-accounts")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CryptoComResponse getAccounts(CryptoComRequest request) throws IOException, CryptoComException;
+
+  @POST
+  @Path("private/get-fee-rate")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CryptoComResponse getFeeRate(CryptoComRequest request) throws IOException, CryptoComException;
+
+  @POST
+  @Path("private/get-fee-credit-balances")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CryptoComResponse getFeeCredits(CryptoComRequest request) throws IOException, CryptoComException;
+
+  @POST
+  @Path("private/user-balance-history")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CryptoComResponse getUserBalanceHistory(CryptoComRequest request)
+      throws IOException, CryptoComException;
+
+  @POST
+  @Path("private/get-transactions")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CryptoComResponse getTransactions(CryptoComRequest request)
+      throws IOException, CryptoComException;
+
+  @POST
+  @Path("private/close-position")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CryptoComResponse closePosition(CryptoComRequest request) throws IOException, CryptoComException;
 }

@@ -1,0 +1,58 @@
+{
+  "id": 8,
+  "method": "public/get-risk-parameters",
+  "code": 0,
+  "result": {
+    "default_max_product_leverage_for_spot": "10",
+    "default_max_product_leverage_for_perps": "100",
+    "default_max_product_leverage_for_futures": "50",
+    "default_umr_multiplier_for_spot": "1",
+    "default_umr_multiplier_for_perps": "0.5",
+    "default_umr_multiplier_for_futures": "0.6",
+    "default_long_pos_limit_perps": "100",
+    "default_short_pos_limit_perps": "100",
+    "default_long_pos_limit_futures": "50",
+    "default_short_pos_limit_futures": "50",
+    "default_unit_margin_rate": "0.001",
+    "default_collateral_cap": "1000000",
+    "update_timestamp_ms": "1771764000000",
+    "base_currency_config": [
+      {
+        "instrument_name": "BTC",
+        "collateral_cap_notional": "500000",
+        "minimum_haircut": "0.01",
+        "max_product_leverage_for_spot": "10",
+        "max_product_leverage_for_perps": "100",
+        "max_product_leverage_for_futures": "50",
+        "unit_margin_rate": "0.001",
+        "umr_multiplier_for_spot": "1",
+        "umr_multiplier_for_perps": "0.5",
+        "umr_multiplier_for_futures": "0.6",
+        "long_pos_limit_perps": "100",
+        "short_pos_limit_perps": "100",
+        "long_pos_limit_futures": "50",
+        "short_pos_limit_futures": "50",
+        "collateral_weight": "0.98",
+        "haircut_bucket": "0.02"
+      },
+      {
+        "instrument_name": "ETH",
+        "collateral_cap_notional": "250000",
+        "minimum_haircut": "0.02",
+        "max_product_leverage_for_spot": "10",
+        "max_product_leverage_for_perps": "75",
+        "max_product_leverage_for_futures": "40",
+        "unit_margin_rate": "0.002",
+        "umr_multiplier_for_spot": "1",
+        "umr_multiplier_for_perps": "0.5",
+        "umr_multiplier_for_futures": "0.6",
+        "long_pos_limit_perps": "80",
+        "short_pos_limit_perps": "80",
+        "long_pos_limit_futures": "40",
+        "short_pos_limit_futures": "40",
+        "collateral_weight": "0.97",
+        "haircut_bucket": "0.03"
+      }
+    ]
+  }
+}
