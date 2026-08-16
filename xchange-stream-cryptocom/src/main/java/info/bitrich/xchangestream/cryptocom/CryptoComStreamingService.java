@@ -8,7 +8,10 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.knowm.xchange.cryptocom.CryptoComRequestIdGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,40 +22,90 @@ import org.slf4j.LoggerFactory;
  * requests, {@code {"id","method","code","result":{"channel","subscription","data":[...]}}} push
  * messages, and the {@code public/heartbeat} / {@code public/respond-heartbeat} keepalive that the
  * server requires every ~30 seconds or it closes the connection.
+ *
+ * <p>Every physical connection gets a generation id (see {@link #getConnectionGeneration()}); the
+ * framework invokes {@link #resubscribeChannels()} right after each successful connection, which
+ * is where the active generation is captured - so consumers can detect stale generations with
+ * {@link #isCurrentConnection()}. Subscribe/unsubscribe confirmations are correlated with their
+ * request ids and tracked in {@link #getActiveChannels()}. Reconnects are bounded: after {@value
+ * #MAX_RECONNECT_ATTEMPTS} consecutive failed attempts the service stops reconnecting and {@link
+ * #onReconnectBudgetExhausted()} is invoked.
  */
 public class CryptoComStreamingService extends JsonNettyStreamingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(CryptoComStreamingService.class);
   private static final String HEARTBEAT_METHOD = "public/heartbeat";
   private static final String HEARTBEAT_RESPONSE_METHOD = "public/respond-heartbeat";
+  private static final String SUBSCRIBE_METHOD = "subscribe";
+  private static final String UNSUBSCRIBE_METHOD = "unsubscribe";
+  static final int MAX_RECONNECT_ATTEMPTS = 10;
+
   private static final Map<Class<?>, JavaType> LIST_TYPES = new ConcurrentHashMap<>();
 
   private final CryptoComRequestIdGenerator requestIdGenerator = new CryptoComRequestIdGenerator();
+  private final AtomicLong connectionGeneration = new AtomicLong();
+  private final AtomicInteger reconnectAttempts = new AtomicInteger();
+  private final Map<Long, String> pendingSubscriptions = new ConcurrentHashMap<>();
+  private final Set<String> activeChannels = ConcurrentHashMap.newKeySet();
 
   public CryptoComStreamingService(String apiUrl) {
     super(apiUrl);
+    subscribeConnectionSuccess().subscribe(ignored -> reconnectAttempts.set(0));
   }
 
   protected long nextRequestId() {
     return requestIdGenerator.next();
   }
 
+  /** Generation of the last successfully established connection; 0 until the first connection. */
+  public long getConnectionGeneration() {
+    return connectionGeneration.get();
+  }
+
+  /** True when this service is attached to a known physical connection (not stale/never seen). */
+  public boolean isCurrentConnection() {
+    long generation = connectionGeneration.get();
+    return generation > 0 && generation == getGeneration();
+  }
+
+  @Override
+  public void resubscribeChannels() {
+    // Called by the framework for every successful (re)connection; capture the generation so
+    // consumers can tell responses of a superseded socket apart from the active one.
+    connectionGeneration.set(getGeneration());
+    super.resubscribeChannels();
+  }
+
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
-    return buildSubscriptionMessage("subscribe", channelName);
+    return buildSubscriptionMessage(SUBSCRIBE_METHOD, channelName);
   }
 
   @Override
   public String getUnsubscribeMessage(String channelName, Object... args) throws IOException {
-    return buildSubscriptionMessage("unsubscribe", channelName);
+    return buildSubscriptionMessage(UNSUBSCRIBE_METHOD, channelName);
   }
 
   private String buildSubscriptionMessage(String method, String channelName) throws IOException {
     ObjectNode message = objectMapper.createObjectNode();
-    message.put("id", nextRequestId());
+    long id = nextRequestId();
+    message.put("id", id);
     message.put("method", method);
     message.putObject("params").putArray("channels").add(channelName);
+    if (SUBSCRIBE_METHOD.equals(method)) {
+      pendingSubscriptions.put(id, channelName);
+    }
     return objectMapper.writeValueAsString(message);
+  }
+
+  /** True once the server confirmed (code 0) the subscription to the given channel. */
+  public boolean isChannelActive(String channelName) {
+    return activeChannels.contains(channelName);
+  }
+
+  /** Channels confirmed active by the server since the current connection was established. */
+  public Set<String> getActiveChannels() {
+    return Collections.unmodifiableSet(activeChannels);
   }
 
   @Override
@@ -85,15 +138,39 @@ public class CryptoComStreamingService extends JsonNettyStreamingService {
       return;
     }
     if (!message.has("result")) {
-      int code = message.path("code").asInt(0);
-      if (code != 0) {
-        LOG.warn("Crypto.com WebSocket error response: {}", message);
-      }
-      // Otherwise a plain ack for subscribe/unsubscribe (and, in the private service,
-      // public/auth) - no channel data to route.
+      // Plain subscribe/unsubscribe (and, in the private service, public/auth) confirmations
+      // carry no result.data; correlate them with the pending request ids.
+      handleConfirmation(message, method);
       return;
     }
     super.handleMessage(message);
+  }
+
+  private void handleConfirmation(JsonNode message, String method) {
+    int code = message.path("code").asInt(-1);
+    if (SUBSCRIBE_METHOD.equals(method) || UNSUBSCRIBE_METHOD.equals(method)) {
+      String channel = pendingSubscriptions.remove(message.path("id").asLong(-1L));
+      if (channel == null) {
+        if (code != 0) {
+          LOG.warn("Crypto.com WebSocket error response: {}", message);
+        }
+        return;
+      }
+      if (code != 0) {
+        LOG.warn("Crypto.com WebSocket rejected {} {}: {}", method, channel, message);
+        return;
+      }
+      if (SUBSCRIBE_METHOD.equals(method)) {
+        activeChannels.add(channel);
+      } else {
+        activeChannels.remove(channel);
+      }
+      LOG.info("Crypto.com WebSocket {} confirmed: {}", method, channel);
+      return;
+    }
+    if (code != 0) {
+      LOG.warn("Crypto.com WebSocket error response: {}", message);
+    }
   }
 
   private void respondToHeartbeat(long id) {
@@ -101,5 +178,33 @@ public class CryptoComStreamingService extends JsonNettyStreamingService {
     response.put("id", id);
     response.put("method", HEARTBEAT_RESPONSE_METHOD);
     sendObjectMessage(response);
+  }
+
+  /**
+   * Bounded reconnect: consecutive scheduling is capped at {@value #MAX_RECONNECT_ATTEMPTS} after
+   * which the service stops reconnecting (transports then report dead via {@code isSocketOpen()})
+   * and {@link #onReconnectBudgetExhausted()} is invoked. The budget resets on every successful
+   * connection.
+   */
+  @Override
+  protected final void scheduleReconnect() {
+    if (reconnectAttempts.incrementAndGet() > MAX_RECONNECT_ATTEMPTS) {
+      LOG.error(
+          "Giving up on reconnecting the Crypto.com WebSocket after {} attempts",
+          MAX_RECONNECT_ATTEMPTS);
+      onReconnectBudgetExhausted();
+      return;
+    }
+    doScheduleReconnect();
+  }
+
+  /** Schedules the actual reconnection; separated so exception handling stays testable. */
+  protected void doScheduleReconnect() {
+    super.scheduleReconnect();
+  }
+
+  /** Hook invoked when the bounded reconnect budget has been exhausted. */
+  protected void onReconnectBudgetExhausted() {
+    // no-op: transports report closed; subclasses may react.
   }
 }
