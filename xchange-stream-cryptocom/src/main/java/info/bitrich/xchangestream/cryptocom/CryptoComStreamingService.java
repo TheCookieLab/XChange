@@ -71,14 +71,33 @@ public class CryptoComStreamingService extends JsonNettyStreamingService {
   @Override
   public void resubscribeChannels() {
     // Called by the framework for every successful (re)connection; capture the generation so
-    // consumers can tell responses of a superseded socket apart from the active one.
+    // consumers can tell responses of a superseded socket apart from the active one. Channel
+    // confirmations are per-connection state: a superseded socket's confirmations must never
+    // count towards the new connection, so the tracked state is cleared here and rebuilt from
+    // the resubscribed channels.
     connectionGeneration.set(getGeneration());
+    activeChannels.clear();
+    pendingSubscriptions.clear();
     super.resubscribeChannels();
   }
 
   @Override
   public String getSubscribeMessage(String channelName, Object... args) throws IOException {
-    return buildSubscriptionMessage(SUBSCRIBE_METHOD, channelName);
+    String method = SUBSCRIBE_METHOD;
+    long id = nextRequestId();
+    ObjectNode message = objectMapper.createObjectNode();
+    message.put("id", id);
+    message.put("method", method);
+    ObjectNode params = message.putObject("params");
+    params.putArray("channels").add(channelName);
+    if (channelName.startsWith("book.")) {
+      // Official book contract: subscribe to the combined snapshot-and-update feed (the server
+      // sends a full snapshot first and incremental updates afterwards; the assembler validates
+      // the u/pu sequence chain and rebuilds from a fresh snapshot when it breaks).
+      params.put("book_subscription_type", "SNAPSHOT_AND_UPDATE");
+    }
+    pendingSubscriptions.put(id, channelName);
+    return objectMapper.writeValueAsString(message);
   }
 
   @Override
@@ -92,9 +111,9 @@ public class CryptoComStreamingService extends JsonNettyStreamingService {
     message.put("id", id);
     message.put("method", method);
     message.putObject("params").putArray("channels").add(channelName);
-    if (SUBSCRIBE_METHOD.equals(method)) {
-      pendingSubscriptions.put(id, channelName);
-    }
+    // Track both subscribe and unsubscribe ids so confirmations can be correlated with the
+    // channel and (for subscribe) promoted to active.
+    pendingSubscriptions.put(id, channelName);
     return objectMapper.writeValueAsString(message);
   }
 
@@ -174,10 +193,15 @@ public class CryptoComStreamingService extends JsonNettyStreamingService {
   }
 
   private void respondToHeartbeat(long id) {
+    sendObjectMessage(buildHeartbeatResponse(id));
+  }
+
+  /** {@code public/respond-heartbeat} echo carrying the server-provided heartbeat id. */
+  ObjectNode buildHeartbeatResponse(long id) {
     ObjectNode response = objectMapper.createObjectNode();
     response.put("id", id);
     response.put("method", HEARTBEAT_RESPONSE_METHOD);
-    sendObjectMessage(response);
+    return response;
   }
 
   /**

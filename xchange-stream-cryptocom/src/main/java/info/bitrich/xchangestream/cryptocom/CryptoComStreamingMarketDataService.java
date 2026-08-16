@@ -1,7 +1,11 @@
 package info.bitrich.xchangestream.cryptocom;
 
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
+import info.bitrich.xchangestream.cryptocom.dto.CryptoComOrderBookContinuityException;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.subjects.PublishSubject;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.knowm.xchange.cryptocom.CryptoComAdapters;
 import org.knowm.xchange.cryptocom.dto.marketdata.CryptoComOrderBookData;
 import org.knowm.xchange.cryptocom.dto.marketdata.CryptoComPublicTrade;
@@ -12,11 +16,26 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.instrument.Instrument;
 
+/**
+ * Market data feed over the Crypto.com v1 public WebSocket.
+ *
+ * <p>{@link #getOrderBook(Instrument, Object...)} subscribes with the official snapshot-and-update
+ * book contract ({@code book_subscription_type: SNAPSHOT_AND_UPDATE}) and feeds every dataframe
+ * into a {@link CryptoComOrderBookAssembler}, so the emitted book is always the consistent result
+ * of snapshot + ordered increments: increments are buffered until the opening snapshot, stale or
+ * duplicate increment deliveries are rejected, and a broken sequence chain emits a dedicated
+ * {@code CryptoComOrderBookContinuityException} on {@link
+ * #getOrderBookContinuityFailures()} while the assembler rebuilds from the next full snapshot.
+ */
 public class CryptoComStreamingMarketDataService implements StreamingMarketDataService {
 
   private static final int DEFAULT_BOOK_DEPTH = 10;
 
   private final CryptoComStreamingService service;
+  private final ConcurrentMap<String, CryptoComOrderBookAssembler> bookAssemblers =
+      new ConcurrentHashMap<>();
+  private final PublishSubject<CryptoComOrderBookContinuityException> continuityFailures =
+      PublishSubject.create();
 
   public CryptoComStreamingMarketDataService(CryptoComStreamingService service) {
     this.service = service;
@@ -49,10 +68,33 @@ public class CryptoComStreamingMarketDataService implements StreamingMarketDataS
             ? (Integer) args[0]
             : DEFAULT_BOOK_DEPTH;
     String channel = "book." + CryptoComAdapters.toInstrumentName(instrument) + "." + depth;
+    CryptoComOrderBookAssembler assembler =
+        bookAssemblers.computeIfAbsent(
+            channel,
+            name -> {
+              CryptoComOrderBookAssembler created = new CryptoComOrderBookAssembler(name, pair, depth);
+              created
+                  .continuityFailures()
+                  .subscribe(continuityFailures::onNext);
+              // Each (re)connection starts a fresh sequence chain; the next full snapshot
+              // rebuilds the book automatically because the framework re-subscribes the channel.
+              service.subscribeDisconnect().subscribe(ignored -> created.markConnectionLost());
+              return created;
+            });
     return service
         .subscribeChannel(channel)
         .flatMapIterable(message -> service.extractData(message, CryptoComOrderBookData.class))
-        .map(data -> CryptoComAdapters.adaptOrderBook(data, pair));
+        .flatMapIterable(assembler::apply);
+  }
+
+  /**
+   * Dedicated order-book continuity failures. When a book's snapshot/increment sequence chain
+   * breaks (gap, incompatible previous-update id, or a snapshot never arrived within the bounded
+   * buffer) a {@code CryptoComOrderBookContinuityException} is emitted here; the corresponding
+   * book observable continues and rebuilds from the next full snapshot.
+   */
+  public Observable<CryptoComOrderBookContinuityException> getOrderBookContinuityFailures() {
+    return continuityFailures;
   }
 
   @Override
