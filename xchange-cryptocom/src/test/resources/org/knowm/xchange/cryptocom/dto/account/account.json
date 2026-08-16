@@ -1,0 +1,17 @@
+{
+  "id": 1,
+  "method": "private/get-accounts",
+  "code": 0,
+  "result": {
+    "data": [
+      {
+        "account_id": "cdef123456-abcd-5678-efgh-1234567890ab",
+        "account_type": "ACCOUNT_TYPE_MARGIN",
+        "main_account_type": "ACCOUNT_TYPE_MAIN",
+        "character_type": "CHARACTER_TYPE_MAIN",
+        "margin_risk_model": "PORTFOLIO_MARGIN",
+        "currency": "USD"
+      }
+    ]
+  }
+}

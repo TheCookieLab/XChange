@@ -1,0 +1,17 @@
+{
+  "id": 1,
+  "method": "private/user-balance-history",
+  "code": 0,
+  "result": {
+    "data": [
+      {
+        "account_id": "cdef123456-abcd-5678-efgh-1234567890ab",
+        "event_type": "TRADE",
+        "instrument_name": "BTC_USDT",
+        "amount": "-0.001",
+        "balance": "1.999",
+        "transaction_time": 1700000001000
+      }
+    ]
+  }
+}

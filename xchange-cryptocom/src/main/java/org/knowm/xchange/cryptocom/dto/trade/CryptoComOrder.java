@@ -37,6 +37,26 @@ public class CryptoComOrder {
   @JsonProperty("order_value")
   private String orderValue;
 
+  /** Notional value of the order (derivatives and advanced orders). */
+  @JsonProperty("notional")
+  private String notional;
+
+  /** Side of the position the order opens or closes: LONG or SHORT (derivatives). */
+  @JsonProperty("position_side")
+  private String positionSide;
+
+  /** Close-position (reduce-only) orders close the open derivative position on fill. */
+  @JsonProperty("close_position")
+  private Boolean closePosition;
+
+  /** Execution instructions, e.g. POST_ONLY or REDUCE_ONLY. */
+  @JsonProperty("exec_inst")
+  private String execInst;
+
+  /** Trigger price expressed as a decimal string (advanced/trigger orders). */
+  @JsonProperty("trigger_price")
+  private String triggerPrice;
+
   @JsonProperty("avg_price")
   private String avgPrice;
 

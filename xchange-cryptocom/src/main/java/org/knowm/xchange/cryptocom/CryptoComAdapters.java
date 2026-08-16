@@ -295,26 +295,44 @@ public final class CryptoComAdapters {
     List<Balance> wallets = new ArrayList<>();
     if (balances != null) {
       for (CryptoComBalance balance : balances) {
-        if (balance.getPositionBalances() == null) {
-          continue;
-        }
-        for (CryptoComBalance.PositionBalance positionBalance : balance.getPositionBalances()) {
-          BigDecimal quantity = toBigDecimal(positionBalance.getQuantity());
-          BigDecimal reserved = toBigDecimal(positionBalance.getReservedQty());
-          if (quantity == null) {
-            continue;
+        if (balance.getPositionBalances() != null) {
+          for (CryptoComBalance.PositionBalance positionBalance : balance.getPositionBalances()) {
+            BigDecimal quantity = toBigDecimal(positionBalance.getQuantity());
+            BigDecimal reserved = toBigDecimal(positionBalance.getReservedQty());
+            if (quantity == null) {
+              continue;
+            }
+            BigDecimal available = reserved == null ? quantity : quantity.subtract(reserved);
+            wallets.add(
+                new Balance(
+                    new Currency(positionBalance.getInstrumentName()),
+                    quantity,
+                    available,
+                    reserved));
           }
-          BigDecimal available = reserved == null ? quantity : quantity.subtract(reserved);
-          wallets.add(
-              new Balance(
-                  new Currency(positionBalance.getInstrumentName()),
-                  quantity,
-                  available,
-                  reserved));
+        }
+        // The account-level row names the base currency of the instrument (e.g. "BTC_USDT" ->
+        // BTC) and reports its cash quantity in total_available_balance; surface it so spot
+        // wallets keep the raw amount even when no position balance row exists.
+        BigDecimal cash = toBigDecimal(balance.getTotalAvailableBalance());
+        if (cash != null) {
+          String baseCurrency = baseCurrencyOf(balance.getInstrumentName());
+          if (baseCurrency != null) {
+            wallets.add(new Balance(new Currency(baseCurrency), cash, cash, BigDecimal.ZERO));
+          }
         }
       }
     }
     return new AccountInfo(Wallet.Builder.from(wallets).build());
+  }
+
+  /** Base currency of an instrument name (everything before the first '_') or the name itself. */
+  private static String baseCurrencyOf(String instrumentName) {
+    if (instrumentName == null) {
+      return null;
+    }
+    int separator = instrumentName.indexOf('_');
+    return separator < 0 ? instrumentName : instrumentName.substring(0, separator);
   }
 
   public static FundingRecord adaptDepositRecord(CryptoComDepositRecord record) {

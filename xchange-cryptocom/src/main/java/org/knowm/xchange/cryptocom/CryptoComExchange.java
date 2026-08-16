@@ -1,7 +1,9 @@
 package org.knowm.xchange.cryptocom;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
@@ -24,6 +26,7 @@ public class CryptoComExchange extends BaseExchange implements Exchange {
   protected CryptoCom cryptoCom;
   private final CryptoComRequestIdGenerator requestIdGenerator = new CryptoComRequestIdGenerator();
   private final ResilienceRegistries resilienceRegistries = new ResilienceRegistries();
+  private volatile Set<String> rateLimitedMethods = Collections.emptySet();
 
   public CryptoCom getCryptoCom() {
     return cryptoCom;
@@ -31,6 +34,12 @@ public class CryptoComExchange extends BaseExchange implements Exchange {
 
   public long nextRequestId() {
     return requestIdGenerator.next();
+  }
+
+  /** Whether a per-method rate limiter was configured for {@code apiMethod} by the exchange rate
+   * policy; services attach the limiter only for these methods. */
+  public boolean isMethodRateLimited(String apiMethod) {
+    return rateLimitedMethods.contains(apiMethod);
   }
 
   @Override
@@ -61,6 +70,16 @@ public class CryptoComExchange extends BaseExchange implements Exchange {
   @Override
   public void applySpecification(ExchangeSpecification exchangeSpecification) {
     concludeHostParams(exchangeSpecification);
+
+    // Opt-in per-method rate policy (spec param cryptocom_rate_policy); an empty policy is a no-op.
+    CryptoComRatePolicy ratePolicy =
+        CryptoComRatePolicy.parse(
+            (String)
+                exchangeSpecification.getExchangeSpecificParametersItem(
+                    CryptoComRatePolicy.SPEC_PARAM));
+    ratePolicy.registerRateLimiters(resilienceRegistries);
+    this.rateLimitedMethods =
+        Collections.unmodifiableSet(ratePolicy.limitsPerMinute().keySet());
 
     Interceptor errorInterceptor = new CryptoComErrorInterceptor();
     this.cryptoCom =
