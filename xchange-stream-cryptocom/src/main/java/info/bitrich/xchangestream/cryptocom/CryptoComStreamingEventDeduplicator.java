@@ -21,6 +21,10 @@ public final class CryptoComStreamingEventDeduplicator {
   public static final int DEFAULT_MAX_ENTRIES = 4096;
 
   private final int maxEntries;
+
+  /** Single-threaded use; insertion-order eviction is required, so concurrent-map semantics
+   * would be wrong here. */
+  @SuppressWarnings("PMD.UseConcurrentHashMap")
   private final Map<String, Boolean> seen =
       new LinkedHashMap<String, Boolean>() {
         @Override

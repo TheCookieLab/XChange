@@ -238,6 +238,8 @@ public final class CryptoComOrderBookAssembler {
     }
   }
 
+  /** Converts raw {@code [price, quantity(, numberOfOrders)]} rows to order-book levels. */
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private List<LimitOrder> toLimitOrders(List<List<String>> levels, OrderType type) {
     if (levels == null) {
       return Collections.emptyList();

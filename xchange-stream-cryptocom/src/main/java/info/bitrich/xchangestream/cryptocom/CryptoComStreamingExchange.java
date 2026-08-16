@@ -60,6 +60,8 @@ public class CryptoComStreamingExchange extends CryptoComExchange implements Str
   static final int DEFAULT_BOOK_DEPTH = 10;
 
   private CryptoComStreamingService publicStreamingService;
+  /** True between {@link #disconnect()} and the next {@link #connect(ProductSubscription)}. */
+  private boolean servicesDisposed;
   private CryptoComPrivateStreamingService privateStreamingService;
 
   private CryptoComStreamingMarketDataService streamingMarketDataService;
@@ -78,6 +80,7 @@ public class CryptoComStreamingExchange extends CryptoComExchange implements Str
   }
 
   private Completable connect(ProductSubscription subscription) {
+    servicesDisposed = false;
     // --- Resolve endpoints and fail closed before any transport is created. ---
     String overrideBaseUrl = (String) exchangeSpecification.getParameter(CRYPTOCOM_WS_OVERRIDE_URI);
     if (usingSandbox() && overrideBaseUrl == null) {
@@ -127,10 +130,6 @@ public class CryptoComStreamingExchange extends CryptoComExchange implements Str
           new CryptoComStreamingAccountService(privateStreamingService, eventDeduplicator);
       // Independent connections to different hosts - no reason to serialize them.
       privateConnect = privateStreamingService.connect();
-    } else {
-      privateStreamingService = null;
-      streamingTradeService = null;
-      streamingAccountService = null;
     }
 
     return Completable.mergeArray(publicConnect, privateConnect)
@@ -255,14 +254,9 @@ public class CryptoComStreamingExchange extends CryptoComExchange implements Str
             ? Completable.complete()
             : privateStreamingService.disconnect();
 
-    publicStreamingService = null;
-    privateStreamingService = null;
-    streamingMarketDataService = null;
-    streamingTradeService = null;
-    streamingAccountService = null;
-    eventDeduplicator = null;
     privateRequired = false;
     requiredChannels.clear();
+    servicesDisposed = true;
 
     return Completable.mergeArray(publicDisconnect, privateDisconnect);
   }
@@ -326,16 +320,16 @@ public class CryptoComStreamingExchange extends CryptoComExchange implements Str
 
   @Override
   public StreamingMarketDataService getStreamingMarketDataService() {
-    return streamingMarketDataService;
+    return servicesDisposed ? null : streamingMarketDataService;
   }
 
   @Override
   public StreamingTradeService getStreamingTradeService() {
-    return streamingTradeService;
+    return servicesDisposed ? null : streamingTradeService;
   }
 
   @Override
   public StreamingAccountService getStreamingAccountService() {
-    return streamingAccountService;
+    return servicesDisposed ? null : streamingAccountService;
   }
 }
