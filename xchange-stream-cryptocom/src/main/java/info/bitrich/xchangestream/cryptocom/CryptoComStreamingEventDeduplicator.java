@@ -1,7 +1,10 @@
 package info.bitrich.xchangestream.cryptocom;
 
-import java.util.LinkedHashMap;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Bounded, insertion-ordered deduplicator for replayed private events.
@@ -12,8 +15,10 @@ import java.util.Map;
  * a stable key and duplicates are filtered. The cache is bounded - the Crypto.com replay window is
  * short, so {@value #DEFAULT_MAX_ENTRIES} entries cover it comfortably while keeping memory flat.
  *
- * <p>Not thread-safe: used single-threaded on the WebSocket event loop; wrap in a synchronized
- * facade when sharing across threads.
+ * <p>A {@link ConcurrentMap} holds the keys while an explicit insertion-order {@link Deque}
+ * tracks the order for bounded FIFO eviction (re-inserting an existing key neither reorders nor
+ * counts against the bound, exactly like insertion-ordered {@code LinkedHashMap} semantics).
+ * Every mutation happens inside the synchronized methods, so the instance stays thread-safe.
  */
 public final class CryptoComStreamingEventDeduplicator {
 
@@ -22,16 +27,10 @@ public final class CryptoComStreamingEventDeduplicator {
 
   private final int maxEntries;
 
-  /** Single-threaded use; insertion-order eviction is required, so concurrent-map semantics
-   * would be wrong here. */
-  @SuppressWarnings("PMD.UseConcurrentHashMap")
-  private final Map<String, Boolean> seen =
-      new LinkedHashMap<String, Boolean>() {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
-          return size() > maxEntries;
-        }
-      };
+  private final ConcurrentMap<String, Boolean> seen = new ConcurrentHashMap<>();
+
+  /** Insertion order of the keys in {@link #seen}; keeps eviction strictly FIFO and bounded. */
+  private final Deque<String> insertionOrder = new ArrayDeque<>();
 
   public CryptoComStreamingEventDeduplicator() {
     this(DEFAULT_MAX_ENTRIES);
@@ -49,7 +48,14 @@ public final class CryptoComStreamingEventDeduplicator {
    * seen once within the bounded window is not a duplicate.
    */
   public synchronized boolean isDuplicate(String key) {
-    return seen.put(key, Boolean.TRUE) != null;
+    if (seen.putIfAbsent(key, Boolean.TRUE) != null) {
+      return true;
+    }
+    insertionOrder.addLast(key);
+    while (insertionOrder.size() > maxEntries) {
+      seen.remove(insertionOrder.removeFirst());
+    }
+    return false;
   }
 
   /** Number of distinct keys currently recorded. */
@@ -60,5 +66,6 @@ public final class CryptoComStreamingEventDeduplicator {
   /** Clears all recorded keys. */
   public synchronized void clear() {
     seen.clear();
+    insertionOrder.clear();
   }
 }

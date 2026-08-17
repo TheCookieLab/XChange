@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.Optional;
 import org.knowm.xchange.cryptocom.CryptoComAdapters;
 import org.knowm.xchange.cryptocom.dto.marketdata.CryptoComOrderBookData;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -39,9 +40,10 @@ import org.slf4j.LoggerFactory;
  *       assembler enters {@code NEEDS_REBUILD}: the book is kept but no longer trusted until the
  *       next full snapshot.
  *   <li><strong>Rebuild:</strong> {@link #markConnectionLost()} (reconnect/re-subscription) and
- *       any full snapshot rebuild the book from scratch, resetting the sequence chain. The next
- *       snapshot arrives automatically because the framework re-subscribes the channel after each
- *       connection.
+ *       any full snapshot rebuild the book from scratch, resetting the sequence chain. After a
+ *       gap the market data service requests a fresh snapshot on the same channel (see {@link
+ *       CryptoComStreamingMarketDataService}), which the provider answers with a full snapshot;
+ *       a reconnect re-subscribes the channel as well.
  * </ul>
  *
  * <p>Levels are {@code [price, quantity(, numberOfOrders)]}; a quantity of zero removes the price
@@ -229,31 +231,43 @@ public final class CryptoComOrderBookAssembler {
       return;
     }
     for (List<String> level : levels) {
-      if (level == null || level.size() < 2) {
-        continue;
-      }
-      BigDecimal price = new BigDecimal(level.get(0));
-      BigDecimal quantity = new BigDecimal(level.get(1));
-      book.update(new LimitOrder(type, quantity, currencyPair, null, null, price));
+      applyLevel(level, type);
     }
   }
 
+  /** Applies a single raw {@code [price, quantity(, numberOfOrders)]} row to the book. */
+  private void applyLevel(List<String> level, OrderType type) {
+    if (level == null || level.size() < 2) {
+      return;
+    }
+    BigDecimal price = new BigDecimal(level.get(0));
+    BigDecimal quantity = new BigDecimal(level.get(1));
+    book.update(new LimitOrder(type, quantity, currencyPair, null, null, price));
+  }
+
   /** Converts raw {@code [price, quantity(, numberOfOrders)]} rows to order-book levels. */
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private List<LimitOrder> toLimitOrders(List<List<String>> levels, OrderType type) {
     if (levels == null) {
       return Collections.emptyList();
     }
     List<LimitOrder> orders = new ArrayList<>(levels.size());
     for (List<String> level : levels) {
-      if (level == null || level.size() < 2) {
-        continue;
-      }
-      orders.add(
-          new LimitOrder(
-              type, new BigDecimal(level.get(1)), currencyPair, null, null, new BigDecimal(level.get(0))));
+      toLimitOrder(level, type).ifPresent(orders::add);
     }
     return orders;
+  }
+
+  /**
+   * Converts a single raw {@code [price, quantity(, numberOfOrders)]} row to a limit order level,
+   * or empty when it is malformed.
+   */
+  private Optional<LimitOrder> toLimitOrder(List<String> level, OrderType type) {
+    if (level == null || level.size() < 2) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        new LimitOrder(
+            type, new BigDecimal(level.get(1)), currencyPair, null, null, new BigDecimal(level.get(0))));
   }
 
   /** Keeps only the best {@code depth} levels per side (asks ascending, bids descending). */

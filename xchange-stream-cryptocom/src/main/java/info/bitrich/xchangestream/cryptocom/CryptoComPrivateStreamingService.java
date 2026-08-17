@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.subjects.PublishSubject;
+import io.reactivex.rxjava3.subjects.ReplaySubject;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -65,11 +65,13 @@ public class CryptoComPrivateStreamingService extends CryptoComStreamingService 
 
   /**
    * Sends a signed {@code private/...} request over the user WebSocket and emits its confirmation
-   * envelope once the server replies with the request id. When {@code replayable} is false the
-   * request must not be repeated on a reconnect (for example order placement): on any connection
-   * loss before confirmation the observable fails with {@link CryptoComRequestException} and the
-   * request is never re-sent - reconnect only re-subscribes channels. Replayable requests
-   * (idempotent reads) fail the same way but the caller may re-issue them explicitly.
+   * envelope once the server replies with the request id. The confirmation (or the explicit
+   * failure) is replayed to any subscriber attaching after it arrived, so subscribing to the
+   * returned observable can never miss it. When {@code replayable} is false the request must not
+   * be repeated on a reconnect (for example order placement): on any connection loss before
+   * confirmation the observable fails with {@link CryptoComRequestException} and the request is
+   * never re-sent - reconnect only re-subscribes channels. Replayable requests (idempotent reads)
+   * fail the same way but the caller may re-issue them explicitly.
    */
   public Observable<JsonNode> sendRequest(String method, Map<String, Object> params, boolean replayable) {
     long id = nextRequestId();
@@ -221,7 +223,11 @@ public class CryptoComPrivateStreamingService extends CryptoComStreamingService 
     private final long id;
     private final String method;
     private final boolean replayable;
-    private final PublishSubject<JsonNode> subject = PublishSubject.create();
+    // A size-1 replay subject rules out the warm-up race: the message is sent before the
+    // caller subscribes, so a confirmation arriving in between was previously lost on a hot
+    // PublishSubject. Replay keeps the single confirmation (or explicit failure) available to
+    // any subscriber, whenever it attaches.
+    private final ReplaySubject<JsonNode> subject = ReplaySubject.createWithSize(1);
 
     private PendingRequest(long id, String method, boolean replayable) {
       this.id = id;

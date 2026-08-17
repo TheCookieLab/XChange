@@ -120,18 +120,23 @@ public class CryptoComTradeService extends CryptoComTradeServiceRaw implements T
 
   /**
    * Extracts the provider order id from a placement result. {@link
-   * CryptoComPlacementOutcome#NOT_FOUND} means the provider provably never accepted the order, so
-   * there is nothing to return; an ambiguous outcome has already raised {@link
+   * CryptoComPlacementOutcome#NOT_FOUND} classifies the order as not surfaced within the bounded
+   * reconciliation window (open orders plus recent history after a placement transport failure),
+   * not as an authoritative provider rejection: an order not visible there may still exist. The
+   * caller must verify order state manually before re-submitting; nothing is ever re-sent
+   * automatically. An ambiguous outcome has already raised {@link
    * CryptoComUnknownOrderOutcomeException} at the raw layer.
    */
   private String requireOrderId(CryptoComOrderPlacementResult placement) {
     if (placement.getOrderId() == null) {
       throw new ExchangeException(
-          "Order placement not accepted by the provider (outcome="
-              + placement.getOutcome()
-              + ", requestId="
+          "Crypto.com placement outcome is NOT_FOUND: the order was not surfaced in open orders "
+              + "or the bounded reconciliation window (requestId="
               + placement.getRequestId()
-              + "); nothing was re-sent");
+              + ", clientOid="
+              + placement.getClientOid()
+              + "). This absence is unconfirmed beyond that window - verify the order state "
+              + "manually before re-submitting to avoid duplicates; nothing was re-sent");
     }
     return placement.getOrderId();
   }

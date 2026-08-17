@@ -75,7 +75,14 @@ public class CryptoComStreamingMarketDataService implements StreamingMarketDataS
               CryptoComOrderBookAssembler created = new CryptoComOrderBookAssembler(name, pair, depth);
               created
                   .continuityFailures()
-                  .subscribe(continuityFailures::onNext);
+                  .subscribe(
+                      failure -> {
+                        continuityFailures.onNext(failure);
+                        // A broken sequence chain is healed by a fresh provider snapshot; ask
+                        // for one on this exact channel instead of waiting for the next
+                        // (unrelated) reconnect to re-subscribe it.
+                        service.resubscribeChannel(name);
+                      });
               // Each (re)connection starts a fresh sequence chain; the next full snapshot
               // rebuilds the book automatically because the framework re-subscribes the channel.
               service.subscribeDisconnect().subscribe(ignored -> created.markConnectionLost());

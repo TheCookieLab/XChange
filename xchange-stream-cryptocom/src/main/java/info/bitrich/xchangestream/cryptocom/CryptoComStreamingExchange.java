@@ -130,10 +130,30 @@ public class CryptoComStreamingExchange extends CryptoComExchange implements Str
           new CryptoComStreamingAccountService(privateStreamingService, eventDeduplicator);
       // Independent connections to different hosts - no reason to serialize them.
       privateConnect = privateStreamingService.connect();
+    } else {
+      dropStalePrivateTransport();
     }
 
     return Completable.mergeArray(publicConnect, privateConnect)
         .doOnComplete(() -> subscribeRequestedChannels(subscription));
+  }
+
+  /**
+   * A public-only (re)connect (for example after an authenticated connect with private channels)
+   * must not expose user-plane services wired to a stale private socket: dispose the previous
+   * user transport and drop the private service layer entirely, so no balances/orders/trades
+   * observable from an earlier connection survives this one.
+   */
+  private void dropStalePrivateTransport() {
+    if (privateStreamingService != null) {
+      CryptoComPrivateStreamingService stale = privateStreamingService;
+      privateStreamingService = null;
+      stale
+          .disconnect()
+          .subscribe(() -> {}, error -> LOG.warn("Stale private stream disconnect failed: {}", error));
+    }
+    streamingTradeService = null;
+    streamingAccountService = null;
   }
 
   /** Subscribes the channels declared by the connect subscription on their owning transports. */

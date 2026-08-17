@@ -95,24 +95,29 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
       return new CryptoComOrderPlacementResult(
           CryptoComPlacementOutcome.ACKED, requestId, ack == null ? null : ack.getOrderId(), clientOid);
     } catch (IOException e) {
-      return reconcile(requestId, instrumentName, clientOid, e);
+      return reconcile(requestId, "private/create-order", instrumentName, clientOid, e);
     }
   }
 
   /**
    * Reconciles an order whose placement crossed the network without a provider answer. Returns
    * {@link CryptoComPlacementOutcome#RECONCILED} when the order surfaced in open orders or recent
-   * order history, {@link CryptoComPlacementOutcome#NOT_FOUND} when those queries prove it was
-   * never taken, and raises {@link CryptoComUnknownOrderOutcomeException} when reconciliation
-   * itself fails or the placement carried no client reference to match on. ZERO automatic replay:
-   * the order is never re-sent from this path.
+   * order history, {@link CryptoComPlacementOutcome#NOT_FOUND} when those queries complete within
+   * the bounded window without surfacing it (a deterministic absent outcome, not an authoritative
+   * rejection - the order may still exist), and raises {@link CryptoComUnknownOrderOutcomeException}
+   * when reconciliation itself fails or the placement carried no client reference to match on.
+   * ZERO automatic replay: the order is never re-sent from this path.
    */
   private CryptoComOrderPlacementResult reconcile(
-      long requestId, String instrumentName, String clientOid, IOException transportFailure)
+      long requestId,
+      String method,
+      String instrumentName,
+      String clientOid,
+      IOException transportFailure)
       throws IOException {
     if (clientOid == null || clientOid.isEmpty()) {
       throw new CryptoComUnknownOrderOutcomeException(
-          requestId, "private/create-order", null, instrumentName, transportFailure);
+          requestId, method, null, instrumentName, transportFailure);
     }
     try {
       for (CryptoComOrder candidate : getCryptoComOpenOrders(null)) {
@@ -133,7 +138,7 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
           CryptoComPlacementOutcome.NOT_FOUND, requestId, null, clientOid);
     } catch (IOException reconcileFailure) {
       throw new CryptoComUnknownOrderOutcomeException(
-          requestId, "private/create-order", clientOid, instrumentName, reconcileFailure);
+          requestId, method, clientOid, instrumentName, reconcileFailure);
     }
   }
 
@@ -201,14 +206,14 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
     CryptoComRequest request = buildRequest("private/advanced/create-order", params);
     long requestId = request.getId();
     try {
-      // Placement is never automatically retried; reconcile on ambiguous transport failure.
-      CryptoComResponse response =
-          apiCall("private/create-advance-order", () -> cryptoCom.createAdvancedOrder(request));
-      CryptoComOrderAck ack = toObject(response.getResult(), CryptoComOrderAck.class);
-      return new CryptoComOrderPlacementResult(
-          CryptoComPlacementOutcome.ACKED, requestId, ack == null ? null : ack.getOrderId(), clientOid);
+// Placement is never automatically retried; reconcile on ambiguous transport failure.
+    CryptoComResponse response =
+        apiCall("private/advanced/create-order", () -> cryptoCom.createAdvancedOrder(request));
+    CryptoComOrderAck ack = toObject(response.getResult(), CryptoComOrderAck.class);
+    return new CryptoComOrderPlacementResult(
+        CryptoComPlacementOutcome.ACKED, requestId, ack == null ? null : ack.getOrderId(), clientOid);
     } catch (IOException e) {
-      return reconcile(requestId, instrumentName, clientOid, e);
+      return reconcile(requestId, "private/advanced/create-order", instrumentName, clientOid, e);
     }
   }
 
