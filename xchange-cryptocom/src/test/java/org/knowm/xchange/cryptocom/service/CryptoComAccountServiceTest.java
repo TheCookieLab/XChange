@@ -106,6 +106,164 @@ public class CryptoComAccountServiceTest {
         .isInstanceOf(NotAvailableFromExchangeException.class);
   }
 
+  @Test
+  public void getAccountInfo_mapsBalancesIncludingMarginFields() throws Exception {
+    ObjectNode balance = mapper.createObjectNode();
+    balance.put("instrument_name", "BTC_USDT");
+    balance.put("total_available_balance", "0.5");
+    balance.put("total_margin_balance", "1.5");
+    balance.put("total_cash_balance", "1.0");
+    balance.put("total_effective_balance", "1.75");
+    balance.put("total_initial_margin", "0.25");
+    balance.put("total_maintenance_margin", "0.1");
+    balance.put("total_position_margin", "0.2");
+    balance.put("total_collateral", "2.0");
+    ObjectNode positionBalance = mapper.createObjectNode();
+    positionBalance.put("instrument_name", "BTCUSD-PERP");
+    positionBalance.put("quantity", "0.5");
+    positionBalance.put("market_value", "20000.0");
+    positionBalance.put("reserved_qty", "0.1");
+    balance.set("position_balances", mapper.createArrayNode().add(positionBalance));
+
+    CryptoComAccountService service = newJsonService(mapper.createArrayNode().add(balance), null);
+
+    org.knowm.xchange.dto.account.Balance xBalance =
+        service
+            .getAccountInfo()
+            .getWallet()
+            .getBalance(org.knowm.xchange.currency.Currency.BTC);
+
+    assertThat(xBalance.getTotal()).isEqualByComparingTo("0.5");
+    // margin/liability fields round-trip through the raw DTO in the request envelope only; the
+    // XChange wallet exposes the same numbers as total/available/held.
+    assertThat(service.getCryptoComBalances().get(0).getTotalEffectiveBalance())
+        .isEqualTo("1.75");
+    assertThat(service.getCryptoComBalances().get(0).getTotalInitialMargin()).isEqualTo("0.25");
+    assertThat(service.getCryptoComBalances().get(0).getTotalMaintenanceMargin()).isEqualTo("0.1");
+    assertThat(service.getCryptoComBalances().get(0).getTotalPositionMargin()).isEqualTo("0.2");
+    assertThat(service.getCryptoComBalances().get(0).getTotalCollateral()).isEqualTo("2.0");
+  }
+
+  @Test
+  public void getCryptoComFeeRate_returnsTieredSchedule() throws Exception {
+    CryptoComAccountService service =
+        accountServiceWith("fee-rate.json", "private/get-fee-rate");
+
+    org.knowm.xchange.cryptocom.dto.account.CryptoComFeeRate rate =
+        service.getCryptoComFeeRate("BTC_USDT").get(0);
+
+    assertThat(rate.getInstrumentName()).isEqualTo("BTC_USDT");
+    assertThat(rate.getEffectiveFeeTier()).isEqualTo(2);
+    assertThat(rate.getFeeTiers()).hasSize(2);
+  }
+
+  @Test
+  public void getCryptoComPositions_returnsDerivativeRows() throws Exception {
+    CryptoComAccountService service =
+        accountServiceWith("position.json", "private/get-positions");
+
+    org.knowm.xchange.cryptocom.dto.account.CryptoComPosition position =
+        service.getCryptoComPositions("USD").get(0);
+
+    assertThat(position.getInstrumentName()).isEqualTo("BTCUSD-PERP");
+    assertThat(position.getQuantity()).isEqualTo("-0.5");
+    assertThat(position.getUpl()).isEqualTo("250.25");
+  }
+
+  @Test
+  public void getCryptoComAccounts_returnsRiskModelRows() throws Exception {
+    CryptoComAccountService service = accountServiceWith("account.json", "private/get-accounts");
+
+    org.knowm.xchange.cryptocom.dto.account.CryptoComAccount account =
+        service.getCryptoComAccounts().get(0);
+
+    assertThat(account.getMarginRiskModel()).isEqualTo("PORTFOLIO_MARGIN");
+    assertThat(account.getAccountType()).isEqualTo("ACCOUNT_TYPE_MARGIN");
+  }
+
+  @Test
+  public void userBalanceHistory_stopsAtCallerLimitWithoutOverFetch() throws Exception {
+    CryptoComRequest[] captured = new CryptoComRequest[1];
+    CryptoComAccountService service = balanceHistoryService(captured, 10);
+
+    java.util.List<org.knowm.xchange.cryptocom.dto.account.CryptoComUserBalanceHistoryRecord>
+        records = service.getCryptoComUserBalanceHistory(null, 1L, 2L, 3);
+
+    assertThat(records).hasSize(3);
+    assertThat(captured[0].getParams()).containsEntry("page", 1).containsEntry("page_size", 100);
+  }
+
+  @Test
+  public void userBalanceHistory_stopsOnRepeatedPages() throws Exception {
+    CryptoComRequest[] captured = new CryptoComRequest[2];
+    CryptoComAccountService service = balanceHistoryService(captured, 100);
+
+    java.util.List<org.knowm.xchange.cryptocom.dto.account.CryptoComUserBalanceHistoryRecord>
+        records = service.getCryptoComUserBalanceHistory(null, 1L, 2L, null);
+
+    // page 2 repeats page 1 -> stop; each page carried exactly 100 rows
+    assertThat(records).hasSize(100);
+    assertThat(captured[1]).isNotNull();
+  }
+
+  private CryptoComAccountService balanceHistoryService(
+      CryptoComRequest[] captured, int rowsPerPage) throws Exception {
+    CryptoCom cryptoCom = mock(CryptoCom.class);
+    when(cryptoCom.getUserBalanceHistory(any()))
+        .thenAnswer(
+            invocation -> {
+              CryptoComRequest request = invocation.getArgument(0);
+              if (captured[0] == null) {
+                captured[0] = request;
+              } else {
+                captured[1] = request;
+              }
+              ObjectNode row = mapper.createObjectNode();
+              row.put("account_id", "a1");
+              row.put("event_type", "TRADE");
+              row.put("amount", "0.001");
+              row.put("balance", "1.001");
+              ArrayNode data = mapper.createArrayNode();
+              for (int i = 0; i < rowsPerPage; i++) {
+                data.add(row);
+              }
+              ObjectNode result = mapper.createObjectNode();
+              result.set("data", data);
+              CryptoComResponse response = new CryptoComResponse();
+              response.setResult(result);
+              return response;
+            });
+    return new CryptoComAccountService(mockExchange(cryptoCom), new ResilienceRegistries());
+  }
+
+  private CryptoComAccountService accountServiceWith(String fixture, String method)
+      throws Exception {
+    CryptoCom cryptoCom = mock(CryptoCom.class);
+    java.io.InputStream is =
+        getClass()
+            .getResourceAsStream(
+                "/org/knowm/xchange/cryptocom/dto/account/" + fixture);
+    CryptoComResponse payload = mapper.readValue(is, CryptoComResponse.class);
+    when(cryptoCom.getFeeRate(any())).thenReturn(payload);
+    when(cryptoCom.getPositions(any())).thenReturn(payload);
+    when(cryptoCom.getAccounts(any())).thenReturn(payload);
+    return new CryptoComAccountService(mockExchange(cryptoCom), new ResilienceRegistries());
+  }
+
+  private CryptoComAccountService newJsonService(ArrayNode list, String unused) throws Exception {
+    CryptoCom cryptoCom = mock(CryptoCom.class);
+    when(cryptoCom.userBalance(any()))
+        .thenAnswer(
+            invocation -> {
+              ObjectNode result = mapper.createObjectNode();
+              result.set("data", list);
+              CryptoComResponse response = new CryptoComResponse();
+              response.setResult(result);
+              return response;
+            });
+    return new CryptoComAccountService(mockExchange(cryptoCom), new ResilienceRegistries());
+  }
+
   private CryptoComAccountService newWithdrawService(CryptoComRequest[] captured)
       throws Exception {
     CryptoCom cryptoCom = mock(CryptoCom.class);

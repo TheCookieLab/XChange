@@ -54,7 +54,16 @@ public class CryptoComStreamingExchangeIntegration {
     ExchangeSpecification exSpec = new ExchangeSpecification(CryptoComStreamingExchange.class);
     exSpec.setApiKey(API_KEY);
     exSpec.setSecretKey(SECRET_KEY);
-    exSpec.setExchangeSpecificParametersItem(StreamingExchange.USE_SANDBOX, true);
+    // The connector fails closed for sandbox: Crypto.com does not publish a verified sandbox
+    // streaming host, so a caller-verified base URL must be supplied explicitly via
+    // CRYPTOCOM_WS_OVERRIDE (see CryptoComStreamingExchange#CRYPTOCOM_WS_OVERRIDE_URI). Without
+    // it this integration run targets the production endpoints, which requires production keys.
+    String overrideBaseUrl = System.getenv("CRYPTOCOM_WS_OVERRIDE");
+    if (overrideBaseUrl != null) {
+      exSpec.setExchangeSpecificParametersItem(
+          CryptoComStreamingExchange.CRYPTOCOM_WS_OVERRIDE_URI, overrideBaseUrl);
+      logger.info("Using caller-verified streaming base URL {}", overrideBaseUrl);
+    }
 
     exchange = (StreamingExchange) ExchangeFactory.INSTANCE.createExchange(exSpec);
     logger.info("Connecting to Crypto.com streaming exchange...");

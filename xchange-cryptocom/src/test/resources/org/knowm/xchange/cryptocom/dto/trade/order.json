@@ -1,0 +1,35 @@
+{
+  "id": 1,
+  "method": "private/get-order-history",
+  "code": 0,
+  "result": {
+    "data": [
+      {
+        "account_id": "cdef123456-abcd-5678-efgh-1234567890ab",
+        "order_id": "7000000000000000000",
+        "client_oid": "client-oid-1",
+        "order_type": "LIMIT",
+        "time_in_force": "GOOD_TILL_CANCEL",
+        "side": "BUY",
+        "quantity": "0.5",
+        "limit_price": "50000.0",
+        "order_value": "25000.0",
+        "notional": "25000.0",
+        "position_side": "LONG",
+        "close_position": false,
+        "exec_inst": "POST_ONLY",
+        "trigger_price": "49000.0",
+        "avg_price": "0",
+        "cumulative_quantity": "0",
+        "cumulative_value": "0",
+        "cumulative_fee": "0",
+        "status": "ACTIVE",
+        "order_date": "2024-03-01",
+        "instrument_name": "BTC_USDT",
+        "fee_instrument_name": "USDT",
+        "create_time": 1700000001000,
+        "update_time": 1700000002000
+      }
+    ]
+  }
+}

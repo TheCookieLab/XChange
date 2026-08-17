@@ -9,15 +9,25 @@ import org.knowm.xchange.cryptocom.CryptoComExchange;
 import org.knowm.xchange.cryptocom.dto.CryptoComException;
 import org.knowm.xchange.cryptocom.dto.CryptoComRequest;
 import org.knowm.xchange.cryptocom.dto.CryptoComResponse;
+import org.knowm.xchange.cryptocom.dto.account.CryptoComAccount;
 import org.knowm.xchange.cryptocom.dto.account.CryptoComBalance;
 import org.knowm.xchange.cryptocom.dto.account.CryptoComDepositAddress;
 import org.knowm.xchange.cryptocom.dto.account.CryptoComDepositAddressResult;
 import org.knowm.xchange.cryptocom.dto.account.CryptoComDepositHistoryResult;
 import org.knowm.xchange.cryptocom.dto.account.CryptoComDepositRecord;
+import org.knowm.xchange.cryptocom.dto.account.CryptoComFeeRate;
+import org.knowm.xchange.cryptocom.dto.account.CryptoComPosition;
+import org.knowm.xchange.cryptocom.dto.account.CryptoComUserBalanceHistoryRecord;
 import org.knowm.xchange.cryptocom.dto.account.CryptoComWithdrawalHistoryResult;
 import org.knowm.xchange.cryptocom.dto.account.CryptoComWithdrawalRecord;
 
 public class CryptoComAccountServiceRaw extends CryptoComBaseService {
+
+  /** Maximum provider pages fetched for one balance-history call regardless of caller limits. */
+  public static final int MAX_HISTORY_PAGES = 10;
+
+  /** Default rows per balance-history page when the caller does not specify a page size. */
+  public static final int DEFAULT_HISTORY_PAGE_SIZE = 100;
 
   protected CryptoComAccountServiceRaw(
       CryptoComExchange exchange, ResilienceRegistries resilienceRegistries) {
@@ -26,8 +36,80 @@ public class CryptoComAccountServiceRaw extends CryptoComBaseService {
 
   public List<CryptoComBalance> getCryptoComBalances() throws IOException, CryptoComException {
     CryptoComRequest request = buildRequest("private/user-balance", null);
-    CryptoComResponse response = decorateApiCall(() -> cryptoCom.userBalance(request)).call();
+    CryptoComResponse response = apiCall("private/user-balance", () -> cryptoCom.userBalance(request));
     return getDataList(response, CryptoComBalance.class);
+  }
+
+  /** Fee schedule for one instrument, or for all instruments when {@code instrumentName} is null. */
+  public List<CryptoComFeeRate> getCryptoComFeeRate(String instrumentName)
+      throws IOException, CryptoComException {
+    Map<String, Object> params = new HashMap<>();
+    if (instrumentName != null) {
+      params.put("instrument_name", instrumentName);
+    }
+    CryptoComRequest request = buildRequest("private/get-fee-rate", params);
+    CryptoComResponse response = apiCall("private/get-fee-rate", () -> cryptoCom.getFeeRate(request));
+    return getDataList(response, CryptoComFeeRate.class);
+  }
+
+  /**
+   * Derivative positions. {@code currency} filters the provider result when non-null; {@code null}
+   * returns every position on the account.
+   */
+  public List<CryptoComPosition> getCryptoComPositions(String currency)
+      throws IOException, CryptoComException {
+    Map<String, Object> params = new HashMap<>();
+    if (currency != null) {
+      params.put("currency", currency);
+    }
+    CryptoComRequest request = buildRequest("private/get-positions", params);
+    CryptoComResponse response = apiCall("private/get-positions", () -> cryptoCom.getPositions(request));
+    return getDataList(response, CryptoComPosition.class);
+  }
+
+  /** Account/risk summary rows (margin risk model, account types) from {@code private/get-accounts}. */
+  public List<CryptoComAccount> getCryptoComAccounts() throws IOException, CryptoComException {
+    CryptoComRequest request = buildRequest("private/get-accounts", null);
+    CryptoComResponse response = apiCall("private/get-accounts", () -> cryptoCom.getAccounts(request));
+    return getDataList(response, CryptoComAccount.class);
+  }
+
+  /**
+   * Wallet/history trail from {@code private/user-balance-history} with bounded pagination:
+   * {@link #DEFAULT_HISTORY_PAGE_SIZE} rows per page, stopped at the caller cap, empty or repeated
+   * pages, or {@link #MAX_HISTORY_PAGES} pages.
+   */
+  public List<CryptoComUserBalanceHistoryRecord> getCryptoComUserBalanceHistory(
+      String currency, Long startTime, Long endTime, Integer limit)
+      throws IOException, CryptoComException {
+    return orEmpty(
+        fetchPagesBounded(
+            MAX_HISTORY_PAGES,
+            DEFAULT_HISTORY_PAGE_SIZE,
+            limit,
+            (page, pageSize) ->
+                userBalanceHistoryPage(currency, startTime, endTime, page, pageSize)));
+  }
+
+  private List<CryptoComUserBalanceHistoryRecord> userBalanceHistoryPage(
+      String currency, Long startTime, Long endTime, Integer page, Integer pageSize)
+      throws IOException {
+    Map<String, Object> params = new HashMap<>();
+    if (currency != null) {
+      params.put("currency", currency);
+    }
+    if (startTime != null) {
+      params.put("start_time", startTime);
+    }
+    if (endTime != null) {
+      params.put("end_time", endTime);
+    }
+    params.put("page", page);
+    params.put("page_size", pageSize);
+    CryptoComRequest request = buildRequest("private/user-balance-history", params);
+    CryptoComResponse response =
+        apiCall("private/get-user-balance-history", () -> cryptoCom.getUserBalanceHistory(request));
+    return getDataList(response, CryptoComUserBalanceHistoryRecord.class);
   }
 
   public List<CryptoComDepositAddress> getCryptoComDepositAddresses(String currency)

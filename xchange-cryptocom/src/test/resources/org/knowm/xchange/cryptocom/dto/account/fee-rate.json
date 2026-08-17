@@ -1,0 +1,30 @@
+{
+  "id": 1,
+  "method": "private/get-fee-rate",
+  "code": 0,
+  "result": {
+    "data": [
+      {
+        "instrument_name": "BTC_USDT",
+        "effective_fee_tier": 2,
+        "fee_type": 1,
+        "fee_tiers": [
+          {
+            "taker_fee_rate": "0.0004",
+            "maker_fee_rate": "0.0002",
+            "taker_effective_fee_rate": "0.00036",
+            "maker_effective_fee_rate": "0.00018",
+            "fee_tier": 2
+          },
+          {
+            "taker_fee_rate": "0.0006",
+            "maker_fee_rate": "0.0003",
+            "taker_effective_fee_rate": "0.00054",
+            "maker_effective_fee_rate": "0.00027",
+            "fee_tier": 1
+          }
+        ]
+      }
+    ]
+  }
+}

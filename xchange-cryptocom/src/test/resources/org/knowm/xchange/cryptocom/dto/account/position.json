@@ -1,0 +1,30 @@
+{
+  "id": 1,
+  "method": "private/get-positions",
+  "code": 0,
+  "result": {
+    "data": [
+      {
+        "account_id": "cdef1234-abcd-5678-efgh-1234567890ab",
+        "instrument_name": "BTCUSD-PERP",
+        "quantity": "-0.5",
+        "position": "SHORT",
+        "cost": "-20000.0",
+        "open_pos_cost": "-20000.0",
+        "allocated_cash": "1000.0",
+        "mm_contribution": "500.0",
+        "ml_contribution": "250.0",
+        "position_cost": "-20000.0",
+        "mark_price": "40500.5",
+        "last_price": "40501.0",
+        "average_cost": "40000.0",
+        "session_upl": "-250.25",
+        "upl": "250.25",
+        "upl_history": "120.5",
+        "close_price": "40200.0",
+        "insert_time": 1699999999000,
+        "update_time": 1700000001000
+      }
+    ]
+  }
+}

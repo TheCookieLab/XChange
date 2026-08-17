@@ -23,6 +23,26 @@ public class CryptoComBalance {
   @JsonProperty("total_cash_balance")
   private String totalCashBalance;
 
+  /** Total equity/cash + unrealised PnL view exposed by the account summary. */
+  @JsonProperty("total_effective_balance")
+  private String totalEffectiveBalance;
+
+  /** Aggregate initial margin across all derivative positions (margin/collateral). */
+  @JsonProperty("total_initial_margin")
+  private String totalInitialMargin;
+
+  /** Aggregate maintenance margin across all derivative positions (margin/collateral). */
+  @JsonProperty("total_maintenance_margin")
+  private String totalMaintenanceMargin;
+
+  /** Margin locked by open positions (margin/collateral). */
+  @JsonProperty("total_position_margin")
+  private String totalPositionMargin;
+
+  /** Total collateral posted against current liabilities. */
+  @JsonProperty("total_collateral")
+  private String totalCollateral;
+
   @JsonProperty("position_balances")
   private List<PositionBalance> positionBalances;
 
