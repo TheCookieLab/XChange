@@ -145,6 +145,31 @@ public class CryptoComPrivateStreamingServiceTest {
   }
 
   @Test
+  public void testConfirmationIsReplayedToALateSubscriber() {
+    // given: the request goes out immediately (request id assigned), but the caller delays
+    // subscribing - the classic warm-up race on a hot subject
+    RecordingPrivateService service = new RecordingPrivateService();
+    Observable<JsonNode> pending =
+        service.sendRequest("private/cancel-order", params("18342311"), true);
+    long requestId = service.lastSent().path("id").asLong();
+
+    // when: the confirmation arrives before any subscriber attaches
+    service.deliver(
+        message(
+            "{\"id\":"
+                + requestId
+                + ",\"method\":\"private/cancel-order\",\"code\":0,\"result\":{\"data\":[{\"order_id\":\"18342311\"}]}}"));
+
+    // then: the late subscriber still receives the confirmation - the size-1 replay subject
+    // keeps it available no matter when the caller attaches
+    TestObserver<JsonNode> observer = pending.test();
+    observer.assertNoErrors().assertComplete();
+    assertThat(observer.values()).hasSize(1);
+    assertThat(observer.values().get(0).at("/result/data/0/order_id").asText())
+        .isEqualTo("18342311");
+  }
+
+  @Test
   public void testSendRequestRejectsWithProviderError() {
     // given
     RecordingPrivateService service = new RecordingPrivateService();

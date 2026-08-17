@@ -12,11 +12,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
+import org.knowm.xchange.client.ResilienceUtils;
 import org.knowm.xchange.cryptocom.CryptoCom;
 import org.knowm.xchange.cryptocom.CryptoComExchange;
 import org.knowm.xchange.cryptocom.dto.CryptoComRequest;
@@ -29,6 +32,10 @@ import org.knowm.xchange.cryptocom.dto.trade.CryptoComOrderType;
 import org.knowm.xchange.cryptocom.dto.trade.CryptoComPlacementOutcome;
 import org.knowm.xchange.cryptocom.dto.trade.CryptoComTimeInForce;
 import org.knowm.xchange.cryptocom.dto.trade.CryptoComUserTrade;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
 
 public class CryptoComTradeServiceRawTest {
@@ -182,6 +189,94 @@ public class CryptoComTradeServiceRawTest {
 
     assertThat(placement.getOutcome()).isEqualTo(CryptoComPlacementOutcome.NOT_FOUND);
     assertThat(placement.getOrderId()).isNull();
+  }
+
+  @Test
+  public void notFoundOutcome_messageDemandsManualVerificationBeforeResubmit() throws Exception {
+    // given: placement crosses the network but reconciliation proves absence in the bounded window
+    CryptoCom cryptoCom = mock(CryptoCom.class);
+    when(cryptoCom.createOrder(any())).thenThrow(new IOException("timeout"));
+    when(cryptoCom.getOpenOrders(any())).thenAnswer(inv -> responseDataArray());
+    when(cryptoCom.getOrderHistory(any())).thenAnswer(inv -> response(order("o-2", "other-client")));
+    CryptoComTradeService tradeService = newTradeService(cryptoCom);
+
+    // when: the high-level caller asks for the order id of the NOT_FOUND outcome
+    LimitOrder limitOrder =
+        new LimitOrder(
+            Order.OrderType.BID,
+            new BigDecimal("0.5"),
+            CurrencyPair.BTC_USDT,
+            null,
+            new Date(),
+            new BigDecimal("50000"),
+            null,
+            null,
+            null,
+            null,
+            "client-ABC");
+
+    // then: the error is a bounded-window absence, never an authoritative rejection - it must
+    // demand manual verification before any re-submit, and confirm nothing was re-sent
+    assertThatThrownBy(() -> tradeService.placeLimitOrder(limitOrder))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("manual")
+        .hasMessageContaining("nothing was re-sent");
+    verify(cryptoCom, times(1)).createOrder(any());
+  }
+
+  @Test
+  public void standardOrder_staysOutsideTheResilienceChain() throws Exception {
+    // A non-idempotent placement is deliberately NOT wrapped in resilience decorators: an
+    // automatic retry could double-fill after an ambiguous transport failure, so the standard
+    // order must reach the wire directly (no apiCall limiter/decorator key, no retry).
+    CryptoCom cryptoCom = mock(CryptoCom.class);
+    when(cryptoCom.createOrder(any()))
+        .thenAnswer(
+            invocation -> {
+              lastRequest = invocation.getArgument(0);
+              ObjectNode result = mapper.createObjectNode();
+              result.put("order_id", "1");
+              CryptoComResponse response = new CryptoComResponse();
+              response.setResult(result);
+              return response;
+            });
+    RecordingRaw raw = newRecordingRaw(cryptoCom);
+
+    raw.createCryptoComOrder(
+        "BTC_USDT", CryptoComOrderSide.BUY, CryptoComOrderType.LIMIT, "50000", "0.5", null, "client-ABC");
+
+    assertThat(raw.lastApiMethod).isNull();
+    verify(cryptoCom, times(1)).createOrder(any());
+  }
+
+  @Test
+  public void advancedOrder_limiterKeyMatchesTheWireMethod() throws Exception {
+    CryptoCom cryptoCom = mock(CryptoCom.class);
+    when(cryptoCom.createAdvancedOrder(any()))
+        .thenAnswer(
+            invocation -> {
+              lastRequest = invocation.getArgument(0);
+              ObjectNode result = mapper.createObjectNode();
+              result.put("order_id", "9");
+              CryptoComResponse response = new CryptoComResponse();
+              response.setResult(result);
+              return response;
+            });
+    RecordingRaw raw = newRecordingRaw(cryptoCom);
+
+    raw.createCryptoComAdvancedOrder(
+        "BTC_USDT",
+        CryptoComOrderSide.SELL,
+        CryptoComOrderType.STOP_LOSS,
+        null,
+        "0.5",
+        null,
+        "49000",
+        CryptoComTimeInForce.GOOD_TILL_CANCEL,
+        "client-STOP");
+
+    assertThat(raw.lastApiMethod).isEqualTo("private/advanced/create-order");
+    verify(cryptoCom, times(1)).createAdvancedOrder(any());
   }
 
   @Test
@@ -359,6 +454,23 @@ public class CryptoComTradeServiceRawTest {
 
   private CryptoComRequest lastRequest;
 
+  /** Raw-service subclass that records the per-method resilience key used by apiCall. */
+  private static final class RecordingRaw extends CryptoComTradeServiceRaw {
+
+    String lastApiMethod;
+
+    RecordingRaw(CryptoComExchange exchange, ResilienceRegistries resilienceRegistries) {
+      super(exchange, resilienceRegistries);
+    }
+
+    @Override
+    protected <T> T apiCall(String apiMethod, ResilienceUtils.CallableApi<T> callable)
+        throws IOException {
+      lastApiMethod = apiMethod;
+      return super.apiCall(apiMethod, callable);
+    }
+  }
+
   private CryptoComTradeServiceRaw newRaw() throws Exception {
     return newRaw("key", "secret");
   }
@@ -395,6 +507,28 @@ public class CryptoComTradeServiceRawTest {
 
   private CryptoComTradeServiceRaw newRaw(CryptoCom cryptoCom) throws Exception {
     return newRaw(cryptoCom, "key", "secret");
+  }
+
+  private CryptoComTradeService newTradeService(CryptoCom cryptoCom) throws Exception {
+    CryptoComExchange exchange = mock(CryptoComExchange.class);
+    ExchangeSpecification spec = new ExchangeSpecification(CryptoComExchange.class);
+    spec.setApiKey("key");
+    spec.setSecretKey("secret");
+    when(exchange.getExchangeSpecification()).thenReturn(spec);
+    when(exchange.getCryptoCom()).thenReturn(cryptoCom);
+    when(exchange.nextRequestId()).thenReturn(1L);
+    return new CryptoComTradeService(exchange, new ResilienceRegistries());
+  }
+
+  private RecordingRaw newRecordingRaw(CryptoCom cryptoCom) throws Exception {
+    CryptoComExchange exchange = mock(CryptoComExchange.class);
+    ExchangeSpecification spec = new ExchangeSpecification(CryptoComExchange.class);
+    spec.setApiKey("key");
+    spec.setSecretKey("secret");
+    when(exchange.getExchangeSpecification()).thenReturn(spec);
+    when(exchange.getCryptoCom()).thenReturn(cryptoCom);
+    when(exchange.nextRequestId()).thenReturn(1L);
+    return new RecordingRaw(exchange, new ResilienceRegistries());
   }
 
   private CryptoComTradeServiceRaw newRaw(CryptoCom cryptoCom, String apiKey, String secretKey)

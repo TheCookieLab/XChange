@@ -206,12 +206,15 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
     CryptoComRequest request = buildRequest("private/advanced/create-order", params);
     long requestId = request.getId();
     try {
-// Placement is never automatically retried; reconcile on ambiguous transport failure.
-    CryptoComResponse response =
-        apiCall("private/advanced/create-order", () -> cryptoCom.createAdvancedOrder(request));
-    CryptoComOrderAck ack = toObject(response.getResult(), CryptoComOrderAck.class);
-    return new CryptoComOrderPlacementResult(
-        CryptoComPlacementOutcome.ACKED, requestId, ack == null ? null : ack.getOrderId(), clientOid);
+      // Placement is never automatically retried; reconcile on ambiguous transport failure.
+      CryptoComResponse response =
+          apiCall("private/advanced/create-order", () -> cryptoCom.createAdvancedOrder(request));
+      CryptoComOrderAck ack = toObject(response.getResult(), CryptoComOrderAck.class);
+      return new CryptoComOrderPlacementResult(
+          CryptoComPlacementOutcome.ACKED,
+          requestId,
+          ack == null ? null : ack.getOrderId(),
+          clientOid);
     } catch (IOException e) {
       return reconcile(requestId, "private/advanced/create-order", instrumentName, clientOid, e);
     }

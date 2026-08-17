@@ -51,6 +51,23 @@ public class CryptoComStreamingEventDeduplicatorTest {
   }
 
   @Test
+  public void testRePuttingExistingKeyDoesNotReorderOrEvict() {
+    CryptoComStreamingEventDeduplicator deduplicator = new CryptoComStreamingEventDeduplicator(2);
+
+    assertThat(deduplicator.isDuplicate("key-1")).isFalse();
+    assertThat(deduplicator.isDuplicate("key-2")).isFalse();
+    // re-issuing a live key is a duplicate and must neither reorder it nor evict anything
+    assertThat(deduplicator.isDuplicate("key-1")).isTrue();
+    assertThat(deduplicator.size()).isEqualTo(2);
+
+    // so the eldest key is still key-1: the next new key evicts it, not key-2
+    assertThat(deduplicator.isDuplicate("key-3")).isFalse();
+    assertThat(deduplicator.isDuplicate("key-2")).isTrue();
+    assertThat(deduplicator.isDuplicate("key-1")).isFalse();
+    assertThat(deduplicator.size()).isEqualTo(2);
+  }
+
+  @Test
   public void testClearResetsTheRecordedWindow() {
     CryptoComStreamingEventDeduplicator deduplicator = new CryptoComStreamingEventDeduplicator();
 

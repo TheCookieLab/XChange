@@ -124,6 +124,30 @@ public class CryptoComStreamingExchangeTest {
   }
 
   @Test
+  public void testPublicOnlyReconnectDropsStalePrivateTransport() {
+    // given: a previous authenticated connection left user-plane services wired to a private socket
+    CryptoComStreamingExchange exchange =
+        (CryptoComStreamingExchange)
+            ExchangeFactory.INSTANCE.createExchange(CryptoComStreamingExchange.class);
+    StubPrivateService stalePrivate = new StubPrivateService();
+    exchange.privateStreamingService = stalePrivate;
+    exchange.streamingTradeService = new CryptoComStreamingTradeService(stalePrivate);
+    exchange.streamingAccountService =
+        new CryptoComStreamingAccountService(
+            stalePrivate, new CryptoComStreamingEventDeduplicator());
+
+    // when: the next connect is public-only
+    exchange.dropStalePrivateTransport();
+
+    // then: no user-plane service survives on the stale socket
+    assertThat(exchange.privateStreamingService).isNull();
+    assertThat(exchange.streamingTradeService).isNull();
+    assertThat(exchange.streamingAccountService).isNull();
+    assertThat(exchange.getStreamingTradeService()).isNull();
+    assertThat(exchange.getStreamingAccountService()).isNull();
+  }
+
+  @Test
   public void testPublicOnlySubscriptionNeedsNoPrivateTransport() {
     ProductSubscription subscription =
         ProductSubscription.create()

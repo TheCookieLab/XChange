@@ -62,11 +62,11 @@ public class CryptoComStreamingExchange extends CryptoComExchange implements Str
   private CryptoComStreamingService publicStreamingService;
   /** True between {@link #disconnect()} and the next {@link #connect(ProductSubscription)}. */
   private boolean servicesDisposed;
-  private CryptoComPrivateStreamingService privateStreamingService;
+  CryptoComPrivateStreamingService privateStreamingService;
 
   private CryptoComStreamingMarketDataService streamingMarketDataService;
-  private CryptoComStreamingTradeService streamingTradeService;
-  private CryptoComStreamingAccountService streamingAccountService;
+  CryptoComStreamingTradeService streamingTradeService;
+  CryptoComStreamingAccountService streamingAccountService;
   private CryptoComStreamingEventDeduplicator eventDeduplicator;
 
   private boolean privateRequired;
@@ -144,7 +144,7 @@ public class CryptoComStreamingExchange extends CryptoComExchange implements Str
    * user transport and drop the private service layer entirely, so no balances/orders/trades
    * observable from an earlier connection survives this one.
    */
-  private void dropStalePrivateTransport() {
+  void dropStalePrivateTransport() {
     if (privateStreamingService != null) {
       CryptoComPrivateStreamingService stale = privateStreamingService;
       privateStreamingService = null;
