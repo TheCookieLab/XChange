@@ -75,6 +75,7 @@ jobs:
     - name: Publish next snapshot
       env:
         MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_TOKEN_USER }}
+        MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN_PASS }}
         MAVEN_OPTS: -Xmx3g
       run: |
         git fetch origin main && git reset --hard origin/main
