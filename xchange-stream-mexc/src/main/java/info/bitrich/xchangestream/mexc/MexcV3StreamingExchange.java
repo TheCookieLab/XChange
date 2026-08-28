@@ -367,7 +367,15 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
 
   @Override
   public boolean isAlive() {
-    return streamingService != null && streamingService.isSocketOpen();
+    // A transport whose TCP connection is up but whose WebSocket upgrade has not completed (or
+    // has failed) must not count as alive: the socket check alone is true from the moment TCP
+    // establishes, before the 101 settles the handshake. connect() reports success only for a
+    // real handshake, so an isAlive() that is true during the pending-upgrade window would
+    // hand concurrent connect() callers a premature complete() and let them treat a doomed
+    // transport as connected.
+    return streamingService != null
+        && streamingService.isSocketOpen()
+        && streamingService.isConnectionEstablished();
   }
 
   @Override

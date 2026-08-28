@@ -606,6 +606,24 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
   }
 
   /**
+   * Returns whether the WebSocket upgrade handshake has completed successfully on the current
+   * transport.
+   *
+   * <p>Unlike {@link #isSocketOpen()}, which only reports that the underlying TCP channel is
+   * open, this is {@code true} only after the server accepted the WebSocket upgrade. A channel
+   * whose TCP connection is established but whose handshake is still pending or has failed is
+   * not a usable WebSocket: callers that treat it as connected would report success for a
+   * connection that is about to fail.
+   *
+   * @return {@code true} if the handshake completed successfully; {@code false} while the TCP
+   *     connection is established but the upgrade has not completed
+   * @since 1.0.1
+   */
+  public boolean isConnectionEstablished() {
+    return connectionStateModel.getState() == State.OPEN;
+  }
+
+  /**
    * @return the generation of the most recent connection attempt. The counter is incremented on
    *     every {@link #openConnection()} (initial connect and reconnects); {@code 0} means no
    *     connection attempt has been made yet. Messages arriving on a connection whose generation is

@@ -253,7 +253,7 @@ class MexcV3StreamingExchangeTest {
     // and replaces all facades, which would tear down the active streams; the listen key must
     // also stay at one.
     Object serviceBefore = streamingServiceInstance(exchange);
-    forceSocketOpen(serviceBefore);
+    forceConnected(serviceBefore);
     connect.test().awaitDone(10, TimeUnit.SECONDS).assertComplete();
 
     assertSame(serviceBefore, streamingServiceInstance(exchange));
@@ -268,11 +268,31 @@ class MexcV3StreamingExchangeTest {
     return serviceField.get(exchange);
   }
 
-  private static void forceSocketOpen(Object service) throws Exception {
+  /**
+   * Simulates a fully established transport: the socket is open AND the WebSocket handshake has
+   * completed. The exchange treats a socket that is open but not yet upgraded as not alive (the
+   * upgrade can still fail), so a transport simulation must convey both facts: an open socket
+   * with a pending or failed handshake would otherwise take the not-alive path and rebuild,
+   * which is not what a connected transport does.
+   */
+  private static void forceConnected(Object service) throws Exception {
     java.lang.reflect.Field channelField =
         NettyStreamingService.class.getDeclaredField("webSocketChannel");
     channelField.setAccessible(true);
     channelField.set(service, new io.netty.channel.embedded.EmbeddedChannel());
+    java.lang.reflect.Field stateModelField =
+        NettyStreamingService.class.getDeclaredField("connectionStateModel");
+    stateModelField.setAccessible(true);
+    Object stateModel = stateModelField.get(service);
+    java.lang.reflect.Field stateField = stateModel.getClass().getDeclaredField("state");
+    stateField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    java.util.concurrent.atomic.AtomicReference<info.bitrich.xchangestream.service.netty.ConnectionStateModel.State>
+        state =
+            (java.util.concurrent.atomic.AtomicReference<
+                    info.bitrich.xchangestream.service.netty.ConnectionStateModel.State>)
+                stateField.get(stateModel);
+    state.set(info.bitrich.xchangestream.service.netty.ConnectionStateModel.State.OPEN);
   }
 
   private static boolean compressedMessagesInstance(Object service) throws Exception {
@@ -449,7 +469,7 @@ class MexcV3StreamingExchangeTest {
 
     // A live transport is never replaced by a sibling chain: subscribing the second chain
     // completes without rebuilding, which would disconnect the active streams.
-    forceSocketOpen(serviceAfterFirst);
+    forceConnected(serviceAfterFirst);
     second.test().awaitDone(10, TimeUnit.SECONDS).assertComplete();
     assertSame(serviceAfterFirst, streamingServiceInstance(exchange));
     exchange.disconnect().onErrorComplete().blockingAwait();
@@ -1220,6 +1240,70 @@ class MexcV3StreamingExchangeTest {
     assertNotNull(retryError.get());
     assertNotSame(settledError.get(), retryError.get());
     assertFalse(exchange.isAlive());
+    filler.close();
+  }
+
+  @Test
+  void joiningSubscriberWhileTheHandshakeIsPendingSharesTheAttempt() throws Exception {
+    // The CI-failing window: the initiator's TCP connect has established (the server accepted
+    // and read the upgrade request) but the server has not answered the 101 yet. The transport
+    // must not count as alive in that window — the upgrade can still fail — so a joining
+    // subscriber shares the in-flight attempt and settles only when the handshake settles,
+    // instead of completing early on a transport that may be about to fail.
+    ServerSocket serverSocket = new ServerSocket(0, 1);
+    CountDownLatch releaseQueue = new CountDownLatch(1);
+    CountDownLatch tcpAccepted = new CountDownLatch(1);
+    CountDownLatch releaseUpgrade = new CountDownLatch(1);
+    CountDownLatch socketClosed = new CountDownLatch(1);
+    startUpgradeServer(
+        serverSocket, releaseQueue, tcpAccepted, releaseUpgrade, socketClosed, true);
+
+    // Fills the accept queue so the client's SYN is dropped while it stays full.
+    Socket filler = new Socket();
+    filler.connect(new InetSocketAddress("127.0.0.1", serverSocket.getLocalPort()));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
+        "ws://127.0.0.1:" + serverSocket.getLocalPort() + "/ws");
+    exchange.applySpecification(spec);
+
+    TestObserver<Void> initiator = exchange.connect().test();
+    releaseQueue.countDown();
+    assertTrue(tcpAccepted.await(10, TimeUnit.SECONDS));
+    // The server holds the upgrade request; the handshake is genuinely pending. Dispose the
+    // initiating observer so only the joining subscriber remains on the cached attempt.
+    initiator.dispose();
+
+    Object serviceBefore = streamingServiceInstance(exchange);
+    CountDownLatch joinedSettled = new CountDownLatch(1);
+    AtomicReference<Throwable> joinedError = new AtomicReference<>();
+    exchange
+        .connect()
+        .subscribe(
+            () -> joinedSettled.countDown(),
+            t -> {
+              joinedError.set(t);
+              joinedSettled.countDown();
+            });
+
+    // No completion signal exists before the server releases the 101: an early settle can only
+    // come from classifying the pending-handshake transport as alive, which is the CI race.
+    assertFalse(
+        joinedSettled.await(1, TimeUnit.SECONDS),
+        "joining subscriber completed before the handshake settled");
+    assertSame(serviceBefore, streamingServiceInstance(exchange));
+
+    releaseUpgrade.countDown();
+    assertTrue(joinedSettled.await(10, TimeUnit.SECONDS));
+    assertNull(joinedError.get());
+    assertTrue(exchange.isAlive());
+
+    // Cleanup: the explicit disconnect closes the live socket so the server sees EOF.
+    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
+    assertTrue(socketClosed.await(10, TimeUnit.SECONDS));
     filler.close();
   }
 
