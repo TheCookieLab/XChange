@@ -548,10 +548,15 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
         keepAliveDisposable = null;
       }
     }
-    if (attempt.key != null) {
-      if (listenKey != null && listenKey.equals(attempt.key)) {
-        listenKey = null;
-      }
+    if (attempt.key != null && listenKey != null && listenKey.equals(attempt.key)) {
+      // The captured key is still the one this exchange owns: close it and clear the reference.
+      // A disconnect that landed after the key was created captured the key in the same
+      // critical section that moved the generation, closed it, and cleared the field — closing
+      // it again here would delete a key that is already gone (and a replacement key that
+      // merely shares the name would be deleted out from under its keepalive). A key created
+      // after the disconnect (the orphan case this release exists for) is still the current
+      // one and is closed here.
+      listenKey = null;
       closeListenKey(attempt.key);
     }
     if (attempt.service != null) {

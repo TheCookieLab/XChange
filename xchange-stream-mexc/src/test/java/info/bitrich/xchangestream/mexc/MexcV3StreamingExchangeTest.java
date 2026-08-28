@@ -978,6 +978,81 @@ class MexcV3StreamingExchangeTest {
   }
 
   @Test
+  void disconnectBetweenKeyCreationAndDeferredReleaseClosesTheKeyExactlyOnce() throws Exception {
+    // Deterministic seam for the disconnect-lands-between-key-creation-and-release window: the
+    // IO scheduler (which runs key creation and the deferred release) is gated, so the test
+    // dispatches each io task in the exact order that reproduces it. The attempt passes its
+    // generation check at subscription (before any io task runs) and queues its key creation;
+    // the disconnect then bumps the generation while no key exists yet (it captures nothing and
+    // reports complete); the queued key creation runs and installs the key; and the attempt's
+    // deferred release — which fires because its generation moved — runs last. The release must
+    // close the key it created exactly once: the disconnect closed nothing (no key existed when
+    // it ran), so a release that skipped or duplicated the close would either orphan the key
+    // until its 60-minute expiry or delete a key that is already gone.
+    wireMock = new WireMockServer(wireMockConfig().dynamicPort());
+    wireMock.start();
+    wireMock.stubFor(
+        post(urlEqualTo("/api/v3/userDataStream"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"K1\"}")));
+    wireMock.stubFor(
+        delete(urlEqualTo("/api/v3/userDataStream?listenKey=K1"))
+            .willReturn(aResponse().withBody("{\"listenKey\":\"K1\"}")));
+
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setApiKey("test_api_key");
+    spec.setSecretKey("test_secret_key");
+    spec.setHost("localhost");
+    spec.setSslUri("http://localhost:" + wireMock.port());
+    spec.setPort(wireMock.port());
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    exchange.applySpecification(spec);
+    // Keepalive ticks must not fire during the test.
+    exchange.keepAliveIntervalSeconds = 3600L;
+
+    GatedScheduler io = new GatedScheduler();
+    RxJavaPlugins.setIoSchedulerHandler(scheduler -> io);
+    try {
+      TestObserver<Void> first;
+      synchronized (exchange) {
+        // The attempt's generation check passes here (subscription time); only the key
+        // creation is queued. The disconnect then bumps the generation: no key exists yet, so
+        // it captures nothing, closes nothing, and reports complete.
+        first = exchange.connect().test();
+        exchange.disconnect().blockingAwait();
+      }
+
+      // Key creation installs K1 and captures the attempt's resources; the deferred release is
+      // then queued because the generation moved while the key was being created.
+      io.dispatchFirst();
+      io.dispatchFirst();
+
+      first.awaitDone(10, TimeUnit.SECONDS).assertComplete();
+
+      // The release closed exactly the key it created, once: nothing else existed to close
+      // (the disconnect saw no key), and the key must not be left to expire in 60 minutes.
+      assertNull(listenKeyInstance(exchange));
+      assertNull(keepAliveDisposableInstance(exchange));
+      wireMock.verify(1, postRequestedFor(urlEqualTo("/api/v3/userDataStream")));
+      wireMock.verify(1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=K1")));
+
+      // The exchange still works end to end: a fresh connection starts a new lifecycle and a
+      // later disconnect closes its key normally.
+      io.open();
+      exchange.connect().test().awaitDone(10, TimeUnit.SECONDS).assertError(IOException.class);
+      assertEquals("K1", listenKeyInstance(exchange));
+      exchange.disconnect().onErrorComplete().blockingAwait();
+      assertNull(listenKeyInstance(exchange));
+      assertNull(keepAliveDisposableInstance(exchange));
+      wireMock.verify(2, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=K1")));
+    } finally {
+      RxJavaPlugins.setIoSchedulerHandler(null);
+    }
+  }
+
+  @Test
   void disconnectClosesAnInFlightTransportConnectThatCompletesAfterwards() throws Exception {
     // Deterministic seam: a backlog-1 raw TCP server. A filler connection fills the accept
     // queue, so the client's SYN is dropped and its TCP connect stays pending; the disconnect
