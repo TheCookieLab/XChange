@@ -21,15 +21,17 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: '25'
+        java-version: '25.0.4+1'
         cache: maven
     - name: Publish Maven snapshots
       env:
         MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_TOKEN_USER || secrets.MAVEN_CENTRAL_USERNAME }}
         MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN_PASS || secrets.MAVEN_CENTRAL_PASSWORD }}
+        MAVEN_OPTS: -Xmx3g
       run: |
         mvn --batch-mode --no-transfer-progress \
           --settings etc/settings.xml \
           -Dfmt.skip=true \
           -DskipIntegrationTests=true \
+          -Dsurefire.fork.tuning.args=-Xmx1g \
           clean deploy

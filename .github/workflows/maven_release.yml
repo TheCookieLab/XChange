@@ -29,7 +29,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: '25'
+        java-version: '25.0.4+1'
         cache: maven
     - name: Import GPG key
       uses: crazy-max/ghaction-import-gpg@v6
@@ -45,7 +45,7 @@ jobs:
         MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_TOKEN_USER }}
         MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN_PASS }}
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        MAVEN_OPTS: -Xmx4g
+        MAVEN_OPTS: -Xmx3g
       run: |
         mvn --batch-mode --no-transfer-progress \
           --settings etc/settings.xml \
@@ -54,27 +54,28 @@ jobs:
           -DreleaseVersion="${{ inputs.release_version }}" \
           -DdevelopmentVersion="${{ inputs.next_snapshot_version }}" \
           -DlocalCheckout=true \
-          -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=\"$GPG_PASSPHRASE\" -DskipIntegrationTests=true" \
+          -Dsurefire.fork.tuning.args=-Xmx1g \
+          -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=\"$GPG_PASSPHRASE\" -DskipIntegrationTests=true -Dsurefire.fork.tuning.args=-Xmx1g" \
           release:clean release:prepare
     - name: Perform release
       env:
         MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_TOKEN_USER }}
         MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN_PASS }}
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        MAVEN_OPTS: -Xmx4g
+        MAVEN_OPTS: -Xmx3g
       run: |
         mvn --batch-mode --no-transfer-progress \
           --settings etc/settings.xml \
           -Prelease-sign-artifacts,central-release-publish \
           -Dgpg.passphrase="$GPG_PASSPHRASE" \
           -DlocalCheckout=true \
-          -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=\"$GPG_PASSPHRASE\" -DskipIntegrationTests=true" \
+          -Dsurefire.fork.tuning.args=-Xmx1g \
+          -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=\"$GPG_PASSPHRASE\" -DskipIntegrationTests=true -Dsurefire.fork.tuning.args=-Xmx1g" \
           release:perform
     - name: Publish next snapshot
       env:
         MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_TOKEN_USER }}
-        MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN_PASS }}
-        MAVEN_OPTS: -Xmx4g
+        MAVEN_OPTS: -Xmx3g
       run: |
         git fetch origin main && git reset --hard origin/main
         CURRENT_VERSION="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' pom.xml | head -n1)"
@@ -89,4 +90,5 @@ jobs:
           --settings etc/settings.xml \
           -Dfmt.skip=true \
           -DskipIntegrationTests=true \
+          -Dsurefire.fork.tuning.args=-Xmx1g \
           clean deploy

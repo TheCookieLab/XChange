@@ -172,6 +172,8 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <skipIntegrationTests>true</skipIntegrationTests>
+        <!-- Optional extra args appended to surefire fork command lines; CI passes -Xmx cap. -->
+        <surefire.fork.tuning.args />
         <version.assertj>3.27.7</version.assertj>
         <version.bouncycastle>1.84</version.bouncycastle>
         <version.byte-buddy-agent>1.18.8</version.byte-buddy-agent>
@@ -684,7 +686,7 @@
                         --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.util=ALL-UNNAMED
                         --add-opens java.base/java.io=ALL-UNNAMED
-                        --add-opens java.base/jdk.internal.loader=ALL-UNNAMED</argLine>
+                        --add-opens java.base/jdk.internal.loader=ALL-UNNAMED ${surefire.fork.tuning.args}</argLine>
                 </configuration>
             </plugin>
             <plugin>
