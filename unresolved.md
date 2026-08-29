@@ -8,8 +8,16 @@
    `xchange-uniswap/README.md`; tracked as Linear CF-436. Code hashes for
    `uniswap.deployments.codeHashes` must be pinned from the node or the
    official Uniswap deployment registry before any funded use.
-2. **OWASP dependency-check NVD scan** — the plugin requires an NVD API key
-   (`nvdApiKey`), which is not configured in this environment; the scan fails
-   with "Invalid API Key". The OSV audit of the full resolved compile graph
-   (46 packages) reports zero findings as a substitute, but the NVD-based scan
-   should be re-run when a key is available.
+## 2026-08-29 — xchange-parent-1.0.1 release workflow re-publish
+
+1. **Perform can never be green for 1.0.1 — do not re-dispatch.** 1.0.1
+   components are already published on Maven Central (release run
+   33213721880, 2026-08-28); Central rejects re-publishing existing components
+   ("Component with package url ... already exists"), so run 33221842148's
+   Perform failure is permanent and expected. Release is complete on Central,
+   built from commit `e81ab59bae` (pre-fix). Both connection-lifecycle race
+   fixes (96 ms `isAlive` flake, double-DELETE in
+   `disconnectCancelsAnInFlightPrivateConnectionAttempt`) are on main
+   (`143650df16`, 1.0.2-SNAPSHOT) and ship with the 1.0.2 release. Tag
+   `xchange-parent-1.0.1` pinned to `e81ab59bae` to match Central artifacts;
+   GitHub release published 2026-08-29.

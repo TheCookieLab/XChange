@@ -16,6 +16,14 @@
       "tracker": null,
       "blocked": true,
       "details": "Configure nvdApiKey (settings.xml or -DnvdApiKey) and re-run mvn org.owasp:dependency-check-maven:check."
+    },
+    {
+      "id": "release-101-republish",
+      "date": "2026-08-29",
+      "summary": "Maven release workflow Perform for xchange-parent-1.0.1 can never be green: 1.0.1 components are already published on Maven Central and Central rejects re-publishing existing components.",
+      "tracker": null,
+      "blocked": true,
+      "details": "Release complete on Central from commit e81ab59bae (run 33213721880); Perform failure in re-dispatch 33221842148 is permanent and expected. Race fixes are on main (143650df16, 1.0.2-SNAPSHOT). Tag pinned to e81ab59bae; GitHub release published 2026-08-29. Do not re-dispatch maven_release.yml with release_version=1.0.1."
     }
   ]
 }
