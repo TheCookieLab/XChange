@@ -9,7 +9,7 @@ import lombok.Getter;
 /**
  * Fee and volume summary returned by Coinbase's transaction-summary endpoint.
  *
- * <p>When queried with {@code product_type=FUTURE}, {@link #getMarginRate()} and the fee tier
+ * <p>When queried with {@code product_type=FUTURE}, {@link #marginRate} and the fee tier
  * describe the current CFM economics for that response filter. Values are observations and are not
  * cached or converted by this transport DTO.
  */
