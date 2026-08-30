@@ -5,7 +5,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
 import java.util.Collections;
 import org.junit.Test;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
@@ -16,6 +15,8 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
@@ -449,5 +450,31 @@ public class CoinbaseAdaptersTest {
 
     assertNotNull(adapted);
     assertEquals(new BigDecimal("2.5"), adapted.getOriginalAmount());
+  }
+  @Test
+  public void testDeserializeCurrentCfmWireShapes() throws Exception {
+    String balanceJson =
+        "{\"balance_summary\":{\"futures_buying_power\":{\"value\":\"5000\",\"currency\":\"USD\"},"
+            + "\"available_margin\":{\"value\":\"4500\",\"currency\":\"USD\"},"
+            + "\"intraday_margin_window_measure\":{\"liquidation_buffer\":\"125.5\"},"
+            + "\"liquidation_buffer_percentage\":\"0.05\"}}";
+    CoinbaseFuturesBalanceSummaryResponse balance =
+        new ObjectMapper().readValue(balanceJson, CoinbaseFuturesBalanceSummaryResponse.class);
+    assertEquals("USD", balance.getBalanceSummary().getFuturesBuyingPower().getCurrency());
+    assertEquals(new BigDecimal("125.5"),
+        balance.getBalanceSummary().getIntradayMarginWindowMeasure().getLiquidationBuffer());
+
+    CoinbaseFuturesPosition position =
+        new ObjectMapper().readValue(
+            "{\"product_id\":\"ETP-20DEC30-CDE\",\"expiration_time\":\"2026-12-20T00:00:00Z\","
+                + "\"side\":\"LONG\",\"number_of_contracts\":\"2.5\"}",
+            CoinbaseFuturesPosition.class);
+    assertEquals(new BigDecimal("2.5"), position.getNumberOfContracts());
+
+    CoinbaseTransactionSummaryResponse summary =
+        new ObjectMapper().readValue(
+            "{\"margin_rate\":{\"value\":\"0.12\"}}",
+            CoinbaseTransactionSummaryResponse.class);
+    assertEquals(new BigDecimal("0.12"), summary.getMarginRate());
   }
 }

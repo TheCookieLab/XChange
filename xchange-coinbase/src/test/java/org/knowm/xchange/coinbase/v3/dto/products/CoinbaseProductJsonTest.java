@@ -56,9 +56,23 @@ public class CoinbaseProductJsonTest {
     String json = "{\n"
         + "  \"product_id\": \"BIP-20DEC30-CDE\",\n"
         + "  \"product_type\": \"FUTURE\",\n"
+        + "  \"product_venue\": \"CDE\",\n"
+        + "  \"base_increment\": \"0.0001\",\n"
+        + "  \"quote_increment\": \"0.01\",\n"
+        + "  \"price_increment\": \"0.01\",\n"
+        + "  \"base_min_size\": \"0.0001\",\n"
+        + "  \"base_max_size\": \"1000\",\n"
+        + "  \"quote_min_size\": \"1\",\n"
+        + "  \"quote_max_size\": \"1000000\",\n"
         + "  \"quote_currency_id\": \"USD\",\n"
         + "  \"future_product_details\": {\n"
+        + "    \"venue\": \"CDE\",\n"
+        + "    \"contract_code\": \"BIP-20DEC30-CDE\",\n"
+        + "    \"contract_expiry\": \"2026-12-20T00:00:00Z\",\n"
+        + "    \"contract_size\": \"0.1\",\n"
         + "    \"contract_root_unit\": \"BTC\",\n"
+        + "    \"contract_expiry_type\": \"EXPIRING\",\n"
+        + "    \"perpetual_details\": {\"max_leverage\": \"10\"},\n"
         + "    \"funding_rate\": \"0.000024\",\n"
         + "    \"funding_time\": \"2026-02-08T14:00:00Z\",\n"
         + "    \"funding_interval\": \"3600s\",\n"
@@ -72,20 +86,26 @@ public class CoinbaseProductJsonTest {
         + "    }\n"
         + "  }\n"
         + "}";
-
     CoinbaseProductResponse product = mapper.readValue(json, CoinbaseProductResponse.class);
 
     assertNotNull("Product should not be null", product);
     assertEquals("Product ID should match", "BIP-20DEC30-CDE", product.getProductId());
-    assertEquals("Product type should match", "FUTURE", product.getProductType());
-    assertEquals("Quote currency id should match", "USD", product.getQuoteCurrencyId());
+    assertEquals("FUTURE", product.getProductType());
+    assertEquals("USD", product.getQuoteCurrencyId());
+    assertEquals("CDE", product.getProductVenue());
+    assertEquals(new BigDecimal("0.0001"), product.getBaseIncrement());
+    assertEquals(new BigDecimal("0.01"), product.getQuoteIncrement());
+    assertEquals(new BigDecimal("0.01"), product.getPriceIncrement());
+    assertEquals(new BigDecimal("0.0001"), product.getBaseMinSize());
+    assertEquals(new BigDecimal("1"), product.getQuoteMinSize());
 
     CoinbaseFutureProductDetails details = product.getFutureProductDetails();
     assertNotNull("Future product details should not be null", details);
-    assertEquals("Contract root unit should match", "BTC", details.getContractRootUnit());
-    assertEquals(new BigDecimal("0.000024"), details.getFundingRate());
-    assertEquals(Instant.parse("2026-02-08T14:00:00Z"), details.getFundingTime());
-    assertEquals(Duration.ofHours(1), details.getFundingInterval());
+    assertEquals("BIP-20DEC30-CDE", details.getContractCode());
+    assertEquals("CDE", details.getVenue());
+    assertEquals(new BigDecimal("0.1"), details.getContractSize());
+    assertEquals("EXPIRING", details.getContractExpiryType());
+    assertEquals(new BigDecimal("10"), details.getPerpetualDetails().getMaxLeverage());
 
     assertNotNull(details.getIntradayMarginRate());
     assertEquals(new BigDecimal("0.1000185"), details.getIntradayMarginRate().getLongMarginRate());

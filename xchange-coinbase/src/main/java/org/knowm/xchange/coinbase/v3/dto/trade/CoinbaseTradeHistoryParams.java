@@ -236,3 +236,4 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   public void setProductTypes(Collection<String> productTypes) {
     this.productTypes = productTypes == null ? null : new HashSet<>(productTypes);
   }
+}
