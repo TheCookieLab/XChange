@@ -46,7 +46,8 @@ public class CoinbasePaginationGuardTest {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     CoinbaseOrdersResponse page = new CoinbaseOrdersResponse(Collections.emptyList(), "stuck");
     when(authenticated.listFills(
-            any(ParamsDigest.class), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+            any(ParamsDigest.class), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+            any(), any(), any(), any()))
         .thenReturn(page);
 
     CoinbaseTradeService service =

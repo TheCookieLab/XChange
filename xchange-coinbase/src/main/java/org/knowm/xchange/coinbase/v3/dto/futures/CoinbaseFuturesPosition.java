@@ -7,53 +7,48 @@ import java.math.BigDecimal;
 import lombok.Getter;
 
 /**
- * Represents a futures position.
+ * A position returned by Coinbase's CFM positions endpoint.
+ *
+ * <p>Contract quantity and all prices/PnL values remain decimal values. The side is the API's
+ * explicit {@code LONG}, {@code SHORT}, or {@code UNKNOWN} value and must not be inferred from a
+ * signed quantity when the response supplies it.
  */
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoinbaseFuturesPosition {
 
   private final String productId;
-  private final String contractSize;
+  private final String expirationTime;
   private final String side;
-  private final BigDecimal amount;
-  private final BigDecimal avgEntryPrice;
-  private final BigDecimal currentPrice;
-  private final BigDecimal unrealizedPnl;
-  private final String expiryTime;
   private final BigDecimal numberOfContracts;
-  private final BigDecimal realizedPnl;
-  private final BigDecimal entryPrice;
+  private final BigDecimal currentPrice;
+  private final BigDecimal avgEntryPrice;
+  private final BigDecimal unrealizedPnl;
+  private final BigDecimal dailyRealizedPnl;
 
   @JsonCreator
   public CoinbaseFuturesPosition(
       @JsonProperty("product_id") String productId,
-      @JsonProperty("contract_size") String contractSize,
+      @JsonProperty("expiration_time") String expirationTime,
       @JsonProperty("side") String side,
-      @JsonProperty("amount") BigDecimal amount,
-      @JsonProperty("avg_entry_price") BigDecimal avgEntryPrice,
-      @JsonProperty("current_price") BigDecimal currentPrice,
-      @JsonProperty("unrealized_pnl") BigDecimal unrealizedPnl,
-      @JsonProperty("expiry_time") String expiryTime,
       @JsonProperty("number_of_contracts") BigDecimal numberOfContracts,
-      @JsonProperty("realized_pnl") BigDecimal realizedPnl,
-      @JsonProperty("entry_price") BigDecimal entryPrice) {
+      @JsonProperty("current_price") BigDecimal currentPrice,
+      @JsonProperty("avg_entry_price") BigDecimal avgEntryPrice,
+      @JsonProperty("unrealized_pnl") BigDecimal unrealizedPnl,
+      @JsonProperty("daily_realized_pnl") BigDecimal dailyRealizedPnl) {
     this.productId = productId;
-    this.contractSize = contractSize;
+    this.expirationTime = expirationTime;
     this.side = side;
-    this.amount = amount;
-    this.avgEntryPrice = avgEntryPrice;
-    this.currentPrice = currentPrice;
-    this.unrealizedPnl = unrealizedPnl;
-    this.expiryTime = expiryTime;
     this.numberOfContracts = numberOfContracts;
-    this.realizedPnl = realizedPnl;
-    this.entryPrice = entryPrice;
+    this.currentPrice = currentPrice;
+    this.avgEntryPrice = avgEntryPrice;
+    this.unrealizedPnl = unrealizedPnl;
+    this.dailyRealizedPnl = dailyRealizedPnl;
   }
 
   @Override
   public String toString() {
-    return "CoinbaseFuturesPosition [productId=" + productId + ", side=" + side + ", numberOfContracts=" + numberOfContracts + "]";
+    return "CoinbaseFuturesPosition [productId=" + productId + ", side=" + side
+        + ", numberOfContracts=" + numberOfContracts + "]";
   }
 }
-

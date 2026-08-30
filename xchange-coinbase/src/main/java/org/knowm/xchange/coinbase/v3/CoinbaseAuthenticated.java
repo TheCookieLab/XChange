@@ -148,7 +148,11 @@ public interface CoinbaseAuthenticated extends Coinbase {
       @QueryParam("end_sequence_timestamp") String endSequenceTimestamp,
       @QueryParam("retail_portfolio_id") String retailPortfolioId,
       @QueryParam("limit") Integer limit, @QueryParam("cursor") String cursor,
-      @QueryParam("sort_by") String sortBy) throws IOException, CoinbaseException;
+      @QueryParam("sort_by") String sortBy,
+      @QueryParam("asset_filters") List<String> assetFilters,
+      @QueryParam("order_types") List<String> orderTypes,
+      @QueryParam("order_side") String orderSide,
+      @QueryParam("product_types") List<String> productTypes) throws IOException, CoinbaseException;
 
   @GET
   @Path("orders/historical/{order_id}")
@@ -171,7 +175,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @Path("best_bid_ask")
   CoinbaseBestBidAsksResponse getBestBidAsk(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
-      @QueryParam("product_ids") String productId) throws IOException, CoinbaseException;
+      @QueryParam("product_ids") List<String> productIds) throws IOException, CoinbaseException;
 
   @GET
   @Path("product_book")

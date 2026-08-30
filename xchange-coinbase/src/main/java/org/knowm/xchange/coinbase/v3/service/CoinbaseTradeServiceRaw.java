@@ -82,7 +82,7 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     String retailPortfolioId = params.getRetailPortfolioId();
 
     return coinbaseAdvancedTrade.listFills(authTokenCreator, orderIds, tradeIds, productIds,
-        startTs, endTs, retailPortfolioId, limit, cursor, null);
+        startTs, endTs, retailPortfolioId, limit, cursor, null, null, null, null, null, null);
   }
 
   /**

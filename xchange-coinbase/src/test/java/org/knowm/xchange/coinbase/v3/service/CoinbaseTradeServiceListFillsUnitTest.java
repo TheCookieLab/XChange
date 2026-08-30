@@ -55,6 +55,10 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         eq("portfolio-uuid"),
         eq(50),
         isNull(),
+        isNull(),
+        isNull(),
+        isNull(),
+        isNull(),
         isNull())).thenReturn(response);
 
     CoinbaseOrdersResponse got = raw.listFills(params);
@@ -68,6 +72,10 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         eq("2026-02-08T00:01:00Z"),
         eq("portfolio-uuid"),
         eq(50),
+        isNull(),
+        isNull(),
+        isNull(),
+        isNull(),
         isNull(),
         isNull());
   }
@@ -88,6 +96,9 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         eq("portfolio-uuid"),
         isNull(),
         isNull(),
+        isNull(),
+        isNull(),
+        isNull(),
         isNull())).thenReturn(response);
 
     CoinbaseOrdersResponse got = raw.listFills(params);
@@ -100,6 +111,9 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         isNull(),
         isNull(),
         eq("portfolio-uuid"),
+        isNull(),
+        isNull(),
+        isNull(),
         isNull(),
         isNull(),
         isNull());

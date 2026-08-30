@@ -16,6 +16,8 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
@@ -249,11 +251,18 @@ public final class CoinbaseAdapters {
    * Adapt a futures balance summary response to a futures wallet.
    */
   public static Wallet adaptFuturesWallet(CoinbaseFuturesBalanceSummaryResponse response) {
-    if (response == null) {
+    if (response == null || response.getBalanceSummary() == null) {
       return null;
     }
-    Balance balance = buildBalance(Currency.USD, response.getTotalUsdBalance(),
-        response.getAvailableMargin());
+    CoinbaseFuturesBalanceSummary summary = response.getBalanceSummary();
+    CoinbaseAmount total = summary.getTotalUsdBalance();
+    CoinbaseAmount available = summary.getAvailableMargin();
+    if (total == null || available == null || total.getCurrency() == null
+        || !total.getCurrency().equals(available.getCurrency())) {
+      return null;
+    }
+    Balance balance = buildBalance(Currency.getInstance(total.getCurrency()), total.getValue(),
+        available.getValue());
     if (balance == null) {
       return null;
     }
@@ -295,10 +304,8 @@ public final class CoinbaseAdapters {
     }
     Instrument instrument = adaptInstrument(position.getProductId());
     OpenPosition.Type type = adaptPositionType(position.getSide());
-    BigDecimal size =
-        position.getAmount() != null ? position.getAmount() : position.getNumberOfContracts();
-    BigDecimal price =
-        position.getAvgEntryPrice() != null ? position.getAvgEntryPrice() : position.getEntryPrice();
+    BigDecimal size = position.getNumberOfContracts();
+    BigDecimal price = position.getAvgEntryPrice();
     return OpenPosition.builder()
         .id(position.getProductId())
         .instrument(instrument)

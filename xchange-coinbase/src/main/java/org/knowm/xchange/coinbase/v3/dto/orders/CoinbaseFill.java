@@ -8,11 +8,17 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import lombok.Getter;
+import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.instrument.Instrument;
-import org.knowm.xchange.coinbase.CoinbaseAdapters;
 
+/**
+ * A fill from Advanced Trade's historical fills endpoint.
+ *
+ * <p>Both trade time and sequence time are retained because sequence time is the authoritative
+ * pagination watermark. Commission is the exchange-reported amount and is never estimated here.
+ */
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoinbaseFill {
@@ -26,6 +32,7 @@ public class CoinbaseFill {
   private final BigDecimal size;
   private final BigDecimal commission;
   private final String productId;
+  private final Date sequenceTimestamp;
   private final String liquidityIndicator;
   private final boolean sizeInQuote;
   private final String userId;
@@ -43,22 +50,22 @@ public class CoinbaseFill {
       @JsonProperty("size") BigDecimal size,
       @JsonProperty("commission") BigDecimal commission,
       @JsonProperty("product_id") String productId,
+      @JsonProperty("sequence_timestamp") String sequenceTimestamp,
       @JsonProperty("liquidity_indicator") String liquidityIndicator,
       @JsonProperty("size_in_quote") boolean sizeInQuote,
       @JsonProperty("user_id") String userId,
       @JsonProperty("side") String side,
       @JsonProperty("retail_portfolio_id") String retailPortfolioId) {
-
     this.entryId = entryId;
     this.tradeId = tradeId;
     this.orderId = orderId;
-    this.tradeTime = tradeTime == null ? null
-        : Date.from(DateTimeFormatter.ISO_INSTANT.parse(tradeTime, Instant::from));
+    this.tradeTime = parseTimestamp(tradeTime);
     this.tradeType = tradeType;
     this.price = price;
     this.size = size;
     this.commission = commission;
     this.productId = productId;
+    this.sequenceTimestamp = parseTimestamp(sequenceTimestamp);
     this.liquidityIndicator = liquidityIndicator;
     this.sizeInQuote = sizeInQuote;
     this.userId = userId;
@@ -66,20 +73,27 @@ public class CoinbaseFill {
     this.retailPortfolioId = retailPortfolioId;
   }
 
+  private static Date parseTimestamp(String value) {
+    return value == null || value.isBlank()
+        ? null : Date.from(DateTimeFormatter.ISO_INSTANT.parse(value, Instant::from));
+  }
+
+  /** @return the XChange order type inferred from the API side value. */
   public Order.OrderType getOrderType() {
     return CoinbaseAdapters.adaptOrderType(side);
   }
 
+  /** @return the instrument identified by the canonical Coinbase product id. */
   public Instrument getInstrument() {
     return CoinbaseAdapters.adaptInstrument(productId);
   }
 
+  /** @return quote currency for a two-component spot product, otherwise {@code null}. */
   public Currency getFeeCurrency() {
-    // Commission currency is quote currency for spot
-    if (productId == null) return null;
+    if (productId == null) {
+      return null;
+    }
     String[] tokens = productId.split("-");
     return tokens.length == 2 ? Currency.getInstance(tokens[1]) : null;
   }
 }
-
-

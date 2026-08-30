@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.Collections;
 import org.junit.Test;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
@@ -230,16 +232,13 @@ public class CoinbaseAdaptersTest {
     CoinbaseFuturesPosition position =
         new CoinbaseFuturesPosition(
             "BTC-USD-240628",
-            "1",
+            "2024-06-28T00:00:00Z",
             "LONG",
             new BigDecimal("2"),
             new BigDecimal("30000"),
             new BigDecimal("31000"),
             new BigDecimal("150"),
-            "2024-06-28T00:00:00Z",
-            new BigDecimal("2"),
-            new BigDecimal("50"),
-            new BigDecimal("30000"));
+            new BigDecimal("50"));
 
     OpenPositions positions =
         CoinbaseAdapters.adaptFuturesOpenPositions(Collections.singletonList(position));
@@ -288,21 +287,12 @@ public class CoinbaseAdaptersTest {
   public void testAdaptFuturesWallet() {
     CoinbaseFuturesBalanceSummaryResponse response =
         new CoinbaseFuturesBalanceSummaryResponse(
-            new BigDecimal("5000"),
-            new BigDecimal("8000"),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            new BigDecimal("3000"),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+            new CoinbaseFuturesBalanceSummary(
+                new CoinbaseAmount("USD", new BigDecimal("5000")),
+                new CoinbaseAmount("USD", new BigDecimal("8000")),
+                null, null, null, null, null, null,
+                new CoinbaseAmount("USD", new BigDecimal("3000")),
+                null, null, null, null, null, null, null));
 
     Wallet wallet = CoinbaseAdapters.adaptFuturesWallet(response);
     assertNotNull("Wallet should not be null", wallet);

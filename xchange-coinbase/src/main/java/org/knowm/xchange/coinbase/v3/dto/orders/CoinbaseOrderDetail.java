@@ -12,6 +12,12 @@ import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.instrument.Instrument;
 
+/**
+ * Current Advanced Trade historical/open-order representation.
+ *
+ * <p>Futures quantities remain decimal contract quantities. Status, product type, order type and
+ * fill accounting are retained exactly as returned so reconciliation can make REST authoritative.
+ */
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoinbaseOrderDetail {
@@ -20,13 +26,41 @@ public class CoinbaseOrderDetail {
   private final String clientOrderId;
   private final String side;
   private final String productId;
+  private final String productType;
   private final String status;
+  private final String orderType;
+  private final String timeInForce;
+  private final CoinbaseOrderConfiguration orderConfiguration;
+  private final BigDecimal completionPercentage;
   private final BigDecimal averageFilledPrice;
   private final BigDecimal filledSize;
+  private final BigDecimal numberOfFills;
+  private final BigDecimal filledValue;
   private final BigDecimal totalFees;
+  private final BigDecimal totalValueAfterFees;
   private final BigDecimal size;
   private final BigDecimal price;
+  private final boolean pendingCancel;
+  private final boolean sizeInQuote;
+  private final boolean sizeInclusiveOfFees;
+  private final boolean settled;
   private final Date createdTime;
+  private final Date lastFillTime;
+  private final Date lastUpdateTime;
+  private final String rejectReason;
+  private final String rejectMessage;
+  private final String cancelMessage;
+  private final String orderPlacementSource;
+  private final String retailPortfolioId;
+
+  /** Creates a legacy minimal order representation. */
+  public CoinbaseOrderDetail(String orderId, String clientOrderId, String side, String productId,
+      String status, BigDecimal averageFilledPrice, BigDecimal filledSize, BigDecimal totalFees,
+      BigDecimal size, BigDecimal price, String createdTime) {
+    this(orderId, clientOrderId, side, productId, null, status, null, null, null, null,
+        averageFilledPrice, filledSize, null, null, totalFees, null, size, price, false, false,
+        false, false, createdTime, null, null, null, null, null, null, null);
+  }
 
   @JsonCreator
   public CoinbaseOrderDetail(
@@ -34,35 +68,72 @@ public class CoinbaseOrderDetail {
       @JsonProperty("client_order_id") String clientOrderId,
       @JsonProperty("side") String side,
       @JsonProperty("product_id") String productId,
+      @JsonProperty("product_type") String productType,
       @JsonProperty("status") String status,
+      @JsonProperty("order_type") String orderType,
+      @JsonProperty("time_in_force") String timeInForce,
+      @JsonProperty("order_configuration") CoinbaseOrderConfiguration orderConfiguration,
+      @JsonProperty("completion_percentage") BigDecimal completionPercentage,
       @JsonProperty("average_filled_price") BigDecimal averageFilledPrice,
       @JsonProperty("filled_size") BigDecimal filledSize,
+      @JsonProperty("number_of_fills") BigDecimal numberOfFills,
+      @JsonProperty("filled_value") BigDecimal filledValue,
       @JsonProperty("total_fees") BigDecimal totalFees,
+      @JsonProperty("total_value_after_fees") BigDecimal totalValueAfterFees,
       @JsonProperty("size") BigDecimal size,
       @JsonProperty("price") BigDecimal price,
-      @JsonProperty("created_time") String createdTime
-  ) {
+      @JsonProperty("pending_cancel") boolean pendingCancel,
+      @JsonProperty("size_in_quote") boolean sizeInQuote,
+      @JsonProperty("size_inclusive_of_fees") boolean sizeInclusiveOfFees,
+      @JsonProperty("settled") boolean settled,
+      @JsonProperty("created_time") String createdTime,
+      @JsonProperty("last_fill_time") String lastFillTime,
+      @JsonProperty("last_update_time") String lastUpdateTime,
+      @JsonProperty("reject_reason") String rejectReason,
+      @JsonProperty("reject_message") String rejectMessage,
+      @JsonProperty("cancel_message") String cancelMessage,
+      @JsonProperty("order_placement_source") String orderPlacementSource,
+      @JsonProperty("retail_portfolio_id") String retailPortfolioId) {
     this.orderId = orderId;
     this.clientOrderId = clientOrderId;
     this.side = side;
     this.productId = productId;
+    this.productType = productType;
     this.status = status;
+    this.orderType = orderType;
+    this.timeInForce = timeInForce;
+    this.orderConfiguration = orderConfiguration;
+    this.completionPercentage = completionPercentage;
     this.averageFilledPrice = averageFilledPrice;
     this.filledSize = filledSize;
+    this.numberOfFills = numberOfFills;
+    this.filledValue = filledValue;
     this.totalFees = totalFees;
+    this.totalValueAfterFees = totalValueAfterFees;
     this.size = size;
     this.price = price;
-    this.createdTime = createdTime == null ? null
-        : Date.from(DateTimeFormatter.ISO_INSTANT.parse(createdTime, Instant::from));
+    this.pendingCancel = pendingCancel;
+    this.sizeInQuote = sizeInQuote;
+    this.sizeInclusiveOfFees = sizeInclusiveOfFees;
+    this.settled = settled;
+    this.createdTime = parseTimestamp(createdTime);
+    this.lastFillTime = parseTimestamp(lastFillTime);
+    this.lastUpdateTime = parseTimestamp(lastUpdateTime);
+    this.rejectReason = rejectReason;
+    this.rejectMessage = rejectMessage;
+    this.cancelMessage = cancelMessage;
+    this.orderPlacementSource = orderPlacementSource;
+    this.retailPortfolioId = retailPortfolioId;
   }
 
-  public Order.OrderType getOrderType() {
-    return CoinbaseAdapters.adaptOrderType(side);
+  private static Date parseTimestamp(String value) {
+    return value == null || value.isBlank()
+        ? null : Date.from(DateTimeFormatter.ISO_INSTANT.parse(value, Instant::from));
   }
 
-  public Instrument getInstrument() {
-    return CoinbaseAdapters.adaptInstrument(productId);
-  }
+  /** @return an XChange order type inferred from the API side. */
+  public Order.OrderType getOrderType() { return CoinbaseAdapters.adaptOrderType(side); }
+
+  /** @return the instrument identified by the canonical product id. */
+  public Instrument getInstrument() { return CoinbaseAdapters.adaptInstrument(productId); }
 }
-
-
