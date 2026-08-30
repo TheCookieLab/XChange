@@ -7,41 +7,40 @@ import java.math.BigDecimal;
 import lombok.Getter;
 
 /**
- * Represents margin window measure for futures trading.
+ * Margin-window measure from the CFM balance summary.
+ *
+ * <p>{@code liquidation_buffer} is the API's decimal string. It is distinct from the response-level
+ * liquidation-buffer percentage and is exposed with its exact wire meaning.
+ *
+ * @since 1.0.2
  */
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoinbaseMarginWindowMeasure {
-
   private final String marginWindowType;
   private final String marginLevel;
   private final BigDecimal initialMargin;
   private final BigDecimal maintenanceMargin;
-  private final BigDecimal liquidationBufferPercentage;
+  private final BigDecimal liquidationBuffer;
   private final BigDecimal totalHold;
   private final BigDecimal futuresBuyingPower;
 
+  /** Deserializes a margin-window measure without substituting missing values. */
   @JsonCreator
   public CoinbaseMarginWindowMeasure(
       @JsonProperty("margin_window_type") String marginWindowType,
       @JsonProperty("margin_level") String marginLevel,
       @JsonProperty("initial_margin") BigDecimal initialMargin,
       @JsonProperty("maintenance_margin") BigDecimal maintenanceMargin,
-      @JsonProperty("liquidation_buffer_percentage") BigDecimal liquidationBufferPercentage,
+      @JsonProperty("liquidation_buffer") String liquidationBuffer,
       @JsonProperty("total_hold") BigDecimal totalHold,
       @JsonProperty("futures_buying_power") BigDecimal futuresBuyingPower) {
     this.marginWindowType = marginWindowType;
     this.marginLevel = marginLevel;
     this.initialMargin = initialMargin;
     this.maintenanceMargin = maintenanceMargin;
-    this.liquidationBufferPercentage = liquidationBufferPercentage;
+    this.liquidationBuffer = liquidationBuffer == null ? null : new BigDecimal(liquidationBuffer);
     this.totalHold = totalHold;
     this.futuresBuyingPower = futuresBuyingPower;
   }
-
-  @Override
-  public String toString() {
-    return "CoinbaseMarginWindowMeasure [marginWindowType=" + marginWindowType + ", marginLevel=" + marginLevel + "]";
-  }
 }
-

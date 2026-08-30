@@ -33,7 +33,7 @@ public class CoinbaseTransactionSummaryResponse {
       @JsonProperty("total_volume") BigDecimal totalVolume,
       @JsonProperty("total_fees") BigDecimal totalFees,
       @JsonProperty("fee_tier") CoinbaseFeeTier feeTier,
-      @JsonProperty("margin_rate") BigDecimal marginRate,
+      @JsonProperty("margin_rate") CoinbaseDecimalValue marginRate,
       @JsonProperty("advanced_trade_only_volume") BigDecimal advancedTradeOnlyVolume,
       @JsonProperty("advanced_trade_only_fees") BigDecimal advancedTradeOnlyFees,
       @JsonProperty("coinbase_pro_volume") BigDecimal coinbaseProVolume,
@@ -43,7 +43,7 @@ public class CoinbaseTransactionSummaryResponse {
     this.totalVolume = totalVolume;
     this.totalFees = totalFees;
     this.feeTier = feeTier;
-    this.marginRate = marginRate;
+    this.marginRate = marginRate == null ? null : marginRate.getValue();
     this.advancedTradeOnlyVolume = advancedTradeOnlyVolume;
     this.advancedTradeOnlyFees = advancedTradeOnlyFees;
     this.coinbaseProVolume = coinbaseProVolume;
