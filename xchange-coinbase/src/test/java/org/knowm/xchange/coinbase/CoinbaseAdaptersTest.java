@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +19,7 @@ import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseMarginWindowMeasure;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseMarketMarketIoc;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
@@ -25,8 +27,10 @@ import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsRespons
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseFeeTier;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -541,6 +545,48 @@ public class CoinbaseAdaptersTest {
     assertEquals(new BigDecimal("0.12"), transactionSummary.getMarginRate());
   }
 
+  @Test
+  public void testRejectOpaqueCdeInstrumentFromGenericAdapters() {
+    String productId = "ETP-20DEC30-CDE";
+    CoinbasePriceBookEntry entry = new CoinbasePriceBookEntry(BigDecimal.TEN, BigDecimal.ONE);
+    CoinbasePriceBook priceBook =
+        new CoinbasePriceBook(
+            productId,
+            Collections.singletonList(entry),
+            Collections.singletonList(entry),
+            "2026-02-08T00:00:00Z");
+    CoinbaseMarketTrade trade =
+        new CoinbaseMarketTrade(
+            "trade",
+            productId,
+            BigDecimal.TEN,
+            BigDecimal.ONE,
+            "2026-02-08T00:00:00Z",
+            "BUY",
+            null,
+            null,
+            "coinbase");
+    CoinbaseFuturesPosition position =
+        new CoinbaseFuturesPosition(
+            productId,
+            "2026-12-20T00:00:00Z",
+            "LONG",
+            BigDecimal.ONE,
+            BigDecimal.TEN,
+            BigDecimal.TEN,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO);
+
+    assertNull(CoinbaseAdapters.adaptOrderBook(priceBook));
+    assertNull(CoinbaseAdapters.adaptTrade(trade));
+    assertNull(CoinbaseAdapters.adaptTicker(null, null, priceBook));
+    assertEquals(
+        0,
+        CoinbaseAdapters.adaptFuturesOpenPositions(Collections.singletonList(position))
+            .getOpenPositions()
+            .size());
+  }
+
   @SuppressWarnings("deprecation")
   @Test
   public void testLegacyPublicContractsRemainAvailable() throws Exception {
@@ -609,7 +655,7 @@ public class CoinbaseAdaptersTest {
     assertEquals(position, balance.getExpiringFutures().get(0));
     assertNull(fill.getSequenceTimestamp());
     assertEquals(BigDecimal.TEN, transaction.getTotalVolume());
-    assertNotNull(
+    Method listFills =
         CoinbaseAuthenticated.class.getMethod(
             "listFills",
             ParamsDigest.class,
@@ -621,10 +667,12 @@ public class CoinbaseAdaptersTest {
             String.class,
             Integer.class,
             String.class,
-            String.class));
-    assertNotNull(
+            String.class);
+    Method bestBidAsk =
         CoinbaseAuthenticated.class.getMethod(
-            "getBestBidAsk", ParamsDigest.class, String.class));
+            "getBestBidAsk", ParamsDigest.class, String.class);
+    assertEquals(CoinbaseOrdersResponse.class, listFills.getReturnType());
+    assertEquals(CoinbaseBestBidAsksResponse.class, bestBidAsk.getReturnType());
   }
 
   private static void assertAmount(CoinbaseAmount amount, String expectedValue) {

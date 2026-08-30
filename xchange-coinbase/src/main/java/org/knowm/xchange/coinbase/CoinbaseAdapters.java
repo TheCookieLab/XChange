@@ -64,6 +64,9 @@ public final class CoinbaseAdapters {
 
   public static OrderBook adaptOrderBook(CoinbasePriceBook priceBook) {
     Instrument instrument = CoinbaseAdapters.adaptInstrument(priceBook.getProductId());
+    if (instrument == null) {
+      return null;
+    }
 
     List<LimitOrder> asks = priceBook.getAsks().stream().map(
         priceBookEntry -> CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.ASK,
@@ -85,8 +88,12 @@ public final class CoinbaseAdapters {
   }
 
   public static Trade adaptTrade(CoinbaseMarketTrade marketTrade) {
+    Instrument instrument = adaptInstrument(marketTrade.getProductId());
+    if (instrument == null) {
+      return null;
+    }
     return UserTrade.builder().id(marketTrade.getTradeId())
-        .instrument(adaptInstrument(marketTrade.getProductId())).price(marketTrade.getPrice())
+        .instrument(instrument).price(marketTrade.getPrice())
         .originalAmount(marketTrade.getSize()).timestamp(
             Date.from(DateTimeFormatter.ISO_INSTANT.parse(marketTrade.getTime(), Instant::from)))
         .type(adaptOrderType(marketTrade.getSide())).build();
@@ -355,6 +362,9 @@ public final class CoinbaseAdapters {
       return null;
     }
     Instrument instrument = adaptInstrument(position.getProductId());
+    if (instrument == null) {
+      return null;
+    }
     OpenPosition.Type type = adaptPositionType(position.getSide());
     BigDecimal size = position.getNumberOfContracts();
     BigDecimal price = position.getAvgEntryPrice();
@@ -492,11 +502,15 @@ public final class CoinbaseAdapters {
     }
 
     if (priceBook != null && !priceBook.getAsks().isEmpty() && !priceBook.getBids().isEmpty()) {
+      Instrument instrument = adaptInstrument(priceBook.getProductId());
+      if (instrument == null) {
+        return null;
+      }
       builder = builder.ask(priceBook.getAsks().get(0).getPrice())
           .askSize(priceBook.getAsks().get(0).getSize())
           .bid(priceBook.getBids().get(0).getPrice())
           .bidSize(priceBook.getBids().get(0).getSize())
-          .instrument(adaptInstrument(priceBook.getProductId())).timestamp(
+          .instrument(instrument).timestamp(
               Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)));
     }
 

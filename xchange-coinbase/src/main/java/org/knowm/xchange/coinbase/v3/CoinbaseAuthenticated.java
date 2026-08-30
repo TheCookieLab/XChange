@@ -179,6 +179,19 @@ public interface CoinbaseAuthenticated extends Coinbase {
   /**
    * Lists fills using the pre-1.0.2 filter surface.
    *
+   * @param jwtDigest authenticated request digest
+   * @param orderIds optional order identifiers
+   * @param tradeIds optional trade identifiers
+   * @param productIds optional product identifiers
+   * @param startSequenceTimestamp inclusive window start
+   * @param endSequenceTimestamp exclusive window end
+   * @param retailPortfolioId optional portfolio scope
+   * @param limit optional page size
+   * @param cursor optional continuation cursor
+   * @param sortBy optional API sort field
+   * @return current fills response
+   * @throws IOException when the request or response cannot be processed
+   * @throws CoinbaseException when Coinbase rejects the request
    * @deprecated use the complete filter overload
    */
   @Deprecated

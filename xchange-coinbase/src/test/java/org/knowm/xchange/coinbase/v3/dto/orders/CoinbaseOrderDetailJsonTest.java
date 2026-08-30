@@ -78,7 +78,8 @@ public class CoinbaseOrderDetailJsonTest {
     String json =
         "{\"order\":{\"order_id\":\"quote-1\",\"side\":\"BUY\",\"product_id\":\"BTC-USD\","
             + "\"status\":\"OPEN\",\"order_type\":\"MARKET\",\"time_in_force\":\"IOC\","
-            + "\"size_in_quote\":true,\"order_configuration\":{\"market_market_ioc\":{"
+            + "\"size\":\"1000\",\"size_in_quote\":true,"
+            + "\"order_configuration\":{\"market_market_ioc\":{"
             + "\"quote_size\":\"1000\"}},\"created_time\":\"2026-02-08T00:00:00Z\"}}";
 
     CoinbaseOrderDetailResponse response =

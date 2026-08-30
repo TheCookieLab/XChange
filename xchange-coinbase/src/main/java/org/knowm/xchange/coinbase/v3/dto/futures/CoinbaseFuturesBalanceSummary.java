@@ -33,6 +33,26 @@ public class CoinbaseFuturesBalanceSummary {
   private final CoinbaseAmount totalPendingTransfersAmount;
   private final CoinbaseAmount fundingPnl;
 
+  /**
+   * Creates the current wrapped CFM balance summary.
+   *
+   * @param futuresBuyingPower available futures buying power
+   * @param totalUsdBalance total USD balance
+   * @param cbiUsdBalance Coinbase Inc. USD balance
+   * @param cfmUsdBalance Coinbase Financial Markets USD balance
+   * @param totalOpenOrdersHoldAmount aggregate open-order hold
+   * @param unrealizedPnl unrealized profit or loss
+   * @param dailyRealizedPnl current-day realized profit or loss
+   * @param initialMargin initial margin requirement
+   * @param availableMargin available margin
+   * @param liquidationThreshold liquidation threshold
+   * @param liquidationBufferAmount liquidation buffer amount
+   * @param liquidationBufferPercentage liquidation buffer percentage
+   * @param intradayMarginWindowMeasure intraday margin-window measures
+   * @param overnightMarginWindowMeasure overnight margin-window measures
+   * @param totalPendingTransfersAmount pending transfer amount
+   * @param fundingPnl funding profit or loss
+   */
   @JsonCreator
   public CoinbaseFuturesBalanceSummary(
       @JsonProperty("futures_buying_power") CoinbaseAmount futuresBuyingPower,

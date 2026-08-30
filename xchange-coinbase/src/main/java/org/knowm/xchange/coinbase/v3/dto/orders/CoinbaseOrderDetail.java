@@ -65,6 +65,42 @@ public class CoinbaseOrderDetail {
         false, createdTime, null, null, null, null, null, null, null);
   }
 
+  /**
+   * Creates a complete Advanced Trade order response.
+   *
+   * @param orderId exchange order identifier
+   * @param clientOrderId client order identifier
+   * @param side exchange order side
+   * @param productId canonical product identifier
+   * @param productType exchange product classification
+   * @param status exchange order status
+   * @param orderType raw exchange order type
+   * @param timeInForce raw time-in-force classification
+   * @param leverage configured leverage
+   * @param marginType configured margin type
+   * @param orderConfiguration nested order configuration
+   * @param completionPercentage completed percentage
+   * @param averageFilledPrice average fill price
+   * @param filledSize filled quantity
+   * @param numberOfFills fill count
+   * @param filledValue filled notional
+   * @param totalFees aggregate fees
+   * @param totalValueAfterFees net value after fees
+   * @param size requested quantity
+   * @param price requested price
+   * @param pendingCancel whether cancellation is pending
+   * @param sizeInQuote whether size uses quote units
+   * @param sizeInclusiveOfFees whether size includes fees
+   * @param settled whether the order settled
+   * @param createdTime creation timestamp
+   * @param lastFillTime last-fill timestamp
+   * @param lastUpdateTime last-update timestamp
+   * @param rejectReason structured rejection reason
+   * @param rejectMessage rejection message
+   * @param cancelMessage cancellation message
+   * @param orderPlacementSource order placement source
+   * @param retailPortfolioId portfolio identifier
+   */
   @JsonCreator
   public CoinbaseOrderDetail(
       @JsonProperty("order_id") String orderId,
