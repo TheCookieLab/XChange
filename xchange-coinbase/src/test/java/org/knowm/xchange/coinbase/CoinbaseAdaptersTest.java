@@ -11,7 +11,9 @@ import org.junit.Test;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
-import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseMarketMarketIoc;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
@@ -21,7 +23,7 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.currency.Currency;
-import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -429,5 +431,23 @@ public class CoinbaseAdaptersTest {
         new BigDecimal("5.2"), ticker2.getPercentageChange());
     assertEquals("5.26 should round to 5.3", 
         new BigDecimal("5.3"), ticker3.getPercentageChange());
+  }
+  @Test
+  public void testAdaptOrderReadsNestedMarketConfiguration() {
+    CoinbaseOrderConfiguration configuration =
+        CoinbaseOrderConfiguration.marketMarketIoc(
+            new CoinbaseMarketMarketIoc(null, new BigDecimal("2.5")));
+    CoinbaseOrderDetail detail =
+        new CoinbaseOrderDetail("order", "client", "BUY", "BTC-USD", "FILLED", null, null, null,
+            null, null, "2026-02-08T00:00:00Z");
+    CoinbaseOrderDetail nested =
+        new CoinbaseOrderDetail("order", "client", "BUY", "BTC-USD", null, "FILLED", "MARKET",
+            "IOC", configuration, null, null, null, null, null, null, null, null, null, false,
+            true, false, true, "2026-02-08T00:00:00Z", null, null, null, null, null, null, null);
+
+    Order adapted = CoinbaseAdapters.adaptOrder(nested);
+
+    assertNotNull(adapted);
+    assertEquals(new BigDecimal("2.5"), adapted.getOriginalAmount());
   }
 }

@@ -12,6 +12,11 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParamOrderId;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamTransactionId;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 
+/**
+ * Coinbase fill-history filters, including product-native CFM filters and sequence windows.
+ *
+ * @since 1.0.2
+ */
 public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionId,
     TradeHistoryParamOrderId, TradeHistoryParamMultiCurrencyPair, TradeHistoryParamLimit,
     TradeHistoryParamNextPageCursor, TradeHistoryParamsTimeSpan {
@@ -27,6 +32,16 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   private Integer limit;
   /** Optional retail portfolio id filter used by some endpoints (for example perpetuals/INTX). */
   private String retailPortfolioId;
+  /** Optional Coinbase fill sort field. */
+  private String sortBy;
+  /** Optional Coinbase asset filters. */
+  private Set<String> assetFilters;
+  /** Optional Coinbase order-type filters. */
+  private Set<String> orderTypes;
+  /** Optional Coinbase order-side filter. */
+  private String orderSide;
+  /** Optional Coinbase product-type filters. */
+  private Set<String> productTypes;
 
   public CoinbaseTradeHistoryParams() {
   }
@@ -172,5 +187,52 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
     this.limit = limit;
   }
 
+  /** @return optional fill sort field */
+  public String getSortBy() {
+    return sortBy;
+  }
 
-}
+  /** @param sortBy Coinbase fill sort field */
+  public void setSortBy(String sortBy) {
+    this.sortBy = sortBy;
+  }
+
+  /** @return optional asset filters */
+  public Collection<String> getAssetFilters() {
+    return assetFilters;
+  }
+
+  /** @param assetFilters Coinbase asset filters */
+  public void setAssetFilters(Collection<String> assetFilters) {
+    this.assetFilters = assetFilters == null ? null : new HashSet<>(assetFilters);
+  }
+
+  /** @return optional order-type filters */
+  public Collection<String> getOrderTypes() {
+    return orderTypes;
+  }
+
+  /** @param orderTypes Coinbase order-type filters */
+  public void setOrderTypes(Collection<String> orderTypes) {
+    this.orderTypes = orderTypes == null ? null : new HashSet<>(orderTypes);
+  }
+
+  /** @return optional order-side filter */
+  public String getOrderSide() {
+    return orderSide;
+  }
+
+  /** @param orderSide Coinbase order-side filter */
+  public void setOrderSide(String orderSide) {
+    this.orderSide = orderSide;
+  }
+
+  /** @return optional product-type filters */
+  public Collection<String> getProductTypes() {
+    return productTypes;
+  }
+
+  /** @param productTypes Coinbase product-type filters */
+  public void setProductTypes(Collection<String> productTypes) {
+    this.productTypes = productTypes == null ? null : new HashSet<>(productTypes);
+  }

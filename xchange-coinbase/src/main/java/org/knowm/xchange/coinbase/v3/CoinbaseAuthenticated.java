@@ -138,6 +138,28 @@ public interface CoinbaseAuthenticated extends Coinbase {
       @QueryParam("use_simplified_total_value_calculation") Boolean useSimplifiedTotalValueCalculation)
       throws IOException, CoinbaseException;
 
+  /**
+   * Lists fills over the supplied sequence window and optional response-driven filters.
+   *
+   * @param jwtDigest authenticated request digest
+   * @param orderIds optional order identifiers
+   * @param tradeIds optional trade identifiers
+   * @param productIds optional product identifiers
+   * @param startSequenceTimestamp inclusive window start
+   * @param endSequenceTimestamp exclusive window end
+   * @param retailPortfolioId optional portfolio scope
+   * @param limit optional page size
+   * @param cursor optional continuation cursor
+   * @param sortBy optional API sort field
+   * @param assetFilters optional asset filters
+   * @param orderTypes optional order-type filters
+   * @param orderSide optional order-side filter
+   * @param productTypes optional product-type filters
+   * @return current fills response
+   * @throws IOException when the request or response cannot be processed
+   * @throws CoinbaseException when Coinbase rejects the request
+   * @since 1.0.2
+   */
   @GET
   @Path("orders/historical/fills")
   CoinbaseOrdersResponse listFills(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,

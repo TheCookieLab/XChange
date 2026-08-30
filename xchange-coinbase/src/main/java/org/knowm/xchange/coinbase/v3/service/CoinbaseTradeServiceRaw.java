@@ -80,9 +80,16 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     Integer limit = params.getLimit();
     String cursor = params.getNextPageCursor();
     String retailPortfolioId = params.getRetailPortfolioId();
+    List<String> assetFilters = toList(params.getAssetFilters());
+    List<String> orderTypes = toList(params.getOrderTypes());
+    List<String> productTypes = toList(params.getProductTypes());
 
     return coinbaseAdvancedTrade.listFills(authTokenCreator, orderIds, tradeIds, productIds,
-        startTs, endTs, retailPortfolioId, limit, cursor, null, null, null, null, null);
+        startTs, endTs, retailPortfolioId, limit, cursor, params.getSortBy(), assetFilters,
+        orderTypes, params.getOrderSide(), productTypes);
+  }
+  private static List<String> toList(java.util.Collection<String> values) {
+    return values == null || values.isEmpty() ? null : new ArrayList<>(values);
   }
 
   /**

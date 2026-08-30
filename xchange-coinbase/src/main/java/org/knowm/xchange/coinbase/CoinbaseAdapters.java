@@ -13,8 +13,8 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
-import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
@@ -103,31 +103,80 @@ public final class CoinbaseAdapters {
   }
 
   /**
-   * Adapt a Coinbase Advanced Trade order detail to XChange Order (as a LimitOrder when price is present).
+   * Adapt a Coinbase Advanced Trade order detail to XChange Order, reading quantity and price from
+   * the variant nested in {@code order_configuration}. Missing or unsupported variants fail closed.
    */
   public static Order adaptOrder(CoinbaseOrderDetail detail) {
     if (detail == null) return null;
     Order.OrderType orderType = adaptOrderType(detail.getSide());
-    if (detail.getPrice() != null) {
+    BigDecimal size = configuredSize(detail);
+    BigDecimal price = configuredPrice(detail);
+    if (size == null) {
+      return null;
+    }
+    if (price != null) {
       return new LimitOrder(
-          orderType,
-          detail.getSize(),
-          detail.getInstrument(),
-          detail.getOrderId(),
-          detail.getCreatedTime(),
-          detail.getPrice(),
-          detail.getAverageFilledPrice(),
-          detail.getFilledSize(),
-          detail.getTotalFees(),
+          orderType, size, detail.getInstrument(), detail.getOrderId(), detail.getCreatedTime(),
+          price, detail.getAverageFilledPrice(), detail.getFilledSize(), detail.getTotalFees(),
           adaptOrderStatus(detail.getStatus()));
     }
-    // Fallback to generic Order without limit price
     return new org.knowm.xchange.dto.trade.MarketOrder(
-        orderType,
-        detail.getSize(),
-        detail.getInstrument(),
-        detail.getOrderId(),
-        detail.getCreatedTime());
+        orderType, size, detail.getInstrument(), detail.getOrderId(), detail.getCreatedTime());
+  }
+
+  private static BigDecimal configuredSize(CoinbaseOrderDetail detail) {
+    CoinbaseOrderConfiguration config = detail.getOrderConfiguration();
+    if (config == null) return detail.getSize();
+    if (config.getMarketMarketIoc() != null) {
+      return firstNonNull(config.getMarketMarketIoc().getBaseSize(),
+          config.getMarketMarketIoc().getQuoteSize());
+    }
+    if (config.getMarketMarketFok() != null) {
+      return firstNonNull(config.getMarketMarketFok().getBaseSize(),
+          config.getMarketMarketFok().getQuoteSize());
+    }
+    if (config.getSorLimitIoc() != null) {
+      return firstNonNull(config.getSorLimitIoc().getBaseSize(),
+          config.getSorLimitIoc().getQuoteSize());
+    }
+    if (config.getLimitLimitGtc() != null) {
+      return firstNonNull(config.getLimitLimitGtc().getBaseSize(),
+          config.getLimitLimitGtc().getQuoteSize());
+    }
+    if (config.getLimitLimitGtd() != null) {
+      return firstNonNull(config.getLimitLimitGtd().getBaseSize(),
+          config.getLimitLimitGtd().getQuoteSize());
+    }
+    if (config.getLimitLimitFok() != null) {
+      return firstNonNull(config.getLimitLimitFok().getBaseSize(),
+          config.getLimitLimitFok().getQuoteSize());
+    }
+    if (config.getStopLimitStopLimitGtc() != null) {
+      return config.getStopLimitStopLimitGtc().getBaseSize();
+    }
+    if (config.getStopLimitStopLimitGtd() != null) {
+      return config.getStopLimitStopLimitGtd().getBaseSize();
+    }
+    return null;
+  }
+
+  private static BigDecimal configuredPrice(CoinbaseOrderDetail detail) {
+    CoinbaseOrderConfiguration config = detail.getOrderConfiguration();
+    if (config == null) return detail.getPrice();
+    if (config.getLimitLimitGtc() != null) return config.getLimitLimitGtc().getLimitPrice();
+    if (config.getLimitLimitGtd() != null) return config.getLimitLimitGtd().getLimitPrice();
+    if (config.getLimitLimitFok() != null) return config.getLimitLimitFok().getLimitPrice();
+    if (config.getStopLimitStopLimitGtc() != null) {
+      return config.getStopLimitStopLimitGtc().getLimitPrice();
+    }
+    if (config.getStopLimitStopLimitGtd() != null) {
+      return config.getStopLimitStopLimitGtd().getLimitPrice();
+    }
+    return null;
+  }
+
+  private static BigDecimal firstNonNull(BigDecimal first, BigDecimal second) {
+    return first == null ? second : first;
   }
 
   private static Order.OrderStatus adaptOrderStatus(String status) {

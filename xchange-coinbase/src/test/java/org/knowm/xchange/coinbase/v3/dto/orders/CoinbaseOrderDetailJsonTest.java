@@ -17,6 +17,9 @@ public class CoinbaseOrderDetailJsonTest {
         "    \"side\": \"BUY\",\n" +
         "    \"product_id\": \"BTC-USD\",\n" +
         "    \"status\": \"FILLED\",\n" +
+        "    \"order_type\": \"MARKET\",\n" +
+        "    \"time_in_force\": \"IOC\",\n" +
+        "    \"order_configuration\": {\"market_market_ioc\":{\"base_size\":\"0.01\"}},\n" +
         "    \"average_filled_price\": \"30000\",\n" +
         "    \"filled_size\": \"0.01\",\n" +
         "    \"total_fees\": \"0.3\",\n" +
@@ -32,6 +35,8 @@ public class CoinbaseOrderDetailJsonTest {
     assertNotNull(response.getOrder());
     assertEquals("abc123", response.getOrder().getOrderId());
     assertEquals("BTC-USD", response.getOrder().getProductId());
+    assertEquals(new java.math.BigDecimal("0.01"),
+        response.getOrder().getOrderConfiguration().getMarketMarketIoc().getBaseSize());
   }
 }
 
