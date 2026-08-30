@@ -81,7 +81,7 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         eq(Collections.singletonList("BTC")),
         eq(Collections.singletonList("LIMIT_LIMIT_FOK")),
         eq("BUY"),
-        eq(Collections.singletonList("FUTURE"))));
+        eq(Collections.singletonList("FUTURE")));
   }
 
   @Test
