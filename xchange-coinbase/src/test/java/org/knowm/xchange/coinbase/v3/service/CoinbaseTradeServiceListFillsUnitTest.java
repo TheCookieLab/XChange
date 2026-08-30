@@ -63,7 +63,7 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         eq(Collections.singletonList("BTC")),
         eq(Collections.singletonList("LIMIT_LIMIT_FOK")),
         eq("BUY"),
-        eq(Collections.singletonList("FUTURE")));
+        eq(Collections.singletonList("FUTURE")))).thenReturn(response);
 
     CoinbaseOrdersResponse got = raw.listFills(params);
     assertNotNull(got);
@@ -76,11 +76,12 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         eq("2026-02-08T00:01:00Z"),
         eq("portfolio-uuid"),
         eq(50),
+        isNull(),
         eq("TRADE_TIME"),
         eq(Collections.singletonList("BTC")),
         eq(Collections.singletonList("LIMIT_LIMIT_FOK")),
         eq("BUY"),
-        eq(Collections.singletonList("FUTURE")));
+        eq(Collections.singletonList("FUTURE"))));
   }
 
   @Test
