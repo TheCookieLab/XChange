@@ -143,7 +143,7 @@ public class CoinbaseFutureProductDetails {
     }
   }
 
-  private static Instant parseInstant(String value) {
+  static Instant parseInstant(String value) {
     if (value == null || value.isBlank()) {
       return null;
     }

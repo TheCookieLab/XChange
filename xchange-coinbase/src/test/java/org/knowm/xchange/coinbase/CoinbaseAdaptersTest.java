@@ -235,8 +235,8 @@ public class CoinbaseAdaptersTest {
             "2024-06-28T00:00:00Z",
             "LONG",
             new BigDecimal("2"),
-            new BigDecimal("30000"),
             new BigDecimal("31000"),
+            new BigDecimal("30000"),
             new BigDecimal("150"),
             new BigDecimal("50"));
 

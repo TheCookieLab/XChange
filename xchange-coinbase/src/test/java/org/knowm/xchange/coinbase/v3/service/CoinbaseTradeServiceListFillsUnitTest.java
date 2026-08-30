@@ -99,6 +99,7 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         isNull(),
         isNull(),
         isNull(),
+        isNull(),
         isNull())).thenReturn(response);
 
     CoinbaseOrdersResponse got = raw.listFills(params);
@@ -111,6 +112,7 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         isNull(),
         isNull(),
         eq("portfolio-uuid"),
+        isNull(),
         isNull(),
         isNull(),
         isNull(),
