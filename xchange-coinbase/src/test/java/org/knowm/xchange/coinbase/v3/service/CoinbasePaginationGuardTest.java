@@ -8,8 +8,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
@@ -17,9 +20,11 @@ import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
+import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.ExchangeException;
 import si.mazi.rescu.ParamsDigest;
 
@@ -57,6 +62,29 @@ public class CoinbasePaginationGuardTest {
     ExchangeException exception =
         assertThrows(ExchangeException.class, () -> service.getTradeHistory(params));
     assertTrue(exception.getMessage().contains("repeated cursor"));
+  }
+
+  @Test
+  public void fillsIterationForwardsContinuationCursor() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    List<String> requestedCursors = new ArrayList<>();
+    when(authenticated.listFills(
+            any(ParamsDigest.class), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+            any(), any(), any(), any()))
+        .thenAnswer(invocation -> {
+          requestedCursors.add(invocation.getArgument(8));
+          if (requestedCursors.size() == 1) {
+            return new CoinbaseOrdersResponse(Collections.singletonList(fill("1")), "next");
+          }
+          return new CoinbaseOrdersResponse(Collections.singletonList(fill("2")), null);
+        });
+
+    CoinbaseTradeService service =
+        new CoinbaseTradeService(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+
+    UserTrades trades = service.getTradeHistory(new CoinbaseTradeHistoryParams());
+    assertEquals(2, trades.getUserTrades().size());
+    assertEquals(Arrays.asList(null, "next"), requestedCursors);
   }
 
   @Test
@@ -100,5 +128,24 @@ public class CoinbasePaginationGuardTest {
   private static CoinbaseOrderDetail order(String id) {
     return new CoinbaseOrderDetail(
         id, "client-" + id, "BUY", "BTC-USD", "OPEN", null, null, null, null, null, null);
+  }
+
+  private static CoinbaseFill fill(String id) {
+    return new CoinbaseFill(
+        "entry-" + id,
+        "trade-" + id,
+        "order-" + id,
+        "2026-02-08T00:00:00Z",
+        "FILL",
+        new BigDecimal("2500"),
+        new BigDecimal("1"),
+        new BigDecimal("0.15"),
+        "BTC-USD",
+        "2026-02-08T00:00:00Z",
+        "TAKER",
+        false,
+        "user",
+        "BUY",
+        "portfolio");
   }
 }

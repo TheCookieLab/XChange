@@ -134,6 +134,17 @@ public class CoinbaseOrderDetail {
   /** @return an XChange order type inferred from the API side. */
   public Order.OrderType getOrderType() { return CoinbaseAdapters.adaptOrderType(side); }
 
+  /**
+   * Returns the order classification exactly as supplied by Coinbase's {@code order_type} field.
+   *
+   * @return exchange order classification such as {@code MARKET} or {@code LIMIT}, or {@code null}
+   *     when absent from the response
+   * @since 1.0.2
+   */
+  public String getExchangeOrderType() {
+    return orderType;
+  }
+
   /** @return the instrument identified by the canonical product id. */
   public Instrument getInstrument() { return CoinbaseAdapters.adaptInstrument(productId); }
 }

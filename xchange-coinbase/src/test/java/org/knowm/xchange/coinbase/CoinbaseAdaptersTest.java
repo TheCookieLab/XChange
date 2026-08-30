@@ -457,15 +457,68 @@ public class CoinbaseAdaptersTest {
   @Test
   public void testDeserializeCurrentCfmWireShapes() throws Exception {
     String balanceJson =
-        "{\"balance_summary\":{\"futures_buying_power\":{\"value\":\"5000\",\"currency\":\"USD\"},"
+        "{\"balance_summary\":{"
+            + "\"futures_buying_power\":{\"value\":\"5000\",\"currency\":\"USD\"},"
+            + "\"total_usd_balance\":{\"value\":\"5100\",\"currency\":\"USD\"},"
+            + "\"cbi_usd_balance\":{\"value\":\"100\",\"currency\":\"USD\"},"
+            + "\"cfm_usd_balance\":{\"value\":\"5000\",\"currency\":\"USD\"},"
+            + "\"total_open_orders_hold_amount\":{\"value\":\"50\",\"currency\":\"USD\"},"
+            + "\"unrealized_pnl\":{\"value\":\"25\",\"currency\":\"USD\"},"
+            + "\"daily_realized_pnl\":{\"value\":\"10\",\"currency\":\"USD\"},"
+            + "\"initial_margin\":{\"value\":\"400\",\"currency\":\"USD\"},"
             + "\"available_margin\":{\"value\":\"4500\",\"currency\":\"USD\"},"
-            + "\"intraday_margin_window_measure\":{\"liquidation_buffer\":\"125.5\"},"
-            + "\"liquidation_buffer_percentage\":\"0.05\"}}";
+            + "\"liquidation_threshold\":{\"value\":\"250\",\"currency\":\"USD\"},"
+            + "\"liquidation_buffer_amount\":{\"value\":\"125.5\",\"currency\":\"USD\"},"
+            + "\"liquidation_buffer_percentage\":\"0.05\","
+            + "\"intraday_margin_window_measure\":{\"margin_window_type\":\"INTRADAY\","
+            + "\"margin_level\":\"BASE\",\"initial_margin\":\"400\","
+            + "\"maintenance_margin\":\"300\",\"liquidation_buffer\":\"125.5\","
+            + "\"total_hold\":\"50\",\"futures_buying_power\":\"5000\"},"
+            + "\"overnight_margin_window_measure\":{\"margin_window_type\":\"OVERNIGHT\","
+            + "\"margin_level\":\"BASE\",\"initial_margin\":\"450\","
+            + "\"maintenance_margin\":\"350\",\"liquidation_buffer\":\"100.5\","
+            + "\"total_hold\":\"60\",\"futures_buying_power\":\"4900\"},"
+            + "\"total_pending_transfers_amount\":{\"value\":\"5\",\"currency\":\"USD\"},"
+            + "\"funding_pnl\":{\"value\":\"-2.5\",\"currency\":\"USD\"}}}";
     CoinbaseFuturesBalanceSummaryResponse balance =
         new ObjectMapper().readValue(balanceJson, CoinbaseFuturesBalanceSummaryResponse.class);
-    assertEquals("USD", balance.getBalanceSummary().getFuturesBuyingPower().getCurrency());
+    CoinbaseFuturesBalanceSummary summary = balance.getBalanceSummary();
+    assertAmount(summary.getFuturesBuyingPower(), "5000");
+    assertAmount(summary.getTotalUsdBalance(), "5100");
+    assertAmount(summary.getCbiUsdBalance(), "100");
+    assertAmount(summary.getCfmUsdBalance(), "5000");
+    assertAmount(summary.getTotalOpenOrdersHoldAmount(), "50");
+    assertAmount(summary.getUnrealizedPnl(), "25");
+    assertAmount(summary.getDailyRealizedPnl(), "10");
+    assertAmount(summary.getInitialMargin(), "400");
+    assertAmount(summary.getAvailableMargin(), "4500");
+    assertAmount(summary.getLiquidationThreshold(), "250");
+    assertAmount(summary.getLiquidationBufferAmount(), "125.5");
+    assertEquals("0.05", summary.getLiquidationBufferPercentage());
+    assertEquals("INTRADAY", summary.getIntradayMarginWindowMeasure().getMarginWindowType());
+    assertEquals("BASE", summary.getIntradayMarginWindowMeasure().getMarginLevel());
+    assertEquals(new BigDecimal("400"),
+        summary.getIntradayMarginWindowMeasure().getInitialMargin());
+    assertEquals(new BigDecimal("300"),
+        summary.getIntradayMarginWindowMeasure().getMaintenanceMargin());
     assertEquals(new BigDecimal("125.5"),
-        balance.getBalanceSummary().getIntradayMarginWindowMeasure().getLiquidationBuffer());
+        summary.getIntradayMarginWindowMeasure().getLiquidationBuffer());
+    assertEquals(new BigDecimal("50"), summary.getIntradayMarginWindowMeasure().getTotalHold());
+    assertEquals(new BigDecimal("5000"),
+        summary.getIntradayMarginWindowMeasure().getFuturesBuyingPower());
+    assertEquals("OVERNIGHT", summary.getOvernightMarginWindowMeasure().getMarginWindowType());
+    assertEquals("BASE", summary.getOvernightMarginWindowMeasure().getMarginLevel());
+    assertEquals(new BigDecimal("450"),
+        summary.getOvernightMarginWindowMeasure().getInitialMargin());
+    assertEquals(new BigDecimal("350"),
+        summary.getOvernightMarginWindowMeasure().getMaintenanceMargin());
+    assertEquals(new BigDecimal("100.5"),
+        summary.getOvernightMarginWindowMeasure().getLiquidationBuffer());
+    assertEquals(new BigDecimal("60"), summary.getOvernightMarginWindowMeasure().getTotalHold());
+    assertEquals(new BigDecimal("4900"),
+        summary.getOvernightMarginWindowMeasure().getFuturesBuyingPower());
+    assertAmount(summary.getTotalPendingTransfersAmount(), "5");
+    assertAmount(summary.getFundingPnl(), "-2.5");
 
     CoinbaseFuturesPosition position =
         new ObjectMapper().readValue(
@@ -474,10 +527,15 @@ public class CoinbaseAdaptersTest {
             CoinbaseFuturesPosition.class);
     assertEquals(new BigDecimal("2.5"), position.getNumberOfContracts());
 
-    CoinbaseTransactionSummaryResponse summary =
+    CoinbaseTransactionSummaryResponse transactionSummary =
         new ObjectMapper().readValue(
             "{\"margin_rate\":{\"value\":\"0.12\"}}",
             CoinbaseTransactionSummaryResponse.class);
-    assertEquals(new BigDecimal("0.12"), summary.getMarginRate());
+    assertEquals(new BigDecimal("0.12"), transactionSummary.getMarginRate());
+  }
+
+  private static void assertAmount(CoinbaseAmount amount, String expectedValue) {
+    assertEquals("USD", amount.getCurrency());
+    assertEquals(new BigDecimal(expectedValue), amount.getValue());
   }
 }
