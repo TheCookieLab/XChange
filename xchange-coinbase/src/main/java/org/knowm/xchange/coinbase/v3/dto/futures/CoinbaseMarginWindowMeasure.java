@@ -22,10 +22,21 @@ public class CoinbaseMarginWindowMeasure {
   private final BigDecimal initialMargin;
   private final BigDecimal maintenanceMargin;
   private final BigDecimal liquidationBuffer;
+  private final BigDecimal liquidationBufferPercentage;
   private final BigDecimal totalHold;
   private final BigDecimal futuresBuyingPower;
 
-  /** Deserializes a margin-window measure without substituting missing values. */
+  /**
+   * Deserializes a margin-window measure without substituting missing values.
+   *
+   * @param marginWindowType exchange window classification
+   * @param marginLevel exchange margin level
+   * @param initialMargin initial margin requirement
+   * @param maintenanceMargin maintenance margin requirement
+   * @param liquidationBuffer current liquidation buffer
+   * @param totalHold aggregate order hold
+   * @param futuresBuyingPower available futures buying power
+   */
   @JsonCreator
   public CoinbaseMarginWindowMeasure(
       @JsonProperty("margin_window_type") String marginWindowType,
@@ -40,6 +51,31 @@ public class CoinbaseMarginWindowMeasure {
     this.initialMargin = initialMargin;
     this.maintenanceMargin = maintenanceMargin;
     this.liquidationBuffer = liquidationBuffer == null ? null : new BigDecimal(liquidationBuffer);
+    this.liquidationBufferPercentage = null;
+    this.totalHold = totalHold;
+    this.futuresBuyingPower = futuresBuyingPower;
+  }
+
+  /**
+   * Preserves the pre-1.0.2 margin-window construction contract.
+   *
+   * @deprecated the current API exposes {@code liquidation_buffer}, not a window percentage
+   */
+  @Deprecated
+  public CoinbaseMarginWindowMeasure(
+      String marginWindowType,
+      String marginLevel,
+      BigDecimal initialMargin,
+      BigDecimal maintenanceMargin,
+      BigDecimal liquidationBufferPercentage,
+      BigDecimal totalHold,
+      BigDecimal futuresBuyingPower) {
+    this.marginWindowType = marginWindowType;
+    this.marginLevel = marginLevel;
+    this.initialMargin = initialMargin;
+    this.maintenanceMargin = maintenanceMargin;
+    this.liquidationBuffer = null;
+    this.liquidationBufferPercentage = liquidationBufferPercentage;
     this.totalHold = totalHold;
     this.futuresBuyingPower = futuresBuyingPower;
   }

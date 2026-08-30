@@ -2,14 +2,13 @@ package org.knowm.xchange.coinbase.v3.dto.orders;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import org.junit.Test;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.dto.Order;
-import org.knowm.xchange.dto.trade.LimitOrder;
 
 public class CoinbaseOrderDetailJsonTest {
 
@@ -24,6 +23,8 @@ public class CoinbaseOrderDetailJsonTest {
         "    \"status\": \"FILLED\",\n" +
         "    \"order_type\": \"MARKET\",\n" +
         "    \"time_in_force\": \"IOC\",\n" +
+        "    \"leverage\": \"2\",\n" +
+        "    \"margin_type\": \"CROSS\",\n" +
         "    \"order_configuration\": {\"market_market_ioc\":{\"base_size\":\"0.01\"}},\n" +
         "    \"average_filled_price\": \"30000\",\n" +
         "    \"filled_size\": \"0.01\",\n" +
@@ -42,12 +43,17 @@ public class CoinbaseOrderDetailJsonTest {
     assertEquals("BTC-USD", response.getOrder().getProductId());
     assertEquals("MARKET", response.getOrder().getExchangeOrderType());
     assertEquals(Order.OrderType.BID, response.getOrder().getOrderType());
+    assertEquals("2", response.getOrder().getLeverage());
+    assertEquals(CoinbaseMarginType.CROSS, response.getOrder().getMarginType());
+    Order adapted = CoinbaseAdapters.adaptOrder(response.getOrder());
+    assertNotNull(adapted);
+    assertEquals("2", adapted.getLeverage());
     assertEquals(new java.math.BigDecimal("0.01"),
         response.getOrder().getOrderConfiguration().getMarketMarketIoc().getBaseSize());
   }
 
   @Test
-  public void testDeserializeAndAdaptCdeLimitFokOrderDetail() throws Exception {
+  public void testDeserializeCdeLimitFokOrderDetailWithoutFabricatingInstrument() throws Exception {
     String json =
         "{\"order\":{\"order_id\":\"fok-1\",\"client_order_id\":\"c-fok\","
             + "\"side\":\"BUY\",\"product_id\":\"ETP-20DEC30-CDE\",\"status\":\"FILLED\","
@@ -63,10 +69,22 @@ public class CoinbaseOrderDetailJsonTest {
     assertEquals(new BigDecimal("2505.25"),
         response.getOrder().getOrderConfiguration().getLimitLimitFok().getLimitPrice());
 
-    Order adapted = CoinbaseAdapters.adaptOrder(response.getOrder());
-    assertTrue(adapted instanceof LimitOrder);
-    assertEquals(new BigDecimal("2.5"), adapted.getOriginalAmount());
-    assertEquals(new BigDecimal("2505.25"), ((LimitOrder) adapted).getLimitPrice());
+    assertNull(response.getOrder().getInstrument());
+    assertNull(CoinbaseAdapters.adaptOrder(response.getOrder()));
+  }
+
+  @Test
+  public void testRejectQuoteSizedOrderWithoutBaseQuantityConversion() throws Exception {
+    String json =
+        "{\"order\":{\"order_id\":\"quote-1\",\"side\":\"BUY\",\"product_id\":\"BTC-USD\","
+            + "\"status\":\"OPEN\",\"order_type\":\"MARKET\",\"time_in_force\":\"IOC\","
+            + "\"size_in_quote\":true,\"order_configuration\":{\"market_market_ioc\":{"
+            + "\"quote_size\":\"1000\"}},\"created_time\":\"2026-02-08T00:00:00Z\"}}";
+
+    CoinbaseOrderDetailResponse response =
+        new ObjectMapper().readValue(json, CoinbaseOrderDetailResponse.class);
+
+    assertNull(CoinbaseAdapters.adaptOrder(response.getOrder()));
   }
 }
 

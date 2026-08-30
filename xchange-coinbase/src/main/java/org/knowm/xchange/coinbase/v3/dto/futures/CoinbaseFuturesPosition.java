@@ -25,7 +25,24 @@ public class CoinbaseFuturesPosition {
   private final BigDecimal avgEntryPrice;
   private final BigDecimal unrealizedPnl;
   private final BigDecimal dailyRealizedPnl;
+  private final String contractSize;
+  private final BigDecimal amount;
+  private final String expiryTime;
+  private final BigDecimal realizedPnl;
+  private final BigDecimal entryPrice;
 
+  /**
+   * Creates a position from the current CFM wire fields.
+   *
+   * @param productId canonical Coinbase product identifier
+   * @param expirationTime contract expiration timestamp
+   * @param side exchange position side
+   * @param numberOfContracts decimal contract quantity
+   * @param currentPrice current mark price
+   * @param avgEntryPrice average entry price
+   * @param unrealizedPnl unrealized profit or loss
+   * @param dailyRealizedPnl current-day realized profit or loss
+   */
   @JsonCreator
   public CoinbaseFuturesPosition(
       @JsonProperty("product_id") String productId,
@@ -44,6 +61,44 @@ public class CoinbaseFuturesPosition {
     this.avgEntryPrice = avgEntryPrice;
     this.unrealizedPnl = unrealizedPnl;
     this.dailyRealizedPnl = dailyRealizedPnl;
+    this.contractSize = null;
+    this.amount = null;
+    this.expiryTime = expirationTime;
+    this.realizedPnl = null;
+    this.entryPrice = null;
+  }
+
+  /**
+   * Preserves the pre-1.0.2 position construction contract.
+   *
+   * @deprecated use the current CFM position fields supplied by the eight-argument constructor
+   */
+  @Deprecated
+  public CoinbaseFuturesPosition(
+      String productId,
+      String contractSize,
+      String side,
+      BigDecimal amount,
+      BigDecimal avgEntryPrice,
+      BigDecimal currentPrice,
+      BigDecimal unrealizedPnl,
+      String expiryTime,
+      BigDecimal numberOfContracts,
+      BigDecimal realizedPnl,
+      BigDecimal entryPrice) {
+    this.productId = productId;
+    this.expirationTime = expiryTime;
+    this.side = side;
+    this.numberOfContracts = numberOfContracts;
+    this.currentPrice = currentPrice;
+    this.avgEntryPrice = avgEntryPrice;
+    this.unrealizedPnl = unrealizedPnl;
+    this.dailyRealizedPnl = realizedPnl;
+    this.contractSize = contractSize;
+    this.amount = amount;
+    this.expiryTime = expiryTime;
+    this.realizedPnl = realizedPnl;
+    this.entryPrice = entryPrice;
   }
 
   @Override

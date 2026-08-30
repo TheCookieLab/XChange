@@ -176,6 +176,27 @@ public interface CoinbaseAuthenticated extends Coinbase {
       @QueryParam("order_side") String orderSide,
       @QueryParam("product_types") List<String> productTypes) throws IOException, CoinbaseException;
 
+  /**
+   * Lists fills using the pre-1.0.2 filter surface.
+   *
+   * @deprecated use the complete filter overload
+   */
+  @Deprecated
+  @GET
+  @Path("orders/historical/fills")
+  CoinbaseOrdersResponse listFills(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @QueryParam("order_ids") List<String> orderIds,
+      @QueryParam("trade_ids") List<String> tradeIds,
+      @QueryParam("product_ids") List<String> productIds,
+      @QueryParam("start_sequence_timestamp") String startSequenceTimestamp,
+      @QueryParam("end_sequence_timestamp") String endSequenceTimestamp,
+      @QueryParam("retail_portfolio_id") String retailPortfolioId,
+      @QueryParam("limit") Integer limit,
+      @QueryParam("cursor") String cursor,
+      @QueryParam("sort_by") String sortBy)
+      throws IOException, CoinbaseException;
+
   @GET
   @Path("orders/historical/{order_id}")
   CoinbaseOrderDetailResponse getOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
@@ -193,11 +214,33 @@ public interface CoinbaseAuthenticated extends Coinbase {
   CoinbaseOrdersResponse previewEditOrder(@HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       CoinbaseEditOrderRequest payload) throws IOException, CoinbaseException;
 
+  /**
+   * Fetches best bids and asks for multiple product identifiers.
+   *
+   * @param jwtDigest authenticated request digest
+   * @param productIds optional product identifiers; {@code null} requests all products
+   * @return current best-bid-and-ask response
+   * @throws IOException when the request or response cannot be processed
+   * @throws CoinbaseException when Coinbase rejects the request
+   * @since 1.0.2
+   */
   @GET
   @Path("best_bid_ask")
   CoinbaseBestBidAsksResponse getBestBidAsk(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @QueryParam("product_ids") List<String> productIds) throws IOException, CoinbaseException;
+
+  /**
+   * Fetches best bids and asks using the pre-1.0.2 single-product contract.
+   *
+   * @deprecated use the list-valued product filter
+   */
+  @Deprecated
+  @GET
+  @Path("best_bid_ask")
+  CoinbaseBestBidAsksResponse getBestBidAsk(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @QueryParam("product_ids") String productId) throws IOException, CoinbaseException;
 
   @GET
   @Path("product_book")

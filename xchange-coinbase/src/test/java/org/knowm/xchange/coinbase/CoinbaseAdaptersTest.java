@@ -7,17 +7,22 @@ import static org.junit.Assert.assertNull;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.List;
 import org.junit.Test;
+import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseMarginWindowMeasure;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseMarketMarketIoc;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseFeeTier;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
@@ -32,6 +37,7 @@ import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.instrument.Instrument;
+import si.mazi.rescu.ParamsDigest;
 
 /**
  * Unit tests for CoinbaseAdapters.
@@ -445,9 +451,10 @@ public class CoinbaseAdaptersTest {
         new CoinbaseOrderDetail("order", "client", "BUY", "BTC-USD", "FILLED", null, null, null,
             null, null, "2026-02-08T00:00:00Z");
     CoinbaseOrderDetail nested =
-        new CoinbaseOrderDetail("order", "client", "BUY", "BTC-USD", null, "FILLED", "MARKET",
-            "IOC", configuration, null, null, null, null, null, null, null, null, null, false,
-            true, false, true, "2026-02-08T00:00:00Z", null, null, null, null, null, null, null);
+        new CoinbaseOrderDetail(
+            "order", "client", "BUY", "BTC-USD", null, "FILLED", "MARKET", "IOC", null, null,
+            configuration, null, null, null, null, null, null, null, null, null, false, true, false,
+            true, "2026-02-08T00:00:00Z", null, null, null, null, null, null, null);
 
     Order adapted = CoinbaseAdapters.adaptOrder(nested);
 
@@ -532,6 +539,92 @@ public class CoinbaseAdaptersTest {
             "{\"margin_rate\":{\"value\":\"0.12\"}}",
             CoinbaseTransactionSummaryResponse.class);
     assertEquals(new BigDecimal("0.12"), transactionSummary.getMarginRate());
+  }
+
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testLegacyPublicContractsRemainAvailable() throws Exception {
+    CoinbaseMarginWindowMeasure margin =
+        new CoinbaseMarginWindowMeasure(
+            "INTRADAY",
+            "BASE",
+            BigDecimal.ONE,
+            BigDecimal.ONE,
+            new BigDecimal("0.10"),
+            BigDecimal.ZERO,
+            BigDecimal.TEN);
+    CoinbaseFuturesPosition position =
+        new CoinbaseFuturesPosition(
+            "BTC-USD-PERP",
+            "1",
+            "LONG",
+            BigDecimal.ONE,
+            BigDecimal.TEN,
+            BigDecimal.TEN,
+            BigDecimal.ZERO,
+            "2026-12-20T00:00:00Z",
+            BigDecimal.ONE,
+            BigDecimal.ZERO,
+            BigDecimal.TEN);
+    CoinbaseFuturesBalanceSummaryResponse balance =
+        new CoinbaseFuturesBalanceSummaryResponse(
+            BigDecimal.TEN,
+            BigDecimal.TEN,
+            BigDecimal.ZERO,
+            BigDecimal.TEN,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            BigDecimal.ONE,
+            BigDecimal.TEN,
+            BigDecimal.ONE,
+            BigDecimal.ONE,
+            new BigDecimal("0.10"),
+            margin,
+            margin,
+            Collections.singletonList(position));
+    CoinbaseFill fill =
+        new CoinbaseFill(
+            "entry",
+            "trade",
+            "order",
+            "2026-02-08T00:00:00Z",
+            "FILL",
+            BigDecimal.TEN,
+            BigDecimal.ONE,
+            BigDecimal.ZERO,
+            "BTC-USD",
+            "MAKER",
+            false,
+            "user",
+            "BUY",
+            "portfolio");
+    CoinbaseTransactionSummaryResponse transaction =
+        new CoinbaseTransactionSummaryResponse(
+            BigDecimal.TEN, BigDecimal.ONE, new CoinbaseFeeTier(BigDecimal.ONE, BigDecimal.ZERO));
+
+    assertEquals(new BigDecimal("0.10"), margin.getLiquidationBufferPercentage());
+    assertEquals("1", position.getContractSize());
+    assertEquals(BigDecimal.TEN, balance.getTotalUsdBalance());
+    assertEquals(position, balance.getExpiringFutures().get(0));
+    assertNull(fill.getSequenceTimestamp());
+    assertEquals(BigDecimal.TEN, transaction.getTotalVolume());
+    assertNotNull(
+        CoinbaseAuthenticated.class.getMethod(
+            "listFills",
+            ParamsDigest.class,
+            List.class,
+            List.class,
+            List.class,
+            String.class,
+            String.class,
+            String.class,
+            Integer.class,
+            String.class,
+            String.class));
+    assertNotNull(
+        CoinbaseAuthenticated.class.getMethod(
+            "getBestBidAsk", ParamsDigest.class, String.class));
   }
 
   private static void assertAmount(CoinbaseAmount amount, String expectedValue) {

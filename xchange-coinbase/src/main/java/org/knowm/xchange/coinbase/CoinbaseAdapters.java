@@ -109,47 +109,48 @@ public final class CoinbaseAdapters {
   public static Order adaptOrder(CoinbaseOrderDetail detail) {
     if (detail == null) return null;
     Order.OrderType orderType = adaptOrderType(detail.getSide());
+    Instrument instrument = detail.getInstrument();
     BigDecimal size = configuredSize(detail);
     BigDecimal price = configuredPrice(detail);
-    if (size == null) {
+    if (orderType == null || instrument == null || size == null) {
       return null;
     }
+    Order order;
     if (price != null) {
-      return new LimitOrder(
-          orderType, size, detail.getInstrument(), detail.getOrderId(), detail.getCreatedTime(),
-          price, detail.getAverageFilledPrice(), detail.getFilledSize(), detail.getTotalFees(),
-          adaptOrderStatus(detail.getStatus()));
+      order =
+          new LimitOrder(
+              orderType, size, instrument, detail.getOrderId(), detail.getCreatedTime(),
+              price, detail.getAverageFilledPrice(), detail.getFilledSize(), detail.getTotalFees(),
+              adaptOrderStatus(detail.getStatus()));
+    } else {
+      order =
+          new org.knowm.xchange.dto.trade.MarketOrder(
+              orderType, size, instrument, detail.getOrderId(), detail.getCreatedTime());
     }
-    return new org.knowm.xchange.dto.trade.MarketOrder(
-        orderType, size, detail.getInstrument(), detail.getOrderId(), detail.getCreatedTime());
+    order.setLeverage(detail.getLeverage());
+    return order;
   }
 
   private static BigDecimal configuredSize(CoinbaseOrderDetail detail) {
     CoinbaseOrderConfiguration config = detail.getOrderConfiguration();
-    if (config == null) return detail.getSize();
+    if (config == null) return detail.isSizeInQuote() ? null : detail.getSize();
     if (config.getMarketMarketIoc() != null) {
-      return firstNonNull(config.getMarketMarketIoc().getBaseSize(),
-          config.getMarketMarketIoc().getQuoteSize());
+      return config.getMarketMarketIoc().getBaseSize();
     }
     if (config.getMarketMarketFok() != null) {
-      return firstNonNull(config.getMarketMarketFok().getBaseSize(),
-          config.getMarketMarketFok().getQuoteSize());
+      return config.getMarketMarketFok().getBaseSize();
     }
     if (config.getSorLimitIoc() != null) {
-      return firstNonNull(config.getSorLimitIoc().getBaseSize(),
-          config.getSorLimitIoc().getQuoteSize());
+      return config.getSorLimitIoc().getBaseSize();
     }
     if (config.getLimitLimitGtc() != null) {
-      return firstNonNull(config.getLimitLimitGtc().getBaseSize(),
-          config.getLimitLimitGtc().getQuoteSize());
+      return config.getLimitLimitGtc().getBaseSize();
     }
     if (config.getLimitLimitGtd() != null) {
-      return firstNonNull(config.getLimitLimitGtd().getBaseSize(),
-          config.getLimitLimitGtd().getQuoteSize());
+      return config.getLimitLimitGtd().getBaseSize();
     }
     if (config.getLimitLimitFok() != null) {
-      return firstNonNull(config.getLimitLimitFok().getBaseSize(),
-          config.getLimitLimitFok().getQuoteSize());
+      return config.getLimitLimitFok().getBaseSize();
     }
     if (config.getStopLimitStopLimitGtc() != null) {
       return config.getStopLimitStopLimitGtc().getBaseSize();
@@ -245,12 +246,14 @@ public final class CoinbaseAdapters {
   /**
    * Adapts a product ID string into a financial instrument (e.g., CurrencyPair) by splitting the
    * string on hyphens. For spot products, expects the product ID to represent a currency pair in
-   * the format "base-counter". For futures/perpetuals, supports IDs with a prompt suffix (e.g.
-   * "base-counter-PERP"), which are mapped to {@link FuturesContract}.
+   * the format "base-counter". For derivatives whose first two components are a canonical price
+   * pair, maps the remaining prompt suffix to {@link FuturesContract}. Opaque CDE identifiers end
+   * in {@code -CDE} but do not encode their price pair; they fail closed rather than fabricating an
+   * instrument from product-code segments.
    *
    * @param productId the product ID string to adapt, must not be null
-   * @return the corresponding Instrument (CurrencyPair or FuturesContract), or null if the format
-   * is invalid
+   * @return the corresponding instrument, or {@code null} when the identifier is invalid or does
+   *     not carry enough metadata to derive one
    */
   public static Instrument adaptInstrument(String productId) {
     Objects.requireNonNull(productId, "Cannot create instrument from a null productId");
@@ -259,7 +262,7 @@ public final class CoinbaseAdapters {
     if (tokens.length == 2) {
       return new CurrencyPair(tokens[0], tokens[1]);
     }
-    if (tokens.length >= 3) {
+    if (tokens.length >= 3 && !"CDE".equals(tokens[tokens.length - 1])) {
       String prompt = String.join("-", Arrays.copyOfRange(tokens, 2, tokens.length));
       return new FuturesContract(new CurrencyPair(tokens[0], tokens[1]), prompt);
     }

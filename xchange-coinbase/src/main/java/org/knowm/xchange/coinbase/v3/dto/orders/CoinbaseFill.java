@@ -39,6 +39,25 @@ public class CoinbaseFill {
   private final String side;
   private final String retailPortfolioId;
 
+  /**
+   * Creates a fill from the current Advanced Trade wire fields.
+   *
+   * @param entryId ledger entry identifier
+   * @param tradeId trade identifier
+   * @param orderId parent order identifier
+   * @param tradeTime execution timestamp
+   * @param tradeType exchange trade classification
+   * @param price execution price
+   * @param size execution quantity
+   * @param commission execution fee
+   * @param productId canonical product identifier
+   * @param sequenceTimestamp response sequence timestamp
+   * @param liquidityIndicator maker/taker classification
+   * @param sizeInQuote whether the reported size uses quote units
+   * @param userId Coinbase user identifier
+   * @param side execution side
+   * @param retailPortfolioId portfolio identifier
+   */
   @JsonCreator
   public CoinbaseFill(
       @JsonProperty("entry_id") String entryId,
@@ -71,6 +90,45 @@ public class CoinbaseFill {
     this.userId = userId;
     this.side = side;
     this.retailPortfolioId = retailPortfolioId;
+  }
+
+  /**
+   * Preserves the pre-1.0.2 fill construction contract.
+   *
+   * @deprecated use the constructor that retains {@code sequence_timestamp}
+   */
+  @Deprecated
+  public CoinbaseFill(
+      String entryId,
+      String tradeId,
+      String orderId,
+      String tradeTime,
+      String tradeType,
+      BigDecimal price,
+      BigDecimal size,
+      BigDecimal commission,
+      String productId,
+      String liquidityIndicator,
+      boolean sizeInQuote,
+      String userId,
+      String side,
+      String retailPortfolioId) {
+    this(
+        entryId,
+        tradeId,
+        orderId,
+        tradeTime,
+        tradeType,
+        price,
+        size,
+        commission,
+        productId,
+        null,
+        liquidityIndicator,
+        sizeInQuote,
+        userId,
+        side,
+        retailPortfolioId);
   }
 
   private static Date parseTimestamp(String value) {

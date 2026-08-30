@@ -30,6 +30,8 @@ public class CoinbaseOrderDetail {
   private final String status;
   private final String orderType;
   private final String timeInForce;
+  private final String leverage;
+  private final CoinbaseMarginType marginType;
   private final CoinbaseOrderConfiguration orderConfiguration;
   private final BigDecimal completionPercentage;
   private final BigDecimal averageFilledPrice;
@@ -57,9 +59,10 @@ public class CoinbaseOrderDetail {
   public CoinbaseOrderDetail(String orderId, String clientOrderId, String side, String productId,
       String status, BigDecimal averageFilledPrice, BigDecimal filledSize, BigDecimal totalFees,
       BigDecimal size, BigDecimal price, String createdTime) {
-    this(orderId, clientOrderId, side, productId, null, status, null, null, null, null,
-        averageFilledPrice, filledSize, null, null, totalFees, null, size, price, false, false,
-        false, false, createdTime, null, null, null, null, null, null, null);
+    this(
+        orderId, clientOrderId, side, productId, null, status, null, null, null, null, null, null,
+        averageFilledPrice, filledSize, null, null, totalFees, null, size, price, false, false, false,
+        false, createdTime, null, null, null, null, null, null, null);
   }
 
   @JsonCreator
@@ -72,6 +75,8 @@ public class CoinbaseOrderDetail {
       @JsonProperty("status") String status,
       @JsonProperty("order_type") String orderType,
       @JsonProperty("time_in_force") String timeInForce,
+      @JsonProperty("leverage") String leverage,
+      @JsonProperty("margin_type") CoinbaseMarginType marginType,
       @JsonProperty("order_configuration") CoinbaseOrderConfiguration orderConfiguration,
       @JsonProperty("completion_percentage") BigDecimal completionPercentage,
       @JsonProperty("average_filled_price") BigDecimal averageFilledPrice,
@@ -102,6 +107,8 @@ public class CoinbaseOrderDetail {
     this.status = status;
     this.orderType = orderType;
     this.timeInForce = timeInForce;
+    this.leverage = leverage;
+    this.marginType = marginType;
     this.orderConfiguration = orderConfiguration;
     this.completionPercentage = completionPercentage;
     this.averageFilledPrice = averageFilledPrice;

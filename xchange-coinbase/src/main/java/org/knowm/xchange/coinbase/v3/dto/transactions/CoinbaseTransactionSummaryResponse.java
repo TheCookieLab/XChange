@@ -28,6 +28,20 @@ public class CoinbaseTransactionSummaryResponse {
   private final BigDecimal totalBalance;
   private final Boolean hasCostPlusCommission;
 
+  /**
+   * Creates a transaction summary from current Advanced Trade fields.
+   *
+   * @param totalVolume aggregate trading volume
+   * @param totalFees aggregate fees
+   * @param feeTier current maker/taker fee tier
+   * @param marginRate wrapped margin rate
+   * @param advancedTradeOnlyVolume Advanced Trade volume
+   * @param advancedTradeOnlyFees Advanced Trade fees
+   * @param coinbaseProVolume Coinbase Pro volume
+   * @param coinbaseProFees Coinbase Pro fees
+   * @param totalBalance total account balance
+   * @param hasCostPlusCommission whether cost-plus commission applies
+   */
   @JsonCreator
   public CoinbaseTransactionSummaryResponse(
       @JsonProperty("total_volume") BigDecimal totalVolume,
@@ -50,6 +64,17 @@ public class CoinbaseTransactionSummaryResponse {
     this.coinbaseProFees = coinbaseProFees;
     this.totalBalance = totalBalance;
     this.hasCostPlusCommission = hasCostPlusCommission;
+  }
+
+  /**
+   * Preserves the pre-1.0.2 transaction-summary construction contract.
+   *
+   * @deprecated use the current constructor to retain CFM margin and volume fields
+   */
+  @Deprecated
+  public CoinbaseTransactionSummaryResponse(
+      BigDecimal totalVolume, BigDecimal totalFees, CoinbaseFeeTier feeTier) {
+    this(totalVolume, totalFees, feeTier, null, null, null, null, null, null, null);
   }
 
   @Override
