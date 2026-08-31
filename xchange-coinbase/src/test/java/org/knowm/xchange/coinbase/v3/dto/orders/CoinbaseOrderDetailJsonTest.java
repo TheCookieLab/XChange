@@ -67,6 +67,27 @@ public class CoinbaseOrderDetailJsonTest {
   }
 
   @Test
+  public void testAbsentAndBlankMarginTypeRemainNull() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    CoinbaseOrderDetail omitted =
+        mapper.readValue("{\"order\":{\"order_id\":\"omitted\",\"side\":\"BUY\","
+            + "\"product_id\":\"BTC-USD\",\"status\":\"OPEN\"}}",
+            CoinbaseOrderDetailResponse.class).getOrder();
+    CoinbaseOrderDetail explicitNull =
+        mapper.readValue("{\"order\":{\"order_id\":\"null\",\"side\":\"BUY\","
+            + "\"product_id\":\"BTC-USD\",\"status\":\"OPEN\",\"margin_type\":null}}",
+            CoinbaseOrderDetailResponse.class).getOrder();
+    CoinbaseOrderDetail blank =
+        mapper.readValue("{\"order\":{\"order_id\":\"blank\",\"side\":\"BUY\","
+            + "\"product_id\":\"BTC-USD\",\"status\":\"OPEN\",\"margin_type\":\"  \"}}",
+            CoinbaseOrderDetailResponse.class).getOrder();
+
+    assertNull(omitted.getMarginType());
+    assertNull(explicitNull.getMarginType());
+    assertNull(blank.getMarginType());
+  }
+
+  @Test
   public void testAdaptSorLimitIocOrderPreservesLimitPrice() throws Exception {
     String json =
         "{\"order\":{\"order_id\":\"sor-1\",\"side\":\"BUY\",\"product_id\":\"BTC-USD\","
@@ -82,7 +103,7 @@ public class CoinbaseOrderDetailJsonTest {
     assertEquals(new BigDecimal("30000"), ((LimitOrder) adapted).getLimitPrice());
   }
 
-  @Test
+  @Test(expected = org.knowm.xchange.exceptions.NotAvailableFromExchangeException.class)
   public void testDeserializeCdeLimitFokOrderDetailWithoutFabricatingInstrument() throws Exception {
     String json =
         "{\"order\":{\"order_id\":\"fok-1\",\"client_order_id\":\"c-fok\","
@@ -100,10 +121,11 @@ public class CoinbaseOrderDetailJsonTest {
         response.getOrder().getOrderConfiguration().getLimitLimitFok().getLimitPrice());
 
     assertNull(response.getOrder().getInstrument());
-    assertNull(CoinbaseAdapters.adaptOrder(response.getOrder()));
+
+    CoinbaseAdapters.adaptOrder(response.getOrder());
   }
 
-  @Test
+  @Test(expected = org.knowm.xchange.exceptions.NotAvailableFromExchangeException.class)
   public void testRejectQuoteSizedOrderWithoutBaseQuantityConversion() throws Exception {
     String json =
         "{\"order\":{\"order_id\":\"quote-1\",\"side\":\"BUY\",\"product_id\":\"BTC-USD\","
@@ -115,7 +137,7 @@ public class CoinbaseOrderDetailJsonTest {
     CoinbaseOrderDetailResponse response =
         new ObjectMapper().readValue(json, CoinbaseOrderDetailResponse.class);
 
-    assertNull(CoinbaseAdapters.adaptOrder(response.getOrder()));
+    CoinbaseAdapters.adaptOrder(response.getOrder());
   }
 }
 

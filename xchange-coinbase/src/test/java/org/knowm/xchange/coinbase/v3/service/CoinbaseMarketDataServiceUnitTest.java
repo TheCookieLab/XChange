@@ -1,10 +1,15 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -95,6 +100,42 @@ public class CoinbaseMarketDataServiceUnitTest {
     
     // Verify that a ticker is returned (even without price book data, adaptTicker should handle null)
     assertNotNull("Ticker should not be null even with empty priceBooks", ticker);
+  }
+
+  @Test
+  public void testAuthenticatedBestBidAskUsesProductListOverload() throws IOException {
+    Exchange exchange = mock(Exchange.class);
+    CoinbaseAuthenticated api = mock(CoinbaseAuthenticated.class);
+    ParamsDigest digest = mock(ParamsDigest.class);
+    CoinbaseMarketDataServiceRaw service =
+        new CoinbaseMarketDataServiceRaw(exchange, api, digest);
+    String productId = "ETP-20DEC30-CDE";
+    CoinbaseBestBidAsksResponse response = mock(CoinbaseBestBidAsksResponse.class);
+    when(api.getBestBidAsks(same(digest), eq(Collections.singletonList(productId))))
+        .thenReturn(response);
+
+    CoinbaseBestBidAsksResponse actual = service.getBestBidAsk(productId);
+
+    assertSame("The raw response instance must be returned unchanged", response, actual);
+    verify(api).getBestBidAsks(same(digest), eq(Collections.singletonList(productId)));
+    verify(api, never()).getBestBidAsk(same(digest), eq(productId));
+  }
+
+  @Test
+  public void testAuthenticatedBestBidAskUsesNullProductListForNullId() throws IOException {
+    Exchange exchange = mock(Exchange.class);
+    CoinbaseAuthenticated api = mock(CoinbaseAuthenticated.class);
+    ParamsDigest digest = mock(ParamsDigest.class);
+    CoinbaseMarketDataServiceRaw service =
+        new CoinbaseMarketDataServiceRaw(exchange, api, digest);
+    CoinbaseBestBidAsksResponse response = mock(CoinbaseBestBidAsksResponse.class);
+    when(api.getBestBidAsks(same(digest), isNull())).thenReturn(response);
+
+    CoinbaseBestBidAsksResponse actual = service.getBestBidAsk(null);
+
+    assertSame("The raw response instance must be returned unchanged", response, actual);
+    verify(api).getBestBidAsks(same(digest), isNull());
+    verify(api, never()).getBestBidAsk(same(digest), isNull());
   }
 }
 

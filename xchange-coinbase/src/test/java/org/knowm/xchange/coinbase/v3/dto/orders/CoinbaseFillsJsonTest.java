@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.Instant;
 import org.junit.Test;
 
 /**
@@ -39,6 +40,8 @@ public class CoinbaseFillsJsonTest {
     assertEquals("Size should match", new BigDecimal("0.1"), btcFill.getSize());
     assertEquals("Commission should match", new BigDecimal("2.5"), btcFill.getCommission());
     assertEquals("Side should match", "BUY", btcFill.getSide());
+    assertEquals("Sequence timestamp should match", Instant.parse("2025-10-13T00:00:00Z"),
+        btcFill.getSequenceTimestamp().toInstant());
     assertEquals("Liquidity indicator should match", "TAKER", btcFill.getLiquidityIndicator());
     
     // Verify second fill (ETH sell)

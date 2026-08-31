@@ -56,7 +56,7 @@ public class CoinbaseProductJsonTest {
     String json = "{\n"
         + "  \"product_id\": \"BIP-20DEC30-CDE\",\n"
         + "  \"product_type\": \"FUTURE\",\n"
-        + "  \"product_venue\": \"CDE\",\n"
+        + "  \"product_venue\": \"FCM\",\n"
         + "  \"base_increment\": \"0.0001\",\n"
         + "  \"quote_increment\": \"0.01\",\n"
         + "  \"price_increment\": \"0.01\",\n"
@@ -92,7 +92,7 @@ public class CoinbaseProductJsonTest {
     assertEquals("Product ID should match", "BIP-20DEC30-CDE", product.getProductId());
     assertEquals("FUTURE", product.getProductType());
     assertEquals("USD", product.getQuoteCurrencyId());
-    assertEquals("CDE", product.getProductVenue());
+    assertEquals("FCM", product.getProductVenue());
     assertEquals(new BigDecimal("0.0001"), product.getBaseIncrement());
     assertEquals(new BigDecimal("0.01"), product.getQuoteIncrement());
     assertEquals(new BigDecimal("0.01"), product.getPriceIncrement());

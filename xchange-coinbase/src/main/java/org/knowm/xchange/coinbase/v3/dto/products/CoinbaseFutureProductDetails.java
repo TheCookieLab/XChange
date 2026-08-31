@@ -47,7 +47,12 @@ public class CoinbaseFutureProductDetails {
   private final String futuresAssetType;
   private final BigDecimal indexPrice;
 
-  /** Legacy six-field constructor retained for existing response fixture owners. */
+  /**
+   * Legacy six-field constructor retained for existing response fixture owners.
+   *
+   * @deprecated use the full-field constructor so all exchange-provided metadata is retained
+   */
+  @Deprecated
   public CoinbaseFutureProductDetails(
       String contractRootUnit,
       String fundingRate,
@@ -59,7 +64,12 @@ public class CoinbaseFutureProductDetails {
         perpetualDetails, null, null, null, null, null, null, null, fundingRate, fundingTime,
         null, intradayMarginRate, overnightMarginRate, null, null, null);
   }
-  /** Legacy constructor including the API-reported funding interval. */
+  /**
+   * Legacy constructor including the API-reported funding interval.
+   *
+   * @deprecated use the full-field constructor so all exchange-provided metadata is retained
+   */
+  @Deprecated
   public CoinbaseFutureProductDetails(
       String contractRootUnit,
       String fundingRate,

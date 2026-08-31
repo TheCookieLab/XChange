@@ -3,6 +3,7 @@ package org.knowm.xchange.coinbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +12,9 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
+import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
@@ -34,9 +38,8 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
-import org.knowm.xchange.derivative.FuturesContract;
-import org.knowm.xchange.currency.Currency;
-import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.account.Wallet;
@@ -478,18 +481,14 @@ public class CoinbaseAdaptersTest {
     CoinbaseOrderConfiguration configuration =
         CoinbaseOrderConfiguration.marketMarketIoc(
             new CoinbaseMarketMarketIoc(null, new BigDecimal("2.5")));
-    CoinbaseOrderDetail detail =
-        new CoinbaseOrderDetail("order", "client", "BUY", "BTC-USD", "FILLED", null, null, null,
-            null, null, "2026-02-08T00:00:00Z");
     CoinbaseOrderDetail nested =
         new CoinbaseOrderDetail(
             "order", "client", "BUY", "BTC-USD", null, "FILLED", "MARKET", "IOC", null, null,
-            configuration, null, null, null, null, null, null, null, null, null, false, true, false,
-            true, "2026-02-08T00:00:00Z", null, null, null, null, null, null, null);
+            configuration, null, null, null, null, null, null, null, null, null, false, false,
+            false, true, "2026-02-08T00:00:00Z", null, null, null, null, null, null, null);
 
     Order adapted = CoinbaseAdapters.adaptOrder(nested);
 
-    assertNotNull(adapted);
     assertEquals(new BigDecimal("2.5"), adapted.getOriginalAmount());
   }
   @Test
@@ -508,12 +507,12 @@ public class CoinbaseAdaptersTest {
             + "\"liquidation_threshold\":{\"value\":\"250\",\"currency\":\"USD\"},"
             + "\"liquidation_buffer_amount\":{\"value\":\"125.5\",\"currency\":\"USD\"},"
             + "\"liquidation_buffer_percentage\":\"0.05\","
-            + "\"intraday_margin_window_measure\":{\"margin_window_type\":\"INTRADAY\","
-            + "\"margin_level\":\"BASE\",\"initial_margin\":\"400\","
+            + "\"intraday_margin_window_measure\":{\"margin_window_type\":\"FCM_MARGIN_WINDOW_TYPE_INTRADAY\","
+            + "\"margin_level\":\"MARGIN_LEVEL_TYPE_BASE\",\"initial_margin\":\"400\","
             + "\"maintenance_margin\":\"300\",\"liquidation_buffer\":\"125.5\","
             + "\"total_hold\":\"50\",\"futures_buying_power\":\"5000\"},"
-            + "\"overnight_margin_window_measure\":{\"margin_window_type\":\"OVERNIGHT\","
-            + "\"margin_level\":\"BASE\",\"initial_margin\":\"450\","
+            + "\"overnight_margin_window_measure\":{\"margin_window_type\":\"FCM_MARGIN_WINDOW_TYPE_OVERNIGHT\","
+            + "\"margin_level\":\"MARGIN_LEVEL_TYPE_BASE\",\"initial_margin\":\"450\","
             + "\"maintenance_margin\":\"350\",\"liquidation_buffer\":\"100.5\","
             + "\"total_hold\":\"60\",\"futures_buying_power\":\"4900\"},"
             + "\"total_pending_transfers_amount\":{\"value\":\"5\",\"currency\":\"USD\"},"
@@ -533,8 +532,10 @@ public class CoinbaseAdaptersTest {
     assertAmount(summary.getLiquidationThreshold(), "250");
     assertAmount(summary.getLiquidationBufferAmount(), "125.5");
     assertEquals("0.05", summary.getLiquidationBufferPercentage());
-    assertEquals("INTRADAY", summary.getIntradayMarginWindowMeasure().getMarginWindowType());
-    assertEquals("BASE", summary.getIntradayMarginWindowMeasure().getMarginLevel());
+    assertEquals("FCM_MARGIN_WINDOW_TYPE_INTRADAY",
+        summary.getIntradayMarginWindowMeasure().getMarginWindowType());
+    assertEquals("MARGIN_LEVEL_TYPE_BASE",
+        summary.getIntradayMarginWindowMeasure().getMarginLevel());
     assertEquals(new BigDecimal("400"),
         summary.getIntradayMarginWindowMeasure().getInitialMargin());
     assertEquals(new BigDecimal("300"),
@@ -544,8 +545,10 @@ public class CoinbaseAdaptersTest {
     assertEquals(new BigDecimal("50"), summary.getIntradayMarginWindowMeasure().getTotalHold());
     assertEquals(new BigDecimal("5000"),
         summary.getIntradayMarginWindowMeasure().getFuturesBuyingPower());
-    assertEquals("OVERNIGHT", summary.getOvernightMarginWindowMeasure().getMarginWindowType());
-    assertEquals("BASE", summary.getOvernightMarginWindowMeasure().getMarginLevel());
+    assertEquals("FCM_MARGIN_WINDOW_TYPE_OVERNIGHT",
+        summary.getOvernightMarginWindowMeasure().getMarginWindowType());
+    assertEquals("MARGIN_LEVEL_TYPE_BASE",
+        summary.getOvernightMarginWindowMeasure().getMarginLevel());
     assertEquals(new BigDecimal("450"),
         summary.getOvernightMarginWindowMeasure().getInitialMargin());
     assertEquals(new BigDecimal("350"),
@@ -604,14 +607,33 @@ public class CoinbaseAdaptersTest {
             BigDecimal.ZERO,
             BigDecimal.ZERO);
 
-    assertNull(CoinbaseAdapters.adaptOrderBook(priceBook));
-    assertNull(CoinbaseAdapters.adaptTrade(trade));
-    assertNull(CoinbaseAdapters.adaptTicker(null, null, priceBook));
-    assertEquals(
-        0,
-        CoinbaseAdapters.adaptFuturesOpenPositions(Collections.singletonList(position))
-            .getOpenPositions()
-            .size());
+    assertUnavailable(() -> CoinbaseAdapters.adaptOrderBook(priceBook));
+    assertUnavailable(() -> CoinbaseAdapters.adaptTrade(trade));
+    assertUnavailable(() -> CoinbaseAdapters.adaptTicker(null, null, priceBook));
+    assertUnavailable(
+        () -> CoinbaseAdapters.adaptFuturesOpenPositions(Collections.singletonList(position)));
+  }
+
+  @Test
+  public void testAdaptQuoteSizedFillConvertsToBaseAmount() {
+    CoinbaseFill fill =
+        new CoinbaseFill(
+            "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            new BigDecimal("2500"), new BigDecimal("100"), BigDecimal.ZERO, "ETH-USD",
+            "MAKER", true, "user", "BUY", "portfolio");
+
+    assertEquals(new BigDecimal("0.04"), CoinbaseAdapters.adaptFill(fill).getOriginalAmount());
+  }
+
+  @Test
+  public void testRejectQuoteSizedFillWithoutPositivePrice() {
+    CoinbaseFill fill =
+        new CoinbaseFill(
+            "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            BigDecimal.ZERO, new BigDecimal("100"), BigDecimal.ZERO, "ETH-USD",
+            "MAKER", true, "user", "BUY", "portfolio");
+
+    assertUnavailable(() -> CoinbaseAdapters.adaptFill(fill));
   }
 
   @SuppressWarnings("deprecation")
@@ -702,6 +724,18 @@ public class CoinbaseAdaptersTest {
     assertEquals(CoinbaseBestBidAsksResponse.class, bestBidAsk.getReturnType());
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     assertNull(authenticated.getBestBidAsk(null, null));
+  }
+
+  private static void assertUnavailable(Runnable action) {
+    try {
+      action.run();
+      fail("Expected opaque or unadaptable Coinbase state to fail explicitly");
+    } catch (RuntimeException expected) {
+      if (!(expected instanceof NotAvailableFromExchangeException)
+          && !(expected instanceof ExchangeException)) {
+        throw expected;
+      }
+    }
   }
 
   private static void assertAmount(CoinbaseAmount amount, String expectedValue) {

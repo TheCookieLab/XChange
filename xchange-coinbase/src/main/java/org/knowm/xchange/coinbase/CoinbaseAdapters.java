@@ -12,7 +12,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
@@ -63,10 +66,8 @@ public final class CoinbaseAdapters {
   }
 
   public static OrderBook adaptOrderBook(CoinbasePriceBook priceBook) {
+    requireAdaptableProduct(priceBook.getProductId(), "order book");
     Instrument instrument = CoinbaseAdapters.adaptInstrument(priceBook.getProductId());
-    if (instrument == null) {
-      return null;
-    }
 
     List<LimitOrder> asks = priceBook.getAsks().stream().map(
         priceBookEntry -> CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.ASK,
@@ -88,15 +89,51 @@ public final class CoinbaseAdapters {
   }
 
   public static Trade adaptTrade(CoinbaseMarketTrade marketTrade) {
+    requireAdaptableProduct(marketTrade.getProductId(), "market trade");
     Instrument instrument = adaptInstrument(marketTrade.getProductId());
-    if (instrument == null) {
-      return null;
-    }
     return UserTrade.builder().id(marketTrade.getTradeId())
         .instrument(instrument).price(marketTrade.getPrice())
         .originalAmount(marketTrade.getSize()).timestamp(
             Date.from(DateTimeFormatter.ISO_INSTANT.parse(marketTrade.getTime(), Instant::from)))
         .type(adaptOrderType(marketTrade.getSide())).build();
+  }
+
+  /**
+   * Adapts a Coinbase Advanced Trade fill to a generic XChange user trade.
+   *
+   * <p>Coinbase may report the fill size in quote currency. XChange's
+   * {@code originalAmount} is base/instrument quantity, so quote-sized fills are converted using
+   * the execution price. A non-positive or missing price is not authoritative and therefore
+   * fails explicitly instead of publishing a mislabeled amount.
+   *
+   * @param fill the Coinbase fill
+   * @return a lossless generic trade for a representable product
+   * @throws ExchangeException when the product is opaque, the side/amount is unusable, or a
+   *     quote-sized fill has no positive execution price
+   */
+  public static UserTrade adaptFill(CoinbaseFill fill) {
+    Objects.requireNonNull(fill, "Cannot adapt a null fill");
+    requireAdaptableProduct(fill.getProductId(), "fill");
+    OrderType orderType = adaptOrderType(fill.getSide());
+    if (orderType == null || fill.getSize() == null) {
+      throw new ExchangeException(
+          "Cannot adapt Coinbase fill " + fill.getTradeId()
+              + ": missing side or quantity for product " + fill.getProductId());
+    }
+    BigDecimal amount = fill.getSize();
+    if (fill.isSizeInQuote()) {
+      if (fill.getPrice() == null || fill.getPrice().signum() <= 0) {
+        throw new ExchangeException(
+            "Cannot adapt quote-sized Coinbase fill " + fill.getTradeId()
+                + " for product " + fill.getProductId()
+                + ": execution price must be positive and authoritative");
+      }
+      amount = amount.divide(fill.getPrice(), MathContext.DECIMAL128);
+    }
+    return UserTrade.builder().id(fill.getTradeId()).orderId(fill.getOrderId())
+        .instrument(adaptInstrument(fill.getProductId())).price(fill.getPrice())
+        .originalAmount(amount).timestamp(fill.getTradeTime()).type(orderType)
+        .feeAmount(fill.getCommission()).build();
   }
 
   public static OrderType adaptOrderType(String side) {
@@ -110,15 +147,38 @@ public final class CoinbaseAdapters {
   }
 
   /**
-   * Adapt a Coinbase Advanced Trade order detail to XChange Order, reading quantity and price from
-   * the variant nested in {@code order_configuration}. Missing or unsupported variants fail closed.
+   * Adapt a Coinbase Advanced Trade order detail to an XChange order.
+   *
+   * <p>Opaque CDE product identifiers cannot be represented by XChange's generic instrument
+   * model and therefore fail explicitly. Quote-sized orders are only representable after they
+   * have filled at a positive authoritative price; an unfilled quote order is never labeled as a
+   * base quantity.
    */
   public static Order adaptOrder(CoinbaseOrderDetail detail) {
     if (detail == null) return null;
+    requireAdaptableProduct(detail.getProductId(), "order");
+    Order.OrderStatus status = adaptOrderStatus(detail.getStatus());
     Order.OrderType orderType = adaptOrderType(detail.getSide());
-    Instrument instrument = detail.getInstrument();
+    Instrument instrument = adaptInstrument(detail.getProductId());
     BigDecimal size = configuredSize(detail);
     BigDecimal price = configuredPrice(detail);
+    if (isQuoteSized(detail)) {
+      if (status != Order.OrderStatus.FILLED) {
+        throw new NotAvailableFromExchangeException(
+            "Cannot adapt unfilled quote-sized Coinbase order " + detail.getOrderId()
+                + " for product " + detail.getProductId()
+                + ": XChange originalAmount requires base quantity");
+      }
+      BigDecimal quoteSize = configuredQuoteSize(detail);
+      BigDecimal executionPrice = firstNonNull(detail.getAverageFilledPrice(), price);
+      if (quoteSize == null || executionPrice == null || executionPrice.signum() <= 0) {
+        throw new ExchangeException(
+            "Cannot adapt filled quote-sized Coinbase order " + detail.getOrderId()
+                + " for product " + detail.getProductId()
+                + ": missing positive authoritative execution price");
+      }
+      size = quoteSize.divide(executionPrice, MathContext.DECIMAL128);
+    }
     if (orderType == null || instrument == null || size == null) {
       return null;
     }
@@ -128,7 +188,7 @@ public final class CoinbaseAdapters {
           new LimitOrder(
               orderType, size, instrument, detail.getOrderId(), detail.getCreatedTime(),
               price, detail.getAverageFilledPrice(), detail.getFilledSize(), detail.getTotalFees(),
-              adaptOrderStatus(detail.getStatus()));
+              status);
     } else {
       order =
           new org.knowm.xchange.dto.trade.MarketOrder(
@@ -136,6 +196,40 @@ public final class CoinbaseAdapters {
     }
     order.setLeverage(detail.getLeverage());
     return order;
+  }
+
+  private static boolean isQuoteSized(CoinbaseOrderDetail detail) {
+    return detail.isSizeInQuote() || configuredQuoteSize(detail) != null;
+  }
+
+  private static BigDecimal configuredQuoteSize(CoinbaseOrderDetail detail) {
+    CoinbaseOrderConfiguration config = detail.getOrderConfiguration();
+    if (config == null) return detail.isSizeInQuote() ? detail.getSize() : null;
+    if (config.getMarketMarketIoc() != null && config.getMarketMarketIoc().getQuoteSize() != null) {
+      return config.getMarketMarketIoc().getQuoteSize();
+    }
+    if (config.getMarketMarketFok() != null && config.getMarketMarketFok().getQuoteSize() != null) {
+      return config.getMarketMarketFok().getQuoteSize();
+    }
+    if (config.getSorLimitIoc() != null && config.getSorLimitIoc().getQuoteSize() != null) {
+      return config.getSorLimitIoc().getQuoteSize();
+    }
+    if (config.getLimitLimitGtc() != null && config.getLimitLimitGtc().getQuoteSize() != null) {
+      return config.getLimitLimitGtc().getQuoteSize();
+    }
+    if (config.getLimitLimitGtd() != null && config.getLimitLimitGtd().getQuoteSize() != null) {
+      return config.getLimitLimitGtd().getQuoteSize();
+    }
+    if (config.getLimitLimitFok() != null && config.getLimitLimitFok().getQuoteSize() != null) {
+      return config.getLimitLimitFok().getQuoteSize();
+    }
+    if (config.getTwapLimitGtd() != null && config.getTwapLimitGtd().getQuoteSize() != null) {
+      return config.getTwapLimitGtd().getQuoteSize();
+    }
+    if (config.getScaledLimitGtc() != null && config.getScaledLimitGtc().getQuoteSize() != null) {
+      return config.getScaledLimitGtc().getQuoteSize();
+    }
+    return null;
   }
 
   private static BigDecimal configuredSize(CoinbaseOrderDetail detail) {
@@ -213,18 +307,17 @@ public final class CoinbaseAdapters {
   }
 
   /**
-   * Adapt Coinbase Advanced Trade list orders response into XChange OpenOrders (LimitOrders only),
-   * filtering to orders in an open state.
-   */
-  public static OpenOrders adaptOpenOrders(CoinbaseListOrdersResponse response) {
-    return adaptOpenOrders(response.getOrders());
-  }
-
-  /**
-   * Adapt Coinbase order details into XChange OpenOrders (LimitOrders only), filtering to orders
-   * in an open state.
+   * Adapt Coinbase order details into XChange open orders, filtering to orders in an open state.
+   *
+   * <p>Every response detail is validated before filtering so opaque CDE state cannot disappear
+   * merely because its status is not open.
    */
   public static OpenOrders adaptOpenOrders(List<CoinbaseOrderDetail> orders) {
+    for (CoinbaseOrderDetail detail : orders) {
+      if (detail != null) {
+        requireAdaptableProduct(detail.getProductId(), "open order");
+      }
+    }
     List<LimitOrder> open = orders.stream()
         .filter(detail -> {
           Order.OrderStatus s = adaptOrderStatus(detail.getStatus());
@@ -237,20 +330,28 @@ public final class CoinbaseAdapters {
     return new OpenOrders(open);
   }
 
+
+  /**
+   * Adapt a Coinbase list-orders response into generic open orders.
+   *
+   * @param response Coinbase list-orders response
+   * @return adapted open orders
+   */
+  public static OpenOrders adaptOpenOrders(CoinbaseListOrdersResponse response) {
+    return adaptOpenOrders(response.getOrders());
+  }
+
   /**
    * Adapts the given financial instrument to a product ID string suitable for Coinbase API by
-   * replacing any forward slashes in the instrument's string representation with hyphens.
+   * replacing any forward slashes in its string representation with hyphens.
    *
-   * @param instrument the financial instrument to adapt, typically representing a currency pair or
-   *                   derivative instrument
-   * @return a product ID string with forward slashes replaced by hyphens, formatted according to
-   * Coinbase's required conventions
+   * @param instrument the financial instrument to adapt
+   * @return a product ID string with forward slashes replaced by hyphens
    */
   public static String adaptProductId(Instrument instrument) {
     Objects.requireNonNull(instrument, "Cannot format productId from a null instrument");
     return instrument.toString().replace("/", "-");
   }
-
   /**
    * Adapts a product ID string into a financial instrument (e.g., CurrencyPair) by splitting the
    * string on hyphens. For spot products, expects the product ID to represent a currency pair in
@@ -278,32 +379,49 @@ public final class CoinbaseAdapters {
     return null;
   }
 
-  /**
-   * Adapt a list of futures positions to XChange open positions.
-   */
-  public static OpenPositions adaptFuturesOpenPositions(List<CoinbaseFuturesPosition> positions) {
-    List<OpenPosition> openPositions =
-        positions == null
-            ? Collections.emptyList()
-            : positions.stream()
-                .map(CoinbaseAdapters::adaptFuturesOpenPosition)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    return new OpenPositions(openPositions);
+  private static void requireAdaptableProduct(String productId, String context) {
+    if (productId != null && isOpaqueCdeProductId(productId)) {
+      throw new NotAvailableFromExchangeException(
+          "Coinbase " + context + " for opaque CDE product " + productId
+              + " cannot be represented by the generic XChange model; use the raw CDE API");
+    }
   }
 
-  /**
-   * Adapt a list of perpetuals positions to XChange open positions.
-   */
+  private static boolean isOpaqueCdeProductId(String productId) {
+    return productId.toUpperCase(Locale.ROOT).endsWith("-CDE");
+  }
+
+  public static OpenPositions adaptFuturesOpenPositions(List<CoinbaseFuturesPosition> positions) {
+    if (positions == null) {
+      return new OpenPositions(Collections.emptyList());
+    }
+    for (CoinbaseFuturesPosition position : positions) {
+      if (position != null) {
+        requireAdaptableProduct(position.getProductId(), "futures position");
+      }
+    }
+    List<OpenPosition> openPositions =
+        positions.stream()
+            .map(CoinbaseAdapters::adaptFuturesOpenPosition)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+    return new OpenPositions(openPositions);
+  }
   public static OpenPositions adaptPerpetualsOpenPositions(
       List<CoinbasePerpetualsPosition> positions) {
+    if (positions == null) {
+      return new OpenPositions(Collections.emptyList());
+    }
+    for (CoinbasePerpetualsPosition position : positions) {
+      if (position != null) {
+        requireAdaptableProduct(position.getSymbol(), "perpetual position");
+      }
+    }
     List<OpenPosition> openPositions =
-        positions == null
-            ? Collections.emptyList()
-            : positions.stream()
-                .map(CoinbaseAdapters::adaptPerpetualsOpenPosition)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        positions.stream()
+            .map(CoinbaseAdapters::adaptPerpetualsOpenPosition)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
     return new OpenPositions(openPositions);
   }
 
@@ -487,6 +605,11 @@ public final class CoinbaseAdapters {
 
   public static Ticker adaptTicker(CoinbaseProductResponse product,
       CoinbaseProductCandlesResponse candle, CoinbasePriceBook priceBook) {
+    if (priceBook != null) {
+      requireAdaptableProduct(priceBook.getProductId(), "ticker");
+    } else if (product != null) {
+      requireAdaptableProduct(product.getProductId(), "ticker");
+    }
     Builder builder = new Ticker.Builder();
 
     if (product != null) {

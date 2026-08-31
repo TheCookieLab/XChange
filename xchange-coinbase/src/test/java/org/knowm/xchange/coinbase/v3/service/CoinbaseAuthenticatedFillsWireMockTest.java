@@ -1,0 +1,114 @@
+package org.knowm.xchange.coinbase.v3.service;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import java.util.Arrays;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.client.ExchangeRestProxyBuilder;
+import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import si.mazi.rescu.ParamsDigest;
+
+/**
+ * Exercises Coinbase's authenticated fills proxy against a local HTTP endpoint.
+ *
+ * <p>The endpoint assertions intentionally inspect the received URL rather than mocked proxy
+ * arguments. This protects the wire contract for both the complete and legacy overloads.
+ */
+public class CoinbaseAuthenticatedFillsWireMockTest {
+
+  private static final String FILLS_PATH = "/api/v3/brokerage/orders/historical/fills";
+
+  private WireMockServer server;
+  private CoinbaseAuthenticated api;
+  private ParamsDigest digest;
+
+  @Before
+  public void setUp() {
+    server = new WireMockServer(options().dynamicPort());
+    server.start();
+
+    ExchangeSpecification specification = new ExchangeSpecification(CoinbaseExchange.class);
+    specification.setSslUri(server.baseUrl());
+    specification.setHost("localhost");
+    api = ExchangeRestProxyBuilder.forInterface(CoinbaseAuthenticated.class, specification).build();
+    digest = invocation -> "Bearer deterministic-test-token";
+
+    server.stubFor(
+        get(urlPathEqualTo(FILLS_PATH))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"fills\":[],\"cursor\":\"\"}")));
+  }
+
+  @After
+  public void tearDown() {
+    server.stop();
+  }
+
+  @Test
+  public void completeListFillsSerializesAllFiltersAndCollectionsOnTheWire() throws Exception {
+    CoinbaseOrdersResponse response = api.listFills(
+        digest,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        Arrays.asList("ETH-USD", "BTC-USD"),
+        Arrays.asList("MARKET_MARKET_IOC", "LIMIT_LIMIT_FOK"),
+        "SELL",
+        Arrays.asList("FUTURE", "SPOT"));
+
+    assertNotNull(response);
+    assertEquals(1, server.getAllServeEvents().size());
+    LoggedRequest request = server.getAllServeEvents().get(0).getRequest();
+    assertEquals(
+        FILLS_PATH
+            + "?asset_filters=ETH-USD%2CBTC-USD"
+            + "&order_types=MARKET_MARKET_IOC%2CLIMIT_LIMIT_FOK"
+            + "&order_side=SELL"
+            + "&product_types=FUTURE%2CSPOT",
+        request.getUrl());
+  }
+
+  @Test
+  public void deprecatedListFillsDoesNotSerializeCompleteFilterParameters() throws Exception {
+    CoinbaseOrdersResponse response = api.listFills(
+        digest,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
+
+    assertNotNull(response);
+    assertEquals(1, server.getAllServeEvents().size());
+    LoggedRequest request = server.getAllServeEvents().get(0).getRequest();
+    assertFalse(request.queryParameter("asset_filters").isPresent());
+    assertFalse(request.queryParameter("order_types").isPresent());
+    assertFalse(request.queryParameter("order_side").isPresent());
+    assertFalse(request.queryParameter("product_types").isPresent());
+  }
+}

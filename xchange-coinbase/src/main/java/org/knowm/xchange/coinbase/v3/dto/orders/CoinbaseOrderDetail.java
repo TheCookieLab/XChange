@@ -55,7 +55,12 @@ public class CoinbaseOrderDetail {
   private final String orderPlacementSource;
   private final String retailPortfolioId;
 
-  /** Creates a legacy minimal order representation. */
+  /**
+   * Creates a legacy minimal order representation.
+   *
+   * @deprecated use the full-field constructor so exchange-provided order metadata is retained
+   */
+  @Deprecated
   public CoinbaseOrderDetail(String orderId, String clientOrderId, String side, String productId,
       String status, BigDecimal averageFilledPrice, BigDecimal filledSize, BigDecimal totalFees,
       BigDecimal size, BigDecimal price, String createdTime) {

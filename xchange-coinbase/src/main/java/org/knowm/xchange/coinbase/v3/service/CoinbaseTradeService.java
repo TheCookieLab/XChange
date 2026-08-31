@@ -158,12 +158,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
       cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "fills");
       page++;
       for (CoinbaseFill fill : response.getFills()) {
-        UserTrade trade = UserTrade.builder()
-            .type(fill.getOrderType()).originalAmount(fill.getSize()).instrument(fill.getInstrument())
-            .price(fill.getPrice()).timestamp(fill.getTradeTime()).id(fill.getTradeId())
-            .orderId(fill.getOrderId()).feeAmount(fill.getCommission())
-            .feeCurrency(fill.getFeeCurrency()).build();
-        trades.add(trade);
+        trades.add(CoinbaseAdapters.adaptFill(fill));
       }
       v3Params.setNextPageCursor(cursor);
     } while (cursor != null && !cursor.isEmpty() && (v3Params.getLimit() == null

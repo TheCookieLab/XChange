@@ -39,7 +39,12 @@ public class CoinbaseProductResponse {
   private final String status;
   private final CoinbaseFutureProductDetails futureProductDetails;
 
-  /** Creates a legacy response containing only the original market summary fields. */
+  /**
+   * Creates a legacy response containing only the original market summary fields.
+   *
+   * @deprecated use the full-field constructor so exchange-provided product metadata is retained
+   */
+  @Deprecated
   public CoinbaseProductResponse(String productId, BigDecimal price,
       BigDecimal pricePercentageChange24H, BigDecimal volume24H,
       BigDecimal volumePercentageChange24H, BigDecimal approximateQuoteVolume24H) {
@@ -47,7 +52,13 @@ public class CoinbaseProductResponse {
         approximateQuoteVolume24H, null, null, null, null, null, null, null, null, null, null, null,
         null, null, null, null);
   }
-  /** Creates a response using the historical product identity and venue fields. */
+  /**
+   * Creates a response using the historical product identity and venue fields.
+   *
+   * @deprecated use the full-field constructor so exchange-provided increment and size metadata
+   *     is retained
+   */
+  @Deprecated
   public CoinbaseProductResponse(
       String productId,
       BigDecimal price,

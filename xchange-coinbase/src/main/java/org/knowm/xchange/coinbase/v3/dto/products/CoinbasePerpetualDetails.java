@@ -28,7 +28,12 @@ public class CoinbasePerpetualDetails {
     this.maxLeverage = CoinbaseFutureProductDetails.parseBigDecimal(maxLeverage);
   }
 
-  /** Legacy constructor for perpetual payloads without max-leverage metadata. */
+  /**
+   * Legacy constructor for perpetual payloads without max-leverage metadata.
+   *
+   * @deprecated use the full-field constructor so max-leverage metadata can be retained
+   */
+  @Deprecated
   public CoinbasePerpetualDetails(String fundingRate, String fundingTime) {
     this(fundingRate, fundingTime, null);
   }

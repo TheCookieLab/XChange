@@ -11,12 +11,16 @@ public enum CoinbaseMarginType {
   /**
    * Maps current and future Coinbase wire values without rejecting the containing order.
    *
-   * @param value Coinbase margin-type value
-   * @return the matching margin type, or {@link #UNKNOWN_MARGIN_TYPE} for an unrecognized value
+   * <p>Absent optional values (including blank strings) remain {@code null}; only a nonblank
+   * unrecognized exchange value is represented by {@link #UNKNOWN_MARGIN_TYPE}.
+   *
+   * @param value Coinbase margin-type value, which may be absent
+   * @return the matching margin type, {@code null} for null/blank input, or
+   *     {@link #UNKNOWN_MARGIN_TYPE} for a nonblank unrecognized value
    */
   @JsonCreator
   public static CoinbaseMarginType fromValue(String value) {
-    if (value == null) {
+    if (value == null || value.trim().isEmpty()) {
       return null;
     }
     switch (value) {
