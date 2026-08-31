@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import org.junit.Test;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.trade.LimitOrder;
 
 public class CoinbaseOrderDetailJsonTest {
 
@@ -50,6 +51,36 @@ public class CoinbaseOrderDetailJsonTest {
     assertEquals("2", adapted.getLeverage());
     assertEquals(new java.math.BigDecimal("0.01"),
         response.getOrder().getOrderConfiguration().getMarketMarketIoc().getBaseSize());
+  }
+
+  @Test
+  public void testDeserializeUnknownMarginType() throws Exception {
+    String json =
+        "{\"order\":{\"order_id\":\"spot-1\",\"side\":\"BUY\",\"product_id\":\"BTC-USD\","
+            + "\"status\":\"OPEN\",\"margin_type\":\"UNKNOWN_MARGIN_TYPE\","
+            + "\"order_configuration\":{\"market_market_ioc\":{\"base_size\":\"0.01\"}},"
+            + "\"created_time\":\"2026-02-08T00:00:00Z\"}}";
+
+    CoinbaseOrderDetailResponse response =
+        new ObjectMapper().readValue(json, CoinbaseOrderDetailResponse.class);
+
+    assertEquals(CoinbaseMarginType.UNKNOWN_MARGIN_TYPE, response.getOrder().getMarginType());
+  }
+
+  @Test
+  public void testAdaptSorLimitIocOrderPreservesLimitPrice() throws Exception {
+    String json =
+        "{\"order\":{\"order_id\":\"sor-1\",\"side\":\"BUY\",\"product_id\":\"BTC-USD\","
+            + "\"status\":\"OPEN\",\"order_configuration\":{\"sor_limit_ioc\":{"
+            + "\"base_size\":\"0.25\",\"limit_price\":\"30000\"}},"
+            + "\"created_time\":\"2026-02-08T00:00:00Z\"}}";
+
+    CoinbaseOrderDetailResponse response =
+        new ObjectMapper().readValue(json, CoinbaseOrderDetailResponse.class);
+    Order adapted = CoinbaseAdapters.adaptOrder(response.getOrder());
+
+    assertEquals(LimitOrder.class, adapted.getClass());
+    assertEquals(new BigDecimal("30000"), ((LimitOrder) adapted).getLimitPrice());
   }
 
   @Test

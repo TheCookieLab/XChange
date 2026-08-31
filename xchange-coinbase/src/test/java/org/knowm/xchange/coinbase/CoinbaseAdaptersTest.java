@@ -269,6 +269,32 @@ public class CoinbaseAdaptersTest {
     assertEquals(new BigDecimal("150"), open.getUnRealisedPnl());
   }
 
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testAdaptLegacyFuturesPositionFallsBackToAmountAndEntryPrice() {
+    CoinbaseFuturesPosition position =
+        new CoinbaseFuturesPosition(
+            "BTC-USD-PERP",
+            "1",
+            "LONG",
+            new BigDecimal("3"),
+            null,
+            new BigDecimal("31000"),
+            new BigDecimal("150"),
+            "2026-12-20T00:00:00Z",
+            null,
+            BigDecimal.ZERO,
+            new BigDecimal("29900"));
+
+    OpenPosition open =
+        CoinbaseAdapters.adaptFuturesOpenPositions(Collections.singletonList(position))
+            .getOpenPositions()
+            .get(0);
+
+    assertEquals(new BigDecimal("3"), open.getSize());
+    assertEquals(new BigDecimal("29900"), open.getPrice());
+  }
+
   @Test
   public void testAdaptPerpetualsOpenPositions() {
     CoinbasePerpetualsPosition position =

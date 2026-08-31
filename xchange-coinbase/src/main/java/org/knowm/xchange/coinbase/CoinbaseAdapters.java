@@ -171,6 +171,7 @@ public final class CoinbaseAdapters {
   private static BigDecimal configuredPrice(CoinbaseOrderDetail detail) {
     CoinbaseOrderConfiguration config = detail.getOrderConfiguration();
     if (config == null) return detail.getPrice();
+    if (config.getSorLimitIoc() != null) return config.getSorLimitIoc().getLimitPrice();
     if (config.getLimitLimitGtc() != null) return config.getLimitLimitGtc().getLimitPrice();
     if (config.getLimitLimitGtd() != null) return config.getLimitLimitGtd().getLimitPrice();
     if (config.getLimitLimitFok() != null) return config.getLimitLimitFok().getLimitPrice();
@@ -366,8 +367,8 @@ public final class CoinbaseAdapters {
       return null;
     }
     OpenPosition.Type type = adaptPositionType(position.getSide());
-    BigDecimal size = position.getNumberOfContracts();
-    BigDecimal price = position.getAvgEntryPrice();
+    BigDecimal size = firstNonNull(position.getNumberOfContracts(), position.getAmount());
+    BigDecimal price = firstNonNull(position.getAvgEntryPrice(), position.getEntryPrice());
     return OpenPosition.builder()
         .id(position.getProductId())
         .instrument(instrument)
