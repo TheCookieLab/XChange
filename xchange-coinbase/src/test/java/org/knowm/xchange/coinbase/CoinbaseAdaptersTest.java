@@ -647,6 +647,22 @@ public class CoinbaseAdaptersTest {
     assertEquals("trade", adapted.getId());
     assertEquals("entry", adapted.getEntryId());
   }
+  @Test
+  public void testFuturesFillFeeCurrencyUsesSettlementConvention() {
+    CoinbaseFill cdeFill =
+        new CoinbaseFill(
+            "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            new BigDecimal("2500"), BigDecimal.ONE, new BigDecimal("0.15"),
+            "ETP-20DEC30-CDE", "MAKER", false, "user", "BUY", "portfolio");
+    CoinbaseFill datedFutureFill =
+        new CoinbaseFill(
+            "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            new BigDecimal("2500"), BigDecimal.ONE, new BigDecimal("0.15"),
+            "BTC-USD-240628", "MAKER", false, "user", "BUY", "portfolio");
+
+    assertEquals(Currency.USD, cdeFill.getFeeCurrency());
+    assertEquals(Currency.USD, datedFutureFill.getFeeCurrency());
+  }
 
   @Test
   public void testAdaptFilledQuoteSizedOrderUsesAuthoritativeFilledSize() throws Exception {
@@ -664,6 +680,39 @@ public class CoinbaseAdaptersTest {
         0,
         new BigDecimal("0.039")
             .compareTo(CoinbaseAdapters.adaptOrder(detail).getOriginalAmount()));
+  }
+  @Test
+  public void testFilledMarketOrderRetainsExecutionState() throws Exception {
+    CoinbaseOrderDetail detail =
+        new ObjectMapper().readValue(
+            "{\"order_id\":\"market\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"FILLED\",\"order_type\":\"MARKET\","
+                + "\"order_configuration\":{\"market_market_ioc\":{\"base_size\":\"1\"}},"
+                + "\"average_filled_price\":\"2500\",\"filled_size\":\"1\","
+                + "\"total_fees\":\"0.25\"}",
+            CoinbaseOrderDetail.class);
+
+    Order adapted = CoinbaseAdapters.adaptOrder(detail);
+
+    assertEquals(Order.OrderStatus.FILLED, adapted.getStatus());
+    assertEquals(new BigDecimal("2500"), adapted.getAveragePrice());
+    assertEquals(BigDecimal.ONE, adapted.getCumulativeAmount());
+    assertEquals(new BigDecimal("0.25"), adapted.getFee());
+  }
+
+  @Test
+  public void testFailedOrderIsTerminalAndExcludedFromOpenOrders() throws Exception {
+    CoinbaseOrderDetail detail =
+        new ObjectMapper().readValue(
+            "{\"order_id\":\"failed\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"FAILED\",\"order_type\":\"LIMIT\","
+                + "\"order_configuration\":{\"limit_limit_gtc\":"
+                + "{\"base_size\":\"1\",\"limit_price\":\"2500\"}}}",
+            CoinbaseOrderDetail.class);
+
+    assertEquals(Order.OrderStatus.REJECTED, CoinbaseAdapters.adaptOrder(detail).getStatus());
+    assertTrue(CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(detail))
+        .getAllOpenOrders().isEmpty());
   }
 
   @Test

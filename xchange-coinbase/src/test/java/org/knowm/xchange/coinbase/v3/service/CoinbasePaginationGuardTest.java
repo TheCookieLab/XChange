@@ -15,12 +15,11 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
-import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
-import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
@@ -51,8 +50,20 @@ public class CoinbasePaginationGuardTest {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     CoinbaseOrdersResponse page = new CoinbaseOrdersResponse(Collections.emptyList(), "stuck");
     when(authenticated.listFills(
-            any(ParamsDigest.class), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-            any(), any(), any(), any()))
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
         .thenReturn(page);
 
     CoinbaseTradeService service =
@@ -69,15 +80,28 @@ public class CoinbasePaginationGuardTest {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     List<String> requestedCursors = new ArrayList<>();
     when(authenticated.listFills(
-            any(ParamsDigest.class), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-            any(), any(), any(), any()))
-        .thenAnswer(invocation -> {
-          requestedCursors.add(invocation.getArgument(8));
-          if (requestedCursors.size() == 1) {
-            return new CoinbaseOrdersResponse(Collections.singletonList(fill("1")), "next");
-          }
-          return new CoinbaseOrdersResponse(Collections.singletonList(fill("2")), null);
-        });
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenAnswer(
+            invocation -> {
+              requestedCursors.add(invocation.getArgument(8));
+              if (requestedCursors.size() == 1) {
+                return new CoinbaseOrdersResponse(Collections.singletonList(fill("1")), "next");
+              }
+              return new CoinbaseOrdersResponse(Arrays.asList(fill("1"), fill("2")), null);
+            });
 
     CoinbaseTradeService service =
         new CoinbaseTradeService(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
@@ -91,11 +115,28 @@ public class CoinbasePaginationGuardTest {
   public void orderHistoryIteratesPagesUntilExhausted() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     when(authenticated.listOrders(
-            any(ParamsDigest.class), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-            any(), any(), any(), any(), any(), any(), any(), any(), any()))
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
         .thenReturn(
-            new CoinbaseListOrdersResponse(Arrays.asList(order("1"), order("2")), "next"),
-            new CoinbaseListOrdersResponse(Collections.singletonList(order("3")), null));
+            new CoinbaseListOrdersResponse(Arrays.asList(order("1"), order("2")), "next", true),
+            new CoinbaseListOrdersResponse(Arrays.asList(order("2"), order("3")), "stale", false));
 
     CoinbaseTradeServiceRaw service =
         new CoinbaseTradeServiceRaw(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
@@ -107,11 +148,28 @@ public class CoinbasePaginationGuardTest {
   public void orderHistoryStopsAtCallerLimit() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     when(authenticated.listOrders(
-            any(ParamsDigest.class), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-            any(), any(), any(), any(), any(), any(), any(), any(), any()))
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
         .thenReturn(
-            new CoinbaseListOrdersResponse(Arrays.asList(order("1"), order("2")), "next"),
-            new CoinbaseListOrdersResponse(Collections.singletonList(order("3")), null));
+            new CoinbaseListOrdersResponse(Arrays.asList(order("1"), order("2")), "next", true),
+            new CoinbaseListOrdersResponse(Collections.singletonList(order("3")), null, false));
 
     CoinbaseTradeServiceRaw service =
         new CoinbaseTradeServiceRaw(mock(Exchange.class), authenticated, mock(ParamsDigest.class));

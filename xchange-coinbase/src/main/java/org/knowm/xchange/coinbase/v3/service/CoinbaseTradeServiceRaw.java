@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
@@ -19,14 +19,14 @@ import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteResponse;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertTradeResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsResponse;
-import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
-import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionsResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
@@ -42,7 +42,9 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     super(exchange, coinbaseAdvancedTrade);
   }
 
-  public CoinbaseTradeServiceRaw(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade,
+  public CoinbaseTradeServiceRaw(
+      Exchange exchange,
+      CoinbaseAuthenticated coinbaseAdvancedTrade,
       ParamsDigest authTokenCreator) {
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
   }
@@ -51,27 +53,31 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    * Lists fills for the authenticated user using Coinbase Advanced Trade.
    *
    * @param params trade history parameters including optional product/order/trade filters,
-   *               pagination cursor, time span, and limit
+   *     pagination cursor, time span, and limit
    * @return a {@link CoinbaseOrdersResponse} containing fills and a cursor for pagination
    * @throws IOException if a network or serialization error occurs
    */
   public CoinbaseOrdersResponse listFills(CoinbaseTradeHistoryParams params) throws IOException {
     List<String> productIds = null;
     if (params.getProductIds() != null && !params.getProductIds().isEmpty()) {
-      productIds = params.getProductIds().stream()
-          .filter(id -> id != null && !id.trim().isEmpty())
-          .map(String::trim)
-          .collect(Collectors.toList());
+      productIds =
+          params.getProductIds().stream()
+              .filter(id -> id != null && !id.trim().isEmpty())
+              .map(String::trim)
+              .collect(Collectors.toList());
     } else if (params.getCurrencyPairs() != null && !params.getCurrencyPairs().isEmpty()) {
-      productIds = params.getCurrencyPairs().stream()
-          .map(CoinbaseAdapters::adaptProductId)
-          .collect(Collectors.toList());
+      productIds =
+          params.getCurrencyPairs().stream()
+              .map(CoinbaseAdapters::adaptProductId)
+              .collect(Collectors.toList());
     }
 
     List<String> orderIds =
         params.getOrderId() == null ? null : Collections.singletonList(params.getOrderId());
-    List<String> tradeIds = params.getTransactionId() == null ? null
-        : Collections.singletonList(params.getTransactionId());
+    List<String> tradeIds =
+        params.getTransactionId() == null
+            ? null
+            : Collections.singletonList(params.getTransactionId());
 
     String startTs =
         params.getStartTime() == null ? null : params.getStartTime().toInstant().toString();
@@ -84,10 +90,23 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     List<String> orderTypes = toList(params.getOrderTypes());
     List<String> productTypes = toList(params.getProductTypes());
 
-    return coinbaseAdvancedTrade.listFills(authTokenCreator, orderIds, tradeIds, productIds,
-        startTs, endTs, retailPortfolioId, limit, cursor, params.getSortBy(), assetFilters,
-        orderTypes, params.getOrderSide(), productTypes);
+    return coinbaseAdvancedTrade.listFills(
+        authTokenCreator,
+        orderIds,
+        tradeIds,
+        productIds,
+        startTs,
+        endTs,
+        retailPortfolioId,
+        limit,
+        cursor,
+        params.getSortBy(),
+        assetFilters,
+        orderTypes,
+        params.getOrderSide(),
+        productTypes);
   }
+
   private static List<String> toList(java.util.Collection<String> values) {
     return values == null || values.isEmpty() ? null : new ArrayList<>(values);
   }
@@ -104,19 +123,21 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   }
 
   /**
-   * Lists historical orders and returns the raw Coinbase response for further mapping.
-   * Note: this endpoint returns historical orders; open orders can be derived by filtering status.
-   * 
+   * Lists historical orders and returns the raw Coinbase response for further mapping. Note: this
+   * endpoint returns historical orders; open orders can be derived by filtering status.
+   *
    * @return response containing orders and pagination cursor
    * @throws IOException if a network or serialization error occurs
    */
   public CoinbaseListOrdersResponse listOrders() throws IOException {
-    return listOrders(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+    return listOrders(
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+        null, null, null);
   }
 
   /**
    * Lists historical orders with optional filters and returns the raw Coinbase response.
-   * 
+   *
    * @param orderIds optional list of order IDs to filter by
    * @param productIds optional list of product IDs to filter by
    * @param productType optional product type filter (e.g., "SPOT", "FUTURE")
@@ -156,11 +177,28 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
       String cursor,
       String sortBy,
       String userNativeCurrency,
-      Boolean useSimplifiedTotalValueCalculation) throws IOException {
-    return coinbaseAdvancedTrade.listOrders(authTokenCreator, orderIds, productIds, productType,
-        orderStatus, timeInForces, orderTypes, orderSide, startDate, endDate, orderPlacementSource,
-        contractExpiryType, assetFilters, retailPortfolioId, limit, cursor, sortBy,
-        userNativeCurrency, useSimplifiedTotalValueCalculation);
+      Boolean useSimplifiedTotalValueCalculation)
+      throws IOException {
+    return coinbaseAdvancedTrade.listOrders(
+        authTokenCreator,
+        orderIds,
+        productIds,
+        productType,
+        orderStatus,
+        timeInForces,
+        orderTypes,
+        orderSide,
+        startDate,
+        endDate,
+        orderPlacementSource,
+        contractExpiryType,
+        assetFilters,
+        retailPortfolioId,
+        limit,
+        cursor,
+        sortBy,
+        userNativeCurrency,
+        useSimplifiedTotalValueCalculation);
   }
 
   /**
@@ -178,38 +216,67 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    */
   public List<CoinbaseOrderDetail> listOrdersBounded(Integer limit) throws IOException {
     List<CoinbaseOrderDetail> orders = new ArrayList<>();
+    Set<String> seenOrderIds = new HashSet<>();
     Set<String> seenCursors = new HashSet<>();
     int page = 0;
     String cursor = null;
     do {
       final String requestCursor = cursor;
-      CoinbaseListOrdersResponse response = CoinbaseRetry.readWithBackoff(() -> listOrders(
-          null, null, null, null, null, null, null, null, null, null, null, null, null, limit,
-          requestCursor, null, null, null));
-      cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "orders");
-      page++;
-      if (response.getOrders() != null) {
-        orders.addAll(response.getOrders());
+      CoinbaseListOrdersResponse response =
+          CoinbaseRetry.readWithBackoff(
+              () ->
+                  listOrders(
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      limit,
+                      requestCursor,
+                      null,
+                      null,
+                      null));
+      for (CoinbaseOrderDetail order : response.getOrders()) {
+        String orderId = order == null ? null : order.getOrderId();
+        if ((orderId == null || orderId.isBlank() || seenOrderIds.add(orderId))) {
+          orders.add(order);
+          if (limit != null && orders.size() >= limit) {
+            break;
+          }
+        }
       }
+      cursor =
+          Boolean.TRUE.equals(response.getHasNext())
+              ? advanceCursor(
+                  response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "orders")
+              : null;
+      page++;
     } while (cursor != null && !cursor.isEmpty() && (limit == null || orders.size() < limit));
     return orders;
   }
 
   /**
-   * Creates an order (market/limit/stop) by forwarding the request as-is to Coinbase.
-   * Caller is responsible for constructing the correct request per Coinbase Advanced Trade.
+   * Creates an order (market/limit/stop) by forwarding the request as-is to Coinbase. Caller is
+   * responsible for constructing the correct request per Coinbase Advanced Trade.
    */
   public CoinbaseCreateOrderResponse createOrder(CoinbaseOrderRequest request) throws IOException {
     try {
       return coinbaseAdvancedTrade.createOrder(authTokenCreator, request);
     } catch (IOException transportFailure) {
-      throw new CoinbaseUnknownOutcomeException("createOrder", request.getClientOrderId(), transportFailure);
+      throw new CoinbaseUnknownOutcomeException(
+          "createOrder", request.getClientOrderId(), transportFailure);
     }
   }
 
-  /**
-   * Edit an existing order natively via Advanced Trade.
-   */
+  /** Edit an existing order natively via Advanced Trade. */
   public CoinbaseOrdersResponse editOrder(CoinbaseEditOrderRequest request) throws IOException {
     try {
       return coinbaseAdvancedTrade.editOrder(authTokenCreator, request);
@@ -219,23 +286,18 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     }
   }
 
-  /**
-   * Preview an order request without placing it.
-   */
+  /** Preview an order request without placing it. */
   public CoinbaseOrdersResponse previewOrder(CoinbaseOrderRequest request) throws IOException {
     return coinbaseAdvancedTrade.previewOrder(authTokenCreator, request);
   }
 
-  /**
-   * Preview an order edit request without modifying the live order.
-   */
-  public CoinbaseOrdersResponse previewEditOrder(CoinbaseEditOrderRequest request) throws IOException {
+  /** Preview an order edit request without modifying the live order. */
+  public CoinbaseOrdersResponse previewEditOrder(CoinbaseEditOrderRequest request)
+      throws IOException {
     return coinbaseAdvancedTrade.previewEditOrder(authTokenCreator, request);
   }
 
-  /**
-   * Cancels orders by id and/or client order id via Advanced Trade batch_cancel endpoint.
-   */
+  /** Cancels orders by id and/or client order id via Advanced Trade batch_cancel endpoint. */
   public CoinbaseOrdersResponse cancelOrders(List<String> orderIds, List<String> clientOrderIds)
       throws IOException {
     Map<String, Object> payload = new ConcurrentHashMap<>();
@@ -258,9 +320,7 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     return cancelOrders(Collections.singletonList(orderId), null);
   }
 
-  /**
-   * Closes an open position using the Advanced Trade close_position endpoint.
-   */
+  /** Closes an open position using the Advanced Trade close_position endpoint. */
   public CoinbaseCreateOrderResponse closePosition(CoinbaseClosePositionRequest request)
       throws IOException {
     try {
@@ -271,31 +331,23 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     }
   }
 
-  /**
-   * Lists futures positions for the authenticated user.
-   */
+  /** Lists futures positions for the authenticated user. */
   public CoinbaseFuturesPositionsResponse listFuturesPositions() throws IOException {
     return coinbaseAdvancedTrade.listFuturesPositions(authTokenCreator);
   }
 
-  /**
-   * Retrieves a futures position by product id.
-   */
+  /** Retrieves a futures position by product id. */
   public CoinbaseFuturesPositionResponse getFuturesPosition(String productId) throws IOException {
     return coinbaseAdvancedTrade.getFuturesPosition(authTokenCreator, productId);
   }
 
-  /**
-   * Lists perpetuals positions for the specified portfolio.
-   */
+  /** Lists perpetuals positions for the specified portfolio. */
   public CoinbasePerpetualsPositionsResponse listPerpetualsPositions(String portfolioUuid)
       throws IOException {
     return coinbaseAdvancedTrade.listPerpetualsPositions(authTokenCreator, portfolioUuid);
   }
 
-  /**
-   * Retrieves a perpetuals position by portfolio and symbol.
-   */
+  /** Retrieves a perpetuals position by portfolio and symbol. */
   public CoinbasePerpetualsPositionResponse getPerpetualsPosition(
       String portfolioUuid, String symbol) throws IOException {
     return coinbaseAdvancedTrade.getPerpetualsPosition(authTokenCreator, portfolioUuid, symbol);
@@ -321,8 +373,8 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    * @return The convert trade response.
    * @throws IOException if a network or serialization error occurs.
    */
-  public CoinbaseConvertTradeResponse commitConvertTrade(String tradeId,
-      CoinbaseCommitConvertTradeRequest request) throws IOException {
+  public CoinbaseConvertTradeResponse commitConvertTrade(
+      String tradeId, CoinbaseCommitConvertTradeRequest request) throws IOException {
     try {
       return coinbaseAdvancedTrade.commitConvertTrade(authTokenCreator, tradeId, request);
     } catch (IOException transportFailure) {
@@ -341,5 +393,4 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   public CoinbaseConvertTradeResponse getConvertTrade(String tradeId) throws IOException {
     return coinbaseAdvancedTrade.getConvertTrade(authTokenCreator, tradeId);
   }
-
 }

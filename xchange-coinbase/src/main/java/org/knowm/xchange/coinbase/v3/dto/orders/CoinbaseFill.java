@@ -133,25 +133,43 @@ public class CoinbaseFill {
 
   private static Date parseTimestamp(String value) {
     return value == null || value.isBlank()
-        ? null : Date.from(DateTimeFormatter.ISO_INSTANT.parse(value, Instant::from));
+        ? null
+        : Date.from(DateTimeFormatter.ISO_INSTANT.parse(value, Instant::from));
   }
 
-  /** @return the XChange order type inferred from the API side value. */
+  /**
+   * @return the XChange order type inferred from the API side value.
+   */
   public Order.OrderType getOrderType() {
     return CoinbaseAdapters.adaptOrderType(side);
   }
 
-  /** @return the instrument identified by the canonical Coinbase product id. */
+  /**
+   * @return the instrument identified by the canonical Coinbase product id.
+   */
   public Instrument getInstrument() {
     return CoinbaseAdapters.adaptInstrument(productId);
   }
 
-  /** @return quote currency for a two-component spot product, otherwise {@code null}. */
+  /**
+   * Returns the commission currency encoded by Coinbase's product conventions.
+   *
+   * <p>Pair-shaped spot and dated-futures identifiers use their second component. Coinbase
+   * Derivatives Exchange products are USD-settled despite opaque expiry-bearing identifiers, and
+   * Coinbase International perpetuals are USDC-settled.
+   */
   public Currency getFeeCurrency() {
     if (productId == null) {
       return null;
     }
-    String[] tokens = productId.split("-");
-    return tokens.length == 2 ? Currency.getInstance(tokens[1]) : null;
+    String normalized = productId.trim().toUpperCase(java.util.Locale.ROOT);
+    if (normalized.endsWith("-CDE")) {
+      return Currency.USD;
+    }
+    if (normalized.endsWith("-INTX")) {
+      return Currency.USDC;
+    }
+    String[] tokens = normalized.split("-");
+    return tokens.length >= 2 ? Currency.getInstance(tokens[1]) : null;
   }
 }

@@ -5,26 +5,24 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import org.knowm.xchange.exceptions.ExchangeException;
-import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseStopPriceDirection;
-import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
-import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
-import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
-import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
@@ -36,6 +34,7 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseUserTrade;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Balance;
@@ -50,21 +49,17 @@ import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.StopOrder;
-import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.trade.UserTrade;
+import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 
-/**
- * jamespedwards42
- */
+/** jamespedwards42 */
 public final class CoinbaseAdapters {
 
-  private CoinbaseAdapters() {
-  }
+  private CoinbaseAdapters() {}
 
-  /**
-   * Extract newly created order id from Coinbase createOrder response.
-   */
+  /** Extract newly created order id from Coinbase createOrder response. */
   public static String adaptCreatedOrderId(CoinbaseCreateOrderResponse response) {
     return response == null ? null : response.getOrderId();
   }
@@ -73,42 +68,53 @@ public final class CoinbaseAdapters {
     requireAdaptableProduct(priceBook.getProductId(), "order book");
     Instrument instrument = CoinbaseAdapters.adaptInstrument(priceBook.getProductId());
 
-    List<LimitOrder> asks = priceBook.getAsks().stream().map(
-        priceBookEntry -> CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.ASK,
-            instrument)).collect(Collectors.toList());
+    List<LimitOrder> asks =
+        priceBook.getAsks().stream()
+            .map(
+                priceBookEntry ->
+                    CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.ASK, instrument))
+            .collect(Collectors.toList());
 
-    List<LimitOrder> bids = priceBook.getBids().stream().map(
-        priceBookEntry -> CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.BID,
-            instrument)).collect(Collectors.toList());
+    List<LimitOrder> bids =
+        priceBook.getBids().stream()
+            .map(
+                priceBookEntry ->
+                    CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.BID, instrument))
+            .collect(Collectors.toList());
 
     return new OrderBook(
-        Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)), asks,
+        Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)),
+        asks,
         bids);
   }
 
-  public static LimitOrder adaptOrderBookEntry(CoinbasePriceBookEntry priceBookEntry,
-      Order.OrderType orderType, Instrument instrument) {
-    return new LimitOrder(orderType, priceBookEntry.getSize(), instrument, null, null,
-        priceBookEntry.getPrice());
+  public static LimitOrder adaptOrderBookEntry(
+      CoinbasePriceBookEntry priceBookEntry, Order.OrderType orderType, Instrument instrument) {
+    return new LimitOrder(
+        orderType, priceBookEntry.getSize(), instrument, null, null, priceBookEntry.getPrice());
   }
 
   public static Trade adaptTrade(CoinbaseMarketTrade marketTrade) {
     requireAdaptableProduct(marketTrade.getProductId(), "market trade");
     Instrument instrument = adaptInstrument(marketTrade.getProductId());
-    return UserTrade.builder().id(marketTrade.getTradeId())
-        .instrument(instrument).price(marketTrade.getPrice())
-        .originalAmount(marketTrade.getSize()).timestamp(
+    return UserTrade.builder()
+        .id(marketTrade.getTradeId())
+        .instrument(instrument)
+        .price(marketTrade.getPrice())
+        .originalAmount(marketTrade.getSize())
+        .timestamp(
             Date.from(DateTimeFormatter.ISO_INSTANT.parse(marketTrade.getTime(), Instant::from)))
-        .type(adaptOrderType(marketTrade.getSide())).build();
+        .type(adaptOrderType(marketTrade.getSide()))
+        .build();
   }
 
   /**
    * Adapts a Coinbase Advanced Trade fill to a generic XChange user trade.
    *
-   * <p>Coinbase may report the fill size in quote currency. XChange's
-   * {@code originalAmount} is base/instrument quantity, so quote-sized fills are converted using
-   * the execution price. A non-positive or missing price is not authoritative and therefore
-   * fails explicitly instead of publishing a mislabeled amount.
+   * <p>Coinbase may report the fill size in quote currency. XChange's {@code originalAmount} is
+   * base/instrument quantity, so quote-sized fills are converted using the execution price. A
+   * non-positive or missing price is not authoritative and therefore fails explicitly instead of
+   * publishing a mislabeled amount.
    *
    * @param fill the Coinbase fill
    * @return a lossless generic trade for a representable product
@@ -117,39 +123,58 @@ public final class CoinbaseAdapters {
    */
   public static UserTrade adaptFill(CoinbaseFill fill) {
     Objects.requireNonNull(fill, "Cannot adapt a null fill");
-    if (fill.getEntryId() == null || fill.getEntryId().isBlank()
-        || fill.getTradeId() == null || fill.getTradeId().isBlank()
-        || fill.getOrderId() == null || fill.getOrderId().isBlank()) {
+    if (fill.getEntryId() == null
+        || fill.getEntryId().isBlank()
+        || fill.getTradeId() == null
+        || fill.getTradeId().isBlank()
+        || fill.getOrderId() == null
+        || fill.getOrderId().isBlank()) {
       throw new ExchangeException(
           "Cannot adapt Coinbase fill: missing entry, trade, or order identity");
     }
-    if (fill.getProductId() == null || fill.getProductId().isBlank()
-        || fill.getSide() == null || fill.getSize() == null || fill.getPrice() == null) {
+    if (fill.getProductId() == null
+        || fill.getProductId().isBlank()
+        || fill.getSide() == null
+        || fill.getSize() == null
+        || fill.getPrice() == null) {
       throw new ExchangeException(
-          "Cannot adapt Coinbase fill " + fill.getEntryId()
+          "Cannot adapt Coinbase fill "
+              + fill.getEntryId()
               + ": missing product, side, quantity, or price");
     }
     if (fill.getSize().signum() <= 0 || fill.getPrice().signum() <= 0) {
       throw new ExchangeException(
-          "Cannot adapt Coinbase fill " + fill.getEntryId()
+          "Cannot adapt Coinbase fill "
+              + fill.getEntryId()
               + ": quantity and execution price must be positive");
     }
     requireAdaptableProduct(fill.getProductId(), "fill");
     OrderType orderType = adaptOrderType(fill.getSide());
     if (orderType == null) {
       throw new ExchangeException(
-          "Cannot adapt Coinbase fill " + fill.getEntryId()
-              + ": unsupported side " + fill.getSide()
-              + " for product " + fill.getProductId());
+          "Cannot adapt Coinbase fill "
+              + fill.getEntryId()
+              + ": unsupported side "
+              + fill.getSide()
+              + " for product "
+              + fill.getProductId());
     }
     BigDecimal amount = fill.getSize();
     if (fill.isSizeInQuote()) {
       amount = amount.divide(fill.getPrice(), MathContext.DECIMAL128);
     }
-    return CoinbaseUserTrade.builder().entryId(fill.getEntryId()).id(fill.getTradeId())
-        .orderId(fill.getOrderId()).instrument(adaptInstrument(fill.getProductId()))
-        .price(fill.getPrice()).originalAmount(amount).timestamp(fill.getTradeTime()).type(orderType)
-        .feeAmount(fill.getCommission()).feeCurrency(fill.getFeeCurrency()).build();
+    return CoinbaseUserTrade.builder()
+        .entryId(fill.getEntryId())
+        .id(fill.getTradeId())
+        .orderId(fill.getOrderId())
+        .instrument(adaptInstrument(fill.getProductId()))
+        .price(fill.getPrice())
+        .originalAmount(amount)
+        .timestamp(fill.getTradeTime())
+        .type(orderType)
+        .feeAmount(fill.getCommission())
+        .feeCurrency(fill.getFeeCurrency())
+        .build();
   }
 
   public static OrderType adaptOrderType(String side) {
@@ -179,7 +204,8 @@ public final class CoinbaseAdapters {
     CoinbaseOrderConfiguration configuration = detail.getOrderConfiguration();
     if (configuration != null && configuration.getScaledLimitGtc() != null) {
       throw new NotAvailableFromExchangeException(
-          "Cannot adapt scaled Coinbase order " + detail.getOrderId()
+          "Cannot adapt scaled Coinbase order "
+              + detail.getOrderId()
               + ": XChange LimitOrder cannot represent an order ladder");
     }
     BigDecimal size = configuredSize(detail);
@@ -187,15 +213,19 @@ public final class CoinbaseAdapters {
     if (isQuoteSized(detail)) {
       if (status != Order.OrderStatus.FILLED) {
         throw new NotAvailableFromExchangeException(
-            "Cannot adapt unfilled quote-sized Coinbase order " + detail.getOrderId()
-                + " for product " + detail.getProductId()
+            "Cannot adapt unfilled quote-sized Coinbase order "
+                + detail.getOrderId()
+                + " for product "
+                + detail.getProductId()
                 + ": XChange originalAmount requires base quantity");
       }
       BigDecimal filledSize = detail.getFilledSize();
       if (filledSize == null || filledSize.signum() <= 0) {
         throw new ExchangeException(
-            "Cannot adapt filled quote-sized Coinbase order " + detail.getOrderId()
-                + " for product " + detail.getProductId()
+            "Cannot adapt filled quote-sized Coinbase order "
+                + detail.getOrderId()
+                + " for product "
+                + detail.getProductId()
                 + ": missing positive authoritative filled_size");
       }
       size = filledSize;
@@ -217,42 +247,78 @@ public final class CoinbaseAdapters {
     }
     Order order;
     if (stopLimit) {
-      if (stopPrice == null || stopPrice.signum() <= 0 || price == null
-          || price.signum() <= 0 || stopDirection == null) {
+      if (stopPrice == null
+          || stopPrice.signum() <= 0
+          || price == null
+          || price.signum() <= 0
+          || stopDirection == null) {
         throw new ExchangeException(
-            "Cannot adapt Coinbase stop-limit order " + detail.getOrderId()
+            "Cannot adapt Coinbase stop-limit order "
+                + detail.getOrderId()
                 + ": missing positive stop/limit price or trigger direction");
       }
       StopOrder.Intention intention;
       switch (stopDirection) {
         case STOP_DIRECTION_STOP_UP:
-          intention = orderType == OrderType.BID
-              ? StopOrder.Intention.STOP_LOSS : StopOrder.Intention.TAKE_PROFIT;
+          intention =
+              orderType == OrderType.BID
+                  ? StopOrder.Intention.STOP_LOSS
+                  : StopOrder.Intention.TAKE_PROFIT;
           break;
         case STOP_DIRECTION_STOP_DOWN:
-          intention = orderType == OrderType.BID
-              ? StopOrder.Intention.TAKE_PROFIT : StopOrder.Intention.STOP_LOSS;
+          intention =
+              orderType == OrderType.BID
+                  ? StopOrder.Intention.TAKE_PROFIT
+                  : StopOrder.Intention.STOP_LOSS;
           break;
         default:
           throw new ExchangeException(
-              "Cannot adapt Coinbase stop-limit order " + detail.getOrderId()
-                  + ": unsupported trigger direction " + stopDirection);
+              "Cannot adapt Coinbase stop-limit order "
+                  + detail.getOrderId()
+                  + ": unsupported trigger direction "
+                  + stopDirection);
       }
       order =
           new StopOrder(
-              orderType, size, instrument, detail.getOrderId(), detail.getCreatedTime(),
-              stopPrice, price, detail.getAverageFilledPrice(), detail.getFilledSize(),
-              detail.getTotalFees(), status, null, intention, null);
+              orderType,
+              size,
+              instrument,
+              detail.getOrderId(),
+              detail.getCreatedTime(),
+              stopPrice,
+              price,
+              detail.getAverageFilledPrice(),
+              detail.getFilledSize(),
+              detail.getTotalFees(),
+              status,
+              null,
+              intention,
+              null);
     } else if (price != null) {
       order =
           new LimitOrder(
-              orderType, size, instrument, detail.getOrderId(), detail.getCreatedTime(),
-              price, detail.getAverageFilledPrice(), detail.getFilledSize(), detail.getTotalFees(),
+              orderType,
+              size,
+              instrument,
+              detail.getOrderId(),
+              detail.getCreatedTime(),
+              price,
+              detail.getAverageFilledPrice(),
+              detail.getFilledSize(),
+              detail.getTotalFees(),
               status);
     } else {
       order =
           new org.knowm.xchange.dto.trade.MarketOrder(
-              orderType, size, instrument, detail.getOrderId(), detail.getCreatedTime());
+              orderType,
+              size,
+              instrument,
+              detail.getOrderId(),
+              detail.getCreatedTime(),
+              detail.getAverageFilledPrice(),
+              detail.getFilledSize(),
+              detail.getTotalFees(),
+              status);
     }
     order.setLeverage(detail.getLeverage());
     return order;
@@ -374,6 +440,7 @@ public final class CoinbaseAdapters {
       case "EXPIRED":
         return Order.OrderStatus.EXPIRED;
       case "REJECTED":
+      case "FAILED":
         return Order.OrderStatus.REJECTED;
       case "PARTIALLY_FILLED":
         return Order.OrderStatus.PARTIALLY_FILLED;
@@ -393,15 +460,16 @@ public final class CoinbaseAdapters {
     List<Order> hidden = new ArrayList<>();
     for (CoinbaseOrderDetail detail : orders) {
       if (detail == null) {
-        throw new NotAvailableFromExchangeException(
-            "Cannot adapt null Coinbase open-order detail");
+        throw new NotAvailableFromExchangeException("Cannot adapt null Coinbase open-order detail");
       }
       requireAdaptableProduct(detail.getProductId(), "open order");
       Order.OrderStatus status = adaptOrderStatus(detail.getStatus());
       if (status == Order.OrderStatus.UNKNOWN) {
         throw new NotAvailableFromExchangeException(
-            "Cannot represent Coinbase open-order status " + detail.getStatus()
-                + " for order " + detail.getOrderId());
+            "Cannot represent Coinbase open-order status "
+                + detail.getStatus()
+                + " for order "
+                + detail.getOrderId());
       }
       if (status.isOpen()) {
         Order order = adaptOrder(detail);
@@ -418,7 +486,6 @@ public final class CoinbaseAdapters {
     }
     return new OpenOrders(visible, hidden);
   }
-
 
   /**
    * Adapt a Coinbase list-orders response into generic open orders.
@@ -441,6 +508,7 @@ public final class CoinbaseAdapters {
     Objects.requireNonNull(instrument, "Cannot format productId from a null instrument");
     return instrument.toString().replace("/", "-");
   }
+
   /**
    * Adapts a product ID string into a financial instrument (e.g., CurrencyPair) by splitting the
    * string on hyphens. For spot products, expects the product ID to represent a currency pair in
@@ -471,7 +539,10 @@ public final class CoinbaseAdapters {
   private static void requireAdaptableProduct(String productId, String context) {
     if (productId != null && isOpaqueCdeProductId(productId)) {
       throw new NotAvailableFromExchangeException(
-          "Coinbase " + context + " for opaque CDE product " + productId
+          "Coinbase "
+              + context
+              + " for opaque CDE product "
+              + productId
               + " cannot be represented by the generic XChange model; use the raw CDE API");
     }
   }
@@ -496,6 +567,7 @@ public final class CoinbaseAdapters {
             .collect(Collectors.toList());
     return new OpenPositions(openPositions);
   }
+
   public static OpenPositions adaptPerpetualsOpenPositions(
       List<CoinbasePerpetualsPosition> positions) {
     if (positions == null) {
@@ -514,9 +586,7 @@ public final class CoinbaseAdapters {
     return new OpenPositions(openPositions);
   }
 
-  /**
-   * Adapt a futures balance summary response to a futures wallet.
-   */
+  /** Adapt a futures balance summary response to a futures wallet. */
   public static Wallet adaptFuturesWallet(CoinbaseFuturesBalanceSummaryResponse response) {
     if (response == null || response.getBalanceSummary() == null) {
       return null;
@@ -524,12 +594,15 @@ public final class CoinbaseAdapters {
     CoinbaseFuturesBalanceSummary summary = response.getBalanceSummary();
     CoinbaseAmount total = summary.getTotalUsdBalance();
     CoinbaseAmount available = summary.getAvailableMargin();
-    if (total == null || available == null || total.getCurrency() == null
+    if (total == null
+        || available == null
+        || total.getCurrency() == null
         || !total.getCurrency().equals(available.getCurrency())) {
       return null;
     }
-    Balance balance = buildBalance(Currency.getInstance(total.getCurrency()), total.getValue(),
-        available.getValue());
+    Balance balance =
+        buildBalance(
+            Currency.getInstance(total.getCurrency()), total.getValue(), available.getValue());
     if (balance == null) {
       return null;
     }
@@ -541,19 +614,16 @@ public final class CoinbaseAdapters {
         .build();
   }
 
-  /**
-   * Adapt a perpetuals balances response to a futures wallet.
-   */
+  /** Adapt a perpetuals balances response to a futures wallet. */
   public static Wallet adaptPerpetualsWallet(CoinbasePerpetualsBalancesResponse response) {
     if (response == null || response.getBalances() == null) {
       return null;
     }
-    CoinbasePerpetualsBalancesResponse.CoinbasePerpetualsBalances balances =
-        response.getBalances();
+    CoinbasePerpetualsBalancesResponse.CoinbasePerpetualsBalances balances = response.getBalances();
     String currencyCode = balances.getCollateralCurrency();
     Currency currency = currencyCode == null ? null : Currency.getInstance(currencyCode);
-    Balance balance = buildBalance(currency, balances.getCollateralValue(),
-        balances.getAvailableCollateral());
+    Balance balance =
+        buildBalance(currency, balances.getCollateralValue(), balances.getAvailableCollateral());
     if (balance == null) {
       return null;
     }
@@ -685,15 +755,20 @@ public final class CoinbaseAdapters {
   }
 
   public static CandleStick adaptProductCandle(CoinbaseProductCandle productCandle) {
-    return new CandleStick.Builder().open(productCandle.getOpen()).high(productCandle.getHigh())
-        .low(productCandle.getLow()).close(productCandle.getClose())
+    return new CandleStick.Builder()
+        .open(productCandle.getOpen())
+        .high(productCandle.getHigh())
+        .low(productCandle.getLow())
+        .close(productCandle.getClose())
         .volume(productCandle.getVolume())
         .timestamp(Instant.ofEpochSecond(Long.parseLong(productCandle.getStart())))
         .build();
   }
 
-  public static Ticker adaptTicker(CoinbaseProductResponse product,
-      CoinbaseProductCandlesResponse candle, CoinbasePriceBook priceBook) {
+  public static Ticker adaptTicker(
+      CoinbaseProductResponse product,
+      CoinbaseProductCandlesResponse candle,
+      CoinbasePriceBook priceBook) {
     if (priceBook != null) {
       requireAdaptableProduct(priceBook.getProductId(), "ticker");
     } else if (product != null) {
@@ -703,8 +778,11 @@ public final class CoinbaseAdapters {
 
     if (product != null) {
       if (product.getPricePercentageChange24H() != null) {
-        builder = builder.percentageChange(
-            product.getPricePercentageChange24H().round(new MathContext(2, RoundingMode.HALF_EVEN)));
+        builder =
+            builder.percentageChange(
+                product
+                    .getPricePercentageChange24H()
+                    .round(new MathContext(2, RoundingMode.HALF_EVEN)));
       }
       if (product.getVolume24H() != null) {
         builder = builder.volume(product.getVolume24H());
@@ -719,19 +797,25 @@ public final class CoinbaseAdapters {
       if (instrument == null) {
         return null;
       }
-      builder = builder.ask(priceBook.getAsks().get(0).getPrice())
-          .askSize(priceBook.getAsks().get(0).getSize())
-          .bid(priceBook.getBids().get(0).getPrice())
-          .bidSize(priceBook.getBids().get(0).getSize())
-          .instrument(instrument).timestamp(
-              Date.from(DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)));
+      builder =
+          builder
+              .ask(priceBook.getAsks().get(0).getPrice())
+              .askSize(priceBook.getAsks().get(0).getSize())
+              .bid(priceBook.getBids().get(0).getPrice())
+              .bidSize(priceBook.getBids().get(0).getSize())
+              .instrument(instrument)
+              .timestamp(
+                  Date.from(
+                      DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)));
     }
 
     if (candle != null && !candle.getCandles().isEmpty()) {
-      builder = builder.low(candle.getCandles().get(0).getLow())
-          .high(candle.getCandles().get(0).getHigh())
-          .open(candle.getCandles().get(0).getOpen())
-          .last(candle.getCandles().get(0).getClose());
+      builder =
+          builder
+              .low(candle.getCandles().get(0).getLow())
+              .high(candle.getCandles().get(0).getHigh())
+              .open(candle.getCandles().get(0).getOpen())
+              .last(candle.getCandles().get(0).getClose());
     }
 
     return builder.build();
