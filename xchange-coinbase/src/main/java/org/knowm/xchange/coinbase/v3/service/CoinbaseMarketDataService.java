@@ -3,6 +3,8 @@ package org.knowm.xchange.coinbase.v3.service;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
@@ -36,13 +38,15 @@ import java.util.stream.Collectors;
  */
 public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw implements MarketDataService {
 
+    private final CoinbaseProductIdentity productIdentity;
+
     /**
      * Constructs a new market data service using the exchange's default configuration.
      *
      * @param exchange The exchange instance containing API credentials and configuration.
      */
     public CoinbaseMarketDataService(Exchange exchange) {
-        super(exchange);
+        this(exchange, null, null, configuredProductIdentity(exchange));
     }
 
     /**
@@ -52,7 +56,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
      * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
      */
     public CoinbaseMarketDataService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade) {
-        super(exchange, coinbaseAdvancedTrade);
+        this(exchange, coinbaseAdvancedTrade, null, configuredProductIdentity(exchange));
     }
 
     /**
@@ -63,7 +67,38 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
      * @param authTokenCreator      The parameter digest for creating authentication tokens.
      */
     public CoinbaseMarketDataService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade, ParamsDigest authTokenCreator) {
+        this(exchange, coinbaseAdvancedTrade, authTokenCreator, configuredProductIdentity(exchange));
+    }
+
+    /**
+     * Constructs a market data service with an explicitly supplied product identity catalog.
+     *
+     * @param exchange              The exchange instance containing API credentials and configuration.
+     * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
+     * @param authTokenCreator      The parameter digest for creating authentication tokens.
+     * @param productIdentity       catalog used to resolve instruments, or {@code null} to use the
+     *                              standard adapter
+     */
+    public CoinbaseMarketDataService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade,
+                                     ParamsDigest authTokenCreator,
+                                     CoinbaseProductIdentity productIdentity) {
         super(exchange, coinbaseAdvancedTrade, authTokenCreator);
+        this.productIdentity = productIdentity;
+    }
+
+    private static CoinbaseProductIdentity configuredProductIdentity(Exchange exchange) {
+        if (exchange == null || exchange.getExchangeSpecification() == null) {
+            return null;
+        }
+        Object configured = exchange.getExchangeSpecification()
+            .getExchangeSpecificParametersItem(CoinbaseExchange.PARAM_PRODUCT_IDENTITY);
+        return configured instanceof CoinbaseProductIdentity
+            ? (CoinbaseProductIdentity) configured
+            : null;
+    }
+
+    private String resolveProductId(Instrument instrument) {
+        return CoinbaseProductIdentity.resolveProductId(instrument, productIdentity);
     }
 
     /**
@@ -90,7 +125,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
      * @throws IOException If there is an error communicating with the Coinbase API.
      */
     public List<CoinbasePriceBook> getBestBidAsk(CurrencyPair currencyPair) throws IOException {
-        return this.getBestBidAsk(CoinbaseAdapters.adaptProductId(currencyPair)).getPriceBooks();
+        return this.getBestBidAsk(resolveProductId(currencyPair)).getPriceBooks();
     }
 
     /**
@@ -109,7 +144,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
      */
     @Override
     public Ticker getTicker(Instrument instrument, final Object... args) throws IOException {
-        String productId = CoinbaseAdapters.adaptProductId(instrument);
+        String productId = resolveProductId(instrument);
         CoinbaseProductResponse product = this.getProduct(productId);
         List<CoinbasePriceBook> priceBooks = this.getBestBidAsk(productId).getPriceBooks();
         CoinbaseProductCandlesResponse candle = this.getProductCandles(productId, "ONE_DAY", 1, null, null);
@@ -174,7 +209,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
         Integer limit = args.length > 0 && args[0] instanceof Integer ? (Integer) args[0] : null;
         Double aggregationPriceIncrement = args.length > 1 && args[1] instanceof Double ? (Double) args[1] : null;
 
-        CoinbaseProductPriceBookResponse response = this.getProductBook(CoinbaseAdapters.adaptProductId(instrument), limit, aggregationPriceIncrement);
+        CoinbaseProductPriceBookResponse response = this.getProductBook(resolveProductId(instrument), limit, aggregationPriceIncrement);
 
         return CoinbaseAdapters.adaptOrderBook(response.getPriceBook());
     }
@@ -198,7 +233,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
         String start = args.length > 1 && args[1] instanceof String ? (String) args[1] : null;
         String end = args.length > 2 && args[2] instanceof String ? (String) args[2] : null;
 
-        CoinbaseProductMarketTradesResponse response = this.getMarketTrades(CoinbaseAdapters.adaptProductId(instrument), limit, start, end);
+        CoinbaseProductMarketTradesResponse response = this.getMarketTrades(resolveProductId(instrument), limit, start, end);
 
         List<Trade> trades = response.getMarketTrades().stream().map(CoinbaseAdapters::adaptTrade).collect(Collectors.toList());
 
@@ -219,7 +254,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
     @Override
     public CandleStickData getCandleStickData(CurrencyPair currencyPair, CandleStickDataParams params) throws IOException {
 
-        String productId = CoinbaseAdapters.adaptProductId(currencyPair);
+        String productId = resolveProductId(currencyPair);
         String granularity = null;
         String start = null;
         String end = null;

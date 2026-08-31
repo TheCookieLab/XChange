@@ -7,8 +7,12 @@ import static org.junit.Assert.assertNotNull;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.util.Collections;
 import org.junit.Test;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
@@ -54,6 +58,39 @@ public class CoinbaseOrderRequestJsonTest {
     assertFalse(config.has("quote_size"));
   }
 
+
+  @Test
+  public void testCatalogResolvesNativeFutureProductId() {
+    CoinbaseProductIdentity catalog =
+        CoinbaseProductIdentity.build(
+            Collections.singletonList(
+                new CoinbaseProductResponse(
+                    "ETP-20DEC30-CDE",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "ETH",
+                    "USD",
+                    "FUTURE",
+                    "CDE",
+                    null)));
+    FuturesContract instrument =
+        (FuturesContract) catalog.instrument("ETP-20DEC30-CDE");
+    MarketOrder order =
+        new MarketOrder.Builder(Order.OrderType.BID, instrument)
+            .originalAmount(new BigDecimal("2"))
+            .userReference("cde-client")
+            .build();
+
+    CoinbaseOrderRequest request =
+        CoinbaseV3OrderRequests.marketOrderRequest(order, catalog);
+    JsonNode node = mapper.valueToTree(request);
+
+    assertEquals("ETP-20DEC30-CDE", node.get("product_id").asText());
+    assertFalse(node.get("product_id").asText().contains("ETH-USD-"));
+  }
   @Test
   public void testPreviewMarketOrderRequestOmitsClientOrderId() {
     MarketOrder order = new MarketOrder.Builder(Order.OrderType.BID, CurrencyPair.BTC_USD)

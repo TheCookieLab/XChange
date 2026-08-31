@@ -6,6 +6,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
+import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -24,8 +25,11 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderResponse;
@@ -37,6 +41,7 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbasePreviewOrderResponse;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.StopOrder;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.dto.Order;
@@ -93,6 +98,34 @@ public class CoinbaseTradeServiceUnitTest {
     } catch (ExchangeException expected) {
       assertTrue(expected.getMessage().contains("rejected"));
     }
+  }
+
+  @Test
+  public void marketOrderSubmissionUsesCatalogNativeProductId() throws Exception {
+    String productId = "ETP-20DEC30-CDE";
+    CoinbaseProductIdentity catalog =
+        CoinbaseProductIdentity.build(
+            Collections.singletonList(
+                new CoinbaseProductResponse(
+                    productId, null, null, null, null, null, "ETH", "USD", "FUTURE", "CDE", null)));
+    FuturesContract instrument = (FuturesContract) catalog.instrument(productId);
+    CoinbaseTradeService catalogService =
+        new CoinbaseTradeService(exchange, api, digest, catalog);
+    when(api.createOrder(any(ParamsDigest.class), any(CoinbaseOrderRequest.class)))
+        .thenReturn(
+            new CoinbaseCreateOrderResponse(
+                true, new CoinbaseCreateOrderResponse.SuccessResponse("order-1"), null));
+
+    String orderId =
+        catalogService.placeMarketOrder(
+            new MarketOrder.Builder(Order.OrderType.BID, instrument)
+                .originalAmount(BigDecimal.ONE)
+                .build());
+
+    ArgumentCaptor<CoinbaseOrderRequest> request = ArgumentCaptor.forClass(CoinbaseOrderRequest.class);
+    verify(api).createOrder(any(ParamsDigest.class), request.capture());
+    assertEquals("order-1", orderId);
+    assertEquals(productId, request.getValue().getProductId());
   }
 
   @Test

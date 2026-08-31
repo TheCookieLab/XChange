@@ -1,6 +1,8 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.junit.Assert.assertSame;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.isNull;
@@ -19,8 +21,13 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -100,6 +107,55 @@ public class CoinbaseMarketDataServiceUnitTest {
     
     // Verify that a ticker is returned (even without price book data, adaptTicker should handle null)
     assertNotNull("Ticker should not be null even with empty priceBooks", ticker);
+  }
+
+  @Test
+  public void testInstrumentRequestsUseCatalogNativeProductId() throws IOException {
+    String productId = "ETP-20DEC30-CDE";
+    CoinbaseProductIdentity catalog =
+        CoinbaseProductIdentity.build(
+            Collections.singletonList(
+                new CoinbaseProductResponse(
+                    productId, null, null, null, null, null, "ETH", "USD", "FUTURE", "CDE", null)));
+    FuturesContract instrument = (FuturesContract) catalog.instrument(productId);
+    Exchange exchange = mock(Exchange.class);
+    CoinbaseAuthenticated api = mock(CoinbaseAuthenticated.class);
+    ParamsDigest digest = mock(ParamsDigest.class);
+    CoinbaseMarketDataService service =
+        spy(new CoinbaseMarketDataService(exchange, api, digest, catalog));
+
+    CoinbaseProductResponse product =
+        new CoinbaseProductResponse(
+            productId, new BigDecimal("2500"), null, null, null, null, "ETH", "USD", "FUTURE", "CDE", null);
+    when(service.getProduct(productId)).thenReturn(product);
+    when(service.getBestBidAsk(productId))
+        .thenReturn(new CoinbaseBestBidAsksResponse(Collections.emptyList()));
+    when(service.getProductCandles(productId, "ONE_DAY", 1, null, null))
+        .thenReturn(mapper.readValue("{\"candles\":[]}", CoinbaseProductCandlesResponse.class));
+    CoinbasePriceBook priceBook =
+        new CoinbasePriceBook(productId, Collections.emptyList(), Collections.emptyList(), "2026-01-01T00:00:00Z");
+    when(service.getProductBook(productId, null, null))
+        .thenReturn(new CoinbaseProductPriceBookResponse(priceBook, null, null, null, null));
+    CoinbaseProductMarketTradesResponse trades =
+        mapper.readValue("{}", CoinbaseProductMarketTradesResponse.class);
+    when(service.getMarketTrades(productId, null, null, null)).thenReturn(trades);
+    try {
+      service.getTicker(instrument);
+    } catch (RuntimeException expected) {
+      // CDE responses are intentionally opaque to generic ticker adaptation.
+    }
+    try {
+      service.getOrderBook(instrument);
+    } catch (RuntimeException expected) {
+      // CDE order books are intentionally opaque to generic order-book adaptation.
+    }
+    service.getTrades(instrument);
+
+
+    verify(service, atLeastOnce()).getBestBidAsk(productId);
+    verify(service, atLeastOnce()).getProductBook(productId, null, null);
+    verify(service, atLeastOnce()).getMarketTrades(productId, null, null, null);
+    assertEquals(productId, catalog.requireProductId(instrument));
   }
 
   @Test

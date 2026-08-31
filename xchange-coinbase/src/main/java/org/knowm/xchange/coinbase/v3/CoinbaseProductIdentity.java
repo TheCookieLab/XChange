@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataServiceRaw;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -123,6 +124,28 @@ public final class CoinbaseProductIdentity {
       throw new AmbiguousMappingException("no unambiguous product id for instrument '" + instrument + "'");
     }
     return productId;
+  }
+
+  /**
+   * Resolves the product id for a request using the configured catalog when present.
+   *
+   * <p>A catalog is authoritative: an instrument without an unambiguous native mapping is
+   * rejected rather than being reconstructed from its currency pair. With no catalog, the
+   * historical adapter remains in use for ordinary spot and futures requests.
+   *
+   * @param instrument instrument supplied by the request
+   * @param catalog configured product identity catalog, or {@code null} when catalog resolution is
+   *     disabled
+   * @return the native Coinbase product id
+   * @throws NullPointerException if {@code instrument} is null
+   * @throws AmbiguousMappingException if a configured catalog cannot resolve the instrument
+   */
+  public static String resolveProductId(
+      Instrument instrument, CoinbaseProductIdentity catalog) {
+    Objects.requireNonNull(instrument, "instrument");
+    return catalog == null
+        ? CoinbaseAdapters.adaptProductId(instrument)
+        : catalog.requireProductId(instrument);
   }
 
   /**

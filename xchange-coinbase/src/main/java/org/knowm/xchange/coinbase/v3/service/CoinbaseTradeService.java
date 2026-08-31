@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrderResult;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
@@ -56,37 +58,68 @@ import si.mazi.rescu.ParamsDigest;
  */
 public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements TradeService {
 
+  private final CoinbaseProductIdentity productIdentity;
+
   /**
    * Constructs a new trade service using the exchange's default configuration.
    *
    * @param exchange The exchange instance containing API credentials and configuration.
    */
   public CoinbaseTradeService(Exchange exchange) {
-    super(exchange);
+    this(exchange, null, null, configuredProductIdentity(exchange));
   }
 
   /**
    * Constructs a new trade service with a custom authenticated API client.
    *
-   * @param exchange The exchange instance containing API credentials and configuration.
+   * @param exchange              The exchange instance containing API credentials and configuration.
    * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
    */
   public CoinbaseTradeService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade) {
-    super(exchange, coinbaseAdvancedTrade);
+    this(exchange, coinbaseAdvancedTrade, null, configuredProductIdentity(exchange));
   }
 
   /**
    * Constructs a new trade service with a custom authenticated API client and token creator.
    *
-   * @param exchange The exchange instance containing API credentials and configuration.
+   * @param exchange              The exchange instance containing API credentials and configuration.
    * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
-   * @param authTokenCreator The parameter digest for creating authentication tokens.
+   * @param authTokenCreator      The parameter digest for creating authentication tokens.
    */
   public CoinbaseTradeService(
       Exchange exchange,
       CoinbaseAuthenticated coinbaseAdvancedTrade,
       ParamsDigest authTokenCreator) {
+    this(exchange, coinbaseAdvancedTrade, authTokenCreator, configuredProductIdentity(exchange));
+  }
+
+  /**
+   * Constructs a trade service with an explicitly supplied product identity catalog.
+   *
+   * @param exchange              The exchange instance containing API credentials and configuration.
+   * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
+   * @param authTokenCreator      The parameter digest for creating authentication tokens.
+   * @param productIdentity       catalog used to resolve instruments, or {@code null} to use the
+   *                              standard adapter
+   */
+  public CoinbaseTradeService(
+      Exchange exchange,
+      CoinbaseAuthenticated coinbaseAdvancedTrade,
+      ParamsDigest authTokenCreator,
+      CoinbaseProductIdentity productIdentity) {
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
+    this.productIdentity = productIdentity;
+  }
+
+  private static CoinbaseProductIdentity configuredProductIdentity(Exchange exchange) {
+    if (exchange == null || exchange.getExchangeSpecification() == null) {
+      return null;
+    }
+    Object configured = exchange.getExchangeSpecification()
+        .getExchangeSpecificParametersItem(CoinbaseExchange.PARAM_PRODUCT_IDENTITY);
+    return configured instanceof CoinbaseProductIdentity
+        ? (CoinbaseProductIdentity) configured
+        : null;
   }
 
   /**
@@ -314,7 +347,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
-    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
+    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder, productIdentity);
     return requireCreatedOrderId(super.createOrder(request));
   }
 
@@ -329,7 +362,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
-    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
+    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder, productIdentity);
     return requireCreatedOrderId(super.createOrder(request));
   }
 
@@ -344,7 +377,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public String placeStopOrder(StopOrder stopOrder) throws IOException {
-    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder);
+    CoinbaseOrderRequest request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder, productIdentity);
     return requireCreatedOrderId(super.createOrder(request));
   }
 
@@ -381,7 +414,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   @Override
   public void verifyOrder(LimitOrder limitOrder) {
     try {
-      CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewLimitOrderRequest(limitOrder);
+      CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewLimitOrderRequest(limitOrder, productIdentity);
       super.previewOrderCurrent(request);
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview limit order", e);
@@ -402,7 +435,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   @Override
   public void verifyOrder(MarketOrder marketOrder) {
     try {
-      CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewMarketOrderRequest(marketOrder);
+      CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewMarketOrderRequest(marketOrder, productIdentity);
       super.previewOrderCurrent(request);
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview market order", e);

@@ -9,6 +9,15 @@ import org.knowm.xchange.coinbase.v3.service.CoinbaseTradeService;
 
 public class CoinbaseExchange extends BaseExchange implements Exchange {
 
+  /**
+   * Exchange-specific parameter containing a {@link CoinbaseProductIdentity} catalog.
+   *
+   * <p>When present, Coinbase v3 market-data and order services resolve every instrument through
+   * this catalog and reject unmapped instruments. When absent, they retain the standard adapter
+   * behavior.
+   */
+  public static final String PARAM_PRODUCT_IDENTITY = "Coinbase_Product_Identity";
+
   @Override
   protected void initServices() {
     this.marketDataService = new CoinbaseMarketDataService(this);
