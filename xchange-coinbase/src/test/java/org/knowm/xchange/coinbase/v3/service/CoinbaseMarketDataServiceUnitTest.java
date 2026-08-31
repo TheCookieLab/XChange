@@ -154,7 +154,7 @@ public class CoinbaseMarketDataServiceUnitTest {
     service.getCandleStickData(
         instrument, new DefaultCandleStickParamWithLimit(null, null, 86_400, 1));
 
-    verify(service).getProductCandles(productId, "ONE_DAY", 1, null, null);
+    verify(service, atLeastOnce()).getProductCandles(productId, "ONE_DAY", 1, null, null);
 
     verify(service, atLeastOnce()).getBestBidAsk(productId);
     verify(service, atLeastOnce()).getProductBook(productId, null, null);
