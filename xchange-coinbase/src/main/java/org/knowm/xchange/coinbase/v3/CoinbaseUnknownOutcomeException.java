@@ -11,8 +11,8 @@ import org.knowm.xchange.coinbase.v3.dto.RetryClassification;
  *
  * <p>Raised when a create/edit/close/convert/allocate request fails at the transport layer after
  * the request may have reached the provider, so the server-side outcome is unknown. Callers must not
- * blindly replay the operation; they should reconcile by {@code client_order_id} or surface the
- * ambiguity to the operator. The message is sanitized and never contains key material.
+ * blindly replay the operation; they should reconcile using identifiers in their declared namespace
+ * or surface the ambiguity to the operator. The message is sanitized and never contains key material.
  *
  * @since 1.0
  */
@@ -25,7 +25,16 @@ public class CoinbaseUnknownOutcomeException extends IOException {
   private final RetryClassification retryClassification;
   private final List<String> orderIds;
   private final List<String> clientOrderIds;
+  private final String correlationName;
+  private final String correlationId;
 
+  /**
+   * Creates an unknown-outcome failure identified by a client order id.
+   *
+   * @param operation interrupted mutation
+   * @param clientOrderId client order identifier supplied with the mutation
+   * @param transportFailure transport error that obscured the provider outcome
+   */
   public CoinbaseUnknownOutcomeException(
       String operation, String clientOrderId, IOException transportFailure) {
     super(
@@ -45,6 +54,42 @@ public class CoinbaseUnknownOutcomeException extends IOException {
         clientOrderId == null
             ? Collections.emptyList()
             : Collections.singletonList(clientOrderId);
+    this.correlationName = null;
+    this.correlationId = null;
+    this.retryClassification = RetryClassification.AMBIGUOUS;
+  }
+
+  /**
+   * Creates an unknown-outcome failure identified by a non-order correlation id.
+   *
+   * @param operation interrupted mutation
+   * @param correlationName provider field naming the identifier
+   * @param correlationId provider identifier used to reconcile the mutation
+   * @param transportFailure transport error that obscured the provider outcome
+   */
+  public CoinbaseUnknownOutcomeException(
+      String operation,
+      String correlationName,
+      String correlationId,
+      IOException transportFailure) {
+    super(
+        "Coinbase "
+            + operation
+            + (correlationId == null
+                ? ""
+                : " (" + correlationName + "=" + correlationId + ")")
+            + " outcome is unknown after a transport failure; do not replay blindly, reconcile "
+            + "before retrying"
+            + (transportFailure == null || transportFailure.getMessage() == null
+                ? ""
+                : ": " + transportFailure.getMessage()),
+        transportFailure);
+    this.operation = operation;
+    this.clientOrderId = null;
+    this.orderIds = Collections.emptyList();
+    this.clientOrderIds = Collections.emptyList();
+    this.correlationName = correlationName;
+    this.correlationId = correlationId;
     this.retryClassification = RetryClassification.AMBIGUOUS;
   }
 
@@ -74,6 +119,8 @@ public class CoinbaseUnknownOutcomeException extends IOException {
     this.clientOrderId = null;
     this.orderIds = safeIds(orderIds);
     this.clientOrderIds = safeIds(clientOrderIds);
+    this.correlationName = null;
+    this.correlationId = null;
     this.retryClassification = RetryClassification.AMBIGUOUS;
   }
 
@@ -96,6 +143,16 @@ public class CoinbaseUnknownOutcomeException extends IOException {
   public List<String> getClientOrderIds() {
     return clientOrderIds;
   }
+  /** Provider field naming a non-order reconciliation identifier, when applicable. */
+  public String getCorrelationName() {
+    return correlationName;
+  }
+
+  /** Non-order provider identifier used to reconcile the interrupted mutation, when applicable. */
+  public String getCorrelationId() {
+    return correlationId;
+  }
+
 
   /** Always {@link RetryClassification#AMBIGUOUS}: the provider outcome is unknown. */
   public RetryClassification getRetryClassification() {

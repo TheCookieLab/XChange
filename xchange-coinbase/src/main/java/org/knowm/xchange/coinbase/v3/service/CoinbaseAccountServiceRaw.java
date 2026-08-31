@@ -451,7 +451,8 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
     try {
       return coinbaseAdvancedTrade.allocatePortfolio(authTokenCreator, request);
     } catch (IOException transportFailure) {
-      throw new CoinbaseUnknownOutcomeException("allocatePortfolio", request.getPortfolioUuid(), transportFailure);
+      throw new CoinbaseUnknownOutcomeException(
+          "allocatePortfolio", "portfolio_uuid", request.getPortfolioUuid(), transportFailure);
     }
   }
 

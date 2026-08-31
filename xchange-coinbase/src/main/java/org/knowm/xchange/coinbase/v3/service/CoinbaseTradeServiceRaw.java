@@ -214,7 +214,8 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     try {
       return coinbaseAdvancedTrade.editOrder(authTokenCreator, request);
     } catch (IOException transportFailure) {
-      throw new CoinbaseUnknownOutcomeException("editOrder", request.getOrderId(), transportFailure);
+      throw new CoinbaseUnknownOutcomeException(
+          "editOrder", Collections.singletonList(request.getOrderId()), null, transportFailure);
     }
   }
 
@@ -325,7 +326,8 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     try {
       return coinbaseAdvancedTrade.commitConvertTrade(authTokenCreator, tradeId, request);
     } catch (IOException transportFailure) {
-      throw new CoinbaseUnknownOutcomeException("commitConvertTrade", tradeId, transportFailure);
+      throw new CoinbaseUnknownOutcomeException(
+          "commitConvertTrade", "trade_id", tradeId, transportFailure);
     }
   }
 
