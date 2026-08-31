@@ -389,7 +389,8 @@ public final class CoinbaseAdapters {
    * merely because its status is not open.
    */
   public static OpenOrders adaptOpenOrders(List<CoinbaseOrderDetail> orders) {
-    List<LimitOrder> open = new ArrayList<>();
+    List<LimitOrder> visible = new ArrayList<>();
+    List<Order> hidden = new ArrayList<>();
     for (CoinbaseOrderDetail detail : orders) {
       if (detail == null) {
         throw new NotAvailableFromExchangeException(
@@ -402,17 +403,20 @@ public final class CoinbaseAdapters {
             "Cannot represent Coinbase open-order status " + detail.getStatus()
                 + " for order " + detail.getOrderId());
       }
-      if (status != null && status.isOpen()) {
+      if (status.isOpen()) {
         Order order = adaptOrder(detail);
-        if (!(order instanceof LimitOrder)) {
+        if (order == null) {
           throw new NotAvailableFromExchangeException(
-              "Cannot represent open Coinbase order " + detail.getOrderId()
-                  + " as an XChange LimitOrder");
+              "Cannot represent open Coinbase order " + detail.getOrderId());
         }
-        open.add((LimitOrder) order);
+        if (order instanceof LimitOrder) {
+          visible.add((LimitOrder) order);
+        } else {
+          hidden.add(order);
+        }
       }
     }
-    return new OpenOrders(open);
+    return new OpenOrders(visible, hidden);
   }
 
 

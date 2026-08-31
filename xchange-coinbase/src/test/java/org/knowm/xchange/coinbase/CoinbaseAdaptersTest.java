@@ -716,6 +716,10 @@ public class CoinbaseAdaptersTest {
     assertEquals(new BigDecimal("2500"), adaptedSell.getStopPrice());
     assertEquals(new BigDecimal("2450"), adaptedSell.getLimitPrice());
     assertEquals(StopOrder.Intention.TAKE_PROFIT, adaptedSell.getIntention());
+    assertEquals(
+        Arrays.asList(adaptedBuy, adaptedSell),
+        CoinbaseAdapters.adaptOpenOrders(Arrays.asList(buyStopLoss, sellTakeProfit))
+            .getHiddenOrders());
     assertUnavailable(() -> CoinbaseAdapters.adaptOrder(missingDirection));
   }
 
@@ -782,7 +786,7 @@ public class CoinbaseAdaptersTest {
   }
 
   @Test
-  public void testUnrepresentableOpenOrdersFailClosed() throws Exception {
+  public void testOpenMarketOrdersRemainVisibleThroughHiddenOrders() throws Exception {
     ObjectMapper mapper = new ObjectMapper();
     CoinbaseOrderDetail market =
         mapper.readValue(
@@ -798,8 +802,13 @@ public class CoinbaseAdaptersTest {
                 + "{\"base_size\":\"1\",\"limit_price\":\"2500\"}}}",
             CoinbaseOrderDetail.class);
 
-    assertUnavailable(
-        () -> CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(market)));
+    assertEquals(
+        Collections.singletonList("market"),
+        CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(market))
+            .getHiddenOrders()
+            .stream()
+            .map(Order::getId)
+            .collect(java.util.stream.Collectors.toList()));
     assertUnavailable(
         () -> CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(unknownSide)));
   }
