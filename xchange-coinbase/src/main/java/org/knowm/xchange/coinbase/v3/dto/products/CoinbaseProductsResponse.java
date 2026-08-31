@@ -17,7 +17,7 @@ public class CoinbaseProductsResponse {
    * deserialization and by tests/offline catalog builders for deterministic construction.
    */
   public CoinbaseProductsResponse(@JsonProperty("products") List<CoinbaseProductResponse> products) {
-    this.products = products == null ? Collections.emptyList() : Collections.unmodifiableList(products);
+    this.products = products == null ? null : Collections.unmodifiableList(products);
   }
 
   @Override

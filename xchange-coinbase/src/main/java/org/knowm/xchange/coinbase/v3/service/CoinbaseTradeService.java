@@ -148,14 +148,19 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     }
 
     CoinbaseTradeHistoryParams v3Params = (CoinbaseTradeHistoryParams) params;
-
     List<UserTrade> trades = new ArrayList<>();
     Set<String> seenFillIds = new HashSet<>();
     Set<String> seenCursors = new HashSet<>();
     int page = 0;
-    String cursor;
+    String cursor = v3Params.getNextPageCursor();
     do {
-      CoinbaseOrdersResponse response = CoinbaseRetry.readWithBackoff(() -> listFills(v3Params));
+      final String requestCursor = cursor;
+      CoinbaseOrdersResponse response =
+          CoinbaseRetry.readWithBackoff(() -> listFills(v3Params, requestCursor));
+      if (response == null || response.getFills() == null) {
+        throw new org.knowm.xchange.exceptions.ExchangeException(
+            "Coinbase fills response is missing the required fills collection");
+      }
       cursor =
           advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "fills");
       page++;
@@ -171,7 +176,6 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
           }
         }
       }
-      v3Params.setNextPageCursor(cursor);
     } while (cursor != null
         && !cursor.isEmpty()
         && (v3Params.getLimit() == null || trades.size() < v3Params.getLimit()));
@@ -259,12 +263,14 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   /**
    * Previews an order edit without modifying the live order.
    *
-   * @param request Edit order request payload.
-   * @return The preview response.
-   * @throws IOException If there is an error communicating with the Coinbase API.
+   * @param request current-schema edit request
+   * @return provider edit-preview response
+   * @throws IOException when the request cannot be transported
+   * @throws org.knowm.xchange.exceptions.ExchangeException when the HTTP-200 response is absent or
+   *     reports success=false
    */
-  public CoinbaseOrdersResponse previewEditOrder(CoinbaseEditOrderRequest request)
-      throws IOException {
+  public org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderResponse previewEditOrder(
+      CoinbaseEditOrderRequest request) throws IOException {
     return super.previewEditOrder(request);
   }
 
@@ -292,59 +298,66 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   }
 
   /**
-   * Places a market order on the exchange.
+   * Places a market order.
    *
-   * <p>A market order is executed immediately at the current market price. The order will be filled
-   * as soon as possible, potentially across multiple price levels in the order book.
-   *
-   * @param marketOrder The market order to place, containing the instrument, side (buy/sell), and
-   *     quantity.
-   * @return The order ID assigned by Coinbase Advanced Trade as a string.
-   * @throws IOException If there is an error communicating with the Coinbase API or if the order
-   *     placement fails.
+   * @param marketOrder order containing product, side, and quantity
+   * @return provider-assigned order id
+   * @throws IOException when transport fails
+   * @throws org.knowm.xchange.exceptions.ExchangeException when Coinbase returns a successful HTTP
+   *     response with success=false or no order id
    */
   @Override
   public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
     CoinbaseOrderRequest request = CoinbaseV3OrderRequests.marketOrderRequest(marketOrder);
-    return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
+    return requireCreatedOrderId(super.createOrder(request));
   }
 
   /**
-   * Places a limit order on the exchange.
+   * Places a limit order.
    *
-   * <p>A limit order specifies a maximum price (for buys) or minimum price (for sells) at which the
-   * order should be executed. The order will only be filled if the market price reaches the
-   * specified limit price or better.
-   *
-   * @param limitOrder The limit order to place, containing the instrument, side (buy/sell),
-   *     quantity, and limit price.
-   * @return The order ID assigned by Coinbase Advanced Trade as a string.
-   * @throws IOException If there is an error communicating with the Coinbase API or if the order
-   *     placement fails.
+   * @param limitOrder order containing product, side, quantity, and limit price
+   * @return provider-assigned order id
+   * @throws IOException when transport fails
+   * @throws org.knowm.xchange.exceptions.ExchangeException when Coinbase returns a successful HTTP
+   *     response with success=false or no order id
    */
   @Override
   public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
     CoinbaseOrderRequest request = CoinbaseV3OrderRequests.limitOrderRequest(limitOrder);
-    return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
+    return requireCreatedOrderId(super.createOrder(request));
   }
 
   /**
-   * Places a stop order on the exchange.
+   * Places a stop order.
    *
-   * <p>A stop order becomes active when the market price reaches a specified stop price. Once
-   * triggered, it behaves like a market order and is executed at the current market price. Stop
-   * orders are commonly used for stop-loss or stop-entry strategies.
-   *
-   * @param stopOrder The stop order to place, containing the instrument, side (buy/sell), quantity,
-   *     and stop price.
-   * @return The order ID assigned by Coinbase Advanced Trade as a string.
-   * @throws IOException If there is an error communicating with the Coinbase API or if the order
-   *     placement fails.
+   * @param stopOrder order containing product, side, quantity, and stop price
+   * @return provider-assigned order id
+   * @throws IOException when transport fails
+   * @throws org.knowm.xchange.exceptions.ExchangeException when Coinbase returns a successful HTTP
+   *     response with success=false or no order id
    */
   @Override
   public String placeStopOrder(StopOrder stopOrder) throws IOException {
     CoinbaseOrderRequest request = CoinbaseV3OrderRequests.stopOrderRequest(stopOrder);
-    return CoinbaseAdapters.adaptCreatedOrderId(super.createOrder(request));
+    return requireCreatedOrderId(super.createOrder(request));
+  }
+
+  private static String requireCreatedOrderId(CoinbaseCreateOrderResponse response) {
+    if (response == null
+        || !response.isSuccess()
+        || response.getOrderId() == null
+        || response.getOrderId().isBlank()) {
+      String details =
+          response == null
+              ? "null response"
+              : response.getErrorResponse() == null
+                  ? "missing order id"
+                  : response.getErrorResponse().getError()
+                      + ": " + response.getErrorResponse().getMessage();
+      throw new org.knowm.xchange.exceptions.ExchangeException(
+          "Coinbase order placement failed in a successful HTTP response: " + details);
+    }
+    return response.getOrderId();
   }
 
   /**

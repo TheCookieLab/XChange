@@ -1,27 +1,24 @@
 package org.knowm.xchange.coinbase.v3.dto.products;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
 
-/**
- * Unit tests for CoinbaseProductsResponse.
- * Tests null-safe list handling to prevent NPEs when API returns null for products list.
- */
+/** Unit tests for preserving the required Coinbase products member. */
 public class CoinbaseProductsResponseTest {
 
   private final ObjectMapper mapper = new ObjectMapper();
 
   @Test
-  public void testWithNullProductsList() throws Exception {
+  public void testPreservesMissingProductsList() throws Exception {
     String json = "{}";
     CoinbaseProductsResponse response = mapper.readValue(json, CoinbaseProductsResponse.class);
 
     assertNotNull("Response should not be null", response);
-    assertNotNull("Products list should not be null", response.getProducts());
-    assertTrue("Products list should be empty", response.getProducts().isEmpty());
+    assertNull("Missing products must remain distinguishable from an empty catalog", response.getProducts());
   }
 
   @Test

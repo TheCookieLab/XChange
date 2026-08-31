@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -111,6 +112,99 @@ public class CoinbasePaginationGuardTest {
     UserTrades trades = service.getTradeHistory(new CoinbaseTradeHistoryParams());
     assertEquals(2, trades.getUserTrades().size());
     assertEquals(Arrays.asList(null, "next"), requestedCursors);
+  }
+
+  @Test
+  public void fillsFailureDoesNotMutateCallerCursor() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    List<String> requestedCursors = new ArrayList<>();
+    when(authenticated.listFills(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenAnswer(
+            invocation -> {
+              requestedCursors.add(invocation.getArgument(8));
+              if (requestedCursors.size() == 1) {
+                return new CoinbaseOrdersResponse(Collections.singletonList(fill("1")), "next");
+              }
+              throw new IOException("later page unavailable");
+            });
+
+    CoinbaseTradeService service =
+        new CoinbaseTradeService(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+    CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
+    params.setNextPageCursor("initial");
+
+    assertThrows(IOException.class, () -> service.getTradeHistory(params));
+    assertEquals("initial", params.getNextPageCursor());
+    assertEquals("initial", requestedCursors.get(0));
+
+    int secondInvocation = requestedCursors.size();
+    when(authenticated.listFills(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenAnswer(
+            invocation -> {
+              requestedCursors.add(invocation.getArgument(8));
+              if (requestedCursors.size() == secondInvocation + 1) {
+                return new CoinbaseOrdersResponse(Collections.singletonList(fill("1")), "next");
+              }
+              return new CoinbaseOrdersResponse(Collections.singletonList(fill("2")), null);
+            });
+    service.getTradeHistory(params);
+    assertEquals("initial", requestedCursors.get(secondInvocation));
+  }
+
+  @Test
+  public void fillsResponseWithoutRequiredCollectionFailsClosed() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    when(authenticated.listFills(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(new CoinbaseOrdersResponse(null, null));
+
+    CoinbaseTradeService service =
+        new CoinbaseTradeService(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+    ExchangeException exception =
+        assertThrows(
+            ExchangeException.class, () -> service.getTradeHistory(new CoinbaseTradeHistoryParams()));
+    assertTrue(exception.getMessage().contains("required fills collection"));
   }
 
   @Test
@@ -247,6 +341,52 @@ public class CoinbasePaginationGuardTest {
         new CoinbaseTradeServiceRaw(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
 
     assertEquals(2, service.listOrdersBounded(2).size());
+  }
+
+  @Test
+  public void orderHistoryResponseWithoutRequiredCollectionFailsClosed() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    when(authenticated.listOrders(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(new CoinbaseListOrdersResponse(null, null, false));
+
+    CoinbaseTradeServiceRaw service =
+        new CoinbaseTradeServiceRaw(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+    ExchangeException exception =
+        assertThrows(ExchangeException.class, () -> service.listOrdersBounded(null));
+    assertTrue(exception.getMessage().contains("required orders collection"));
+  }
+
+  @Test
+  public void futuresPositionsResponseWithoutRequiredCollectionFailsClosed() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    when(authenticated.listFuturesPositions(any(ParamsDigest.class)))
+        .thenReturn(
+            new org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsResponse(null));
+
+    CoinbaseTradeServiceRaw service =
+        new CoinbaseTradeServiceRaw(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+    ExchangeException exception =
+        assertThrows(ExchangeException.class, service::listFuturesPositions);
+    assertTrue(exception.getMessage().contains("required positions collection"));
   }
 
   private static Exchange coinbaseExchange() {

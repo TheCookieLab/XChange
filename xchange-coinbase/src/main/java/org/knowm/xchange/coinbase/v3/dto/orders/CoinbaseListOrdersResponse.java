@@ -3,7 +3,6 @@ package org.knowm.xchange.coinbase.v3.dto.orders;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Collections;
 import java.util.List;
 import lombok.Getter;
 
@@ -24,7 +23,7 @@ public class CoinbaseListOrdersResponse {
       @JsonProperty("orders") List<CoinbaseOrderDetail> orders,
       @JsonProperty("cursor") String cursor,
       @JsonProperty("has_next") Boolean hasNext) {
-    this.orders = orders == null ? Collections.emptyList() : Collections.unmodifiableList(orders);
+    this.orders = orders == null ? null : List.copyOf(orders);
     this.cursor = cursor;
     this.hasNext = hasNext;
   }

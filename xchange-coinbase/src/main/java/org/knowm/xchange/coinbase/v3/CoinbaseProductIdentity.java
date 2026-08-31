@@ -3,8 +3,8 @@ package org.knowm.xchange.coinbase.v3;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -61,6 +61,23 @@ public final class CoinbaseProductIdentity {
       super(message);
     }
   }
+  private static final class NativeProductFuturesContract extends FuturesContract {
+
+    private static final long serialVersionUID = 1L;
+
+    private final String productId;
+
+    private NativeProductFuturesContract(
+        CurrencyPair currencyPair, String prompt, String productId) {
+      super(currencyPair, prompt);
+      this.productId = productId;
+    }
+
+    @Override
+    public String toString() {
+      return productId;
+    }
+  }
 
   private final Map<String, Product> productByProductId;
   private final Map<Instrument, String> productIdByInstrument;
@@ -87,7 +104,7 @@ public final class CoinbaseProductIdentity {
 
   /** Returns the native product id for an instrument, or null when unknown. */
   public String productId(Instrument instrument) {
-    return productIdByInstrument.get(instrument);
+    return productIdByInstrument.get(identityKey(instrument));
   }
 
   /**
@@ -118,7 +135,7 @@ public final class CoinbaseProductIdentity {
    * @throws AmbiguousMappingException when the instrument is unknown or ambiguous.
    */
   public String requireProductId(Instrument instrument) {
-    String productId = productIdByInstrument.get(instrument);
+    String productId = productId(instrument);
     if (productId == null) {
       throw new AmbiguousMappingException("no unambiguous product id for instrument '" + instrument + "'");
     }
@@ -143,6 +160,9 @@ public final class CoinbaseProductIdentity {
         continue;
       }
       String productId = response.getProductId();
+      if (productByProductId.containsKey(productId)) {
+        throw new IllegalArgumentException("duplicate product id '" + productId + "'");
+      }
       Product product =
           new Product(
               productId,
@@ -157,18 +177,19 @@ public final class CoinbaseProductIdentity {
       if (instrument == null) {
         continue;
       }
-      if (ambiguousInstruments.contains(instrument)) {
+      Instrument identityKey = identityKey(instrument);
+      if (ambiguousInstruments.contains(identityKey)) {
         continue;
       }
-      String existing = productIdByInstrument.get(instrument);
+      String existing = productIdByInstrument.get(identityKey);
       if (existing != null && !existing.equals(productId)) {
         // Every product producing this instrument remains raw-id-only, including later collisions.
-        productIdByInstrument.remove(instrument);
+        productIdByInstrument.remove(identityKey);
         instrumentByProductId.remove(existing);
-        ambiguousInstruments.add(instrument);
+        ambiguousInstruments.add(identityKey);
         continue;
       }
-      productIdByInstrument.put(instrument, productId);
+      productIdByInstrument.put(identityKey, productId);
       instrumentByProductId.put(productId, instrument);
     }
     return new CoinbaseProductIdentity(productByProductId, productIdByInstrument, instrumentByProductId);
@@ -257,7 +278,15 @@ public final class CoinbaseProductIdentity {
     if (prompt == null) {
       return null;
     }
-    return new FuturesContract(pair, prompt);
+    return new NativeProductFuturesContract(pair, prompt, product.productId());
+  }
+
+  private static Instrument identityKey(Instrument instrument) {
+    if (instrument instanceof FuturesContract) {
+      FuturesContract contract = (FuturesContract) instrument;
+      return new FuturesContract(contract.getCurrencyPair(), contract.getPrompt());
+    }
+    return instrument;
   }
 
   /**

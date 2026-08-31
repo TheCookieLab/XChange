@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -17,14 +18,22 @@ import java.util.Collection;
 import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrderResult;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.StopOrder;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.service.trade.TradeService;
@@ -62,11 +71,94 @@ public class CoinbaseTradeServiceUnitTest {
         new CoinbaseCancelOrdersResponse(
             Collections.singletonList(
                 new CoinbaseCancelOrderResult(false, "UNKNOWN_CANCEL_FAILURE_REASON", "order-2")));
-    when(api.cancelOrders(any(ParamsDigest.class), any())).thenReturn(accepted, rejected);
-
+    when(api.batchCancelOrders(any(ParamsDigest.class), any())).thenReturn(accepted, rejected);
     assertTrue(service.cancelOrder(new DefaultCancelOrderParamId("order-1")));
     assertFalse(service.cancelOrder(new DefaultCancelOrderParamId("order-2")));
   }
+
+  @Test
+  public void marketOrderRejectsSuccessfulHttpFailurePayload() throws Exception {
+    when(api.createOrder(any(ParamsDigest.class), any()))
+        .thenReturn(
+            new CoinbaseCreateOrderResponse(
+                false, null, new CoinbaseCreateOrderResponse.ErrorResponse("INVALID", "rejected")));
+    try {
+      service.placeMarketOrder(
+          new MarketOrder(Order.OrderType.BID, BigDecimal.ONE, CurrencyPair.BTC_USD));
+      fail("Expected a failed successful-HTTP response to be rejected");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("rejected"));
+    }
+  }
+
+  @Test
+  public void limitOrderRejectsSuccessfulHttpFailurePayload() throws Exception {
+    when(api.createOrder(any(ParamsDigest.class), any()))
+        .thenReturn(
+            new CoinbaseCreateOrderResponse(
+                false, null, new CoinbaseCreateOrderResponse.ErrorResponse("INVALID", "rejected")));
+    LimitOrder order =
+        new LimitOrder(
+            Order.OrderType.BID,
+            BigDecimal.ONE,
+            CurrencyPair.BTC_USD,
+            null,
+            null,
+            BigDecimal.ONE);
+    try {
+      service.placeLimitOrder(order);
+      fail("Expected a failed successful-HTTP response to be rejected");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("rejected"));
+    }
+  }
+
+  @Test
+  public void stopOrderRejectsSuccessfulHttpFailurePayload() throws Exception {
+    when(api.createOrder(any(ParamsDigest.class), any()))
+        .thenReturn(
+            new CoinbaseCreateOrderResponse(
+                false, null, new CoinbaseCreateOrderResponse.ErrorResponse("INVALID", "rejected")));
+    StopOrder order =
+        new StopOrder(
+            Order.OrderType.BID,
+            BigDecimal.ONE,
+            CurrencyPair.BTC_USD,
+            null,
+            null,
+            BigDecimal.ONE);
+    try {
+      service.placeStopOrder(order);
+      fail("Expected a failed successful-HTTP response to be rejected");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("rejected"));
+    }
+  }
+
+  @Test
+  public void editOrderRejectsFalseSuccessResponse() throws Exception {
+    when(api.editOrder(any(ParamsDigest.class), any()))
+        .thenReturn(new CoinbaseEditOrderResponse(false, Collections.emptyList()));
+    try {
+      service.editOrder(new CoinbaseEditOrderRequest("order-1", null, null, null, null, null));
+      fail("Expected a false success response to be rejected");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("editOrder"));
+    }
+  }
+
+  @Test
+  public void previewEditOrderRejectsMissingSuccessResponse() throws Exception {
+    when(api.previewEditOrder(any(ParamsDigest.class), any())).thenReturn(null);
+    try {
+      service.previewEditOrder(
+          new CoinbaseEditOrderRequest("order-1", null, null, null, null, null));
+      fail("Expected a missing response to be rejected");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("previewEditOrder"));
+    }
+  }
+
 
   @Test
   public void testServiceCreationSucceeds() {

@@ -11,12 +11,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity.AmbiguousMappingException;
 import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity.Product;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseFutureProductDetails;
@@ -26,6 +27,7 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
 import org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataServiceRaw;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import si.mazi.rescu.ParamsDigest;
 
@@ -98,6 +100,33 @@ public class CoinbaseProductIdentityTest {
     assertNotNull(product);
     assertTrue(product.perpetual());
     assertEquals("INTX", product.productVenue());
+  }
+
+  @Test
+  public void opaqueCdeFutureRoundTripsNativeProductId() {
+    CoinbaseProductIdentity identity =
+        CoinbaseProductIdentity.build(
+            Collections.singletonList(
+                future("ETP-20DEC30-CDE", "ETH", "USD", "CDE", false)));
+
+    FuturesContract contract = (FuturesContract) identity.instrument("ETP-20DEC30-CDE");
+
+    assertEquals("ETP-20DEC30-CDE", CoinbaseAdapters.adaptProductId(contract));
+    assertEquals(
+        "ETP-20DEC30-CDE",
+        identity.requireProductId(
+            new FuturesContract(new CurrencyPair("ETH", "USD"), "ETP-20DEC30-CDE")));
+  }
+
+  @Test
+  public void duplicateNativeProductIdsAreRejected() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            CoinbaseProductIdentity.build(
+                Arrays.asList(
+                    spot("DUPLICATE", "BTC", "USD"),
+                    future("DUPLICATE", "ETH", "USD", "CDE", false))));
   }
 
   @Test
@@ -178,6 +207,30 @@ public class CoinbaseProductIdentityTest {
     assertEquals(
         "BTC-PERP-INTX",
         identity.requireProductId(new FuturesContract(CurrencyPair.BTC_USD, "PERP")));
+  }
+
+  @Test
+  public void discoveryRejectsMissingProductCollection() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    when(authenticated.listProducts(
+            any(ParamsDigest.class),
+            eq(250),
+            eq(0),
+            eq("SPOT"),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(null);
+
+    ExchangeException exception =
+        assertThrows(
+            ExchangeException.class,
+            () -> CoinbaseProductIdentity.discover(rawWith(authenticated)));
+
+    assertTrue(exception.getMessage().contains("omitted products"));
   }
 
   @Test

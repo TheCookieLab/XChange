@@ -22,6 +22,7 @@ import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsRespons
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
@@ -60,6 +61,19 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    * @throws IOException if a network or serialization error occurs
    */
   public CoinbaseOrdersResponse listFills(CoinbaseTradeHistoryParams params) throws IOException {
+    return listFills(params, params.getNextPageCursor());
+  }
+
+  /**
+   * Lists one fills page using the supplied cursor without mutating {@code params}.
+   *
+   * @param params immutable-for-request trade history filters
+   * @param cursor explicit cursor for this request, or null for the first page
+   * @return a response containing fills and its continuation cursor
+   * @throws IOException if a network or serialization error occurs
+   */
+  public CoinbaseOrdersResponse listFills(CoinbaseTradeHistoryParams params, String cursor)
+      throws IOException {
     List<String> productIds = null;
     if (params.getProductIds() != null && !params.getProductIds().isEmpty()) {
       productIds =
@@ -86,7 +100,6 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     String endTs = params.getEndTime() == null ? null : params.getEndTime().toInstant().toString();
 
     Integer limit = params.getLimit();
-    String cursor = params.getNextPageCursor();
     String retailPortfolioId = params.getRetailPortfolioId();
     List<String> assetFilters = toList(params.getAssetFilters());
     List<String> orderTypes = toList(params.getOrderTypes());
@@ -247,6 +260,10 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
                       null,
                       null,
                       null));
+      if (response == null || response.getOrders() == null) {
+        throw new ExchangeException(
+            "Coinbase orders response is missing the required orders collection");
+      }
       for (CoinbaseOrderDetail order : response.getOrders()) {
         String orderId = order == null ? null : order.getOrderId();
         if ((orderId == null || orderId.isBlank() || seenOrderIds.add(orderId))) {
@@ -288,9 +305,10 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   }
 
   /** Edit an existing order natively via Advanced Trade. */
-  public CoinbaseOrdersResponse editOrder(CoinbaseEditOrderRequest request) throws IOException {
+  public CoinbaseEditOrderResponse editOrder(CoinbaseEditOrderRequest request) throws IOException {
     try {
-      return coinbaseAdvancedTrade.editOrder(authTokenCreator, request);
+      return requireSuccessfulEditResponse(
+          coinbaseAdvancedTrade.editOrder(authTokenCreator, request), "editOrder");
     } catch (CoinbaseException providerFailure) {
       throw providerFailure;
     } catch (IOException transportFailure) {
@@ -305,9 +323,23 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   }
 
   /** Preview an order edit request without modifying the live order. */
-  public CoinbaseOrdersResponse previewEditOrder(CoinbaseEditOrderRequest request)
+  public CoinbaseEditOrderResponse previewEditOrder(CoinbaseEditOrderRequest request)
       throws IOException {
-    return coinbaseAdvancedTrade.previewEditOrder(authTokenCreator, request);
+    return requireSuccessfulEditResponse(
+        coinbaseAdvancedTrade.previewEditOrder(authTokenCreator, request), "previewEditOrder");
+  }
+
+  private static CoinbaseEditOrderResponse requireSuccessfulEditResponse(
+      CoinbaseEditOrderResponse response, String operation) {
+    if (response == null || !response.isSuccess()) {
+      String details =
+          response == null
+              ? "null response"
+              : response.getErrors().stream().map(Object::toString).collect(Collectors.joining(", "));
+      throw new ExchangeException(
+          "Coinbase " + operation + " failed in a successful HTTP response: " + details);
+    }
+    return response;
   }
 
   /** Cancels provider order ids via the Advanced Trade {@code batch_cancel} endpoint. */
@@ -320,7 +352,7 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     List<String> requestedOrderIds = List.copyOf(orderIds);
     Map<String, Object> payload = Collections.singletonMap("order_ids", requestedOrderIds);
     try {
-      return coinbaseAdvancedTrade.cancelOrders(authTokenCreator, payload);
+      return coinbaseAdvancedTrade.batchCancelOrders(authTokenCreator, payload);
     } catch (CoinbaseException providerFailure) {
       throw providerFailure;
     } catch (IOException transportFailure) {
@@ -349,7 +381,13 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
 
   /** Lists futures positions for the authenticated user. */
   public CoinbaseFuturesPositionsResponse listFuturesPositions() throws IOException {
-    return coinbaseAdvancedTrade.listFuturesPositions(authTokenCreator);
+    CoinbaseFuturesPositionsResponse response =
+        coinbaseAdvancedTrade.listFuturesPositions(authTokenCreator);
+    if (response == null || response.getPositions() == null) {
+      throw new ExchangeException(
+          "Coinbase futures positions response is missing the required positions collection");
+    }
+    return response;
   }
 
   /** Retrieves a futures position by product id. */
@@ -362,7 +400,6 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
       throws IOException {
     return coinbaseAdvancedTrade.listPerpetualsPositions(authTokenCreator, portfolioUuid);
   }
-
   /** Retrieves a perpetuals position by portfolio and symbol. */
   public CoinbasePerpetualsPositionResponse getPerpetualsPosition(
       String portfolioUuid, String symbol) throws IOException {

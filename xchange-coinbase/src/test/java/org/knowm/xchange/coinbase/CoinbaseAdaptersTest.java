@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ws.rs.Path;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -25,6 +26,7 @@ import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseMarginWindowMeasure;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseMarketMarketIoc;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
@@ -1072,6 +1074,15 @@ public class CoinbaseAdaptersTest {
             "getBestBidAsk", ParamsDigest.class, String.class);
     assertEquals(CoinbaseOrdersResponse.class, listFills.getReturnType());
     assertEquals(CoinbaseBestBidAsksResponse.class, bestBidAsk.getReturnType());
+    Method cancelOrders =
+        CoinbaseAuthenticated.class.getMethod("cancelOrders", ParamsDigest.class, Object.class);
+    Method batchCancelOrders =
+        CoinbaseAuthenticated.class.getMethod(
+            "batchCancelOrders", ParamsDigest.class, Object.class);
+    assertEquals(CoinbaseOrdersResponse.class, cancelOrders.getReturnType());
+    assertEquals(CoinbaseCancelOrdersResponse.class, batchCancelOrders.getReturnType());
+    assertEquals("orders/batch_cancel", cancelOrders.getAnnotation(Path.class).value());
+    assertEquals("orders/batch_cancel", batchCancelOrders.getAnnotation(Path.class).value());
   }
 
   private static void assertUnavailable(Runnable action) {

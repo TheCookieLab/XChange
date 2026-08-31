@@ -125,7 +125,7 @@ public class CoinbaseRetryTest {
   public void cancelTransportFailurePreservesEveryAmbiguousIdentity() throws Exception {
     List<String> orderIds = Arrays.asList("order-1", "order-2");
     CoinbaseAuthenticated interrupted = mock(CoinbaseAuthenticated.class);
-    when(interrupted.cancelOrders(any(ParamsDigest.class), any()))
+    when(interrupted.batchCancelOrders(any(ParamsDigest.class), any()))
         .thenThrow(new IOException("connection reset"));
     CoinbaseTradeServiceRaw interruptedService =
         new CoinbaseTradeServiceRaw(coinbaseExchange(), interrupted, mock(ParamsDigest.class));
@@ -139,7 +139,7 @@ public class CoinbaseRetryTest {
 
     CoinbaseException rejection = rejected();
     CoinbaseAuthenticated rejectedApi = mock(CoinbaseAuthenticated.class);
-    when(rejectedApi.cancelOrders(any(ParamsDigest.class), any())).thenThrow(rejection);
+    when(rejectedApi.batchCancelOrders(any(ParamsDigest.class), any())).thenThrow(rejection);
     CoinbaseTradeServiceRaw rejectedService =
         new CoinbaseTradeServiceRaw(coinbaseExchange(), rejectedApi, mock(ParamsDigest.class));
     assertSame(
@@ -149,7 +149,7 @@ public class CoinbaseRetryTest {
     CoinbaseCancelOrdersResponse response =
         new CoinbaseCancelOrdersResponse(Collections.emptyList());
     CoinbaseAuthenticated definitive = mock(CoinbaseAuthenticated.class);
-    when(definitive.cancelOrders(any(ParamsDigest.class), any())).thenReturn(response);
+    when(definitive.batchCancelOrders(any(ParamsDigest.class), any())).thenReturn(response);
     CoinbaseTradeServiceRaw definitiveService =
         new CoinbaseTradeServiceRaw(coinbaseExchange(), definitive, mock(ParamsDigest.class));
 

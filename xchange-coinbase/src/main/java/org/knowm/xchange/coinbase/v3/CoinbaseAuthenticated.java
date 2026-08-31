@@ -33,6 +33,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
@@ -112,16 +113,40 @@ public interface CoinbaseAuthenticated extends Coinbase {
       throws IOException, CoinbaseException;
 
   @POST
-  @Path("orders/edit")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrdersResponse editOrder(
+  CoinbaseEditOrderResponse editOrder(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseEditOrderRequest payload)
       throws IOException, CoinbaseException;
 
+  /**
+   * Legacy batch-cancel transport contract retained for source and binary compatibility.
+   *
+   * @param jwtDigest authenticated request digest
+   * @param payload batch-cancel request body
+   * @return legacy order-shaped response
+   * @throws IOException when the request or response cannot be processed
+   * @throws CoinbaseException when Coinbase rejects the request
+   */
   @POST
   @Path("orders/batch_cancel")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseCancelOrdersResponse cancelOrders(
+  CoinbaseOrdersResponse cancelOrders(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
+      throws IOException, CoinbaseException;
+
+  /**
+   * Current-schema batch-cancel transport contract.
+   *
+   * @param jwtDigest authenticated request digest
+   * @param payload batch-cancel request body
+   * @return per-order cancellation results
+   * @throws IOException when the request or response cannot be processed
+   * @throws CoinbaseException when Coinbase rejects the request
+   */
+  @POST
+  @Path("orders/batch_cancel")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinbaseCancelOrdersResponse batchCancelOrders(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, Object payload)
       throws IOException, CoinbaseException;
 
@@ -242,7 +267,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @POST
   @Path("orders/edit_preview")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrdersResponse previewEditOrder(
+  CoinbaseEditOrderResponse previewEditOrder(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseEditOrderRequest payload)
       throws IOException, CoinbaseException;
 
