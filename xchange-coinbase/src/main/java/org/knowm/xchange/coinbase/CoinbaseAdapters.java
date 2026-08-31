@@ -20,6 +20,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseStopPriceDirection;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
@@ -32,6 +33,7 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseMarketTrade;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandle;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
+import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseUserTrade;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
@@ -47,6 +49,7 @@ import org.knowm.xchange.dto.marketdata.Ticker.Builder;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
+import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
@@ -143,9 +146,9 @@ public final class CoinbaseAdapters {
     if (fill.isSizeInQuote()) {
       amount = amount.divide(fill.getPrice(), MathContext.DECIMAL128);
     }
-    return UserTrade.builder().id(fill.getEntryId()).orderId(fill.getOrderId())
-        .instrument(adaptInstrument(fill.getProductId())).price(fill.getPrice())
-        .originalAmount(amount).timestamp(fill.getTradeTime()).type(orderType)
+    return CoinbaseUserTrade.builder().entryId(fill.getEntryId()).id(fill.getTradeId())
+        .orderId(fill.getOrderId()).instrument(adaptInstrument(fill.getProductId()))
+        .price(fill.getPrice()).originalAmount(amount).timestamp(fill.getTradeTime()).type(orderType)
         .feeAmount(fill.getCommission()).feeCurrency(fill.getFeeCurrency()).build();
   }
 
@@ -162,10 +165,10 @@ public final class CoinbaseAdapters {
   /**
    * Adapt a Coinbase Advanced Trade order detail to an XChange order.
    *
-   * <p>Opaque CDE product identifiers cannot be represented by XChange's generic instrument
-   * model and therefore fail explicitly. Quote-sized orders are only representable after they
-   * have filled at a positive authoritative price; an unfilled quote order is never labeled as a
-   * base quantity.
+   * <p>Opaque CDE product identifiers cannot be represented by XChange's generic instrument model
+   * and therefore fail explicitly. Quote-sized orders are only representable after Coinbase reports
+   * a positive authoritative {@code filled_size}; an unfilled quote order is never labeled as a
+   * base quantity. Stop-limit configurations preserve both trigger direction and stop price.
    */
   public static Order adaptOrder(CoinbaseOrderDetail detail) {
     if (detail == null) return null;
@@ -188,21 +191,59 @@ public final class CoinbaseAdapters {
                 + " for product " + detail.getProductId()
                 + ": XChange originalAmount requires base quantity");
       }
-      BigDecimal quoteSize = configuredQuoteSize(detail);
-      BigDecimal executionPrice = detail.getAverageFilledPrice();
-      if (quoteSize == null || executionPrice == null || executionPrice.signum() <= 0) {
+      BigDecimal filledSize = detail.getFilledSize();
+      if (filledSize == null || filledSize.signum() <= 0) {
         throw new ExchangeException(
             "Cannot adapt filled quote-sized Coinbase order " + detail.getOrderId()
                 + " for product " + detail.getProductId()
-                + ": missing positive authoritative execution price");
+                + ": missing positive authoritative filled_size");
       }
-      size = quoteSize.divide(executionPrice, MathContext.DECIMAL128);
+      size = filledSize;
+    }
+    boolean stopLimit = false;
+    BigDecimal stopPrice = null;
+    CoinbaseStopPriceDirection stopDirection = null;
+    if (configuration != null && configuration.getStopLimitStopLimitGtc() != null) {
+      stopLimit = true;
+      stopPrice = configuration.getStopLimitStopLimitGtc().getStopPrice();
+      stopDirection = configuration.getStopLimitStopLimitGtc().getStopDirection();
+    } else if (configuration != null && configuration.getStopLimitStopLimitGtd() != null) {
+      stopLimit = true;
+      stopPrice = configuration.getStopLimitStopLimitGtd().getStopPrice();
+      stopDirection = configuration.getStopLimitStopLimitGtd().getStopDirection();
     }
     if (orderType == null || instrument == null || size == null) {
       return null;
     }
     Order order;
-    if (price != null) {
+    if (stopLimit) {
+      if (stopPrice == null || stopPrice.signum() <= 0 || price == null
+          || price.signum() <= 0 || stopDirection == null) {
+        throw new ExchangeException(
+            "Cannot adapt Coinbase stop-limit order " + detail.getOrderId()
+                + ": missing positive stop/limit price or trigger direction");
+      }
+      StopOrder.Intention intention;
+      switch (stopDirection) {
+        case STOP_DIRECTION_STOP_UP:
+          intention = orderType == OrderType.BID
+              ? StopOrder.Intention.STOP_LOSS : StopOrder.Intention.TAKE_PROFIT;
+          break;
+        case STOP_DIRECTION_STOP_DOWN:
+          intention = orderType == OrderType.BID
+              ? StopOrder.Intention.TAKE_PROFIT : StopOrder.Intention.STOP_LOSS;
+          break;
+        default:
+          throw new ExchangeException(
+              "Cannot adapt Coinbase stop-limit order " + detail.getOrderId()
+                  + ": unsupported trigger direction " + stopDirection);
+      }
+      order =
+          new StopOrder(
+              orderType, size, instrument, detail.getOrderId(), detail.getCreatedTime(),
+              stopPrice, price, detail.getAverageFilledPrice(), detail.getFilledSize(),
+              detail.getTotalFees(), status, null, intention, null);
+    } else if (price != null) {
       order =
           new LimitOrder(
               orderType, size, instrument, detail.getOrderId(), detail.getCreatedTime(),

@@ -17,6 +17,7 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseCurrentMarginWindowResponse;
@@ -29,6 +30,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderConfiguration;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
+import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseUserTrade;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsResponse;
@@ -639,13 +641,33 @@ public class CoinbaseAdaptersTest {
             new BigDecimal("2500"), new BigDecimal("100"), BigDecimal.ZERO, "ETH-USD",
             "MAKER", true, "user", "BUY", "portfolio");
 
-    assertEquals(new BigDecimal("0.04"), CoinbaseAdapters.adaptFill(fill).getOriginalAmount());
-    assertEquals(Currency.USD, CoinbaseAdapters.adaptFill(fill).getFeeCurrency());
-    assertEquals("entry", CoinbaseAdapters.adaptFill(fill).getId());
+    CoinbaseUserTrade adapted = (CoinbaseUserTrade) CoinbaseAdapters.adaptFill(fill);
+    assertEquals(new BigDecimal("0.04"), adapted.getOriginalAmount());
+    assertEquals(Currency.USD, adapted.getFeeCurrency());
+    assertEquals("trade", adapted.getId());
+    assertEquals("entry", adapted.getEntryId());
   }
 
   @Test
-  public void testAdaptFilledQuoteSizedOrderUsesAverageFillPrice() throws Exception {
+  public void testAdaptFilledQuoteSizedOrderUsesAuthoritativeFilledSize() throws Exception {
+    CoinbaseOrderDetail detail =
+        new ObjectMapper().readValue(
+            "{\"order_id\":\"order\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"FILLED\",\"order_type\":\"LIMIT\","
+                + "\"order_configuration\":{\"limit_limit_fok\":"
+                + "{\"quote_size\":\"100\",\"limit_price\":\"2500\"}},"
+                + "\"average_filled_price\":\"2500\",\"filled_size\":\"0.039\","
+                + "\"size_in_quote\":true}",
+            CoinbaseOrderDetail.class);
+
+    assertEquals(
+        0,
+        new BigDecimal("0.039")
+            .compareTo(CoinbaseAdapters.adaptOrder(detail).getOriginalAmount()));
+  }
+
+  @Test
+  public void testRejectFilledQuoteSizedOrderWithoutFilledSize() throws Exception {
     CoinbaseOrderDetail detail =
         new ObjectMapper().readValue(
             "{\"order_id\":\"order\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
@@ -655,24 +677,46 @@ public class CoinbaseAdaptersTest {
                 + "\"average_filled_price\":\"2500\",\"size_in_quote\":true}",
             CoinbaseOrderDetail.class);
 
-    assertEquals(
-        0,
-        new BigDecimal("0.04")
-            .compareTo(CoinbaseAdapters.adaptOrder(detail).getOriginalAmount()));
+    assertUnavailable(() -> CoinbaseAdapters.adaptOrder(detail));
   }
 
   @Test
-  public void testRejectFilledQuoteSizedOrderWithoutAverageFillPrice() throws Exception {
-    CoinbaseOrderDetail detail =
+  public void testAdaptStopLimitOrdersPreservesTriggerSemantics() throws Exception {
+    CoinbaseOrderDetail buyStopLoss =
         new ObjectMapper().readValue(
-            "{\"order_id\":\"order\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
-                + "\"status\":\"FILLED\",\"order_type\":\"LIMIT\","
-                + "\"order_configuration\":{\"limit_limit_fok\":"
-                + "{\"quote_size\":\"100\",\"limit_price\":\"2500\"}},"
-                + "\"size_in_quote\":true}",
+            "{\"order_id\":\"buy-stop\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"OPEN\",\"order_type\":\"STOP_LIMIT\","
+                + "\"order_configuration\":{\"stop_limit_stop_limit_gtc\":"
+                + "{\"base_size\":\"2\",\"limit_price\":\"2600\",\"stop_price\":\"2550\","
+                + "\"stop_direction\":\"STOP_DIRECTION_STOP_UP\"}}}",
+            CoinbaseOrderDetail.class);
+    CoinbaseOrderDetail sellTakeProfit =
+        new ObjectMapper().readValue(
+            "{\"order_id\":\"sell-stop\",\"side\":\"SELL\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"OPEN\",\"order_type\":\"STOP_LIMIT\","
+                + "\"order_configuration\":{\"stop_limit_stop_limit_gtd\":"
+                + "{\"base_size\":\"3\",\"limit_price\":\"2450\",\"stop_price\":\"2500\","
+                + "\"end_time\":\"2026-12-20T00:00:00Z\","
+                + "\"stop_direction\":\"STOP_DIRECTION_STOP_UP\"}}}",
+            CoinbaseOrderDetail.class);
+    CoinbaseOrderDetail missingDirection =
+        new ObjectMapper().readValue(
+            "{\"order_id\":\"missing-direction\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"OPEN\",\"order_type\":\"STOP_LIMIT\","
+                + "\"order_configuration\":{\"stop_limit_stop_limit_gtc\":"
+                + "{\"base_size\":\"1\",\"limit_price\":\"2600\",\"stop_price\":\"2550\"}}}",
             CoinbaseOrderDetail.class);
 
-    assertUnavailable(() -> CoinbaseAdapters.adaptOrder(detail));
+    StopOrder adaptedBuy = (StopOrder) CoinbaseAdapters.adaptOrder(buyStopLoss);
+    StopOrder adaptedSell = (StopOrder) CoinbaseAdapters.adaptOrder(sellTakeProfit);
+
+    assertEquals(new BigDecimal("2550"), adaptedBuy.getStopPrice());
+    assertEquals(new BigDecimal("2600"), adaptedBuy.getLimitPrice());
+    assertEquals(StopOrder.Intention.STOP_LOSS, adaptedBuy.getIntention());
+    assertEquals(new BigDecimal("2500"), adaptedSell.getStopPrice());
+    assertEquals(new BigDecimal("2450"), adaptedSell.getLimitPrice());
+    assertEquals(StopOrder.Intention.TAKE_PROFIT, adaptedSell.getIntention());
+    assertUnavailable(() -> CoinbaseAdapters.adaptOrder(missingDirection));
   }
 
   @Test
