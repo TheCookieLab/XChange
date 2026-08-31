@@ -110,10 +110,18 @@ public class CoinbaseProductJsonTest {
     assertEquals(new BigDecimal("10"), details.getPerpetualDetails().getMaxLeverage());
     assertEquals("2026-12-20T00:00:00Z", details.getContractExpiry());
     assertEquals("BTC", details.getContractRootUnit());
-    assertEquals("0.000024", details.getFundingRate());
+    assertEquals(new BigDecimal("0.000024"), details.getFundingRate());
+    assertEquals("0.000024", details.getFundingRateWireValue());
     assertEquals(new BigDecimal("0.000024"), details.getFundingRateValue());
-    assertEquals("2026-02-08T14:00:00Z", details.getFundingTime());
+    assertEquals(Instant.parse("2026-02-08T14:00:00Z"), details.getFundingTime());
+    assertEquals("2026-02-08T14:00:00Z", details.getFundingTimeWireValue());
     assertEquals(Instant.parse("2026-02-08T14:00:00Z"), details.getFundingTimeInstant());
+    assertEquals(
+        BigDecimal.class,
+        CoinbaseFutureProductDetails.class.getMethod("getFundingRate").getReturnType());
+    assertEquals(
+        Instant.class,
+        CoinbaseFutureProductDetails.class.getMethod("getFundingTime").getReturnType());
     assertEquals(Duration.ofHours(1), details.getFundingInterval());
 
     assertNotNull(details.getIntradayMarginRate());

@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.dto.products;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
@@ -270,12 +271,22 @@ public class CoinbaseFutureProductDetails {
   }
 
   /**
+   * Returns the typed funding rate retained by the legacy public contract.
+   *
+   * @return parsed funding rate, or {@code null} when absent or malformed
+   */
+  public BigDecimal getFundingRate() {
+    return parseBigDecimal(fundingRate);
+  }
+
+  /**
    * Returns the raw funding-rate wire value.
    *
-   * @deprecated use {@link #getFundingRateValue()} for numeric calculations
+   * @return raw wire value, or {@code null} when absent
+   * @since 1.0.2
    */
-  @Deprecated
-  public String getFundingRate() {
+  @JsonIgnore
+  public String getFundingRateWireValue() {
     return fundingRate;
   }
 
@@ -283,16 +294,26 @@ public class CoinbaseFutureProductDetails {
    * @return parsed funding rate, or {@code null} when absent or malformed.
    */
   public BigDecimal getFundingRateValue() {
-    return parseBigDecimal(fundingRate);
+    return getFundingRate();
+  }
+
+  /**
+   * Returns the typed funding timestamp retained by the legacy public contract.
+   *
+   * @return parsed funding timestamp, or {@code null} when absent or malformed
+   */
+  public Instant getFundingTime() {
+    return parseInstant(fundingTime);
   }
 
   /**
    * Returns the raw funding-time wire value.
    *
-   * @deprecated use {@link #getFundingTimeInstant()} for timestamp calculations
+   * @return raw wire value, or {@code null} when absent
+   * @since 1.0.2
    */
-  @Deprecated
-  public String getFundingTime() {
+  @JsonIgnore
+  public String getFundingTimeWireValue() {
     return fundingTime;
   }
 
@@ -300,7 +321,7 @@ public class CoinbaseFutureProductDetails {
    * @return parsed funding timestamp, or {@code null} when absent or malformed.
    */
   public Instant getFundingTimeInstant() {
-    return parseInstant(fundingTime);
+    return getFundingTime();
   }
 
   /**
