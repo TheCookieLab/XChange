@@ -304,6 +304,19 @@ public interface CoinbaseAuthenticated extends Coinbase {
       @QueryParam("start") String start, @QueryParam("end") String end)
       throws IOException, CoinbaseException;
 
+  /**
+   * Returns the authenticated account's transaction and fee-tier summary for the supplied product
+   * classification.
+   *
+   * @param jwtDigest request authorization digest
+   * @param productType Coinbase product type, such as {@code FUTURE}
+   * @param contractExpiryType Coinbase contract-expiry classification
+   * @param productVenue Coinbase API venue, such as {@code FCM}
+   * @return transaction summary containing the matching fee tier
+   * @throws IOException when request transport or response decoding fails
+   * @throws CoinbaseException when Coinbase rejects the request
+   * @since 1.0.2
+   */
   @GET
   @Path("transaction_summary")
   CoinbaseTransactionSummaryResponse getTransactionSummary(

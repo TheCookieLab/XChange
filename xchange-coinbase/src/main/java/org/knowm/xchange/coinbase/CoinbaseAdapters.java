@@ -133,7 +133,7 @@ public final class CoinbaseAdapters {
     return UserTrade.builder().id(fill.getTradeId()).orderId(fill.getOrderId())
         .instrument(adaptInstrument(fill.getProductId())).price(fill.getPrice())
         .originalAmount(amount).timestamp(fill.getTradeTime()).type(orderType)
-        .feeAmount(fill.getCommission()).build();
+        .feeAmount(fill.getCommission()).feeCurrency(fill.getFeeCurrency()).build();
   }
 
   public static OrderType adaptOrderType(String side) {
@@ -170,7 +170,7 @@ public final class CoinbaseAdapters {
                 + ": XChange originalAmount requires base quantity");
       }
       BigDecimal quoteSize = configuredQuoteSize(detail);
-      BigDecimal executionPrice = firstNonNull(detail.getAverageFilledPrice(), price);
+      BigDecimal executionPrice = detail.getAverageFilledPrice();
       if (quoteSize == null || executionPrice == null || executionPrice.signum() <= 0) {
         throw new ExchangeException(
             "Cannot adapt filled quote-sized Coinbase order " + detail.getOrderId()

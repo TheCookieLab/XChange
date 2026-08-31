@@ -6,9 +6,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 /**
- * Response containing the current margin window for futures trading.
+ * Response containing the current CFM margin window.
  *
- * @see <a href="https://docs.cdp.coinbase.com/advanced-trade/reference/retailbrokerageapi_getcurrentmarginwindow">Get Current Margin Window</a>
+ * <p>The wire-level {@code margin_window} object is flattened into the legacy string accessors so
+ * callers retain {@link #getMarginWindow()} and {@link #getMarginWindowType()}. {@link
+ * #getEndTime()} exposes the object's RFC 3339 end time.
+ *
+ * @see <a href="https://docs.cdp.coinbase.com/api-reference/advanced-trade-api/rest-api/futures/get-current-margin-window">Get Current Margin Window</a>
+ * @since 1.0.2
  */
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -16,24 +21,65 @@ public class CoinbaseCurrentMarginWindowResponse {
 
   private final String marginWindow;
   private final String marginWindowType;
+  private final String endTime;
   private final Boolean isIntradayMarginEnrollmentKillswitchEnabled;
   private final Boolean isIntradayMarginKillswitchEnabled;
 
   @JsonCreator
+  private CoinbaseCurrentMarginWindowResponse(
+      @JsonProperty("margin_window") MarginWindow marginWindow,
+      @JsonProperty("is_intraday_margin_enrollment_killswitch_enabled")
+          Boolean isIntradayMarginEnrollmentKillswitchEnabled,
+      @JsonProperty("is_intraday_margin_killswitch_enabled")
+          Boolean isIntradayMarginKillswitchEnabled) {
+    this.marginWindow = marginWindow == null ? null : marginWindow.marginWindowType;
+    this.marginWindowType = this.marginWindow;
+    this.endTime = marginWindow == null ? null : marginWindow.endTime;
+    this.isIntradayMarginEnrollmentKillswitchEnabled =
+        isIntradayMarginEnrollmentKillswitchEnabled;
+    this.isIntradayMarginKillswitchEnabled = isIntradayMarginKillswitchEnabled;
+  }
+
+  /**
+   * Preserves the pre-1.0.2 construction contract for callers that supplied flattened values.
+   *
+   * @deprecated Coinbase now returns a nested {@code margin_window} object
+   */
+  @Deprecated
   public CoinbaseCurrentMarginWindowResponse(
-      @JsonProperty("margin_window") String marginWindow,
-      @JsonProperty("margin_window_type") String marginWindowType,
-      @JsonProperty("is_intraday_margin_enrollment_killswitch_enabled") Boolean isIntradayMarginEnrollmentKillswitchEnabled,
-      @JsonProperty("is_intraday_margin_killswitch_enabled") Boolean isIntradayMarginKillswitchEnabled) {
+      String marginWindow,
+      String marginWindowType,
+      Boolean isIntradayMarginEnrollmentKillswitchEnabled,
+      Boolean isIntradayMarginKillswitchEnabled) {
     this.marginWindow = marginWindow;
     this.marginWindowType = marginWindowType;
-    this.isIntradayMarginEnrollmentKillswitchEnabled = isIntradayMarginEnrollmentKillswitchEnabled;
+    this.endTime = null;
+    this.isIntradayMarginEnrollmentKillswitchEnabled =
+        isIntradayMarginEnrollmentKillswitchEnabled;
     this.isIntradayMarginKillswitchEnabled = isIntradayMarginKillswitchEnabled;
   }
 
   @Override
   public String toString() {
-    return "CoinbaseCurrentMarginWindowResponse [marginWindow=" + marginWindow + ", marginWindowType=" + marginWindowType + "]";
+    return "CoinbaseCurrentMarginWindowResponse [marginWindow="
+        + marginWindow
+        + ", marginWindowType="
+        + marginWindowType
+        + "]";
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static class MarginWindow {
+    private final String marginWindowType;
+    private final String endTime;
+
+    @JsonCreator
+    private MarginWindow(
+        @JsonProperty("margin_window_type") String marginWindowType,
+        @JsonProperty("end_time") String endTime) {
+      this.marginWindowType = marginWindowType;
+      this.endTime = endTime;
+    }
   }
 }
 

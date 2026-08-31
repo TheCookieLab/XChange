@@ -3,8 +3,8 @@ package org.knowm.xchange.coinbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
@@ -17,6 +17,7 @@ import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseCurrentMarginWindowResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
@@ -573,6 +574,20 @@ public class CoinbaseAdaptersTest {
             "{\"margin_rate\":{\"value\":\"0.12\"}}",
             CoinbaseTransactionSummaryResponse.class);
     assertEquals(new BigDecimal("0.12"), transactionSummary.getMarginRate());
+
+    CoinbaseCurrentMarginWindowResponse marginWindow =
+        new ObjectMapper().readValue(
+            "{\"margin_window\":{\"margin_window_type\":\"MARGIN_WINDOW_TYPE_INTRADAY\","
+                + "\"end_time\":\"2026-08-31T20:00:00Z\"},"
+                + "\"is_intraday_margin_killswitch_enabled\":false,"
+                + "\"is_intraday_margin_enrollment_killswitch_enabled\":true}",
+            CoinbaseCurrentMarginWindowResponse.class);
+    assertEquals("MARGIN_WINDOW_TYPE_INTRADAY", marginWindow.getMarginWindow());
+    assertEquals("MARGIN_WINDOW_TYPE_INTRADAY", marginWindow.getMarginWindowType());
+    assertEquals("2026-08-31T20:00:00Z", marginWindow.getEndTime());
+    assertEquals(Boolean.FALSE, marginWindow.getIsIntradayMarginKillswitchEnabled());
+    assertEquals(
+        Boolean.TRUE, marginWindow.getIsIntradayMarginEnrollmentKillswitchEnabled());
   }
 
   @Test
@@ -623,6 +638,63 @@ public class CoinbaseAdaptersTest {
             "MAKER", true, "user", "BUY", "portfolio");
 
     assertEquals(new BigDecimal("0.04"), CoinbaseAdapters.adaptFill(fill).getOriginalAmount());
+    assertEquals(Currency.USD, CoinbaseAdapters.adaptFill(fill).getFeeCurrency());
+  }
+
+  @Test
+  public void testAdaptFilledQuoteSizedOrderUsesAverageFillPrice() throws Exception {
+    CoinbaseOrderDetail detail =
+        new ObjectMapper().readValue(
+            "{\"order_id\":\"order\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"FILLED\",\"order_type\":\"LIMIT\","
+                + "\"order_configuration\":{\"limit_limit_fok\":"
+                + "{\"quote_size\":\"100\",\"limit_price\":\"2500\"}},"
+                + "\"average_filled_price\":\"2500\",\"size_in_quote\":true}",
+            CoinbaseOrderDetail.class);
+
+    assertEquals(
+        0,
+        new BigDecimal("0.04")
+            .compareTo(CoinbaseAdapters.adaptOrder(detail).getOriginalAmount()));
+  }
+
+  @Test
+  public void testRejectFilledQuoteSizedOrderWithoutAverageFillPrice() throws Exception {
+    CoinbaseOrderDetail detail =
+        new ObjectMapper().readValue(
+            "{\"order_id\":\"order\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"FILLED\",\"order_type\":\"LIMIT\","
+                + "\"order_configuration\":{\"limit_limit_fok\":"
+                + "{\"quote_size\":\"100\",\"limit_price\":\"2500\"}},"
+                + "\"size_in_quote\":true}",
+            CoinbaseOrderDetail.class);
+
+    assertUnavailable(() -> CoinbaseAdapters.adaptOrder(detail));
+  }
+
+  @Test
+  public void testOpaqueCdeOpenOrderFailsBeforeStatusFiltering() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    CoinbaseOrderDetail cde =
+        mapper.readValue(
+            "{\"order_id\":\"cde\",\"side\":\"BUY\",\"product_id\":\"ETP-20DEC30-CDE\","
+                + "\"status\":\"CANCELLED\",\"order_type\":\"LIMIT\","
+                + "\"order_configuration\":{\"limit_limit_fok\":"
+                + "{\"base_size\":\"1\",\"limit_price\":\"2500\"}}}",
+            CoinbaseOrderDetail.class);
+    CoinbaseOrderDetail spot =
+        mapper.readValue(
+            "{\"order_id\":\"spot\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"CANCELLED\",\"order_type\":\"LIMIT\","
+                + "\"order_configuration\":{\"limit_limit_fok\":"
+                + "{\"base_size\":\"1\",\"limit_price\":\"2500\"}}}",
+            CoinbaseOrderDetail.class);
+
+    assertUnavailable(() -> CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(cde)));
+    assertTrue(
+        CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(spot))
+            .getOpenOrders()
+            .isEmpty());
   }
 
   @Test
@@ -646,6 +718,15 @@ public class CoinbaseAdaptersTest {
             BigDecimal.ONE,
             BigDecimal.ONE,
             new BigDecimal("0.10"),
+            BigDecimal.ZERO,
+            BigDecimal.TEN);
+    CoinbaseMarginWindowMeasure absentLegacyPercentage =
+        new CoinbaseMarginWindowMeasure(
+            "INTRADAY",
+            "BASE",
+            BigDecimal.ONE,
+            BigDecimal.ONE,
+            null,
             BigDecimal.ZERO,
             BigDecimal.TEN);
     CoinbaseFuturesPosition position =
@@ -699,6 +780,10 @@ public class CoinbaseAdaptersTest {
             BigDecimal.TEN, BigDecimal.ONE, new CoinbaseFeeTier(BigDecimal.ONE, BigDecimal.ZERO));
 
     assertEquals(new BigDecimal("0.10"), margin.getLiquidationBufferPercentage());
+    assertNull(absentLegacyPercentage.getLiquidationBufferPercentage());
+    assertEquals(
+        "CoinbaseMarginWindowMeasure [marginWindowType=INTRADAY, marginLevel=BASE]",
+        margin.toString());
     assertEquals("1", position.getContractSize());
     assertEquals(BigDecimal.TEN, balance.getTotalUsdBalance());
     assertEquals(position, balance.getExpiringFutures().get(0));
@@ -722,8 +807,6 @@ public class CoinbaseAdaptersTest {
             "getBestBidAsk", ParamsDigest.class, String.class);
     assertEquals(CoinbaseOrdersResponse.class, listFills.getReturnType());
     assertEquals(CoinbaseBestBidAsksResponse.class, bestBidAsk.getReturnType());
-    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
-    assertNull(authenticated.getBestBidAsk(null, null));
   }
 
   private static void assertUnavailable(Runnable action) {

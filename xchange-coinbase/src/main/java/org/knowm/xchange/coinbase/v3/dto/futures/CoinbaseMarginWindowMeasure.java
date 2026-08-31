@@ -38,7 +38,7 @@ public class CoinbaseMarginWindowMeasure {
    * @param futuresBuyingPower available futures buying power
    */
   @JsonCreator
-  public CoinbaseMarginWindowMeasure(
+  private CoinbaseMarginWindowMeasure(
       @JsonProperty("margin_window_type") String marginWindowType,
       @JsonProperty("margin_level") String marginLevel,
       @JsonProperty("initial_margin") BigDecimal initialMargin,
@@ -78,5 +78,11 @@ public class CoinbaseMarginWindowMeasure {
     this.liquidationBufferPercentage = liquidationBufferPercentage;
     this.totalHold = totalHold;
     this.futuresBuyingPower = futuresBuyingPower;
+  }
+
+  @Override
+  public String toString() {
+    return "CoinbaseMarginWindowMeasure [marginWindowType=" + marginWindowType
+        + ", marginLevel=" + marginLevel + "]";
   }
 }

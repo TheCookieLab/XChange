@@ -30,6 +30,7 @@ import si.mazi.rescu.ParamsDigest;
 public class CoinbaseAuthenticatedFillsWireMockTest {
 
   private static final String FILLS_PATH = "/api/v3/brokerage/orders/historical/fills";
+  private static final String BEST_BID_ASK_PATH = "/api/v3/brokerage/best_bid_ask";
 
   private WireMockServer server;
   private CoinbaseAuthenticated api;
@@ -52,6 +53,12 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
                 aResponse()
                     .withHeader("Content-Type", "application/json")
                     .withBody("{\"fills\":[],\"cursor\":\"\"}")));
+    server.stubFor(
+        get(urlPathEqualTo(BEST_BID_ASK_PATH))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"pricebooks\":[]}")));
   }
 
   @After
@@ -110,5 +117,17 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
     assertFalse(request.queryParameter("order_types").isPresent());
     assertFalse(request.queryParameter("order_side").isPresent());
     assertFalse(request.queryParameter("product_types").isPresent());
+  }
+
+  @SuppressWarnings("deprecation")
+  @Test
+  public void deprecatedBestBidAskRetainsItsProxyBinding() throws Exception {
+    assertNotNull(api.getBestBidAsk(digest, "ETP-20DEC30-CDE"));
+
+    assertEquals(1, server.getAllServeEvents().size());
+    LoggedRequest request = server.getAllServeEvents().get(0).getRequest();
+    assertEquals(
+        BEST_BID_ASK_PATH + "?product_ids=ETP-20DEC30-CDE",
+        request.getUrl());
   }
 }
