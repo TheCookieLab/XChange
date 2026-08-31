@@ -256,10 +256,6 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
      */
     public CandleStickData getCandleStickData(Instrument instrument, CandleStickDataParams params)
         throws IOException {
-        CurrencyPair currencyPair =
-            instrument instanceof CurrencyPair
-                ? (CurrencyPair) instrument
-                : new CurrencyPair(instrument.getBase(), instrument.getCounter());
         String productId = resolveProductId(instrument);
         String granularity = null;
         String start = null;
@@ -290,7 +286,7 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
             response.getCandles().stream()
                 .map(CoinbaseAdapters::adaptProductCandle)
                 .collect(Collectors.toList());
-        return new CandleStickData(currencyPair, candleSticks);
+        return new CandleStickData(instrument, candleSticks);
     }
 
     /**

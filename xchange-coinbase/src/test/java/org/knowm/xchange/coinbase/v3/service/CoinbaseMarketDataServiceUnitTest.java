@@ -32,6 +32,7 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import si.mazi.rescu.ParamsDigest;
@@ -151,8 +152,9 @@ public class CoinbaseMarketDataServiceUnitTest {
       // CDE order books are intentionally opaque to generic order-book adaptation.
     }
     service.getTrades(instrument);
-    service.getCandleStickData(
-        instrument, new DefaultCandleStickParamWithLimit(null, null, 86_400, 1));
+    CandleStickData candleData =
+        service.getCandleStickData(
+            instrument, new DefaultCandleStickParamWithLimit(null, null, 86_400, 1));
 
     verify(service, atLeastOnce()).getProductCandles(productId, "ONE_DAY", 1, null, null);
 
@@ -160,6 +162,7 @@ public class CoinbaseMarketDataServiceUnitTest {
     verify(service, atLeastOnce()).getProductBook(productId, null, null);
     verify(service, atLeastOnce()).getMarketTrades(productId, null, null, null);
     assertEquals(productId, catalog.requireProductId(instrument));
+    assertSame(instrument, candleData.getInstrument());
   }
 
   @Test
