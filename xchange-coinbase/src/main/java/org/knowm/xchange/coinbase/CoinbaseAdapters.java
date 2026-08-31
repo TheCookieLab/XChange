@@ -114,12 +114,19 @@ public final class CoinbaseAdapters {
    */
   public static UserTrade adaptFill(CoinbaseFill fill) {
     Objects.requireNonNull(fill, "Cannot adapt a null fill");
-    requireAdaptableProduct(fill.getProductId(), "fill");
-    OrderType orderType = adaptOrderType(fill.getSide());
-    if (orderType == null || fill.getSize() == null) {
+    if (fill.getProductId() == null || fill.getProductId().isBlank()
+        || fill.getSide() == null || fill.getSize() == null) {
       throw new ExchangeException(
           "Cannot adapt Coinbase fill " + fill.getTradeId()
-              + ": missing side or quantity for product " + fill.getProductId());
+              + ": missing product, side, or quantity");
+    }
+    requireAdaptableProduct(fill.getProductId(), "fill");
+    OrderType orderType = adaptOrderType(fill.getSide());
+    if (orderType == null) {
+      throw new ExchangeException(
+          "Cannot adapt Coinbase fill " + fill.getTradeId()
+              + ": unsupported side " + fill.getSide()
+              + " for product " + fill.getProductId());
     }
     BigDecimal amount = fill.getSize();
     if (fill.isSizeInQuote()) {

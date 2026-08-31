@@ -57,6 +57,39 @@ public class CoinbaseMarginWindowMeasure {
   }
 
   /**
+   * Creates a measure using Coinbase's current {@code liquidation_buffer} wire field.
+   *
+   * <p>A named factory avoids a source-ambiguous constructor overload for legacy callers that
+   * pass {@code null} as the deprecated liquidation-buffer percentage.
+   *
+   * @param marginWindowType exchange window classification
+   * @param marginLevel exchange margin level
+   * @param initialMargin initial margin requirement
+   * @param maintenanceMargin maintenance margin requirement
+   * @param liquidationBuffer current liquidation buffer
+   * @param totalHold aggregate order hold
+   * @param futuresBuyingPower available futures buying power
+   * @return current-schema margin-window measure
+   */
+  public static CoinbaseMarginWindowMeasure fromCurrentSchema(
+      String marginWindowType,
+      String marginLevel,
+      BigDecimal initialMargin,
+      BigDecimal maintenanceMargin,
+      String liquidationBuffer,
+      BigDecimal totalHold,
+      BigDecimal futuresBuyingPower) {
+    return new CoinbaseMarginWindowMeasure(
+        marginWindowType,
+        marginLevel,
+        initialMargin,
+        maintenanceMargin,
+        liquidationBuffer,
+        totalHold,
+        futuresBuyingPower);
+  }
+
+  /**
    * Preserves the pre-1.0.2 margin-window construction contract.
    *
    * @deprecated the current API exposes {@code liquidation_buffer}, not a window percentage

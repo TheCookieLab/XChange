@@ -25,8 +25,15 @@ public class CoinbaseCurrentMarginWindowResponse {
   private final Boolean isIntradayMarginEnrollmentKillswitchEnabled;
   private final Boolean isIntradayMarginKillswitchEnabled;
 
+  /**
+   * Creates a current CFM margin-window response from its wire-level nested object.
+   *
+   * @param marginWindow current margin-window type and end time
+   * @param isIntradayMarginEnrollmentKillswitchEnabled enrollment killswitch state
+   * @param isIntradayMarginKillswitchEnabled intraday-margin killswitch state
+   */
   @JsonCreator
-  private CoinbaseCurrentMarginWindowResponse(
+  public CoinbaseCurrentMarginWindowResponse(
       @JsonProperty("margin_window") MarginWindow marginWindow,
       @JsonProperty("is_intraday_margin_enrollment_killswitch_enabled")
           Boolean isIntradayMarginEnrollmentKillswitchEnabled,
@@ -68,13 +75,24 @@ public class CoinbaseCurrentMarginWindowResponse {
         + "]";
   }
 
+  /**
+   * Wire representation of Coinbase's nested current-margin window.
+   *
+   * @since 1.0.2
+   */
   @JsonIgnoreProperties(ignoreUnknown = true)
-  private static class MarginWindow {
+  public static class MarginWindow {
     private final String marginWindowType;
     private final String endTime;
 
+    /**
+     * Creates a current margin window.
+     *
+     * @param marginWindowType exchange window classification
+     * @param endTime RFC 3339 end time
+     */
     @JsonCreator
-    private MarginWindow(
+    public MarginWindow(
         @JsonProperty("margin_window_type") String marginWindowType,
         @JsonProperty("end_time") String endTime) {
       this.marginWindowType = marginWindowType;

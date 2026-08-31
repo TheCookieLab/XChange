@@ -769,6 +769,45 @@ public class CoinbaseAdaptersTest {
     assertUnavailable(() -> CoinbaseAdapters.adaptFill(fill));
   }
 
+  @Test
+  public void testRejectFillWithMissingIdentityFieldsExplicitly() {
+    CoinbaseFill missingSide =
+        new CoinbaseFill(
+            "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            BigDecimal.ONE, new BigDecimal("2500"), BigDecimal.ZERO, "ETH-USD",
+            "MAKER", false, "user", null, "portfolio");
+    CoinbaseFill missingProduct =
+        new CoinbaseFill(
+            "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            BigDecimal.ONE, new BigDecimal("2500"), BigDecimal.ZERO, null,
+            "MAKER", false, "user", "BUY", "portfolio");
+
+    assertUnavailable(() -> CoinbaseAdapters.adaptFill(missingSide));
+    assertUnavailable(() -> CoinbaseAdapters.adaptFill(missingProduct));
+  }
+
+  @Test
+  public void testCurrentMarginContractsArePubliclyConstructible() {
+    CoinbaseCurrentMarginWindowResponse marginWindow =
+        new CoinbaseCurrentMarginWindowResponse(
+            new CoinbaseCurrentMarginWindowResponse.MarginWindow(
+                "INTRADAY", "2026-12-20T00:00:00Z"),
+            true,
+            false);
+    CoinbaseMarginWindowMeasure measure =
+        CoinbaseMarginWindowMeasure.fromCurrentSchema(
+            "INTRADAY",
+            "BASE",
+            BigDecimal.ONE,
+            BigDecimal.ONE,
+            "0.10",
+            BigDecimal.ZERO,
+            BigDecimal.TEN);
+    assertEquals("INTRADAY", marginWindow.getMarginWindowType());
+    assertEquals("2026-12-20T00:00:00Z", marginWindow.getEndTime());
+    assertEquals(new BigDecimal("0.10"), measure.getLiquidationBuffer());
+  }
+
   @SuppressWarnings("deprecation")
   @Test
   public void testLegacyPublicContractsRemainAvailable() throws Exception {
