@@ -57,13 +57,12 @@ public class CoinbaseOrderDetailJsonTest {
   public void testDeserializeUnknownMarginType() throws Exception {
     String json =
         "{\"order\":{\"order_id\":\"spot-1\",\"side\":\"BUY\",\"product_id\":\"BTC-USD\","
-            + "\"status\":\"OPEN\",\"margin_type\":\"UNKNOWN_MARGIN_TYPE\","
+            + "\"status\":\"OPEN\",\"margin_type\":\"PORTFOLIO_MARGIN\","
             + "\"order_configuration\":{\"market_market_ioc\":{\"base_size\":\"0.01\"}},"
             + "\"created_time\":\"2026-02-08T00:00:00Z\"}}";
 
     CoinbaseOrderDetailResponse response =
         new ObjectMapper().readValue(json, CoinbaseOrderDetailResponse.class);
-
     assertEquals(CoinbaseMarginType.UNKNOWN_MARGIN_TYPE, response.getOrder().getMarginType());
   }
 

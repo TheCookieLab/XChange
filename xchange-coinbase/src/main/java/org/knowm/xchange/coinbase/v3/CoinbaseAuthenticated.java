@@ -239,7 +239,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
    */
   @GET
   @Path("best_bid_ask")
-  CoinbaseBestBidAsksResponse getBestBidAsk(
+  CoinbaseBestBidAsksResponse getBestBidAsks(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
       @QueryParam("product_ids") List<String> productIds) throws IOException, CoinbaseException;
 
@@ -251,7 +251,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
    * @return current best-bid-and-ask response
    * @throws IOException when the request or response cannot be processed
    * @throws CoinbaseException when Coinbase rejects the request
-   * @deprecated use the list-valued product filter
+   * @deprecated use {@link #getBestBidAsks(ParamsDigest, List)}
    */
   @Deprecated
   @GET

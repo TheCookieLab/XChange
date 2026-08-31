@@ -3,6 +3,7 @@ package org.knowm.xchange.coinbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
@@ -699,6 +700,8 @@ public class CoinbaseAdaptersTest {
             "getBestBidAsk", ParamsDigest.class, String.class);
     assertEquals(CoinbaseOrdersResponse.class, listFills.getReturnType());
     assertEquals(CoinbaseBestBidAsksResponse.class, bestBidAsk.getReturnType());
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    assertNull(authenticated.getBestBidAsk(null, null));
   }
 
   private static void assertAmount(CoinbaseAmount amount, String expectedValue) {

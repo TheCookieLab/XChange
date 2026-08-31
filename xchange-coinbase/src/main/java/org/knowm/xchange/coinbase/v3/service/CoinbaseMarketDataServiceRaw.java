@@ -143,7 +143,7 @@ public class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseBestBidAsksResponse getBestBidAsk(String productId) throws IOException {
     if (hasAuthentication()) {
-      return coinbaseAdvancedTrade.getBestBidAsk(authTokenCreator,
+      return coinbaseAdvancedTrade.getBestBidAsks(authTokenCreator,
           productId == null ? null : Collections.singletonList(productId));
     }
     if (productId == null) {
