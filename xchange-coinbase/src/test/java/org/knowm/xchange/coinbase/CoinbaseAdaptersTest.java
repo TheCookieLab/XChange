@@ -1084,8 +1084,13 @@ public class CoinbaseAdaptersTest {
             "editOrder",
             ParamsDigest.class,
             org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest.class);
+    Method rawCancelOrders =
+        org.knowm.xchange.coinbase.v3.service.CoinbaseTradeServiceRaw.class.getMethod(
+            "cancelOrders", List.class, List.class);
     assertEquals(CoinbaseOrdersResponse.class, cancelOrders.getReturnType());
     assertEquals(CoinbaseCancelOrdersResponse.class, batchCancelOrders.getReturnType());
+    assertEquals(CoinbaseOrdersResponse.class, rawCancelOrders.getReturnType());
+    assertNotNull(rawCancelOrders.getAnnotation(Deprecated.class));
     assertEquals("orders/batch_cancel", cancelOrders.getAnnotation(Path.class).value());
     assertEquals("orders/batch_cancel", batchCancelOrders.getAnnotation(Path.class).value());
     assertEquals("orders/edit", editOrder.getAnnotation(Path.class).value());
