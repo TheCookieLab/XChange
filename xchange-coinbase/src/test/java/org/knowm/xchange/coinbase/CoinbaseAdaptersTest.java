@@ -736,6 +736,29 @@ public class CoinbaseAdaptersTest {
   }
 
   @Test
+  public void testUnrepresentableOpenOrdersFailClosed() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    CoinbaseOrderDetail market =
+        mapper.readValue(
+            "{\"order_id\":\"market\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"PENDING\",\"order_type\":\"MARKET\","
+                + "\"order_configuration\":{\"market_market_ioc\":{\"base_size\":\"1\"}}}",
+            CoinbaseOrderDetail.class);
+    CoinbaseOrderDetail unknownSide =
+        mapper.readValue(
+            "{\"order_id\":\"unknown-side\",\"side\":\"UNKNOWN\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"OPEN\",\"order_type\":\"LIMIT\","
+                + "\"order_configuration\":{\"limit_limit_gtc\":"
+                + "{\"base_size\":\"1\",\"limit_price\":\"2500\"}}}",
+            CoinbaseOrderDetail.class);
+
+    assertUnavailable(
+        () -> CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(market)));
+    assertUnavailable(
+        () -> CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(unknownSide)));
+  }
+
+  @Test
   public void testRejectQuoteSizedFillWithoutPositivePrice() {
     CoinbaseFill fill =
         new CoinbaseFill(

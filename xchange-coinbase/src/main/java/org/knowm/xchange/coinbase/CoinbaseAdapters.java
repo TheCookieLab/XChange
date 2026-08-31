@@ -6,6 +6,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -332,20 +333,24 @@ public final class CoinbaseAdapters {
    * merely because its status is not open.
    */
   public static OpenOrders adaptOpenOrders(List<CoinbaseOrderDetail> orders) {
+    List<LimitOrder> open = new ArrayList<>();
     for (CoinbaseOrderDetail detail : orders) {
-      if (detail != null) {
-        requireAdaptableProduct(detail.getProductId(), "open order");
+      if (detail == null) {
+        throw new NotAvailableFromExchangeException(
+            "Cannot adapt null Coinbase open-order detail");
+      }
+      requireAdaptableProduct(detail.getProductId(), "open order");
+      Order.OrderStatus status = adaptOrderStatus(detail.getStatus());
+      if (status != null && status.isOpen()) {
+        Order order = adaptOrder(detail);
+        if (!(order instanceof LimitOrder)) {
+          throw new NotAvailableFromExchangeException(
+              "Cannot represent open Coinbase order " + detail.getOrderId()
+                  + " as an XChange LimitOrder");
+        }
+        open.add((LimitOrder) order);
       }
     }
-    List<LimitOrder> open = orders.stream()
-        .filter(detail -> {
-          Order.OrderStatus s = adaptOrderStatus(detail.getStatus());
-          return s != null && s.isOpen();
-        })
-        .map(CoinbaseAdapters::adaptOrder)
-        .filter(o -> o instanceof LimitOrder)
-        .map(o -> (LimitOrder) o)
-        .collect(Collectors.toList());
     return new OpenOrders(open);
   }
 
