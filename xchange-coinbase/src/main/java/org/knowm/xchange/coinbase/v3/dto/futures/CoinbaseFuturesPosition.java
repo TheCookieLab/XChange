@@ -32,16 +32,21 @@ public class CoinbaseFuturesPosition {
   private final BigDecimal entryPrice;
 
   /**
-   * Creates a position from the current CFM wire fields.
+   * Creates a position from current and retained CFM wire fields.
    *
    * @param productId canonical Coinbase product identifier
-   * @param expirationTime contract expiration timestamp
+   * @param expirationTime current contract expiration timestamp
    * @param side exchange position side
    * @param numberOfContracts decimal contract quantity
    * @param currentPrice current mark price
    * @param avgEntryPrice average entry price
    * @param unrealizedPnl unrealized profit or loss
    * @param dailyRealizedPnl current-day realized profit or loss
+   * @param contractSize retained raw contract size
+   * @param amount retained position amount
+   * @param expiryTime retained contract expiration timestamp alias
+   * @param realizedPnl retained realized profit or loss
+   * @param entryPrice retained entry price
    */
   @JsonCreator
   public CoinbaseFuturesPosition(
@@ -52,20 +57,51 @@ public class CoinbaseFuturesPosition {
       @JsonProperty("current_price") BigDecimal currentPrice,
       @JsonProperty("avg_entry_price") BigDecimal avgEntryPrice,
       @JsonProperty("unrealized_pnl") BigDecimal unrealizedPnl,
-      @JsonProperty("daily_realized_pnl") BigDecimal dailyRealizedPnl) {
+      @JsonProperty("daily_realized_pnl") BigDecimal dailyRealizedPnl,
+      @JsonProperty("contract_size") String contractSize,
+      @JsonProperty("amount") BigDecimal amount,
+      @JsonProperty("expiry_time") String expiryTime,
+      @JsonProperty("realized_pnl") BigDecimal realizedPnl,
+      @JsonProperty("entry_price") BigDecimal entryPrice) {
     this.productId = productId;
-    this.expirationTime = expirationTime;
+    this.expirationTime = expirationTime != null ? expirationTime : expiryTime;
     this.side = side;
     this.numberOfContracts = numberOfContracts;
     this.currentPrice = currentPrice;
     this.avgEntryPrice = avgEntryPrice;
     this.unrealizedPnl = unrealizedPnl;
     this.dailyRealizedPnl = dailyRealizedPnl;
-    this.contractSize = null;
-    this.amount = null;
-    this.expiryTime = expirationTime;
-    this.realizedPnl = null;
-    this.entryPrice = null;
+    this.contractSize = contractSize;
+    this.amount = amount;
+    this.expiryTime = expiryTime != null ? expiryTime : expirationTime;
+    this.realizedPnl = realizedPnl;
+    this.entryPrice = entryPrice;
+  }
+
+  /** Creates a position from the current eight-field CFM response shape. */
+  public CoinbaseFuturesPosition(
+      String productId,
+      String expirationTime,
+      String side,
+      BigDecimal numberOfContracts,
+      BigDecimal currentPrice,
+      BigDecimal avgEntryPrice,
+      BigDecimal unrealizedPnl,
+      BigDecimal dailyRealizedPnl) {
+    this(
+        productId,
+        expirationTime,
+        side,
+        numberOfContracts,
+        currentPrice,
+        avgEntryPrice,
+        unrealizedPnl,
+        dailyRealizedPnl,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   /**

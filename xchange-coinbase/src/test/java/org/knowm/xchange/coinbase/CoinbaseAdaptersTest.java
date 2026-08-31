@@ -569,9 +569,16 @@ public class CoinbaseAdaptersTest {
     CoinbaseFuturesPosition position =
         new ObjectMapper().readValue(
             "{\"product_id\":\"ETP-20DEC30-CDE\",\"expiration_time\":\"2026-12-20T00:00:00Z\","
-                + "\"side\":\"LONG\",\"number_of_contracts\":\"2.5\"}",
+                + "\"side\":\"LONG\",\"number_of_contracts\":\"2.5\",\"contract_size\":\"0.1\","
+                + "\"amount\":\"0.25\",\"expiry_time\":\"2026-12-20T00:00:00Z\","
+                + "\"realized_pnl\":\"4.5\",\"entry_price\":\"3200\"}",
             CoinbaseFuturesPosition.class);
     assertEquals(new BigDecimal("2.5"), position.getNumberOfContracts());
+    assertEquals("0.1", position.getContractSize());
+    assertEquals(new BigDecimal("0.25"), position.getAmount());
+    assertEquals("2026-12-20T00:00:00Z", position.getExpiryTime());
+    assertEquals(new BigDecimal("4.5"), position.getRealizedPnl());
+    assertEquals(new BigDecimal("3200"), position.getEntryPrice());
 
     CoinbaseTransactionSummaryResponse transactionSummary =
         new ObjectMapper().readValue(

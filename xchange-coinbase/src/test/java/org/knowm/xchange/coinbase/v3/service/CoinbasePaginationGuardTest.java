@@ -178,6 +178,45 @@ public class CoinbasePaginationGuardTest {
   }
 
   @Test
+  public void orderHistoryRejectsHasNextWithoutContinuationCursor() throws Exception {
+    for (String cursor : Arrays.asList((String) null, "", "   ")) {
+      CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+      when(authenticated.listOrders(
+              any(ParamsDigest.class),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any()))
+          .thenReturn(
+              new CoinbaseListOrdersResponse(
+                  Collections.singletonList(order("partial")), cursor, true));
+
+      CoinbaseTradeServiceRaw service =
+          new CoinbaseTradeServiceRaw(
+              mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+
+      ExchangeException exception =
+          assertThrows(ExchangeException.class, () -> service.listOrdersBounded(null));
+      assertTrue(exception.getMessage().contains("has_next=true"));
+      assertTrue(exception.getMessage().contains("continuation cursor"));
+    }
+  }
+
+  @Test
   public void orderHistoryStopsAtCallerLimit() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     when(authenticated.listOrders(

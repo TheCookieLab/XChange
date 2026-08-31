@@ -12,6 +12,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
@@ -106,7 +107,8 @@ public class CoinbaseProductIdentityTest {
         CoinbaseProductIdentity.build(
             Arrays.asList(
                 future("BTC-PERP", "BTC", "USD", "CFM", true),
-                future("BTC-PERP-INTX", "BTC", "USD", "INTX", true)));
+                future("BTC-PERP-INTX", "BTC", "USD", "INTX", true),
+                future("BTC-PERP-CDE", "BTC", "USD", "CDE", true)));
 
     FuturesContract instrument = new FuturesContract(CurrencyPair.BTC_USD, "PERP");
     assertNull(identity.productId(instrument));
@@ -137,21 +139,37 @@ public class CoinbaseProductIdentityTest {
   }
 
   @Test
-  public void discoveryLoopsPagesUntilBound() throws Exception {
+  public void discoveryQueriesSpotAndFutureCatalogs() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
-
-    CoinbaseProductsResponse page1 =
-        new CoinbaseProductsResponse(
-            Arrays.asList(
-                spot("BTC-USD", "BTC", "USD"),
-                future("BTC-PERP-INTX", "BTC", "USD", "INTX", true)));
-    CoinbaseProductsResponse page2 = new CoinbaseProductsResponse(Collections.emptyList());
     when(authenticated.listProducts(
-            any(ParamsDigest.class), eq(250), eq(0), any(), any(), any(), any(), any(), any(), any()))
-        .thenReturn(page1);
+            any(ParamsDigest.class),
+            eq(250),
+            eq(0),
+            eq("SPOT"),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(
+            new CoinbaseProductsResponse(
+                Collections.singletonList(spot("BTC-USD", "BTC", "USD"))));
     when(authenticated.listProducts(
-            any(ParamsDigest.class), eq(250), eq(250), any(), any(), any(), any(), any(), any(), any()))
-        .thenReturn(page2);
+            any(ParamsDigest.class),
+            eq(250),
+            eq(0),
+            eq("FUTURE"),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(
+            new CoinbaseProductsResponse(
+                Collections.singletonList(
+                    future("BTC-PERP-INTX", "BTC", "USD", "INTX", true))));
 
     CoinbaseProductIdentity identity = CoinbaseProductIdentity.discover(rawWith(authenticated));
 
@@ -160,6 +178,47 @@ public class CoinbaseProductIdentityTest {
     assertEquals(
         "BTC-PERP-INTX",
         identity.requireProductId(new FuturesContract(CurrencyPair.BTC_USD, "PERP")));
+  }
+
+  @Test
+  public void discoveryRejectsReplayedOffsetPage() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    List<CoinbaseProductResponse> repeatedPage = new ArrayList<>();
+    for (int index = 0; index < CoinbaseProductIdentity.DISCOVERY_PAGE_SIZE; index++) {
+      repeatedPage.add(spot("ASSET" + index + "-USD", "ASSET" + index, "USD"));
+    }
+    CoinbaseProductsResponse response = new CoinbaseProductsResponse(repeatedPage);
+    when(authenticated.listProducts(
+            any(ParamsDigest.class),
+            eq(250),
+            eq(0),
+            eq("SPOT"),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(response);
+    when(authenticated.listProducts(
+            any(ParamsDigest.class),
+            eq(250),
+            eq(250),
+            eq("SPOT"),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(response);
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> CoinbaseProductIdentity.discover(rawWith(authenticated)));
+
+    assertTrue(exception.getMessage().contains("repeated product"));
   }
 
   private static CoinbaseMarketDataServiceRaw rawWith(CoinbaseAuthenticated authenticated) {

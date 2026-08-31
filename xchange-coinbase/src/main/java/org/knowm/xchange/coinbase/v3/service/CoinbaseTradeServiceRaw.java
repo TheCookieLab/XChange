@@ -31,6 +31,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionsResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
+import org.knowm.xchange.exceptions.ExchangeException;
 import si.mazi.rescu.ParamsDigest;
 
 public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
@@ -206,14 +207,15 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    * Iterates order history across pages with a bounded, loop-safe cursor loop.
    *
    * <p>Stops when the caller-provided limit is reached, the server stops returning cursors, a
-   * repeated cursor is detected, or the hard page bound is exceeded. Filters mirror {@link
+   * repeated cursor is detected, or the hard page bound is exceeded. A response claiming another
+   * page without a non-blank continuation cursor is rejected as malformed. Filters mirror {@link
    * #listOrders(List, List, String, List, List, List, String, String, String, String, String, List,
    * String, Integer, String, String, String, Boolean)}.
    *
    * @param limit optional maximum number of orders to collect; null collects all pages
    * @return all collected orders
    * @throws IOException on transport failure
-   * @throws org.knowm.xchange.exceptions.ExchangeException when pagination does not advance
+   * @throws ExchangeException when pagination does not advance or returns a malformed continuation
    */
   public List<CoinbaseOrderDetail> listOrdersBounded(Integer limit) throws IOException {
     List<CoinbaseOrderDetail> orders = new ArrayList<>();
@@ -253,6 +255,12 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
             break;
           }
         }
+      }
+      if (Boolean.TRUE.equals(response.getHasNext())
+          && (response.getCursor() == null || response.getCursor().isBlank())) {
+        throw new ExchangeException(
+            "Coinbase orders pagination returned has_next=true without a "
+                + "non-blank continuation cursor");
       }
       cursor =
           Boolean.TRUE.equals(response.getHasNext())

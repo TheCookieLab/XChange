@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataServiceRaw;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -134,6 +136,7 @@ public final class CoinbaseProductIdentity {
     Map<String, Product> productByProductId = new LinkedHashMap<>();
     Map<Instrument, String> productIdByInstrument = new LinkedHashMap<>();
     Map<String, Instrument> instrumentByProductId = new LinkedHashMap<>();
+    Set<Instrument> ambiguousInstruments = new HashSet<>();
 
     for (CoinbaseProductResponse response : products) {
       if (response == null || response.getProductId() == null || response.getProductId().isEmpty()) {
@@ -154,14 +157,18 @@ public final class CoinbaseProductIdentity {
       if (instrument == null) {
         continue;
       }
-      String existing = productIdByInstrument.putIfAbsent(instrument, productId);
-      if (existing != null && !existing.equals(productId)) {
-        // Two distinct product ids produce the same instrument: reject both rather than
-        // silently selecting one (for example identical contracts across venues).
-        productIdByInstrument.remove(instrument);
-        instrumentByProductId.remove(existing);
+      if (ambiguousInstruments.contains(instrument)) {
         continue;
       }
+      String existing = productIdByInstrument.get(instrument);
+      if (existing != null && !existing.equals(productId)) {
+        // Every product producing this instrument remains raw-id-only, including later collisions.
+        productIdByInstrument.remove(instrument);
+        instrumentByProductId.remove(existing);
+        ambiguousInstruments.add(instrument);
+        continue;
+      }
+      productIdByInstrument.put(instrument, productId);
       instrumentByProductId.put(productId, instrument);
     }
     return new CoinbaseProductIdentity(productByProductId, productIdByInstrument, instrumentByProductId);
@@ -178,20 +185,52 @@ public final class CoinbaseProductIdentity {
     if (rawService == null) {
       throw new IllegalArgumentException("raw market data service is required for discovery");
     }
-    List<CoinbaseProductResponse> all = new ArrayList<>();
+    Map<String, CoinbaseProductResponse> productsById = new LinkedHashMap<>();
+    discoverProductType(rawService, "SPOT", productsById);
+    discoverProductType(rawService, "FUTURE", productsById);
+    return build(new ArrayList<>(productsById.values()));
+  }
+
+  private static void discoverProductType(
+      CoinbaseMarketDataServiceRaw rawService,
+      String productType,
+      Map<String, CoinbaseProductResponse> productsById)
+      throws Exception {
+    Set<String> productIdsForType = new HashSet<>();
     int offset = 0;
-    while (all.size() < DISCOVERY_MAX_PRODUCTS) {
-      List<CoinbaseProductResponse> page = rawService.listProducts(DISCOVERY_PAGE_SIZE, offset, null);
+    while (true) {
+      if (productsById.size() >= DISCOVERY_MAX_PRODUCTS) {
+        throw new IllegalArgumentException("product discovery exceeded its bounded catalog size");
+      }
+      List<CoinbaseProductResponse> page =
+          rawService.listProducts(DISCOVERY_PAGE_SIZE, offset, productType);
       if (page == null || page.isEmpty()) {
-        break;
+        return;
       }
-      all.addAll(page);
+      for (CoinbaseProductResponse product : page) {
+        if (product == null || product.getProductId() == null || product.getProductId().isBlank()) {
+          continue;
+        }
+        if (!productIdsForType.add(product.getProductId())) {
+          throw new IllegalArgumentException(
+              "product discovery repeated product '"
+                  + product.getProductId()
+                  + "' for type "
+                  + productType);
+        }
+        CoinbaseProductResponse existing = productsById.putIfAbsent(product.getProductId(), product);
+        if (existing != null) {
+          throw new IllegalArgumentException(
+              "product discovery returned product '"
+                  + product.getProductId()
+                  + "' in multiple product types");
+        }
+      }
       if (page.size() < DISCOVERY_PAGE_SIZE) {
-        break;
+        return;
       }
-      offset += DISCOVERY_PAGE_SIZE;
+      offset += page.size();
     }
-    return build(all);
   }
 
   private static boolean isPerpetual(CoinbaseProductResponse response) {
