@@ -246,6 +246,11 @@ public interface CoinbaseAuthenticated extends Coinbase {
   /**
    * Fetches best bids and asks using the pre-1.0.2 single-product contract.
    *
+   * @param jwtDigest authenticated request digest
+   * @param productId optional single product identifier
+   * @return current best-bid-and-ask response
+   * @throws IOException when the request or response cannot be processed
+   * @throws CoinbaseException when Coinbase rejects the request
    * @deprecated use the list-valued product filter
    */
   @Deprecated
