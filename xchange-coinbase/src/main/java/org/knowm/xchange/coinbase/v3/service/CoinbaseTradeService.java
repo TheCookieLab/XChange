@@ -391,9 +391,8 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   /**
    * Modifies an existing limit order.
    * <p>
-   * This method allows you to update the parameters of an existing limit order, such as
-   * changing the price or quantity. The order must have a valid ID set via
-   * {@link LimitOrder#setId(String)}.
+   * This method allows you to update the parameters of an existing limit order, such as changing
+   * the price or quantity. The order must contain a valid exchange order ID.
    * </p>
    *
    * @param limitOrder The limit order to modify, containing the order ID and updated parameters

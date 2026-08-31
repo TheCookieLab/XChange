@@ -73,14 +73,14 @@ public interface CoinbaseAuthenticated extends Coinbase {
   /**
    * All Advanced Trade API requests must include an Authorization Bearer header containing a JSON
    * Web Token (JWT) generated from the CDP API keys.
-   * <p><a href="https://docs.cdp.coinbase.com/advanced-trade/docs/rest-api-auth</a>
+   * <p><a href="https://docs.cdp.coinbase.com/advanced-trade/docs/rest-api-auth">REST API authentication</a>
    *
    * <p>All request bodies should have content type application/json and be valid JSON.
    *
    * <p>The body is the request body string or omitted if there is no request body (typically for
    * GET requests).
    *
-   * <p><a href=https://docs.cdp.coinbase.com/advanced-trade/docs/api-overview</a></p>
+   * <p><a href="https://docs.cdp.coinbase.com/advanced-trade/docs/api-overview">API overview</a>
    */
   String CB_AUTHORIZATION_KEY = "Authorization";
 

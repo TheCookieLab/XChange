@@ -9,8 +9,8 @@ import lombok.Getter;
  * Response containing the current CFM margin window.
  *
  * <p>The wire-level {@code margin_window} object is flattened into the legacy string accessors so
- * callers retain {@link #getMarginWindow()} and {@link #getMarginWindowType()}. {@link
- * #getEndTime()} exposes the object's RFC 3339 end time.
+ * callers retain {@code getMarginWindow()} and {@code getMarginWindowType()}. {@code getEndTime()}
+ * exposes the object's RFC 3339 end time.
  *
  * @see <a href="https://docs.cdp.coinbase.com/api-reference/advanced-trade-api/rest-api/futures/get-current-margin-window">Get Current Margin Window</a>
  * @since 1.0.2

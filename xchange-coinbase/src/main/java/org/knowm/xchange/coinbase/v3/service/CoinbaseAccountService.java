@@ -27,6 +27,7 @@ import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
+import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
 
