@@ -202,11 +202,14 @@ public final class CoinbaseAdapters {
     Order.OrderType orderType = adaptOrderType(detail.getSide());
     Instrument instrument = adaptInstrument(detail.getProductId());
     CoinbaseOrderConfiguration configuration = detail.getOrderConfiguration();
-    if (configuration != null && configuration.getScaledLimitGtc() != null) {
+    String unsupportedConfiguration = unsupportedConfiguration(configuration);
+    if (unsupportedConfiguration != null) {
       throw new NotAvailableFromExchangeException(
-          "Cannot adapt scaled Coinbase order "
+          "Cannot adapt Coinbase "
+              + unsupportedConfiguration
+              + " order "
               + detail.getOrderId()
-              + ": XChange LimitOrder cannot represent an order ladder");
+              + ": XChange cannot preserve its execution semantics");
     }
     BigDecimal size = configuredSize(detail);
     BigDecimal price = configuredPrice(detail);
@@ -322,6 +325,15 @@ public final class CoinbaseAdapters {
     }
     order.setLeverage(detail.getLeverage());
     return order;
+  }
+
+  private static String unsupportedConfiguration(CoinbaseOrderConfiguration configuration) {
+    if (configuration == null) return null;
+    if (configuration.getScaledLimitGtc() != null) return "scaled_limit_gtc";
+    if (configuration.getTwapLimitGtd() != null) return "twap_limit_gtd";
+    if (configuration.getTriggerBracketGtc() != null) return "trigger_bracket_gtc";
+    if (configuration.getTriggerBracketGtd() != null) return "trigger_bracket_gtd";
+    return null;
   }
 
   private static boolean isQuoteSized(CoinbaseOrderDetail detail) {
