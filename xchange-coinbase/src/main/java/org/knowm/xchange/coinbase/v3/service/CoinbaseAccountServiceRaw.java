@@ -379,13 +379,27 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
   }
 
   /**
-   * Retrieves the current margin window.
+   * Retrieves the current margin window for Coinbase's default margin profile.
    *
-   * @return The current margin window response.
-   * @throws IOException If there is an error communicating with the Coinbase API.
+   * @return the current margin window response
+   * @throws IOException if communication or response decoding fails
    */
   public CoinbaseCurrentMarginWindowResponse getCurrentMarginWindow() throws IOException {
-    return coinbaseAdvancedTrade.getCurrentMarginWindow(authTokenCreator);
+    return getCurrentMarginWindow(null);
+  }
+
+  /**
+   * Retrieves the current margin window for a selected Coinbase margin profile.
+   *
+   * @param marginProfileType optional Coinbase margin-profile type; {@code null} selects the
+   *     provider default
+   * @return the selected profile's current margin window
+   * @throws IOException if communication or response decoding fails
+   * @since 1.0.2
+   */
+  public CoinbaseCurrentMarginWindowResponse getCurrentMarginWindow(String marginProfileType)
+      throws IOException {
+    return coinbaseAdvancedTrade.getCurrentMarginWindow(authTokenCreator, marginProfileType);
   }
 
   /**

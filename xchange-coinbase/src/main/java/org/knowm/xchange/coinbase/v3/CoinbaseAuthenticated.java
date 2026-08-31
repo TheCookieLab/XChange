@@ -456,10 +456,33 @@ public interface CoinbaseAuthenticated extends Coinbase {
       CoinbaseIntradayMarginSettingRequest payload)
       throws IOException, CoinbaseException;
 
+  /**
+   * Returns the current margin window for Coinbase's default margin profile.
+   *
+   * @since 1.0.2
+   */
   @GET
   @Path("cfm/intraday/current_margin_window")
   CoinbaseCurrentMarginWindowResponse getCurrentMarginWindow(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest)
+      throws IOException, CoinbaseException;
+
+  /**
+   * Returns the current margin window for a selected margin profile.
+   *
+   * @param jwtDigest request authorization digest
+   * @param marginProfileType optional Coinbase margin-profile type; {@code null} selects the
+   *     provider default
+   * @return the selected profile's current margin window
+   * @throws IOException when request transport or response decoding fails
+   * @throws CoinbaseException when Coinbase rejects the request
+   * @since 1.0.2
+   */
+  @GET
+  @Path("cfm/intraday/current_margin_window")
+  CoinbaseCurrentMarginWindowResponse getCurrentMarginWindow(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest,
+      @QueryParam("margin_profile_type") String marginProfileType)
       throws IOException, CoinbaseException;
 
   // ========== Perpetuals (INTX) Endpoints ==========

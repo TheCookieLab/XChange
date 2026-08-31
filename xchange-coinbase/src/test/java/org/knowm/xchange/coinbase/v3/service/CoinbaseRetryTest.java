@@ -2,6 +2,7 @@ package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -11,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Collections;
 import org.junit.Test;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
@@ -19,6 +21,8 @@ import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.CoinbaseException.CoinbaseError;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import si.mazi.rescu.ParamsDigest;
 
 /** Deterministic tests for bounded jittered retry on replay-safe Coinbase reads. */
@@ -83,6 +87,35 @@ public class CoinbaseRetryTest {
 
     assertThrows(CoinbaseUnknownOutcomeException.class, service::getCoinbaseAccounts);
     verify(authenticated, times(1)).listAccounts(any(ParamsDigest.class), eq(250), any());
+  }
+
+  @Test
+  public void closePositionTransportFailureIsAmbiguousButProviderResponseIsDefinitive()
+      throws Exception {
+    CoinbaseClosePositionRequest request =
+        new CoinbaseClosePositionRequest("close-1", "ETP-20DEC30-CDE", BigDecimal.ONE);
+    CoinbaseAuthenticated interrupted = mock(CoinbaseAuthenticated.class);
+    when(interrupted.closePosition(any(ParamsDigest.class), eq(request)))
+        .thenThrow(new IOException("connection reset"));
+    CoinbaseTradeServiceRaw interruptedService =
+        new CoinbaseTradeServiceRaw(coinbaseExchange(), interrupted, mock(ParamsDigest.class));
+
+    CoinbaseUnknownOutcomeException failure =
+        assertThrows(
+            CoinbaseUnknownOutcomeException.class,
+            () -> interruptedService.closePosition(request));
+    assertEquals("closePosition", failure.getOperation());
+    assertEquals("close-1", failure.getClientOrderId());
+
+    CoinbaseCreateOrderResponse rejected =
+        new CoinbaseCreateOrderResponse(
+            false, null, new CoinbaseCreateOrderResponse.ErrorResponse("INVALID_ARGUMENT", "no"));
+    CoinbaseAuthenticated definitive = mock(CoinbaseAuthenticated.class);
+    when(definitive.closePosition(any(ParamsDigest.class), eq(request))).thenReturn(rejected);
+    CoinbaseTradeServiceRaw definitiveService =
+        new CoinbaseTradeServiceRaw(coinbaseExchange(), definitive, mock(ParamsDigest.class));
+
+    assertSame(rejected, definitiveService.closePosition(request));
   }
 
   @Test

@@ -257,7 +257,12 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseCreateOrderResponse closePosition(CoinbaseClosePositionRequest request)
       throws IOException {
-    return coinbaseAdvancedTrade.closePosition(authTokenCreator, request);
+    try {
+      return coinbaseAdvancedTrade.closePosition(authTokenCreator, request);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException(
+          "closePosition", request.getClientOrderId(), transportFailure);
+    }
   }
 
   /**

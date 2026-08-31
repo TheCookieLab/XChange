@@ -31,6 +31,8 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
 
   private static final String FILLS_PATH = "/api/v3/brokerage/orders/historical/fills";
   private static final String BEST_BID_ASK_PATH = "/api/v3/brokerage/best_bid_ask";
+  private static final String CURRENT_MARGIN_WINDOW_PATH =
+      "/api/v3/brokerage/cfm/intraday/current_margin_window";
 
   private WireMockServer server;
   private CoinbaseAuthenticated api;
@@ -59,6 +61,15 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
                 aResponse()
                     .withHeader("Content-Type", "application/json")
                     .withBody("{\"pricebooks\":[]}")));
+    server.stubFor(
+        get(urlPathEqualTo(CURRENT_MARGIN_WINDOW_PATH))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"margin_window\":{\"margin_window_type\":"
+                            + "\"MARGIN_WINDOW_TYPE_INTRADAY\","
+                            + "\"end_time\":\"2026-08-31T20:00:00Z\"}}")));
   }
 
   @After
@@ -117,6 +128,23 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
     assertFalse(request.queryParameter("order_types").isPresent());
     assertFalse(request.queryParameter("order_side").isPresent());
     assertFalse(request.queryParameter("product_types").isPresent());
+  }
+
+  @Test
+  public void currentMarginWindowSerializesOptionalProfileSelector() throws Exception {
+    assertNotNull(
+        api.getCurrentMarginWindow(digest, "MARGIN_PROFILE_TYPE_RETAIL_REGULATED"));
+
+    assertEquals(1, server.getAllServeEvents().size());
+    LoggedRequest selected = server.getAllServeEvents().get(0).getRequest();
+    assertEquals(
+        CURRENT_MARGIN_WINDOW_PATH
+            + "?margin_profile_type=MARGIN_PROFILE_TYPE_RETAIL_REGULATED",
+        selected.getUrl());
+
+    server.resetRequests();
+    assertNotNull(api.getCurrentMarginWindow(digest));
+    assertEquals(CURRENT_MARGIN_WINDOW_PATH, server.getAllServeEvents().get(0).getRequest().getUrl());
   }
 
   @SuppressWarnings("deprecation")

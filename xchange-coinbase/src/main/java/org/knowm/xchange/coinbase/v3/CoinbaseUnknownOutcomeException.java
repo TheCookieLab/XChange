@@ -6,8 +6,8 @@ import org.knowm.xchange.coinbase.v3.dto.RetryClassification;
 /**
  * Structured unknown-outcome failure for non-replayable Coinbase Advanced Trade operations.
  *
- * <p>Raised when a create/edit/convert/allocate request fails at the transport layer after the
- * request may have reached the provider, so the server-side outcome is unknown. Callers must not
+ * <p>Raised when a create/edit/close/convert/allocate request fails at the transport layer after
+ * the request may have reached the provider, so the server-side outcome is unknown. Callers must not
  * blindly replay the operation; they should reconcile by {@code client_order_id} or surface the
  * ambiguity to the operator. The message is sanitized and never contains key material.
  *
