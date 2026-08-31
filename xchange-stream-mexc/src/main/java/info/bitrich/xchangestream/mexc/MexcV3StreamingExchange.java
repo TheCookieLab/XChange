@@ -8,6 +8,7 @@ import info.bitrich.xchangestream.core.StreamingTradeService;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Scheduler;
+import io.reactivex.rxjava3.exceptions.Exceptions;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.PublishSubject;
@@ -571,9 +572,7 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
             .concatMapCompletable(
                 tick ->
                     Completable.defer(
-                            () ->
-                                Completable.fromAction(() -> keepAliveListenKey(accountService))
-                                    .subscribeOn(Schedulers.io()))
+                            () -> keepAliveAttempt(accountService).subscribeOn(Schedulers.io()))
                         // A transient PUT failure must not terminate the schedule: retry the
                         // tick a bounded number of times, then swallow and let the next tick
                         // refresh the key. Without this, one failure stopped all later refreshes
@@ -595,6 +594,29 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
                     LOG.warn(
                         "MEXC Spot v3 listenKey keepalive schedule stopped: {}",
                         String.valueOf(e.getMessage())));
+  }
+
+  /**
+   * Runs one listen-key refresh without reporting a late failure after the subscriber disposes.
+   *
+   * <p>Disposal before execution skips the HTTP request. Disposal during an in-flight request
+   * allows the request to finish but prevents its eventual failure from escaping through RxJava's
+   * global error handler.
+   */
+  Completable keepAliveAttempt(MexcV3AccountService accountService) {
+    return Completable.create(
+        emitter -> {
+          if (emitter.isDisposed()) {
+            return;
+          }
+          try {
+            keepAliveListenKey(accountService);
+            emitter.onComplete();
+          } catch (Throwable error) {
+            Exceptions.throwIfFatal(error);
+            emitter.tryOnError(error);
+          }
+        });
   }
 
   private void keepAliveListenKey(MexcV3AccountService accountService) throws IOException {
