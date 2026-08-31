@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import lombok.AccessLevel;
 import lombok.Getter;
 
 /**
@@ -23,7 +24,10 @@ public class CoinbaseFutureProductDetails {
   private final String venue;
   private final String contractCode;
   private final String contractExpiry;
-  private final BigDecimal contractSize;
+
+  @Getter(AccessLevel.NONE)
+  private final String contractSize;
+
   private final String contractRootUnit;
   private final String groupDescription;
   private final String contractExpiryTimezone;
@@ -38,8 +42,13 @@ public class CoinbaseFutureProductDetails {
   private final Boolean twentyFourBySeven;
   private final Duration fundingInterval;
   private final BigDecimal openInterest;
-  private final BigDecimal fundingRate;
-  private final Instant fundingTime;
+
+  @Getter(AccessLevel.NONE)
+  private final String fundingRate;
+
+  @Getter(AccessLevel.NONE)
+  private final String fundingTime;
+
   private final String displayName;
   private final CoinbaseMarginRate intradayMarginRate;
   private final CoinbaseMarginRate overnightMarginRate;
@@ -60,10 +69,35 @@ public class CoinbaseFutureProductDetails {
       CoinbaseMarginRate intradayMarginRate,
       CoinbaseMarginRate overnightMarginRate,
       CoinbasePerpetualDetails perpetualDetails) {
-    this(null, null, null, null, contractRootUnit, null, null, null, null, null,
-        perpetualDetails, null, null, null, null, null, null, null, fundingRate, fundingTime,
-        null, intradayMarginRate, overnightMarginRate, null, null, null);
+    this(
+        null,
+        null,
+        null,
+        null,
+        contractRootUnit,
+        null,
+        null,
+        null,
+        null,
+        null,
+        perpetualDetails,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        fundingRate,
+        fundingTime,
+        null,
+        intradayMarginRate,
+        overnightMarginRate,
+        null,
+        null,
+        null);
   }
+
   /**
    * Legacy constructor including the API-reported funding interval.
    *
@@ -78,14 +112,36 @@ public class CoinbaseFutureProductDetails {
       CoinbaseMarginRate overnightMarginRate,
       CoinbasePerpetualDetails perpetualDetails,
       String fundingInterval) {
-    this(null, null, null, null, contractRootUnit, null, null, null, null, null,
-        perpetualDetails, null, null, null, null, null, fundingInterval, null, fundingRate,
-        fundingTime, null, intradayMarginRate, overnightMarginRate, null, null, null);
+    this(
+        null,
+        null,
+        null,
+        null,
+        contractRootUnit,
+        null,
+        null,
+        null,
+        null,
+        null,
+        perpetualDetails,
+        null,
+        null,
+        null,
+        null,
+        null,
+        fundingInterval,
+        null,
+        fundingRate,
+        fundingTime,
+        null,
+        intradayMarginRate,
+        overnightMarginRate,
+        null,
+        null,
+        null);
   }
 
-  /**
-   * Deserializes all current fields from Advanced Trade's future_product_details object.
-   */
+  /** Deserializes all current fields from Advanced Trade's future_product_details object. */
   @JsonCreator
   public CoinbaseFutureProductDetails(
       @JsonProperty("venue") String venue,
@@ -117,7 +173,7 @@ public class CoinbaseFutureProductDetails {
     this.venue = venue;
     this.contractCode = contractCode;
     this.contractExpiry = contractExpiry;
-    this.contractSize = parseBigDecimal(contractSize);
+    this.contractSize = contractSize;
     this.contractRootUnit = contractRootUnit;
     this.groupDescription = groupDescription;
     this.contractExpiryTimezone = contractExpiryTimezone;
@@ -132,8 +188,8 @@ public class CoinbaseFutureProductDetails {
     this.twentyFourBySeven = twentyFourBySeven;
     this.fundingInterval = parseDuration(fundingInterval);
     this.openInterest = parseBigDecimal(openInterest);
-    this.fundingRate = parseBigDecimal(fundingRate);
-    this.fundingTime = parseInstant(fundingTime);
+    this.fundingRate = fundingRate;
+    this.fundingTime = fundingTime;
     this.displayName = displayName;
     this.intradayMarginRate = intradayMarginRate;
     this.overnightMarginRate = overnightMarginRate;
@@ -182,24 +238,95 @@ public class CoinbaseFutureProductDetails {
     }
   }
 
-  /** @return exchange venue, such as {@code FCM} or {@code INTX}. */
-  public String getVenue() { return venue; }
+  /**
+   * @return exchange venue, such as {@code FCM} or {@code INTX}.
+   */
+  public String getVenue() {
+    return venue;
+  }
 
-  /** @return quantity represented by one contract. */
-  public BigDecimal getContractSize() { return contractSize; }
+  /**
+   * Returns the raw contract-size wire value.
+   *
+   * @deprecated use {@link #getContractSizeValue()} for numeric calculations
+   */
+  @Deprecated
+  public String getContractSize() {
+    return contractSize;
+  }
 
-  /** @return API-reported funding interval. */
-  public Duration getFundingInterval() { return fundingInterval; }
+  /**
+   * @return quantity represented by one contract, or {@code null} when absent or malformed.
+   */
+  public BigDecimal getContractSizeValue() {
+    return parseBigDecimal(contractSize);
+  }
 
-  /** @return intraday long/short margin rates. */
-  public CoinbaseMarginRate getIntradayMarginRate() { return intradayMarginRate; }
+  /**
+   * @return API-reported funding interval.
+   */
+  public Duration getFundingInterval() {
+    return fundingInterval;
+  }
 
-  /** @return overnight long/short margin rates. */
-  public CoinbaseMarginRate getOvernightMarginRate() { return overnightMarginRate; }
+  /**
+   * Returns the raw funding-rate wire value.
+   *
+   * @deprecated use {@link #getFundingRateValue()} for numeric calculations
+   */
+  @Deprecated
+  public String getFundingRate() {
+    return fundingRate;
+  }
+
+  /**
+   * @return parsed funding rate, or {@code null} when absent or malformed.
+   */
+  public BigDecimal getFundingRateValue() {
+    return parseBigDecimal(fundingRate);
+  }
+
+  /**
+   * Returns the raw funding-time wire value.
+   *
+   * @deprecated use {@link #getFundingTimeInstant()} for timestamp calculations
+   */
+  @Deprecated
+  public String getFundingTime() {
+    return fundingTime;
+  }
+
+  /**
+   * @return parsed funding timestamp, or {@code null} when absent or malformed.
+   */
+  public Instant getFundingTimeInstant() {
+    return parseInstant(fundingTime);
+  }
+
+  /**
+   * @return intraday long/short margin rates.
+   */
+  public CoinbaseMarginRate getIntradayMarginRate() {
+    return intradayMarginRate;
+  }
+
+  /**
+   * @return overnight long/short margin rates.
+   */
+  public CoinbaseMarginRate getOvernightMarginRate() {
+    return overnightMarginRate;
+  }
 
   @Override
   public String toString() {
-    return "CoinbaseFutureProductDetails [venue=" + venue + ", contractSize=" + contractSize
-        + ", contractExpiryType=" + contractExpiryType + ", fundingInterval=" + fundingInterval + "]";
+    return "CoinbaseFutureProductDetails [venue="
+        + venue
+        + ", contractSize="
+        + contractSize
+        + ", contractExpiryType="
+        + contractExpiryType
+        + ", fundingInterval="
+        + fundingInterval
+        + "]";
   }
 }

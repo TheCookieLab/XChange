@@ -7,18 +7,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
+import org.knowm.xchange.coinbase.v3.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseCommitConvertTradeRequest;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteRequest;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertQuoteResponse;
 import org.knowm.xchange.coinbase.v3.dto.converts.CoinbaseConvertTradeResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionResponse;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPositionsResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
@@ -270,6 +271,8 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   public CoinbaseCreateOrderResponse createOrder(CoinbaseOrderRequest request) throws IOException {
     try {
       return coinbaseAdvancedTrade.createOrder(authTokenCreator, request);
+    } catch (CoinbaseException providerFailure) {
+      throw providerFailure;
     } catch (IOException transportFailure) {
       throw new CoinbaseUnknownOutcomeException(
           "createOrder", request.getClientOrderId(), transportFailure);
@@ -280,6 +283,8 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   public CoinbaseOrdersResponse editOrder(CoinbaseEditOrderRequest request) throws IOException {
     try {
       return coinbaseAdvancedTrade.editOrder(authTokenCreator, request);
+    } catch (CoinbaseException providerFailure) {
+      throw providerFailure;
     } catch (IOException transportFailure) {
       throw new CoinbaseUnknownOutcomeException(
           "editOrder", Collections.singletonList(request.getOrderId()), null, transportFailure);
@@ -297,27 +302,28 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     return coinbaseAdvancedTrade.previewEditOrder(authTokenCreator, request);
   }
 
-  /** Cancels orders by id and/or client order id via Advanced Trade batch_cancel endpoint. */
-  public CoinbaseOrdersResponse cancelOrders(List<String> orderIds, List<String> clientOrderIds)
-      throws IOException {
-    Map<String, Object> payload = new ConcurrentHashMap<>();
-    if (orderIds != null && !orderIds.isEmpty()) {
-      payload.put("order_ids", orderIds);
+  /** Cancels provider order ids via the Advanced Trade {@code batch_cancel} endpoint. */
+  public CoinbaseCancelOrdersResponse cancelOrders(List<String> orderIds) throws IOException {
+    if (orderIds == null
+        || orderIds.isEmpty()
+        || orderIds.stream().anyMatch(orderId -> orderId == null || orderId.isBlank())) {
+      throw new IllegalArgumentException("orderIds must contain at least one non-blank order id");
     }
-    if (clientOrderIds != null && !clientOrderIds.isEmpty()) {
-      payload.put("client_order_ids", clientOrderIds);
-    }
+    List<String> requestedOrderIds = List.copyOf(orderIds);
+    Map<String, Object> payload = Collections.singletonMap("order_ids", requestedOrderIds);
     try {
       return coinbaseAdvancedTrade.cancelOrders(authTokenCreator, payload);
+    } catch (CoinbaseException providerFailure) {
+      throw providerFailure;
     } catch (IOException transportFailure) {
       throw new CoinbaseUnknownOutcomeException(
-          "cancelOrders", orderIds, clientOrderIds, transportFailure);
+          "cancelOrders", requestedOrderIds, null, transportFailure);
     }
   }
 
-  /** Convenience overload to cancel a single order id. */
-  public CoinbaseOrdersResponse cancelOrderById(String orderId) throws IOException {
-    return cancelOrders(Collections.singletonList(orderId), null);
+  /** Convenience method to cancel a single provider order id. */
+  public CoinbaseCancelOrdersResponse cancelOrderById(String orderId) throws IOException {
+    return cancelOrders(Collections.singletonList(orderId));
   }
 
   /** Closes an open position using the Advanced Trade close_position endpoint. */
@@ -325,6 +331,8 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
       throws IOException {
     try {
       return coinbaseAdvancedTrade.closePosition(authTokenCreator, request);
+    } catch (CoinbaseException providerFailure) {
+      throw providerFailure;
     } catch (IOException transportFailure) {
       throw new CoinbaseUnknownOutcomeException(
           "closePosition", request.getClientOrderId(), transportFailure);
@@ -377,6 +385,8 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
       String tradeId, CoinbaseCommitConvertTradeRequest request) throws IOException {
     try {
       return coinbaseAdvancedTrade.commitConvertTrade(authTokenCreator, tradeId, request);
+    } catch (CoinbaseException providerFailure) {
+      throw providerFailure;
     } catch (IOException transportFailure) {
       throw new CoinbaseUnknownOutcomeException(
           "commitConvertTrade", "trade_id", tradeId, transportFailure);

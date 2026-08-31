@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
@@ -23,6 +24,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
+import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.ExchangeException;
 import si.mazi.rescu.ParamsDigest;
@@ -112,6 +114,37 @@ public class CoinbasePaginationGuardTest {
   }
 
   @Test
+  public void adjustedFillsSharingTradeIdRemainDistinctByEntryId() throws Exception {
+    CoinbaseAuthenticated api = mock(CoinbaseAuthenticated.class);
+    when(api.listFills(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(page(fill("entry-1", "shared-trade"), "cursor-1"))
+        .thenReturn(page(fill("entry-2", "shared-trade"), ""));
+    CoinbaseTradeService service =
+        new CoinbaseTradeService(mock(Exchange.class), api, mock(ParamsDigest.class));
+
+    UserTrades history = service.getTradeHistory(new CoinbaseTradeHistoryParams());
+
+    assertEquals(2, history.getUserTrades().size());
+    assertEquals(
+        Arrays.asList("entry-1-order", "entry-2-order"),
+        history.getUserTrades().stream().map(UserTrade::getOrderId).collect(Collectors.toList()));
+  }
+
+  @Test
   public void orderHistoryIteratesPagesUntilExhausted() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     when(authenticated.listOrders(
@@ -189,15 +222,19 @@ public class CoinbasePaginationGuardTest {
   }
 
   private static CoinbaseFill fill(String id) {
+    return fill(id, id);
+  }
+
+  private static CoinbaseFill fill(String entryId, String tradeId) {
     return new CoinbaseFill(
-        "entry-" + id,
-        "trade-" + id,
-        "order-" + id,
+        entryId,
+        tradeId,
+        entryId + "-order",
         "2026-02-08T00:00:00Z",
         "FILL",
-        new BigDecimal("2500"),
         new BigDecimal("1"),
         new BigDecimal("0.15"),
+        new BigDecimal("0.001"),
         "BTC-USD",
         "2026-02-08T00:00:00Z",
         "TAKER",
@@ -205,5 +242,9 @@ public class CoinbasePaginationGuardTest {
         "user",
         "BUY",
         "portfolio");
+  }
+
+  private static CoinbaseOrdersResponse page(CoinbaseFill fill, String cursor) {
+    return new CoinbaseOrdersResponse(Collections.singletonList(fill), cursor);
   }
 }

@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrderResult;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
@@ -158,9 +160,9 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
           advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "fills");
       page++;
       for (CoinbaseFill fill : response.getFills()) {
-        String fillId = fill.getTradeId();
+        String fillId = fill.getEntryId();
         if (fillId == null || fillId.isBlank()) {
-          fillId = fill.getEntryId();
+          fillId = fill.getTradeId();
         }
         if (fillId == null || fillId.isBlank() || seenFillIds.add(fillId)) {
           trades.add(CoinbaseAdapters.adaptFill(fill));
@@ -422,13 +424,11 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public boolean cancelOrder(CancelOrderParams orderParams) throws IOException {
-    if (orderParams instanceof DefaultCancelOrderParamId) {
-      DefaultCancelOrderParamId byId = (DefaultCancelOrderParamId) orderParams;
-      super.cancelOrderById(byId.getOrderId());
-      return true;
+    if (!(orderParams instanceof DefaultCancelOrderParamId)) {
+      return false;
     }
-    // If other param types are added later (e.g., by clientOrderId), extend here
-    return false;
+    String orderId = ((DefaultCancelOrderParamId) orderParams).getOrderId();
+    return successfulOrderIds(super.cancelOrderById(orderId)).contains(orderId);
   }
 
   /**
@@ -448,12 +448,27 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   public Collection<String> cancelAllOrders(CancelAllOrders orderParams) throws IOException {
     OpenOrders openOrders = getOpenOrders();
     List<String> ids = new ArrayList<>();
-    for (Order o : openOrders.getAllOpenOrders()) {
-      if (o.getId() != null && !o.getId().isEmpty()) ids.add(o.getId());
+    for (Order order : openOrders.getAllOpenOrders()) {
+      if (order.getId() != null && !order.getId().isEmpty()) {
+        ids.add(order.getId());
+      }
     }
-    if (ids.isEmpty()) return Collections.emptyList();
-    super.cancelOrders(ids, null);
-    return ids;
+    if (ids.isEmpty()) {
+      return Collections.emptyList();
+    }
+    Set<String> successfulIds = successfulOrderIds(super.cancelOrders(ids));
+    return ids.stream().filter(successfulIds::contains).collect(Collectors.toList());
+  }
+
+  private static Set<String> successfulOrderIds(CoinbaseCancelOrdersResponse response) {
+    if (response == null) {
+      return Collections.emptySet();
+    }
+    return response.getResults().stream()
+        .filter(CoinbaseCancelOrderResult::isSuccess)
+        .map(CoinbaseCancelOrderResult::getOrderId)
+        .filter(orderId -> orderId != null && !orderId.isBlank())
+        .collect(Collectors.toSet());
   }
 
   private List<CoinbasePortfolio> listPerpetualsPortfolios() throws IOException {
