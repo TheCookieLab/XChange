@@ -15,6 +15,7 @@ import org.junit.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseCurrentMarginWindowResponse;
@@ -695,6 +696,43 @@ public class CoinbaseAdaptersTest {
         CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(spot))
             .getOpenOrders()
             .isEmpty());
+  }
+
+  @Test
+  public void testAdvancedLimitConfigurationsRemainVisibleOrFailClosed() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    String[][] representable = {
+      {"twap_limit_gtd", "2", "2500"},
+      {"trigger_bracket_gtc", "3", "2600"},
+      {"trigger_bracket_gtd", "4", "2700"}
+    };
+    for (String[] configuration : representable) {
+      CoinbaseOrderDetail detail =
+          mapper.readValue(
+              "{\"order_id\":\"" + configuration[0]
+                  + "\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                  + "\"status\":\"OPEN\",\"order_type\":\"LIMIT\",\"order_configuration\":{\""
+                  + configuration[0] + "\":{\"base_size\":\"" + configuration[1]
+                  + "\",\"limit_price\":\"" + configuration[2] + "\"}}}",
+              CoinbaseOrderDetail.class);
+
+      LimitOrder order =
+          CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(detail))
+              .getOpenOrders()
+              .get(0);
+      assertEquals(new BigDecimal(configuration[1]), order.getOriginalAmount());
+      assertEquals(new BigDecimal(configuration[2]), order.getLimitPrice());
+    }
+
+    CoinbaseOrderDetail scaled =
+        mapper.readValue(
+            "{\"order_id\":\"scaled\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"OPEN\",\"order_type\":\"LIMIT\","
+                + "\"order_configuration\":{\"scaled_limit_gtc\":"
+                + "{\"base_size\":\"5\",\"min_price\":\"2400\",\"max_price\":\"2600\"}}}",
+            CoinbaseOrderDetail.class);
+    assertUnavailable(
+        () -> CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(scaled)));
   }
 
   @Test

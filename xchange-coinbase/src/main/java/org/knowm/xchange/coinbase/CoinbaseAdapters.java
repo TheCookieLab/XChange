@@ -160,6 +160,12 @@ public final class CoinbaseAdapters {
     Order.OrderStatus status = adaptOrderStatus(detail.getStatus());
     Order.OrderType orderType = adaptOrderType(detail.getSide());
     Instrument instrument = adaptInstrument(detail.getProductId());
+    CoinbaseOrderConfiguration configuration = detail.getOrderConfiguration();
+    if (configuration != null && configuration.getScaledLimitGtc() != null) {
+      throw new NotAvailableFromExchangeException(
+          "Cannot adapt scaled Coinbase order " + detail.getOrderId()
+              + ": XChange LimitOrder cannot represent an order ladder");
+    }
     BigDecimal size = configuredSize(detail);
     BigDecimal price = configuredPrice(detail);
     if (isQuoteSized(detail)) {
@@ -226,9 +232,6 @@ public final class CoinbaseAdapters {
     if (config.getTwapLimitGtd() != null && config.getTwapLimitGtd().getQuoteSize() != null) {
       return config.getTwapLimitGtd().getQuoteSize();
     }
-    if (config.getScaledLimitGtc() != null && config.getScaledLimitGtc().getQuoteSize() != null) {
-      return config.getScaledLimitGtc().getQuoteSize();
-    }
     return null;
   }
 
@@ -259,6 +262,15 @@ public final class CoinbaseAdapters {
     if (config.getStopLimitStopLimitGtd() != null) {
       return config.getStopLimitStopLimitGtd().getBaseSize();
     }
+    if (config.getTwapLimitGtd() != null) {
+      return config.getTwapLimitGtd().getBaseSize();
+    }
+    if (config.getTriggerBracketGtc() != null) {
+      return config.getTriggerBracketGtc().getBaseSize();
+    }
+    if (config.getTriggerBracketGtd() != null) {
+      return config.getTriggerBracketGtd().getBaseSize();
+    }
     return null;
   }
 
@@ -274,6 +286,13 @@ public final class CoinbaseAdapters {
     }
     if (config.getStopLimitStopLimitGtd() != null) {
       return config.getStopLimitStopLimitGtd().getLimitPrice();
+    }
+    if (config.getTwapLimitGtd() != null) return config.getTwapLimitGtd().getLimitPrice();
+    if (config.getTriggerBracketGtc() != null) {
+      return config.getTriggerBracketGtc().getLimitPrice();
+    }
+    if (config.getTriggerBracketGtd() != null) {
+      return config.getTriggerBracketGtd().getLimitPrice();
     }
     return null;
   }
