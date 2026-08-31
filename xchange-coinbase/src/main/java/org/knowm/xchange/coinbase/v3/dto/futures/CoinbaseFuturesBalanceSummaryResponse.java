@@ -86,6 +86,11 @@ public class CoinbaseFuturesBalanceSummaryResponse {
             : Collections.unmodifiableList(expiringFutures);
   }
 
+  /** Returns the current wrapped CFM balance and margin measures. */
+  public CoinbaseFuturesBalanceSummary getBalanceSummary() {
+    return balanceSummary;
+  }
+
   /** @deprecated use {@link #getBalanceSummary()} and retain its currency */
   @Deprecated
   public BigDecimal getFuturesBuyingPower() {
