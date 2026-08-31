@@ -113,6 +113,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
       throws IOException, CoinbaseException;
 
   @POST
+  @Path("orders/edit")
   @Consumes(MediaType.APPLICATION_JSON)
   CoinbaseEditOrderResponse editOrder(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseEditOrderRequest payload)

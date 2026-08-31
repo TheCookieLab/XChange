@@ -24,6 +24,7 @@ import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrderResult;
@@ -129,6 +130,23 @@ public class CoinbaseTradeServiceUnitTest {
             BigDecimal.ONE);
     try {
       service.placeStopOrder(order);
+      fail("Expected a failed successful-HTTP response to be rejected");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("rejected"));
+    }
+  }
+
+  @Test
+  public void closePositionRejectsSuccessfulHttpFailurePayload() throws Exception {
+    when(api.closePosition(any(ParamsDigest.class), any()))
+        .thenReturn(
+            new CoinbaseCreateOrderResponse(
+                false, null, new CoinbaseCreateOrderResponse.ErrorResponse("INVALID", "rejected")));
+
+    try {
+      service.closePosition(
+          new CoinbaseClosePositionRequest(
+              "close-client-order", "ETP-20DEC30-CDE", BigDecimal.ONE));
       fail("Expected a failed successful-HTTP response to be rejected");
     } catch (ExchangeException expected) {
       assertTrue(expected.getMessage().contains("rejected"));

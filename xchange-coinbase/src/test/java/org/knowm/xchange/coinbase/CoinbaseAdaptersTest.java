@@ -1079,10 +1079,16 @@ public class CoinbaseAdaptersTest {
     Method batchCancelOrders =
         CoinbaseAuthenticated.class.getMethod(
             "batchCancelOrders", ParamsDigest.class, Object.class);
+    Method editOrder =
+        CoinbaseAuthenticated.class.getMethod(
+            "editOrder",
+            ParamsDigest.class,
+            org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest.class);
     assertEquals(CoinbaseOrdersResponse.class, cancelOrders.getReturnType());
     assertEquals(CoinbaseCancelOrdersResponse.class, batchCancelOrders.getReturnType());
     assertEquals("orders/batch_cancel", cancelOrders.getAnnotation(Path.class).value());
     assertEquals("orders/batch_cancel", batchCancelOrders.getAnnotation(Path.class).value());
+    assertEquals("orders/edit", editOrder.getAnnotation(Path.class).value());
   }
 
   private static void assertUnavailable(Runnable action) {

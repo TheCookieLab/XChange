@@ -278,12 +278,16 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    * Closes an open position using the Advanced Trade close_position endpoint.
    *
    * @param request Close position request payload.
-   * @return The create order response.
+   * @return The accepted create-order response.
    * @throws IOException If there is an error communicating with the Coinbase API.
+   * @throws org.knowm.xchange.exceptions.ExchangeException when Coinbase returns a successful HTTP
+   *     response with success=false or no order id
    */
   public CoinbaseCreateOrderResponse closePosition(CoinbaseClosePositionRequest request)
       throws IOException {
-    return super.closePosition(request);
+    CoinbaseCreateOrderResponse response = super.closePosition(request);
+    requireCreatedOrderId(response);
+    return response;
   }
 
   /**
