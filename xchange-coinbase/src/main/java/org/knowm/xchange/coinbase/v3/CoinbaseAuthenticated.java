@@ -116,7 +116,24 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @POST
   @Path("orders/edit")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseEditOrderResponse editOrder(
+  CoinbaseOrdersResponse editOrder(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseEditOrderRequest payload)
+      throws IOException, CoinbaseException;
+
+  /**
+   * Edits an order using Coinbase's current response schema.
+   *
+   * @param jwtDigest authenticated request digest
+   * @param payload edit request
+   * @return current edit response
+   * @throws IOException when the request or response cannot be processed
+   * @throws CoinbaseException when Coinbase rejects the request
+   * @since 1.0.2
+   */
+  @POST
+  @Path("orders/edit")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinbaseEditOrderResponse editOrderCurrent(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseEditOrderRequest payload)
       throws IOException, CoinbaseException;
 
@@ -262,14 +279,48 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @POST
   @Path("orders/preview")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbasePreviewOrderResponse previewOrder(
+  CoinbaseOrdersResponse previewOrder(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseOrderRequest payload)
+      throws IOException, CoinbaseException;
+
+  /**
+   * Previews an order using Coinbase's current response schema.
+   *
+   * @param jwtDigest authenticated request digest
+   * @param payload order request
+   * @return current preview response
+   * @throws IOException when the request or response cannot be processed
+   * @throws CoinbaseException when Coinbase rejects the request
+   * @since 1.0.2
+   */
+  @POST
+  @Path("orders/preview")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinbasePreviewOrderResponse previewOrderCurrent(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseOrderRequest payload)
       throws IOException, CoinbaseException;
 
   @POST
   @Path("orders/edit_preview")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseEditOrderResponse previewEditOrder(
+  CoinbaseOrdersResponse previewEditOrder(
+      @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseEditOrderRequest payload)
+      throws IOException, CoinbaseException;
+
+  /**
+   * Previews an order edit using Coinbase's current response schema.
+   *
+   * @param jwtDigest authenticated request digest
+   * @param payload edit request
+   * @return current edit-preview response
+   * @throws IOException when the request or response cannot be processed
+   * @throws CoinbaseException when Coinbase rejects the request
+   * @since 1.0.2
+   */
+  @POST
+  @Path("orders/edit_preview")
+  @Consumes(MediaType.APPLICATION_JSON)
+  CoinbaseEditOrderResponse previewEditOrderCurrent(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseEditOrderRequest payload)
       throws IOException, CoinbaseException;
 

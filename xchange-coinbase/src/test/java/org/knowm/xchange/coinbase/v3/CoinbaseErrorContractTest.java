@@ -71,7 +71,7 @@ public class CoinbaseErrorContractTest {
   @Test
   public void editOrderTransportFailureIsAmbiguous() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
-    when(authenticated.editOrder(any(ParamsDigest.class), any()))
+    when(authenticated.editOrderCurrent(any(ParamsDigest.class), any()))
         .thenThrow(new IOException("read timed out"));
 
     CoinbaseTradeServiceRaw service =
@@ -80,7 +80,7 @@ public class CoinbaseErrorContractTest {
     CoinbaseEditOrderRequest request =
         new CoinbaseEditOrderRequest("order-42", null, null, null, null, null);
     try {
-      service.editOrder(request);
+      service.editOrderCurrent(request);
       throw new AssertionError("expected CoinbaseUnknownOutcomeException");
     } catch (CoinbaseUnknownOutcomeException unknown) {
       assertEquals(RetryClassification.AMBIGUOUS, unknown.getRetryClassification());

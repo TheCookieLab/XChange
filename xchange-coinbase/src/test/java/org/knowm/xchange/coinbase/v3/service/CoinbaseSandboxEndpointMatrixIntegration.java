@@ -425,18 +425,18 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
         CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
 
     assertEndpointReachable(
-        "POST /orders/preview market", () -> tradeService.previewOrder(previewMarketRequest));
+        "POST /orders/preview market", () -> tradeService.previewOrderCurrent(previewMarketRequest));
     assertEndpointReachable(
-        "POST /orders/preview limit", () -> tradeService.previewOrder(previewLimitRequest));
+        "POST /orders/preview limit", () -> tradeService.previewOrderCurrent(previewLimitRequest));
     assertEndpointReachable(
-        "POST /orders/preview stop", () -> tradeService.previewOrder(previewStopRequest));
+        "POST /orders/preview stop", () -> tradeService.previewOrderCurrent(previewStopRequest));
     assertEndpointReachable(
-        "POST /orders/edit_preview", () -> tradeService.previewEditOrder(editRequest));
+        "POST /orders/edit_preview", () -> tradeService.previewEditOrderCurrent(editRequest));
 
     assertEndpointReachable(
         "POST /orders create",
         () -> tradeService.createOrder(CoinbaseV3OrderRequests.limitOrderRequest(limitOrder)));
-    assertEndpointReachable("POST /orders/edit", () -> tradeService.editOrder(editRequest));
+    assertEndpointReachable("POST /orders/edit", () -> tradeService.editOrderCurrent(editRequest));
     assertEndpointReachable(
         "POST /orders/batch_cancel",
         () ->
@@ -444,7 +444,7 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
                 Collections.singletonList(nonEmpty(orderId, SYNTHETIC_ORDER_ID))));
     assertEndpointReachable(
         "POST /orders/batch_cancel single id",
-        () -> tradeService.cancelOrderById(nonEmpty(orderId, SYNTHETIC_ORDER_ID)));
+        () -> tradeService.cancelOrderByIdCurrent(nonEmpty(orderId, SYNTHETIC_ORDER_ID)));
 
     assertEndpointReachable(
         "POST /orders/close_position",

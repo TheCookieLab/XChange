@@ -306,11 +306,15 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     }
   }
 
-  /** Edit an existing order natively via Advanced Trade. */
-  public CoinbaseEditOrderResponse editOrder(CoinbaseEditOrderRequest request) throws IOException {
+  /**
+   * Legacy edit-order contract retained for source and binary compatibility.
+   *
+   * @deprecated use {@link #editOrderCurrent(CoinbaseEditOrderRequest)}
+   */
+  @Deprecated
+  public CoinbaseOrdersResponse editOrder(CoinbaseEditOrderRequest request) throws IOException {
     try {
-      return requireSuccessfulEditResponse(
-          coinbaseAdvancedTrade.editOrder(authTokenCreator, request), "editOrder");
+      return coinbaseAdvancedTrade.editOrder(authTokenCreator, request);
     } catch (CoinbaseException providerFailure) {
       throw providerFailure;
     } catch (IOException transportFailure) {
@@ -319,11 +323,49 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     }
   }
 
-  /** Preview an order request without placing it. */
-  public CoinbasePreviewOrderResponse previewOrder(CoinbaseOrderRequest request)
+  /**
+   * Edits an existing order using the current Advanced Trade response schema.
+   *
+   * @param request edit request
+   * @return validated current edit response
+   * @throws IOException when the request or response cannot be processed
+   * @since 1.0.2
+   */
+  public CoinbaseEditOrderResponse editOrderCurrent(CoinbaseEditOrderRequest request)
+      throws IOException {
+    try {
+      return requireSuccessfulEditResponse(
+          coinbaseAdvancedTrade.editOrderCurrent(authTokenCreator, request), "editOrder");
+    } catch (CoinbaseException providerFailure) {
+      throw providerFailure;
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException(
+          "editOrder", Collections.singletonList(request.getOrderId()), null, transportFailure);
+    }
+  }
+
+  /**
+   * Legacy order-preview contract retained for source and binary compatibility.
+   *
+   * @deprecated use {@link #previewOrderCurrent(CoinbaseOrderRequest)}
+   */
+  @Deprecated
+  public CoinbaseOrdersResponse previewOrder(CoinbaseOrderRequest request) throws IOException {
+    return coinbaseAdvancedTrade.previewOrder(authTokenCreator, request);
+  }
+
+  /**
+   * Previews an order request using the current Advanced Trade response schema.
+   *
+   * @param request order request
+   * @return validated current preview response
+   * @throws IOException when the request or response cannot be processed
+   * @since 1.0.2
+   */
+  public CoinbasePreviewOrderResponse previewOrderCurrent(CoinbaseOrderRequest request)
       throws IOException {
     CoinbasePreviewOrderResponse response =
-        coinbaseAdvancedTrade.previewOrder(authTokenCreator, request);
+        coinbaseAdvancedTrade.previewOrderCurrent(authTokenCreator, request);
     if (response == null) {
       throw new ExchangeException(
           "Coinbase previewOrder failed in a successful HTTP response: null response");
@@ -339,11 +381,30 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     return response;
   }
 
-  /** Preview an order edit request without modifying the live order. */
-  public CoinbaseEditOrderResponse previewEditOrder(CoinbaseEditOrderRequest request)
+  /**
+   * Legacy edit-preview contract retained for source and binary compatibility.
+   *
+   * @deprecated use {@link #previewEditOrderCurrent(CoinbaseEditOrderRequest)}
+   */
+  @Deprecated
+  public CoinbaseOrdersResponse previewEditOrder(CoinbaseEditOrderRequest request)
+      throws IOException {
+    return coinbaseAdvancedTrade.previewEditOrder(authTokenCreator, request);
+  }
+
+  /**
+   * Previews an edit request using the current Advanced Trade response schema.
+   *
+   * @param request edit request
+   * @return validated current edit-preview response
+   * @throws IOException when the request or response cannot be processed
+   * @since 1.0.2
+   */
+  public CoinbaseEditOrderResponse previewEditOrderCurrent(CoinbaseEditOrderRequest request)
       throws IOException {
     return requireSuccessfulEditResponse(
-        coinbaseAdvancedTrade.previewEditOrder(authTokenCreator, request), "previewEditOrder");
+        coinbaseAdvancedTrade.previewEditOrderCurrent(authTokenCreator, request),
+        "previewEditOrder");
   }
 
   private static CoinbaseEditOrderResponse requireSuccessfulEditResponse(
@@ -399,8 +460,25 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     }
     return coinbaseAdvancedTrade.cancelOrders(authTokenCreator, payload);
   }
-  /** Convenience method to cancel a single provider order id. */
-  public CoinbaseCancelOrdersResponse cancelOrderById(String orderId) throws IOException {
+  /**
+   * Legacy single-order cancellation contract retained for source and binary compatibility.
+   *
+   * @deprecated use {@link #cancelOrderByIdCurrent(String)}
+   */
+  @Deprecated
+  public CoinbaseOrdersResponse cancelOrderById(String orderId) throws IOException {
+    return cancelOrders(Collections.singletonList(orderId), null);
+  }
+
+  /**
+   * Cancels one provider order id using the current batch-cancel response schema.
+   *
+   * @param orderId provider order id
+   * @return current batch-cancel response
+   * @throws IOException when the request or response cannot be processed
+   * @since 1.0.2
+   */
+  public CoinbaseCancelOrdersResponse cancelOrderByIdCurrent(String orderId) throws IOException {
     return cancelOrders(Collections.singletonList(orderId));
   }
 

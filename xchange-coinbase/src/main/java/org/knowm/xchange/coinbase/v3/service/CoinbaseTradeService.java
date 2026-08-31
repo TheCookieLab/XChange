@@ -268,10 +268,11 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    * @throws IOException when the request cannot be transported
    * @throws org.knowm.xchange.exceptions.ExchangeException when the HTTP-200 response is absent or
    *     reports success=false
+   * @since 1.0.2
    */
-  public org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderResponse previewEditOrder(
+  public org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderResponse previewEditOrderCurrent(
       CoinbaseEditOrderRequest request) throws IOException {
-    return super.previewEditOrder(request);
+    return super.previewEditOrderCurrent(request);
   }
 
   /**
@@ -380,7 +381,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   public void verifyOrder(LimitOrder limitOrder) {
     try {
       CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewLimitOrderRequest(limitOrder);
-      super.previewOrder(request);
+      super.previewOrderCurrent(request);
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview limit order", e);
     }
@@ -401,7 +402,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   public void verifyOrder(MarketOrder marketOrder) {
     try {
       CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewMarketOrderRequest(marketOrder);
-      super.previewOrder(request);
+      super.previewOrderCurrent(request);
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview market order", e);
     }
@@ -422,7 +423,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   @Override
   public String changeOrder(LimitOrder limitOrder) throws IOException {
     CoinbaseEditOrderRequest request = CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
-    super.editOrder(request);
+    super.editOrderCurrent(request);
     return limitOrder.getId();
   }
 
@@ -445,7 +446,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
       return false;
     }
     String orderId = ((DefaultCancelOrderParamId) orderParams).getOrderId();
-    return successfulOrderIds(super.cancelOrderById(orderId)).contains(orderId);
+    return successfulOrderIds(super.cancelOrderByIdCurrent(orderId)).contains(orderId);
   }
 
   /**

@@ -1084,12 +1084,44 @@ public class CoinbaseAdaptersTest {
             "editOrder",
             ParamsDigest.class,
             org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest.class);
+    Method previewOrder =
+        CoinbaseAuthenticated.class.getMethod(
+            "previewOrder",
+            ParamsDigest.class,
+            org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest.class);
+    Method previewEditOrder =
+        CoinbaseAuthenticated.class.getMethod(
+            "previewEditOrder",
+            ParamsDigest.class,
+            org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest.class);
     Method rawCancelOrders =
         org.knowm.xchange.coinbase.v3.service.CoinbaseTradeServiceRaw.class.getMethod(
             "cancelOrders", List.class, List.class);
+    Method rawEditOrder =
+        org.knowm.xchange.coinbase.v3.service.CoinbaseTradeServiceRaw.class.getMethod(
+            "editOrder",
+            org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest.class);
+    Method rawPreviewOrder =
+        org.knowm.xchange.coinbase.v3.service.CoinbaseTradeServiceRaw.class.getMethod(
+            "previewOrder",
+            org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest.class);
+    Method rawPreviewEditOrder =
+        org.knowm.xchange.coinbase.v3.service.CoinbaseTradeServiceRaw.class.getMethod(
+            "previewEditOrder",
+            org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest.class);
+    Method rawCancelOrderById =
+        org.knowm.xchange.coinbase.v3.service.CoinbaseTradeServiceRaw.class.getMethod(
+            "cancelOrderById", String.class);
     assertEquals(CoinbaseOrdersResponse.class, cancelOrders.getReturnType());
     assertEquals(CoinbaseCancelOrdersResponse.class, batchCancelOrders.getReturnType());
     assertEquals(CoinbaseOrdersResponse.class, rawCancelOrders.getReturnType());
+    assertEquals(CoinbaseOrdersResponse.class, editOrder.getReturnType());
+    assertEquals(CoinbaseOrdersResponse.class, previewOrder.getReturnType());
+    assertEquals(CoinbaseOrdersResponse.class, previewEditOrder.getReturnType());
+    assertEquals(CoinbaseOrdersResponse.class, rawEditOrder.getReturnType());
+    assertEquals(CoinbaseOrdersResponse.class, rawPreviewOrder.getReturnType());
+    assertEquals(CoinbaseOrdersResponse.class, rawPreviewEditOrder.getReturnType());
+    assertEquals(CoinbaseOrdersResponse.class, rawCancelOrderById.getReturnType());
     assertNotNull(rawCancelOrders.getAnnotation(Deprecated.class));
     assertEquals("orders/batch_cancel", cancelOrders.getAnnotation(Path.class).value());
     assertEquals("orders/batch_cancel", batchCancelOrders.getAnnotation(Path.class).value());

@@ -158,10 +158,10 @@ public class CoinbaseTradeServiceUnitTest {
 
   @Test
   public void editOrderRejectsFalseSuccessResponse() throws Exception {
-    when(api.editOrder(any(ParamsDigest.class), any()))
+    when(api.editOrderCurrent(any(ParamsDigest.class), any()))
         .thenReturn(new CoinbaseEditOrderResponse(false, Collections.emptyList()));
     try {
-      service.editOrder(new CoinbaseEditOrderRequest("order-1", null, null, null, null, null));
+      service.editOrderCurrent(new CoinbaseEditOrderRequest("order-1", null, null, null, null, null));
       fail("Expected a false success response to be rejected");
     } catch (ExchangeException expected) {
       assertTrue(expected.getMessage().contains("editOrder"));
@@ -170,9 +170,9 @@ public class CoinbaseTradeServiceUnitTest {
 
   @Test
   public void previewEditOrderRejectsMissingSuccessResponse() throws Exception {
-    when(api.previewEditOrder(any(ParamsDigest.class), any())).thenReturn(null);
+    when(api.previewEditOrderCurrent(any(ParamsDigest.class), any())).thenReturn(null);
     try {
-      service.previewEditOrder(
+      service.previewEditOrderCurrent(
           new CoinbaseEditOrderRequest("order-1", null, null, null, null, null));
       fail("Expected a missing response to be rejected");
     } catch (ExchangeException expected) {
@@ -181,7 +181,7 @@ public class CoinbaseTradeServiceUnitTest {
   }
   @Test
   public void verifyOrderRejectsMissingPreviewResponse() throws Exception {
-    when(api.previewOrder(any(ParamsDigest.class), any())).thenReturn(null);
+    when(api.previewOrderCurrent(any(ParamsDigest.class), any())).thenReturn(null);
     LimitOrder order =
         new LimitOrder(
             Order.OrderType.BID,
@@ -226,7 +226,7 @@ public class CoinbaseTradeServiceUnitTest {
     MarketOrder marketOrder =
         new MarketOrder(Order.OrderType.BID, BigDecimal.ONE, CurrencyPair.BTC_USD);
 
-    when(api.previewOrder(any(ParamsDigest.class), any()))
+    when(api.previewOrderCurrent(any(ParamsDigest.class), any()))
         .thenReturn(
             new CoinbasePreviewOrderResponse(Collections.emptyList(), "limit-preview"),
             new CoinbasePreviewOrderResponse(
@@ -242,14 +242,14 @@ public class CoinbaseTradeServiceUnitTest {
 
   @Test
   public void verifyMarketOrderAcceptsEmptyPreviewErrors() throws Exception {
-    when(api.previewOrder(any(ParamsDigest.class), any()))
+    when(api.previewOrderCurrent(any(ParamsDigest.class), any()))
         .thenReturn(new CoinbasePreviewOrderResponse(Collections.emptyList(), "market-preview"));
     service.verifyOrder(new MarketOrder(Order.OrderType.BID, BigDecimal.ONE, CurrencyPair.BTC_USD));
   }
 
   @Test
   public void verifyLimitOrderRejectsPreviewErrorsWithProviderDetail() throws Exception {
-    when(api.previewOrder(any(ParamsDigest.class), any()))
+    when(api.previewOrderCurrent(any(ParamsDigest.class), any()))
         .thenReturn(
             new CoinbasePreviewOrderResponse(
                 Collections.singletonList("PREVIEW_INVALID_LIMIT_PRICE"), "limit-preview"));
@@ -269,7 +269,7 @@ public class CoinbaseTradeServiceUnitTest {
   }
   @Test
   public void verifyMarketOrderRejectsPreviewWithMissingErrors() throws Exception {
-    when(api.previewOrder(any(ParamsDigest.class), any()))
+    when(api.previewOrderCurrent(any(ParamsDigest.class), any()))
         .thenReturn(new CoinbasePreviewOrderResponse(null, "market-preview"));
     try {
       service.verifyOrder(new MarketOrder(Order.OrderType.BID, BigDecimal.ONE, CurrencyPair.BTC_USD));
