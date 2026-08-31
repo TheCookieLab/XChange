@@ -176,6 +176,25 @@ public class CoinbaseTradeServiceUnitTest {
       assertTrue(expected.getMessage().contains("previewEditOrder"));
     }
   }
+  @Test
+  public void verifyOrderRejectsMissingPreviewResponse() throws Exception {
+    when(api.previewOrder(any(ParamsDigest.class), any())).thenReturn(null);
+    LimitOrder order =
+        new LimitOrder(
+            Order.OrderType.BID,
+            BigDecimal.ONE,
+            CurrencyPair.BTC_USD,
+            null,
+            null,
+            BigDecimal.ONE);
+    try {
+      service.verifyOrder(order);
+      fail("Expected a missing preview response to be rejected");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("preview"));
+    }
+  }
+
 
 
   @Test
