@@ -21,6 +21,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbasePreviewOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseV3OrderRequests;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolio;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
@@ -36,6 +37,7 @@ import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelAllOrders;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
@@ -380,7 +382,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   public void verifyOrder(LimitOrder limitOrder) {
     try {
       CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewLimitOrderRequest(limitOrder);
-      super.previewOrder(request);
+      requireSuccessfulPreview(super.previewOrder(request));
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview limit order", e);
     }
@@ -401,9 +403,23 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
   public void verifyOrder(MarketOrder marketOrder) {
     try {
       CoinbaseOrderRequest request = CoinbaseV3OrderRequests.previewMarketOrderRequest(marketOrder);
-      super.previewOrder(request);
+      requireSuccessfulPreview(super.previewOrder(request));
     } catch (IOException e) {
       throw new RuntimeException("Failed to preview market order", e);
+    }
+  }
+
+  private static void requireSuccessfulPreview(CoinbasePreviewOrderResponse response) {
+    if (response == null) {
+      throw new ExchangeException("Coinbase previewOrder failed: null response");
+    }
+    if (response.getErrs() == null) {
+      throw new ExchangeException("Coinbase previewOrder failed: missing errs");
+    }
+    if (!response.getErrs().isEmpty()) {
+      String details =
+          response.getErrs().stream().map(String::valueOf).collect(Collectors.joining(", "));
+      throw new ExchangeException("Coinbase previewOrder rejected order: " + details);
     }
   }
 

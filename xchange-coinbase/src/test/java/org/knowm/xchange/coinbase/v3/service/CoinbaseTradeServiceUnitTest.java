@@ -5,6 +5,7 @@ import static org.junit.Assert.fail;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,6 +16,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Collection;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,6 +34,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbasePreviewOrderResponse;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.exceptions.ExchangeException;
@@ -192,6 +195,87 @@ public class CoinbaseTradeServiceUnitTest {
       fail("Expected a missing preview response to be rejected");
     } catch (ExchangeException expected) {
       assertTrue(expected.getMessage().contains("preview"));
+    }
+  }
+  @Test
+  public void previewOrderDeserializesRequiredErrorsAndOptionalPreviewId() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    CoinbasePreviewOrderResponse accepted =
+        mapper.readValue(
+            "{\"errs\":[],\"preview_id\":\"preview-1\",\"order_total\":\"1.00\"}",
+            CoinbasePreviewOrderResponse.class);
+    assertTrue(accepted.isSuccessful());
+    assertEquals("preview-1", accepted.getPreviewId());
+
+    CoinbasePreviewOrderResponse missingErrors =
+        mapper.readValue("{\"preview_id\":\"preview-2\"}", CoinbasePreviewOrderResponse.class);
+    assertNull(missingErrors.getErrs());
+    assertFalse(missingErrors.isSuccessful());
+  }
+
+  @Test
+  public void verifyLimitAndMarketOrdersRejectPreviewFailuresWithProviderDetail() throws Exception {
+    LimitOrder limitOrder =
+        new LimitOrder(
+            Order.OrderType.BID,
+            BigDecimal.ONE,
+            CurrencyPair.BTC_USD,
+            null,
+            null,
+            BigDecimal.ONE);
+    MarketOrder marketOrder =
+        new MarketOrder(Order.OrderType.BID, BigDecimal.ONE, CurrencyPair.BTC_USD);
+
+    when(api.previewOrder(any(ParamsDigest.class), any()))
+        .thenReturn(
+            new CoinbasePreviewOrderResponse(Collections.emptyList(), "limit-preview"),
+            new CoinbasePreviewOrderResponse(
+                Collections.singletonList("PREVIEW_INSUFFICIENT_FUNDS"), "market-preview"));
+    service.verifyOrder(limitOrder);
+    try {
+      service.verifyOrder(marketOrder);
+      fail("Expected a rejected market preview to fail closed");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("PREVIEW_INSUFFICIENT_FUNDS"));
+    }
+  }
+
+  @Test
+  public void verifyMarketOrderAcceptsEmptyPreviewErrors() throws Exception {
+    when(api.previewOrder(any(ParamsDigest.class), any()))
+        .thenReturn(new CoinbasePreviewOrderResponse(Collections.emptyList(), "market-preview"));
+    service.verifyOrder(new MarketOrder(Order.OrderType.BID, BigDecimal.ONE, CurrencyPair.BTC_USD));
+  }
+
+  @Test
+  public void verifyLimitOrderRejectsPreviewErrorsWithProviderDetail() throws Exception {
+    when(api.previewOrder(any(ParamsDigest.class), any()))
+        .thenReturn(
+            new CoinbasePreviewOrderResponse(
+                Collections.singletonList("PREVIEW_INVALID_LIMIT_PRICE"), "limit-preview"));
+    try {
+      service.verifyOrder(
+          new LimitOrder(
+              Order.OrderType.BID,
+              BigDecimal.ONE,
+              CurrencyPair.BTC_USD,
+              null,
+              null,
+              BigDecimal.ONE));
+      fail("Expected a rejected limit preview to fail closed");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("PREVIEW_INVALID_LIMIT_PRICE"));
+    }
+  }
+  @Test
+  public void verifyMarketOrderRejectsPreviewWithMissingErrors() throws Exception {
+    when(api.previewOrder(any(ParamsDigest.class), any()))
+        .thenReturn(new CoinbasePreviewOrderResponse(null, "market-preview"));
+    try {
+      service.verifyOrder(new MarketOrder(Order.OrderType.BID, BigDecimal.ONE, CurrencyPair.BTC_USD));
+      fail("Expected a preview without errs to fail closed");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("missing errs"));
     }
   }
 

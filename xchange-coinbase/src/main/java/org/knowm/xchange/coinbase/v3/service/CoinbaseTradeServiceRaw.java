@@ -29,6 +29,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbasePreviewOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionsResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
@@ -318,8 +319,23 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   }
 
   /** Preview an order request without placing it. */
-  public CoinbaseOrdersResponse previewOrder(CoinbaseOrderRequest request) throws IOException {
-    return coinbaseAdvancedTrade.previewOrder(authTokenCreator, request);
+  public CoinbasePreviewOrderResponse previewOrder(CoinbaseOrderRequest request)
+      throws IOException {
+    CoinbasePreviewOrderResponse response =
+        coinbaseAdvancedTrade.previewOrder(authTokenCreator, request);
+    if (response == null) {
+      throw new ExchangeException(
+          "Coinbase previewOrder failed in a successful HTTP response: null response");
+    }
+    if (response.getErrs() == null) {
+      throw new ExchangeException(
+          "Coinbase previewOrder failed in a successful HTTP response: missing errs");
+    }
+    if (!response.getErrs().isEmpty()) {
+      throw new ExchangeException(
+          "Coinbase previewOrder rejected order: " + String.join(", ", response.getErrs()));
+    }
+    return response;
   }
 
   /** Preview an order edit request without modifying the live order. */

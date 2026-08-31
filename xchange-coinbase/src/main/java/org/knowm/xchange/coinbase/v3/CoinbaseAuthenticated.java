@@ -37,6 +37,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbasePreviewOrderResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodResponse;
 import org.knowm.xchange.coinbase.v3.dto.paymentmethods.CoinbasePaymentMethodsResponse;
@@ -261,7 +262,7 @@ public interface CoinbaseAuthenticated extends Coinbase {
   @POST
   @Path("orders/preview")
   @Consumes(MediaType.APPLICATION_JSON)
-  CoinbaseOrdersResponse previewOrder(
+  CoinbasePreviewOrderResponse previewOrder(
       @HeaderParam(CB_AUTHORIZATION_KEY) ParamsDigest jwtDigest, CoinbaseOrderRequest payload)
       throws IOException, CoinbaseException;
 
