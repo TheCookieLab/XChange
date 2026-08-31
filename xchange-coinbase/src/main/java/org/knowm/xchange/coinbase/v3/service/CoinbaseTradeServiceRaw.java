@@ -3,6 +3,7 @@ package org.knowm.xchange.coinbase.v3.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -377,6 +378,27 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     }
   }
 
+
+  /**
+   * Legacy cancellation ABI retaining the provider's historical response shape.
+   *
+   * @param orderIds provider order ids (optional)
+   * @param clientOrderIds client order ids (optional)
+   * @return the legacy provider response
+   * @throws IOException if the request cannot be sent
+   */
+  @Deprecated
+  public CoinbaseOrdersResponse cancelOrders(List<String> orderIds, List<String> clientOrderIds)
+      throws IOException {
+    Map<String, Object> payload = new HashMap<>();
+    if (orderIds != null && !orderIds.isEmpty()) {
+      payload.put("order_ids", orderIds);
+    }
+    if (clientOrderIds != null && !clientOrderIds.isEmpty()) {
+      payload.put("client_order_ids", clientOrderIds);
+    }
+    return coinbaseAdvancedTrade.cancelOrders(authTokenCreator, payload);
+  }
   /** Convenience method to cancel a single provider order id. */
   public CoinbaseCancelOrdersResponse cancelOrderById(String orderId) throws IOException {
     return cancelOrders(Collections.singletonList(orderId));
