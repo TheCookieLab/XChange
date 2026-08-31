@@ -357,7 +357,7 @@ public class CoinbaseStreamingService extends JsonNettyStreamingService {
           // so subscribers do not hang waiting for a subscription response.
           state.markPendingFailure(
               new CoinbaseUnknownOutcomeException(
-                  "websocketSubscribe", state.channel.channelName(), null));
+                  "websocketSubscribe", "channel", state.channel.channelName(), null));
         }
         return;
       }

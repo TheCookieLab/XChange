@@ -444,10 +444,17 @@ class CoinbaseStreamingServiceTest {
     TestObserver<JsonNode> observer = second.get().test();
     observer.awaitDone(2, TimeUnit.SECONDS);
     observer.assertError(
-        error ->
-            error instanceof CoinbaseUnknownOutcomeException
-                && ((CoinbaseUnknownOutcomeException) error).getRetryClassification()
-                    == RetryClassification.AMBIGUOUS);
+        error -> {
+          if (!(error instanceof CoinbaseUnknownOutcomeException)) {
+            return false;
+          }
+          CoinbaseUnknownOutcomeException unknown =
+              (CoinbaseUnknownOutcomeException) error;
+          return unknown.getRetryClassification() == RetryClassification.AMBIGUOUS
+              && "channel".equals(unknown.getCorrelationName())
+              && CoinbaseChannel.USER.channelName().equals(unknown.getCorrelationId())
+              && unknown.getClientOrderIds().isEmpty();
+        });
     assertEquals(1, service.sentCommands);
   }
 
