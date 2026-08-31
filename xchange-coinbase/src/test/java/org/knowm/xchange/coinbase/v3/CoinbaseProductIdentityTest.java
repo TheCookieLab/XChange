@@ -14,10 +14,10 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
-import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity.AmbiguousMappingException;
 import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity.Product;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseFutureProductDetails;
@@ -103,19 +103,24 @@ public class CoinbaseProductIdentityTest {
   }
 
   @Test
-  public void opaqueCdeFutureRoundTripsNativeProductId() {
+  public void opaqueCdeFutureUsesOrdinaryContractAndCatalogPreservesNativeProductId() {
     CoinbaseProductIdentity identity =
         CoinbaseProductIdentity.build(
             Collections.singletonList(
                 future("ETP-20DEC30-CDE", "ETH", "USD", "CDE", false)));
 
+    FuturesContract expected =
+        new FuturesContract(new CurrencyPair("ETH", "USD"), "ETP-20DEC30-CDE");
     FuturesContract contract = (FuturesContract) identity.instrument("ETP-20DEC30-CDE");
 
-    assertEquals("ETP-20DEC30-CDE", CoinbaseAdapters.adaptProductId(contract));
-    assertEquals(
-        "ETP-20DEC30-CDE",
-        identity.requireProductId(
-            new FuturesContract(new CurrencyPair("ETH", "USD"), "ETP-20DEC30-CDE")));
+    assertEquals(expected, contract);
+    assertEquals(expected.hashCode(), contract.hashCode());
+    HashMap<FuturesContract, String> nativeIdsByContract = new HashMap<>();
+    nativeIdsByContract.put(expected, "ETP-20DEC30-CDE");
+    assertEquals("ETP-20DEC30-CDE", nativeIdsByContract.get(contract));
+    assertEquals("ETP-20DEC30-CDE", identity.requireProductId(contract));
+    assertEquals("ETP-20DEC30-CDE", identity.requireProductId(expected));
+    assertEquals("CDE", identity.product("ETP-20DEC30-CDE").productVenue());
   }
 
   @Test

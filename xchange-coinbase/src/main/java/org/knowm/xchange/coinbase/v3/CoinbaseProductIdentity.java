@@ -61,23 +61,6 @@ public final class CoinbaseProductIdentity {
       super(message);
     }
   }
-  private static final class NativeProductFuturesContract extends FuturesContract {
-
-    private static final long serialVersionUID = 1L;
-
-    private final String productId;
-
-    private NativeProductFuturesContract(
-        CurrencyPair currencyPair, String prompt, String productId) {
-      super(currencyPair, prompt);
-      this.productId = productId;
-    }
-
-    @Override
-    public String toString() {
-      return productId;
-    }
-  }
 
   private final Map<String, Product> productByProductId;
   private final Map<Instrument, String> productIdByInstrument;
@@ -278,7 +261,7 @@ public final class CoinbaseProductIdentity {
     if (prompt == null) {
       return null;
     }
-    return new NativeProductFuturesContract(pair, prompt, product.productId());
+    return new FuturesContract(pair, prompt);
   }
 
   private static Instrument identityKey(Instrument instrument) {
