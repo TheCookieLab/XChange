@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
@@ -640,6 +641,7 @@ public class CoinbaseAdaptersTest {
 
     assertEquals(new BigDecimal("0.04"), CoinbaseAdapters.adaptFill(fill).getOriginalAmount());
     assertEquals(Currency.USD, CoinbaseAdapters.adaptFill(fill).getFeeCurrency());
+    assertEquals("entry", CoinbaseAdapters.adaptFill(fill).getId());
   }
 
   @Test
@@ -759,18 +761,69 @@ public class CoinbaseAdaptersTest {
   }
 
   @Test
-  public void testRejectQuoteSizedFillWithoutPositivePrice() {
-    CoinbaseFill fill =
+  public void testQueuedOrderStatesRemainVisibleAndUnknownStatusFailsClosed() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    for (String status : Arrays.asList("QUEUED", "CANCEL_QUEUED", "EDIT_QUEUED")) {
+      CoinbaseOrderDetail queued =
+          mapper.readValue(
+              "{\"order_id\":\"" + status + "\",\"side\":\"BUY\","
+                  + "\"product_id\":\"ETH-USD\",\"status\":\"" + status + "\","
+                  + "\"order_type\":\"LIMIT\",\"order_configuration\":{\"limit_limit_gtc\":"
+                  + "{\"base_size\":\"1\",\"limit_price\":\"2500\"}}}",
+              CoinbaseOrderDetail.class);
+      assertEquals(
+          status,
+          CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(queued))
+              .getOpenOrders()
+              .get(0)
+              .getId());
+    }
+
+    CoinbaseOrderDetail unknown =
+        mapper.readValue(
+            "{\"order_id\":\"unknown-status\",\"side\":\"BUY\",\"product_id\":\"ETH-USD\","
+                + "\"status\":\"AWAITING_PROVIDER\",\"order_type\":\"LIMIT\","
+                + "\"order_configuration\":{\"limit_limit_gtc\":"
+                + "{\"base_size\":\"1\",\"limit_price\":\"2500\"}}}",
+            CoinbaseOrderDetail.class);
+    assertUnavailable(
+        () -> CoinbaseAdapters.adaptOpenOrders(Collections.singletonList(unknown)));
+  }
+
+  @Test
+  public void testRejectFillWithoutPositiveQuantityOrPrice() {
+    CoinbaseFill invalidPrice =
         new CoinbaseFill(
             "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
             BigDecimal.ZERO, new BigDecimal("100"), BigDecimal.ZERO, "ETH-USD",
             "MAKER", true, "user", "BUY", "portfolio");
+    CoinbaseFill invalidQuantity =
+        new CoinbaseFill(
+            "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            new BigDecimal("2500"), BigDecimal.ZERO, BigDecimal.ZERO, "ETH-USD",
+            "MAKER", false, "user", "BUY", "portfolio");
 
-    assertUnavailable(() -> CoinbaseAdapters.adaptFill(fill));
+    assertUnavailable(() -> CoinbaseAdapters.adaptFill(invalidPrice));
+    assertUnavailable(() -> CoinbaseAdapters.adaptFill(invalidQuantity));
   }
 
   @Test
-  public void testRejectFillWithMissingIdentityFieldsExplicitly() {
+  public void testRejectFillWithMissingRequiredFieldsExplicitly() {
+    CoinbaseFill missingEntry =
+        new CoinbaseFill(
+            null, "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            BigDecimal.ONE, new BigDecimal("2500"), BigDecimal.ZERO, "ETH-USD",
+            "MAKER", false, "user", "BUY", "portfolio");
+    CoinbaseFill missingTrade =
+        new CoinbaseFill(
+            "entry", null, "order", "2026-02-08T00:00:00Z", "FILL",
+            BigDecimal.ONE, new BigDecimal("2500"), BigDecimal.ZERO, "ETH-USD",
+            "MAKER", false, "user", "BUY", "portfolio");
+    CoinbaseFill missingOrder =
+        new CoinbaseFill(
+            "entry", "trade", null, "2026-02-08T00:00:00Z", "FILL",
+            BigDecimal.ONE, new BigDecimal("2500"), BigDecimal.ZERO, "ETH-USD",
+            "MAKER", false, "user", "BUY", "portfolio");
     CoinbaseFill missingSide =
         new CoinbaseFill(
             "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
@@ -782,6 +835,9 @@ public class CoinbaseAdaptersTest {
             BigDecimal.ONE, new BigDecimal("2500"), BigDecimal.ZERO, null,
             "MAKER", false, "user", "BUY", "portfolio");
 
+    assertUnavailable(() -> CoinbaseAdapters.adaptFill(missingEntry));
+    assertUnavailable(() -> CoinbaseAdapters.adaptFill(missingTrade));
+    assertUnavailable(() -> CoinbaseAdapters.adaptFill(missingOrder));
     assertUnavailable(() -> CoinbaseAdapters.adaptFill(missingSide));
     assertUnavailable(() -> CoinbaseAdapters.adaptFill(missingProduct));
   }

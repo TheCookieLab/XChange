@@ -13,7 +13,9 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
@@ -23,6 +25,7 @@ import org.knowm.xchange.coinbase.v3.dto.CoinbaseException.CoinbaseError;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCreateOrderResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import si.mazi.rescu.ParamsDigest;
 
 /** Deterministic tests for bounded jittered retry on replay-safe Coinbase reads. */
@@ -116,6 +119,34 @@ public class CoinbaseRetryTest {
         new CoinbaseTradeServiceRaw(coinbaseExchange(), definitive, mock(ParamsDigest.class));
 
     assertSame(rejected, definitiveService.closePosition(request));
+  }
+
+  @Test
+  public void cancelTransportFailurePreservesEveryAmbiguousIdentity() throws Exception {
+    List<String> orderIds = Arrays.asList("order-1", "order-2");
+    List<String> clientOrderIds = Arrays.asList("client-1", "client-2");
+    CoinbaseAuthenticated interrupted = mock(CoinbaseAuthenticated.class);
+    when(interrupted.cancelOrders(any(ParamsDigest.class), any()))
+        .thenThrow(new IOException("connection reset"));
+    CoinbaseTradeServiceRaw interruptedService =
+        new CoinbaseTradeServiceRaw(coinbaseExchange(), interrupted, mock(ParamsDigest.class));
+
+    CoinbaseUnknownOutcomeException failure =
+        assertThrows(
+            CoinbaseUnknownOutcomeException.class,
+            () -> interruptedService.cancelOrders(orderIds, clientOrderIds));
+    assertEquals("cancelOrders", failure.getOperation());
+    assertEquals(orderIds, failure.getOrderIds());
+    assertEquals(clientOrderIds, failure.getClientOrderIds());
+
+    CoinbaseOrdersResponse response =
+        new CoinbaseOrdersResponse(Collections.emptyList(), null);
+    CoinbaseAuthenticated definitive = mock(CoinbaseAuthenticated.class);
+    when(definitive.cancelOrders(any(ParamsDigest.class), any())).thenReturn(response);
+    CoinbaseTradeServiceRaw definitiveService =
+        new CoinbaseTradeServiceRaw(coinbaseExchange(), definitive, mock(ParamsDigest.class));
+
+    assertSame(response, definitiveService.cancelOrders(orderIds, clientOrderIds));
   }
 
   @Test

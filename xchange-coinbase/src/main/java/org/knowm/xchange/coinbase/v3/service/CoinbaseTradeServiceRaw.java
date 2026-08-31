@@ -244,7 +244,12 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
     if (clientOrderIds != null && !clientOrderIds.isEmpty()) {
       payload.put("client_order_ids", clientOrderIds);
     }
-    return coinbaseAdvancedTrade.cancelOrders(authTokenCreator, payload);
+    try {
+      return coinbaseAdvancedTrade.cancelOrders(authTokenCreator, payload);
+    } catch (IOException transportFailure) {
+      throw new CoinbaseUnknownOutcomeException(
+          "cancelOrders", orderIds, clientOrderIds, transportFailure);
+    }
   }
 
   /** Convenience overload to cancel a single order id. */

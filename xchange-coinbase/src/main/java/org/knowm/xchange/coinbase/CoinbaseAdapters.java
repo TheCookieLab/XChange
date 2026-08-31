@@ -114,31 +114,36 @@ public final class CoinbaseAdapters {
    */
   public static UserTrade adaptFill(CoinbaseFill fill) {
     Objects.requireNonNull(fill, "Cannot adapt a null fill");
-    if (fill.getProductId() == null || fill.getProductId().isBlank()
-        || fill.getSide() == null || fill.getSize() == null) {
+    if (fill.getEntryId() == null || fill.getEntryId().isBlank()
+        || fill.getTradeId() == null || fill.getTradeId().isBlank()
+        || fill.getOrderId() == null || fill.getOrderId().isBlank()) {
       throw new ExchangeException(
-          "Cannot adapt Coinbase fill " + fill.getTradeId()
-              + ": missing product, side, or quantity");
+          "Cannot adapt Coinbase fill: missing entry, trade, or order identity");
+    }
+    if (fill.getProductId() == null || fill.getProductId().isBlank()
+        || fill.getSide() == null || fill.getSize() == null || fill.getPrice() == null) {
+      throw new ExchangeException(
+          "Cannot adapt Coinbase fill " + fill.getEntryId()
+              + ": missing product, side, quantity, or price");
+    }
+    if (fill.getSize().signum() <= 0 || fill.getPrice().signum() <= 0) {
+      throw new ExchangeException(
+          "Cannot adapt Coinbase fill " + fill.getEntryId()
+              + ": quantity and execution price must be positive");
     }
     requireAdaptableProduct(fill.getProductId(), "fill");
     OrderType orderType = adaptOrderType(fill.getSide());
     if (orderType == null) {
       throw new ExchangeException(
-          "Cannot adapt Coinbase fill " + fill.getTradeId()
+          "Cannot adapt Coinbase fill " + fill.getEntryId()
               + ": unsupported side " + fill.getSide()
               + " for product " + fill.getProductId());
     }
     BigDecimal amount = fill.getSize();
     if (fill.isSizeInQuote()) {
-      if (fill.getPrice() == null || fill.getPrice().signum() <= 0) {
-        throw new ExchangeException(
-            "Cannot adapt quote-sized Coinbase fill " + fill.getTradeId()
-                + " for product " + fill.getProductId()
-                + ": execution price must be positive and authoritative");
-      }
       amount = amount.divide(fill.getPrice(), MathContext.DECIMAL128);
     }
-    return UserTrade.builder().id(fill.getTradeId()).orderId(fill.getOrderId())
+    return UserTrade.builder().id(fill.getEntryId()).orderId(fill.getOrderId())
         .instrument(adaptInstrument(fill.getProductId())).price(fill.getPrice())
         .originalAmount(amount).timestamp(fill.getTradeTime()).type(orderType)
         .feeAmount(fill.getCommission()).feeCurrency(fill.getFeeCurrency()).build();
@@ -315,6 +320,9 @@ public final class CoinbaseAdapters {
       case "OPEN":
       case "PENDING":
       case "NEW":
+      case "QUEUED":
+      case "CANCEL_QUEUED":
+      case "EDIT_QUEUED":
         return Order.OrderStatus.OPEN;
       case "FILLED":
       case "DONE":
@@ -348,6 +356,11 @@ public final class CoinbaseAdapters {
       }
       requireAdaptableProduct(detail.getProductId(), "open order");
       Order.OrderStatus status = adaptOrderStatus(detail.getStatus());
+      if (status == Order.OrderStatus.UNKNOWN) {
+        throw new NotAvailableFromExchangeException(
+            "Cannot represent Coinbase open-order status " + detail.getStatus()
+                + " for order " + detail.getOrderId());
+      }
       if (status != null && status.isOpen()) {
         Order order = adaptOrder(detail);
         if (!(order instanceof LimitOrder)) {
