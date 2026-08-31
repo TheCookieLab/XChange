@@ -179,6 +179,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     } while (cursor != null
         && !cursor.isEmpty()
         && (v3Params.getLimit() == null || trades.size() < v3Params.getLimit()));
+    v3Params.setNextPageCursor(cursor);
 
     return new UserTrades(trades, Trades.TradeSortType.SortByTimestamp);
   }

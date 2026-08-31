@@ -115,6 +115,36 @@ public class CoinbasePaginationGuardTest {
   }
 
   @Test
+  public void finiteFillLimitPersistsSuccessfulContinuationCursor() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    when(authenticated.listFills(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(new CoinbaseOrdersResponse(Collections.singletonList(fill("1")), "next"));
+    CoinbaseTradeService service =
+        new CoinbaseTradeService(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+    CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
+    params.setLimit(1);
+
+    UserTrades trades = service.getTradeHistory(params);
+
+    assertEquals(1, trades.getUserTrades().size());
+    assertEquals("next", params.getNextPageCursor());
+  }
+
+  @Test
   public void fillsFailureDoesNotMutateCallerCursor() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     List<String> requestedCursors = new ArrayList<>();
