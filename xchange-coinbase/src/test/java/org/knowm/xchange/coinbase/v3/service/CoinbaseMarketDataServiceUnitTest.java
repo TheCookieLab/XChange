@@ -29,6 +29,7 @@ import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
+import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.instrument.Instrument;
@@ -150,7 +151,10 @@ public class CoinbaseMarketDataServiceUnitTest {
       // CDE order books are intentionally opaque to generic order-book adaptation.
     }
     service.getTrades(instrument);
+    service.getCandleStickData(
+        instrument, new DefaultCandleStickParamWithLimit(null, null, 86_400, 1));
 
+    verify(service).getProductCandles(productId, "ONE_DAY", 1, null, null);
 
     verify(service, atLeastOnce()).getBestBidAsk(productId);
     verify(service, atLeastOnce()).getProductBook(productId, null, null);

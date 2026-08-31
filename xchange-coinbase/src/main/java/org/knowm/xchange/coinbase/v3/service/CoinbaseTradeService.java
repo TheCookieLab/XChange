@@ -66,7 +66,8 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    * @param exchange The exchange instance containing API credentials and configuration.
    */
   public CoinbaseTradeService(Exchange exchange) {
-    this(exchange, null, null, configuredProductIdentity(exchange));
+    super(exchange);
+    this.productIdentity = configuredProductIdentity(exchange);
   }
 
   /**
@@ -76,7 +77,8 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
    */
   public CoinbaseTradeService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade) {
-    this(exchange, coinbaseAdvancedTrade, null, configuredProductIdentity(exchange));
+    super(exchange, coinbaseAdvancedTrade);
+    this.productIdentity = configuredProductIdentity(exchange);
   }
 
   /**

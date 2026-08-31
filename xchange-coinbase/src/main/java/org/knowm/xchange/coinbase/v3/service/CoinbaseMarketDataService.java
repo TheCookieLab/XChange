@@ -46,7 +46,8 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
      * @param exchange The exchange instance containing API credentials and configuration.
      */
     public CoinbaseMarketDataService(Exchange exchange) {
-        this(exchange, null, null, configuredProductIdentity(exchange));
+        super(exchange);
+        this.productIdentity = configuredProductIdentity(exchange);
     }
 
     /**
@@ -56,7 +57,8 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
      * @param coinbaseAdvancedTrade The authenticated Coinbase API client for making requests.
      */
     public CoinbaseMarketDataService(Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade) {
-        this(exchange, coinbaseAdvancedTrade, null, configuredProductIdentity(exchange));
+        super(exchange, coinbaseAdvancedTrade);
+        this.productIdentity = configuredProductIdentity(exchange);
     }
 
     /**
@@ -241,20 +243,24 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
     }
 
     /**
-     * Fetches candlestick data for a given currency pair and parameters.
+     * Fetches candlestick data for an instrument and parameters.
      *
-     * @param currencyPair The currency pair for which data is requested.
-     * @param params       Additional parameters for candlestick data (e.g., period, start/end time,
-     *                     limit).
-     * @return A {@link CandleStickData} object containing the candlestick data.
-     * @throws IOException              If there is an error communicating with the exchange.
-     * @throws IllegalArgumentException If the granularity is invalid or the limit exceeds API
-     *                                  constraints.
+     * <p>The instrument is resolved through the configured Coinbase product identity catalog,
+     * when present, before the REST request is serialized.
+     *
+     * @param instrument instrument for which data is requested
+     * @param params additional parameters for candlestick data
+     * @return candlestick data represented by the instrument's currency pair
+     * @throws IOException if there is an error communicating with the exchange
+     * @throws IllegalArgumentException if the granularity is invalid
      */
-    @Override
-    public CandleStickData getCandleStickData(CurrencyPair currencyPair, CandleStickDataParams params) throws IOException {
-
-        String productId = resolveProductId(currencyPair);
+    public CandleStickData getCandleStickData(Instrument instrument, CandleStickDataParams params)
+        throws IOException {
+        CurrencyPair currencyPair =
+            instrument instanceof CurrencyPair
+                ? (CurrencyPair) instrument
+                : new CurrencyPair(instrument.getBase(), instrument.getCounter());
+        String productId = resolveProductId(instrument);
         String granularity = null;
         String start = null;
         String end = null;
@@ -270,21 +276,37 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
             if (defaultParams.getStartDate() != null) {
                 start = Long.toString(defaultParams.getStartDate().toInstant().getEpochSecond());
             }
-
             if (defaultParams.getEndDate() != null) {
                 end = Long.toString(defaultParams.getEndDate().toInstant().getEpochSecond());
             }
-
             if (params instanceof DefaultCandleStickParamWithLimit) {
-                DefaultCandleStickParamWithLimit paramsWithLimit = (DefaultCandleStickParamWithLimit) params;
-                limit = paramsWithLimit.getLimit();
+                limit = ((DefaultCandleStickParamWithLimit) params).getLimit();
             }
         }
 
-        CoinbaseProductCandlesResponse response = this.getProductCandles(productId, granularity, limit, start, end);
-
-        List<CandleStick> candleSticks = response.getCandles().stream().map(CoinbaseAdapters::adaptProductCandle).collect(Collectors.toList());
-
+        CoinbaseProductCandlesResponse response =
+            this.getProductCandles(productId, granularity, limit, start, end);
+        List<CandleStick> candleSticks =
+            response.getCandles().stream()
+                .map(CoinbaseAdapters::adaptProductCandle)
+                .collect(Collectors.toList());
         return new CandleStickData(currencyPair, candleSticks);
+    }
+
+    /**
+     * Fetches candlestick data for a currency pair.
+     *
+     * @param currencyPair currency pair for which data is requested
+     * @param params additional parameters for candlestick data
+     * @return candlestick data for the currency pair
+     * @throws IOException if there is an error communicating with the exchange
+     * @deprecated use {@link #getCandleStickData(Instrument, CandleStickDataParams)} so a
+     *     configured product identity catalog can resolve the native product id
+     */
+    @Override
+    @Deprecated
+    public CandleStickData getCandleStickData(CurrencyPair currencyPair, CandleStickDataParams params)
+        throws IOException {
+        return getCandleStickData((Instrument) currencyPair, params);
     }
 }
