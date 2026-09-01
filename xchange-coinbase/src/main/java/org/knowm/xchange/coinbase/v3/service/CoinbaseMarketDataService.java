@@ -12,8 +12,6 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesRes
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.derivative.FuturesContract;
-import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.OrderBook;
@@ -159,33 +157,8 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
         CoinbaseProductCandlesResponse candle = this.getProductCandles(productId, "ONE_DAY", 1, null, null);
 
         CoinbasePriceBook priceBook = priceBooks.isEmpty() ? null : priceBooks.get(0);
-        Ticker ticker = CoinbaseAdapters.adaptTicker(product, candle, priceBook);
-        return preservesRequestedCatalogInstrument(instrument) && ticker != null
-            ? withRequestedInstrument(ticker, instrument)
-            : ticker;
-    }
-
-    private boolean preservesRequestedCatalogInstrument(Instrument instrument) {
-        return productIdentity != null && instrument instanceof FuturesContract;
-    }
-
-    private static Ticker withRequestedInstrument(Ticker ticker, Instrument instrument) {
-        return new Ticker.Builder()
-            .instrument(instrument)
-            .open(ticker.getOpen())
-            .last(ticker.getLast())
-            .bid(ticker.getBid())
-            .ask(ticker.getAsk())
-            .high(ticker.getHigh())
-            .low(ticker.getLow())
-            .vwap(ticker.getVwap())
-            .volume(ticker.getVolume())
-            .quoteVolume(ticker.getQuoteVolume())
-            .timestamp(ticker.getTimestamp())
-            .bidSize(ticker.getBidSize())
-            .askSize(ticker.getAskSize())
-            .percentageChange(ticker.getPercentageChange())
-            .build();
+        return CoinbaseAdapters.adaptTicker(
+            product, candle, priceBook, productIdentity == null ? null : instrument);
     }
 
     /**
@@ -246,19 +219,8 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
 
         CoinbaseProductPriceBookResponse response = this.getProductBook(resolveProductId(instrument), limit, aggregationPriceIncrement);
 
-        OrderBook orderBook = CoinbaseAdapters.adaptOrderBook(response.getPriceBook());
-        if (!preservesRequestedCatalogInstrument(instrument)) {
-            return orderBook;
-        }
-        CoinbasePriceBook priceBook = response.getPriceBook();
-        return new OrderBook(
-            orderBook.getTimeStamp(),
-            priceBook.getAsks().stream()
-                .map(entry -> CoinbaseAdapters.adaptOrderBookEntry(entry, OrderType.ASK, instrument))
-                .collect(Collectors.toList()),
-            priceBook.getBids().stream()
-                .map(entry -> CoinbaseAdapters.adaptOrderBookEntry(entry, OrderType.BID, instrument))
-                .collect(Collectors.toList()));
+        return CoinbaseAdapters.adaptOrderBook(
+            response.getPriceBook(), productIdentity == null ? null : instrument);
     }
 
     /**
@@ -283,10 +245,12 @@ public class CoinbaseMarketDataService extends CoinbaseMarketDataServiceRaw impl
         CoinbaseProductMarketTradesResponse response = this.getMarketTrades(resolveProductId(instrument), limit, start, end);
 
         List<Trade> trades =
-            response.getMarketTrades().stream().map(CoinbaseAdapters::adaptTrade).collect(Collectors.toList());
-        if (preservesRequestedCatalogInstrument(instrument)) {
-            trades.forEach(trade -> trade.setInstrument(instrument));
-        }
+            response.getMarketTrades().stream()
+                .map(
+                    marketTrade ->
+                        CoinbaseAdapters.adaptTrade(
+                            marketTrade, productIdentity == null ? null : instrument))
+                .collect(Collectors.toList());
 
         return new Trades(trades);
     }

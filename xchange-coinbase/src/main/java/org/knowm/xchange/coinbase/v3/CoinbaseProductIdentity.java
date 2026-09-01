@@ -114,6 +114,31 @@ public final class CoinbaseProductIdentity {
   }
 
   /**
+   * Resolves an INTX perpetual position symbol through the discovered native product catalog.
+   *
+   * <p>The perpetual positions endpoint can omit {@code product_id} and report a symbol such as
+   * {@code BTC-PERP}; discovery keys the same product as {@code BTC-PERP-INTX}. This method
+   * deliberately accepts only the endpoint's INTX suffix and fails closed for unknown or
+   * non-perpetual products.
+   *
+   * @param symbol perpetual position symbol returned by Coinbase
+   * @return the catalog-resolved perpetual futures instrument
+   * @throws AmbiguousMappingException when the symbol cannot be resolved losslessly
+   */
+  public Instrument perpetualInstrument(String symbol) {
+    if (symbol == null || symbol.isBlank()) {
+      throw new AmbiguousMappingException("perpetual position symbol is null or blank");
+    }
+    String productId = symbol.endsWith("-INTX") ? symbol : symbol + "-INTX";
+    Product product = productByProductId.get(productId);
+    if (product == null || !product.perpetual()) {
+      throw new AmbiguousMappingException(
+          "unknown perpetual position symbol '" + symbol + "' for INTX catalog");
+    }
+    return instrument(productId);
+  }
+
+  /**
    * Resolves the native product id for an instrument, rejecting lossy or ambiguous mappings.
    *
    * @throws AmbiguousMappingException when the instrument is unknown or ambiguous.

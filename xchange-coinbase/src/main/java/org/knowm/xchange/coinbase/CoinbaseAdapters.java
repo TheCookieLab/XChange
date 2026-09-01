@@ -66,21 +66,38 @@ public final class CoinbaseAdapters {
   }
 
   public static OrderBook adaptOrderBook(CoinbasePriceBook priceBook) {
-    requireAdaptableProduct(priceBook.getProductId(), "order book");
-    Instrument instrument = CoinbaseAdapters.adaptInstrument(priceBook.getProductId());
+    return adaptOrderBook(priceBook, null);
+  }
+
+  /**
+   * Adapts an order book using a catalog-resolved instrument when its native product identifier
+   * cannot be reverse parsed.
+   *
+   * @param priceBook Coinbase price book
+   * @param instrument catalog-resolved instrument, or {@code null} to parse the native product id
+   * @return adapted order book
+   */
+  public static OrderBook adaptOrderBook(CoinbasePriceBook priceBook, Instrument instrument) {
+    if (instrument == null) {
+      requireAdaptableProduct(priceBook.getProductId(), "order book");
+    }
+    final Instrument resolvedInstrument =
+        instrument == null ? CoinbaseAdapters.adaptInstrument(priceBook.getProductId()) : instrument;
 
     List<LimitOrder> asks =
         priceBook.getAsks().stream()
             .map(
                 priceBookEntry ->
-                    CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.ASK, instrument))
+                    CoinbaseAdapters.adaptOrderBookEntry(
+                        priceBookEntry, OrderType.ASK, resolvedInstrument))
             .collect(Collectors.toList());
 
     List<LimitOrder> bids =
         priceBook.getBids().stream()
             .map(
                 priceBookEntry ->
-                    CoinbaseAdapters.adaptOrderBookEntry(priceBookEntry, OrderType.BID, instrument))
+                    CoinbaseAdapters.adaptOrderBookEntry(
+                        priceBookEntry, OrderType.BID, resolvedInstrument))
             .collect(Collectors.toList());
 
     return new OrderBook(
@@ -96,11 +113,26 @@ public final class CoinbaseAdapters {
   }
 
   public static Trade adaptTrade(CoinbaseMarketTrade marketTrade) {
-    requireAdaptableProduct(marketTrade.getProductId(), "market trade");
-    Instrument instrument = adaptInstrument(marketTrade.getProductId());
+    return adaptTrade(marketTrade, null);
+  }
+
+  /**
+   * Adapts a market trade using a catalog-resolved instrument when its native product identifier
+   * cannot be reverse parsed.
+   *
+   * @param marketTrade Coinbase market trade
+   * @param instrument catalog-resolved instrument, or {@code null} to parse the native product id
+   * @return adapted market trade
+   */
+  public static Trade adaptTrade(CoinbaseMarketTrade marketTrade, Instrument instrument) {
+    Instrument resolvedInstrument = instrument;
+    if (resolvedInstrument == null) {
+      requireAdaptableProduct(marketTrade.getProductId(), "market trade");
+      resolvedInstrument = adaptInstrument(marketTrade.getProductId());
+    }
     return UserTrade.builder()
         .id(marketTrade.getTradeId())
-        .instrument(instrument)
+        .instrument(resolvedInstrument)
         .price(marketTrade.getPrice())
         .originalAmount(marketTrade.getSize())
         .timestamp(
@@ -864,10 +896,30 @@ public final class CoinbaseAdapters {
       CoinbaseProductResponse product,
       CoinbaseProductCandlesResponse candle,
       CoinbasePriceBook priceBook) {
-    if (priceBook != null) {
-      requireAdaptableProduct(priceBook.getProductId(), "ticker");
-    } else if (product != null) {
-      requireAdaptableProduct(product.getProductId(), "ticker");
+    return adaptTicker(product, candle, priceBook, null);
+  }
+
+  /**
+   * Adapts a ticker using a catalog-resolved instrument when its native product identifier cannot
+   * be reverse parsed.
+   *
+   * @param product Coinbase product response
+   * @param candle Coinbase candle response
+   * @param priceBook Coinbase best bid/ask response
+   * @param instrument catalog-resolved instrument, or {@code null} to parse the native product id
+   * @return adapted ticker
+   */
+  public static Ticker adaptTicker(
+      CoinbaseProductResponse product,
+      CoinbaseProductCandlesResponse candle,
+      CoinbasePriceBook priceBook,
+      Instrument instrument) {
+    if (instrument == null) {
+      if (priceBook != null) {
+        requireAdaptableProduct(priceBook.getProductId(), "ticker");
+      } else if (product != null) {
+        requireAdaptableProduct(product.getProductId(), "ticker");
+      }
     }
     Builder builder = new Ticker.Builder();
 
@@ -888,8 +940,9 @@ public final class CoinbaseAdapters {
     }
 
     if (priceBook != null && !priceBook.getAsks().isEmpty() && !priceBook.getBids().isEmpty()) {
-      Instrument instrument = adaptInstrument(priceBook.getProductId());
-      if (instrument == null) {
+      Instrument resolvedInstrument =
+          instrument == null ? adaptInstrument(priceBook.getProductId()) : instrument;
+      if (resolvedInstrument == null) {
         return null;
       }
       builder =
@@ -898,7 +951,7 @@ public final class CoinbaseAdapters {
               .askSize(priceBook.getAsks().get(0).getSize())
               .bid(priceBook.getBids().get(0).getPrice())
               .bidSize(priceBook.getBids().get(0).getSize())
-              .instrument(instrument)
+              .instrument(resolvedInstrument)
               .timestamp(
                   Date.from(
                       DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)));

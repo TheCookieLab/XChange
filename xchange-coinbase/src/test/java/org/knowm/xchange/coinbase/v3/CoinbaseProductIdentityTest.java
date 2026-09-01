@@ -96,6 +96,7 @@ public class CoinbaseProductIdentityTest {
     assertEquals("PERP", contract.getPrompt());
     assertTrue(contract.isPerpetual());
     assertEquals("BTC-PERP-INTX", identity.requireProductId(contract));
+    assertEquals(contract, identity.perpetualInstrument("BTC-PERP"));
     Product product = identity.product("BTC-PERP-INTX");
     assertNotNull(product);
     assertTrue(product.perpetual());

@@ -261,8 +261,9 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     if (productIdentity == null) {
       return null;
     }
-    String productId = position.getProductId() != null ? position.getProductId() : position.getSymbol();
-    return productIdentity.instrument(productId);
+    return position.getProductId() != null
+        ? productIdentity.instrument(position.getProductId())
+        : productIdentity.perpetualInstrument(position.getSymbol());
   }
 
   /**

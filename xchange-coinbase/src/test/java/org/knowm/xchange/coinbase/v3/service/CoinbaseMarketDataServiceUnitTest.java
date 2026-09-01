@@ -134,38 +134,43 @@ public class CoinbaseMarketDataServiceUnitTest {
         new CoinbaseProductResponse(
             productId, new BigDecimal("2500"), null, null, null, null, "ETH", "USD", "FUTURE", "CDE", null);
     when(service.getProduct(productId)).thenReturn(product);
+    CoinbasePriceBook priceBook =
+        new CoinbasePriceBook(
+            productId,
+            Collections.singletonList(
+                new CoinbasePriceBookEntry(new BigDecimal("2499"), new BigDecimal("0.1"))),
+            Collections.singletonList(
+                new CoinbasePriceBookEntry(new BigDecimal("2501"), new BigDecimal("0.1"))),
+            "2026-01-01T00:00:00Z");
     when(service.getBestBidAsk(productId))
-        .thenReturn(new CoinbaseBestBidAsksResponse(Collections.emptyList()));
+        .thenReturn(new CoinbaseBestBidAsksResponse(Collections.singletonList(priceBook)));
     when(service.getProductCandles(productId, "ONE_DAY", 1, null, null))
         .thenReturn(mapper.readValue("{\"candles\":[]}", CoinbaseProductCandlesResponse.class));
-    CoinbasePriceBook priceBook =
-        new CoinbasePriceBook(productId, Collections.emptyList(), Collections.emptyList(), "2026-01-01T00:00:00Z");
     when(service.getProductBook(productId, null, null))
         .thenReturn(new CoinbaseProductPriceBookResponse(priceBook, null, null, null, null));
     CoinbaseProductMarketTradesResponse trades =
-        mapper.readValue("{}", CoinbaseProductMarketTradesResponse.class);
+        mapper.readValue(
+            "{\"trades\":[{\"trade_id\":\"1\",\"product_id\":\"ETP-20DEC30-CDE\","
+                + "\"price\":\"2500\",\"size\":\"0.1\",\"time\":\"2026-01-01T00:00:00Z\","
+                + "\"side\":\"BUY\"}]}",
+            CoinbaseProductMarketTradesResponse.class);
     when(service.getMarketTrades(productId, null, null, null)).thenReturn(trades);
-    try {
-      service.getTicker(instrument);
-    } catch (RuntimeException expected) {
-      // CDE responses are intentionally opaque to generic ticker adaptation.
-    }
-    try {
-      service.getOrderBook(instrument);
-    } catch (RuntimeException expected) {
-      // CDE order books are intentionally opaque to generic order-book adaptation.
-    }
-    service.getTrades(instrument);
+
+    Ticker ticker = service.getTicker(instrument);
+    OrderBook orderBook = service.getOrderBook(instrument);
+    Trades marketTrades = service.getTrades(instrument);
     CandleStickData candleData =
         service.getCandleStickData(
             instrument, new DefaultCandleStickParamWithLimit(null, null, 86_400, 1));
 
     verify(service, atLeastOnce()).getProductCandles(productId, "ONE_DAY", 1, null, null);
-
     verify(service, atLeastOnce()).getBestBidAsk(productId);
     verify(service, atLeastOnce()).getProductBook(productId, null, null);
     verify(service, atLeastOnce()).getMarketTrades(productId, null, null, null);
     assertEquals(productId, catalog.requireProductId(instrument));
+    assertSame(instrument, ticker.getInstrument());
+    assertSame(instrument, orderBook.getAsks().get(0).getInstrument());
+    assertSame(instrument, marketTrades.getTrades().get(0).getInstrument());
     assertSame(instrument, candleData.getInstrument());
   }
 
