@@ -63,7 +63,8 @@ import si.mazi.rescu.ParamsDigest;
 public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements TradeService {
 
   private final CoinbaseProductIdentity productIdentity;
-  private static final List<String> OPEN_ORDER_STATUSES = List.of("OPEN", "PENDING");
+  private static final List<String> OPEN_ORDER_STATUSES =
+      List.of("OPEN", "PENDING", "QUEUED", "CANCEL_QUEUED", "EDIT_QUEUED");
 
 
   /**

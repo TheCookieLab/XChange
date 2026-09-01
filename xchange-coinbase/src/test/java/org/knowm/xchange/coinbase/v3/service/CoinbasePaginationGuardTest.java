@@ -405,7 +405,8 @@ public class CoinbasePaginationGuardTest {
   @Test
   public void openOrderPaginationRequestsOnlyOpenStatuses() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
-    List<String> openStatuses = Arrays.asList("OPEN", "PENDING");
+    List<String> openStatuses =
+        Arrays.asList("OPEN", "PENDING", "QUEUED", "CANCEL_QUEUED", "EDIT_QUEUED");
     when(authenticated.listOrders(
             any(ParamsDigest.class),
             any(),
