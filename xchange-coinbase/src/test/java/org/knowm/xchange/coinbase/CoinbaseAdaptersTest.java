@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
 import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
@@ -654,6 +655,18 @@ public class CoinbaseAdaptersTest {
     assertEquals(Currency.USD, adapted.getFeeCurrency());
     assertEquals("trade", adapted.getId());
     assertEquals("entry", adapted.getEntryId());
+  }
+
+  @Test
+  public void testAdaptFillRetainsCatalogResolvedFuturesInstrument() {
+    CoinbaseFill fill =
+        new CoinbaseFill(
+            "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            new BigDecimal("2500"), BigDecimal.ONE, BigDecimal.ZERO,
+            "ETP-20DEC30-CDE", "MAKER", false, "user", "BUY", "portfolio");
+    FuturesContract configured = new FuturesContract(CurrencyPair.ETH_USD, "CDE");
+
+    assertEquals(configured, CoinbaseAdapters.adaptFill(fill, configured).getInstrument());
   }
   @Test
   public void testFuturesFillFeeCurrencyUsesSettlementConvention() {

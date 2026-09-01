@@ -160,7 +160,9 @@ public final class CoinbaseAdapters {
               + fill.getEntryId()
               + ": quantity and execution price must be positive");
     }
-    requireAdaptableProduct(fill.getProductId(), "fill");
+    if (instrument == null) {
+      requireAdaptableProduct(fill.getProductId(), "fill");
+    }
     OrderType orderType = adaptOrderType(fill.getSide());
     if (orderType == null) {
       throw new ExchangeException(
