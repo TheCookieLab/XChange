@@ -1,7 +1,6 @@
 package org.knowm.xchange.coinbase.v3.dto.products;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -14,8 +13,8 @@ import java.time.Instant;
 import org.junit.Test;
 
 /**
- * Unit tests for CoinbaseProductResponse JSON parsing.
- * Verifies correct deserialization of product/market data from Coinbase API responses.
+ * Unit tests for CoinbaseProductResponse JSON parsing. Verifies correct deserialization of
+ * product/market data from Coinbase API responses.
  */
 public class CoinbaseProductJsonTest {
 
@@ -23,9 +22,10 @@ public class CoinbaseProductJsonTest {
 
   @Test
   public void testDeserializeProductResponse() throws IOException {
-    InputStream is = CoinbaseProductJsonTest.class.getResourceAsStream(
-        "/org/knowm/xchange/coinbase/dto/v3/products/example-product-response.json");
-    
+    InputStream is =
+        CoinbaseProductJsonTest.class.getResourceAsStream(
+            "/org/knowm/xchange/coinbase/dto/v3/products/example-product-response.json");
+
     CoinbaseProductResponse product = mapper.readValue(is, CoinbaseProductResponse.class);
 
     assertNotNull("Product should not be null", product);
@@ -34,14 +34,14 @@ public class CoinbaseProductJsonTest {
     assertEquals("Product venue should match", "CBE", product.getProductVenue());
     assertEquals("Base currency id should match", "BTC", product.getBaseCurrencyId());
     assertEquals("Quote currency id should match", "USD", product.getQuoteCurrencyId());
-    assertTrue("Spot products should not include futures details", product.getFutureProductDetails() == null);
+    assertTrue(
+        "Spot products should not include futures details",
+        product.getFutureProductDetails() == null);
   }
 
   @Test
   public void testDeserializeProductWithMinimalFields() throws Exception {
-    String json = "{\n" +
-        "  \"product_id\": \"ETH-USD\"\n" +
-        "}";
+    String json = "{\n" + "  \"product_id\": \"ETH-USD\"\n" + "}";
 
     CoinbaseProductResponse product = mapper.readValue(json, CoinbaseProductResponse.class);
 
@@ -53,38 +53,75 @@ public class CoinbaseProductJsonTest {
 
   @Test
   public void testDeserializeFutureProductDetails() throws Exception {
-    String json = "{\n"
-        + "  \"product_id\": \"BIP-20DEC30-CDE\",\n"
-        + "  \"product_type\": \"FUTURE\",\n"
-        + "  \"quote_currency_id\": \"USD\",\n"
-        + "  \"future_product_details\": {\n"
-        + "    \"contract_root_unit\": \"BTC\",\n"
-        + "    \"funding_rate\": \"0.000024\",\n"
-        + "    \"funding_time\": \"2026-02-08T14:00:00Z\",\n"
-        + "    \"funding_interval\": \"3600s\",\n"
-        + "    \"intraday_margin_rate\": {\n"
-        + "      \"long_margin_rate\": \"0.1000185\",\n"
-        + "      \"short_margin_rate\": \"0.1000008\"\n"
-        + "    },\n"
-        + "    \"overnight_margin_rate\": {\n"
-        + "      \"long_margin_rate\": \"0.245625\",\n"
-        + "      \"short_margin_rate\": \"0.306375\"\n"
-        + "    }\n"
-        + "  }\n"
-        + "}";
-
+    String json =
+        "{\n"
+            + "  \"product_id\": \"BIP-20DEC30-CDE\",\n"
+            + "  \"product_type\": \"FUTURE\",\n"
+            + "  \"product_venue\": \"FCM\",\n"
+            + "  \"base_increment\": \"0.0001\",\n"
+            + "  \"quote_increment\": \"0.01\",\n"
+            + "  \"price_increment\": \"0.01\",\n"
+            + "  \"base_min_size\": \"0.0001\",\n"
+            + "  \"base_max_size\": \"1000\",\n"
+            + "  \"quote_min_size\": \"1\",\n"
+            + "  \"quote_max_size\": \"1000000\",\n"
+            + "  \"quote_currency_id\": \"USD\",\n"
+            + "  \"future_product_details\": {\n"
+            + "    \"venue\": \"CDE\",\n"
+            + "    \"contract_code\": \"BIP-20DEC30-CDE\",\n"
+            + "    \"contract_expiry\": \"2026-12-20T00:00:00Z\",\n"
+            + "    \"contract_size\": \"0.1\",\n"
+            + "    \"contract_root_unit\": \"BTC\",\n"
+            + "    \"contract_expiry_type\": \"EXPIRING\",\n"
+            + "    \"perpetual_details\": {\"max_leverage\": \"10\"},\n"
+            + "    \"funding_rate\": \"0.000024\",\n"
+            + "    \"funding_time\": \"2026-02-08T14:00:00Z\",\n"
+            + "    \"funding_interval\": \"3600s\",\n"
+            + "    \"intraday_margin_rate\": {\n"
+            + "      \"long_margin_rate\": \"0.1000185\",\n"
+            + "      \"short_margin_rate\": \"0.1000008\"\n"
+            + "    },\n"
+            + "    \"overnight_margin_rate\": {\n"
+            + "      \"long_margin_rate\": \"0.245625\",\n"
+            + "      \"short_margin_rate\": \"0.306375\"\n"
+            + "    }\n"
+            + "  }\n"
+            + "}";
     CoinbaseProductResponse product = mapper.readValue(json, CoinbaseProductResponse.class);
 
     assertNotNull("Product should not be null", product);
     assertEquals("Product ID should match", "BIP-20DEC30-CDE", product.getProductId());
-    assertEquals("Product type should match", "FUTURE", product.getProductType());
-    assertEquals("Quote currency id should match", "USD", product.getQuoteCurrencyId());
+    assertEquals("FUTURE", product.getProductType());
+    assertEquals("USD", product.getQuoteCurrencyId());
+    assertEquals("FCM", product.getProductVenue());
+    assertEquals(new BigDecimal("0.0001"), product.getBaseIncrement());
+    assertEquals(new BigDecimal("0.01"), product.getQuoteIncrement());
+    assertEquals(new BigDecimal("0.01"), product.getPriceIncrement());
+    assertEquals(new BigDecimal("0.0001"), product.getBaseMinSize());
+    assertEquals(new BigDecimal("1"), product.getQuoteMinSize());
 
     CoinbaseFutureProductDetails details = product.getFutureProductDetails();
     assertNotNull("Future product details should not be null", details);
-    assertEquals("Contract root unit should match", "BTC", details.getContractRootUnit());
+    assertEquals("BIP-20DEC30-CDE", details.getContractCode());
+    assertEquals("CDE", details.getVenue());
+    assertEquals("0.1", details.getContractSize());
+    assertEquals(new BigDecimal("0.1"), details.getContractSizeValue());
+    assertEquals("EXPIRING", details.getContractExpiryType());
+    assertEquals(new BigDecimal("10"), details.getPerpetualDetails().getMaxLeverage());
+    assertEquals("2026-12-20T00:00:00Z", details.getContractExpiry());
+    assertEquals("BTC", details.getContractRootUnit());
     assertEquals(new BigDecimal("0.000024"), details.getFundingRate());
+    assertEquals("0.000024", details.getFundingRateWireValue());
+    assertEquals(new BigDecimal("0.000024"), details.getFundingRateValue());
     assertEquals(Instant.parse("2026-02-08T14:00:00Z"), details.getFundingTime());
+    assertEquals("2026-02-08T14:00:00Z", details.getFundingTimeWireValue());
+    assertEquals(Instant.parse("2026-02-08T14:00:00Z"), details.getFundingTimeInstant());
+    assertEquals(
+        BigDecimal.class,
+        CoinbaseFutureProductDetails.class.getMethod("getFundingRate").getReturnType());
+    assertEquals(
+        Instant.class,
+        CoinbaseFutureProductDetails.class.getMethod("getFundingTime").getReturnType());
     assertEquals(Duration.ofHours(1), details.getFundingInterval());
 
     assertNotNull(details.getIntradayMarginRate());
@@ -98,16 +135,17 @@ public class CoinbaseProductJsonTest {
 
   @Test
   public void testDeserializeCandlesResponse() throws IOException {
-    InputStream is = CoinbaseProductJsonTest.class.getResourceAsStream(
-        "/org/knowm/xchange/coinbase/dto/v3/products/example-candles-response.json");
-    
-    CoinbaseProductCandlesResponse response = mapper.readValue(is, 
-        CoinbaseProductCandlesResponse.class);
+    InputStream is =
+        CoinbaseProductJsonTest.class.getResourceAsStream(
+            "/org/knowm/xchange/coinbase/dto/v3/products/example-candles-response.json");
+
+    CoinbaseProductCandlesResponse response =
+        mapper.readValue(is, CoinbaseProductCandlesResponse.class);
 
     assertNotNull("Response should not be null", response);
     assertNotNull("Candles should not be null", response.getCandles());
     assertEquals("Should have 2 candles", 2, response.getCandles().size());
-    
+
     // Verify first candle
     CoinbaseProductCandle candle1 = response.getCandles().get(0);
     assertEquals("Start time should match", "1609459200", candle1.getStart());
@@ -116,7 +154,7 @@ public class CoinbaseProductJsonTest {
     assertEquals("Open should match", new BigDecimal("50000.00"), candle1.getOpen());
     assertEquals("Close should match", new BigDecimal("50500.00"), candle1.getClose());
     assertEquals("Volume should match", new BigDecimal("100.5"), candle1.getVolume());
-    
+
     // Verify second candle
     CoinbaseProductCandle candle2 = response.getCandles().get(1);
     assertEquals("Start time should match", "1609462800", candle2.getStart());
@@ -126,31 +164,32 @@ public class CoinbaseProductJsonTest {
 
   @Test
   public void testDeserializeMarketTradesList() throws Exception {
-    String json = "{\n" +
-        "  \"trades\": [\n" +
-        "    {\n" +
-        "      \"trade_id\": \"t1\",\n" +
-        "      \"product_id\": \"BTC-USD\",\n" +
-        "      \"price\": \"50000\",\n" +
-        "      \"size\": \"0.1\",\n" +
-        "      \"side\": \"BUY\",\n" +
-        "      \"time\": \"2024-01-01T00:00:00Z\",\n" +
-        "      \"trade_time\": \"12345\"\n" +
-        "    }\n" +
-        "  ],\n" +
-        "  \"best_bid\": \"49999\",\n" +
-        "  \"best_ask\": \"50001\"\n" +
-        "}";
+    String json =
+        "{\n"
+            + "  \"trades\": [\n"
+            + "    {\n"
+            + "      \"trade_id\": \"t1\",\n"
+            + "      \"product_id\": \"BTC-USD\",\n"
+            + "      \"price\": \"50000\",\n"
+            + "      \"size\": \"0.1\",\n"
+            + "      \"side\": \"BUY\",\n"
+            + "      \"time\": \"2024-01-01T00:00:00Z\",\n"
+            + "      \"trade_time\": \"12345\"\n"
+            + "    }\n"
+            + "  ],\n"
+            + "  \"best_bid\": \"49999\",\n"
+            + "  \"best_ask\": \"50001\"\n"
+            + "}";
 
-    CoinbaseProductMarketTradesResponse response = mapper.readValue(json, 
-        CoinbaseProductMarketTradesResponse.class);
+    CoinbaseProductMarketTradesResponse response =
+        mapper.readValue(json, CoinbaseProductMarketTradesResponse.class);
 
     assertNotNull("Response should not be null", response);
     assertNotNull("Trades should not be null", response.getMarketTrades());
     assertEquals("Should have 1 trade", 1, response.getMarketTrades().size());
     assertEquals("Best bid should match", new BigDecimal("49999"), response.getBestBid());
     assertEquals("Best ask should match", new BigDecimal("50001"), response.getBestAsk());
-    
+
     CoinbaseMarketTrade trade = response.getMarketTrades().get(0);
     assertEquals("Trade ID should match", "t1", trade.getTradeId());
     assertEquals("Product ID should match", "BTC-USD", trade.getProductId());

@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.Instant;
+import org.knowm.xchange.currency.Currency;
 import org.junit.Test;
 
 /**
@@ -39,6 +41,8 @@ public class CoinbaseFillsJsonTest {
     assertEquals("Size should match", new BigDecimal("0.1"), btcFill.getSize());
     assertEquals("Commission should match", new BigDecimal("2.5"), btcFill.getCommission());
     assertEquals("Side should match", "BUY", btcFill.getSide());
+    assertEquals("Sequence timestamp should match", Instant.parse("2025-10-13T00:00:00Z"),
+        btcFill.getSequenceTimestamp().toInstant());
     assertEquals("Liquidity indicator should match", "TAKER", btcFill.getLiquidityIndicator());
     
     // Verify second fill (ETH sell)
@@ -103,5 +107,32 @@ public class CoinbaseFillsJsonTest {
     assertEquals("Commission precision should be preserved", 
         new BigDecimal("0.00000025"), fill.getCommission());
   }
+
+  @Test
+  public void testDatedCfmfFillUsesUsdFeeCurrency() {
+    CoinbaseFill fill =
+        new CoinbaseFill(
+            "entry",
+            "trade",
+            "order",
+            null,
+            null,
+            null,
+            null,
+            null,
+            "BTC-28MAR25-CFMF",
+            null,
+            null,
+            false,
+            null,
+            null,
+            null);
+
+    assertEquals(
+        "CFMF futures fees settle in USD rather than the expiry token",
+        Currency.USD,
+        fill.getFeeCurrency());
+  }
+
 }
 

@@ -4,6 +4,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
+import java.nio.file.Path;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.knowm.xchange.ExchangeFactory;
@@ -21,7 +22,10 @@ public abstract class BitgetExchangeWiremock {
 
   @BeforeAll
   public static void initExchange() {
-    wireMockServer = new WireMockServer(options().dynamicPort());
+    String resources =
+        Path.of(System.getProperty("basedir"), "src", "test", "resources").toString();
+    wireMockServer =
+        new WireMockServer(options().dynamicPort().usingFilesUnderDirectory(resources));
     wireMockServer.start();
 
     ExchangeSpecification exSpec = new ExchangeSpecification(BitgetExchange.class);

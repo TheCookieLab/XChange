@@ -2,7 +2,6 @@ package org.knowm.xchange.coinbase.v3.dto.orders;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Collections;
 import java.util.List;
 import lombok.Getter;
 
@@ -20,8 +19,9 @@ public class CoinbaseOrdersResponse {
     this.cursor = cursor;
   }
 
+  /** Returns the provider fills collection, or null when the required field was absent. */
   public List<CoinbaseFill> getFills() {
-    return fills == null ? Collections.emptyList() : Collections.unmodifiableList(fills);
+    return fills;
   }
 
   @Override

@@ -71,7 +71,7 @@ public class CoinbaseErrorContractTest {
   @Test
   public void editOrderTransportFailureIsAmbiguous() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
-    when(authenticated.editOrder(any(ParamsDigest.class), any()))
+    when(authenticated.editOrderCurrent(any(ParamsDigest.class), any()))
         .thenThrow(new IOException("read timed out"));
 
     CoinbaseTradeServiceRaw service =
@@ -80,11 +80,13 @@ public class CoinbaseErrorContractTest {
     CoinbaseEditOrderRequest request =
         new CoinbaseEditOrderRequest("order-42", null, null, null, null, null);
     try {
-      service.editOrder(request);
+      service.editOrderCurrent(request);
       throw new AssertionError("expected CoinbaseUnknownOutcomeException");
     } catch (CoinbaseUnknownOutcomeException unknown) {
       assertEquals(RetryClassification.AMBIGUOUS, unknown.getRetryClassification());
-      assertEquals("order-42", unknown.getClientOrderId());
+      assertEquals(Collections.singletonList("order-42"), unknown.getOrderIds());
+      assertTrue(unknown.getClientOrderIds().isEmpty());
+      assertEquals(null, unknown.getClientOrderId());
     }
   }
 
@@ -94,6 +96,18 @@ public class CoinbaseErrorContractTest {
         new CoinbaseUnknownOutcomeException(
             "createOrder", "c-1", new IOException("boom"));
     assertTrue(exception instanceof IOException);
+  }
+
+  @Test
+  public void nonOrderCorrelationDoesNotClaimClientOrderIdentity() {
+    CoinbaseUnknownOutcomeException exception =
+        new CoinbaseUnknownOutcomeException(
+            "commitConvertTrade", "trade_id", "trade-42", new IOException("boom"));
+
+    assertEquals("trade_id", exception.getCorrelationName());
+    assertEquals("trade-42", exception.getCorrelationId());
+    assertTrue(exception.getOrderIds().isEmpty());
+    assertTrue(exception.getClientOrderIds().isEmpty());
   }
 
   private static RetryClassification CoinbaseException_classify(int status) {

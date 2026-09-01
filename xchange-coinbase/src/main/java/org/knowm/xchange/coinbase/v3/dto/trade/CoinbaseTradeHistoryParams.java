@@ -12,6 +12,11 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParamOrderId;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamTransactionId;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 
+/**
+ * Coinbase fill-history filters, including product-native CFM filters and sequence windows.
+ *
+ * @since 1.0.2
+ */
 public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionId,
     TradeHistoryParamOrderId, TradeHistoryParamMultiCurrencyPair, TradeHistoryParamLimit,
     TradeHistoryParamNextPageCursor, TradeHistoryParamsTimeSpan {
@@ -22,11 +27,27 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   private String transactionId;
   private String orderId;
   private String nextPageCursor;
+  /**
+   * Whether {@link #nextPageCursor} and {@link #continuationFillIds} resume a partially consumed
+   * mutable fill page.
+   */
+  private boolean fillContinuationPending;
+  private Set<String> continuationFillIds = new HashSet<>();
   private Date startTime;
   private Date endTime;
   private Integer limit;
   /** Optional retail portfolio id filter used by some endpoints (for example perpetuals/INTX). */
   private String retailPortfolioId;
+  /** Optional Coinbase fill sort field. */
+  private String sortBy;
+  /** Optional Coinbase asset filters. */
+  private Set<String> assetFilters;
+  /** Optional Coinbase order-type filters. */
+  private Set<String> orderTypes;
+  /** Optional Coinbase order-side filter. */
+  private String orderSide;
+  /** Optional Coinbase product-type filters. */
+  private Set<String> productTypes;
 
   public CoinbaseTradeHistoryParams() {
   }
@@ -120,6 +141,42 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   @Override
   public void setNextPageCursor(String cursor) {
     this.nextPageCursor = cursor;
+    this.fillContinuationPending = false;
+    this.continuationFillIds.clear();
+  }
+
+  /** @return whether the current cursor resumes a partially consumed mutable fills page */
+  public boolean isFillContinuationPending() {
+    return fillContinuationPending;
+  }
+
+  /**
+   * Stores the cursor for a partial fills page without using a mutable result index.
+   *
+   * <p>When {@code pending} is true, the next request refetches the page and suppresses only
+   * previously emitted fill identities. This admits new fills inserted ahead of the prior page
+   * contents instead of skipping them by a stale numeric offset.</p>
+   *
+   * @param cursor raw Coinbase cursor used to request the page, or {@code null} for the first page
+   * @param pending whether this is a partial-page continuation
+   */
+  public void setFillContinuation(String cursor, boolean pending) {
+    this.nextPageCursor = cursor;
+    this.fillContinuationPending = pending;
+  }
+
+  /** @return a defensive copy of fill identities emitted before the current continuation cursor */
+  public Set<String> getContinuationFillIds() {
+    return new HashSet<>(continuationFillIds);
+  }
+
+  /**
+   * Records fill identities already emitted before resuming the current cursor.
+   *
+   * @param fillIds fill entry or trade identities, never {@code null}
+   */
+  public void setContinuationFillIds(Collection<String> fillIds) {
+    this.continuationFillIds = new HashSet<>(fillIds);
   }
 
   @Override
@@ -172,5 +229,53 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
     this.limit = limit;
   }
 
+  /** @return optional fill sort field */
+  public String getSortBy() {
+    return sortBy;
+  }
 
+  /** @param sortBy Coinbase fill sort field */
+  public void setSortBy(String sortBy) {
+    this.sortBy = sortBy;
+  }
+
+  /** @return optional asset filters */
+  public Collection<String> getAssetFilters() {
+    return assetFilters;
+  }
+
+  /** @param assetFilters Coinbase asset filters */
+  public void setAssetFilters(Collection<String> assetFilters) {
+    this.assetFilters = assetFilters == null ? null : new HashSet<>(assetFilters);
+  }
+
+  /** @return optional order-type filters */
+  public Collection<String> getOrderTypes() {
+    return orderTypes;
+  }
+
+  /** @param orderTypes Coinbase order-type filters */
+  public void setOrderTypes(Collection<String> orderTypes) {
+    this.orderTypes = orderTypes == null ? null : new HashSet<>(orderTypes);
+  }
+
+  /** @return optional order-side filter */
+  public String getOrderSide() {
+    return orderSide;
+  }
+
+  /** @param orderSide Coinbase order-side filter */
+  public void setOrderSide(String orderSide) {
+    this.orderSide = orderSide;
+  }
+
+  /** @return optional product-type filters */
+  public Collection<String> getProductTypes() {
+    return productTypes;
+  }
+
+  /** @param productTypes Coinbase product-type filters */
+  public void setProductTypes(Collection<String> productTypes) {
+    this.productTypes = productTypes == null ? null : new HashSet<>(productTypes);
+  }
 }

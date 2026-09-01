@@ -11,7 +11,6 @@ import java.util.Date;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
-import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelAllOrdersParams;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderParams;
@@ -28,13 +27,11 @@ import org.knowm.xchange.service.trade.TradeService;
 
 public class BybitTradeServiceTest extends BaseWiremockTest {
 
-  BybitExchange bybitExchange;
   TradeService tradeService;
 
   @Before
   public void setUp() throws IOException {
-    bybitExchange = createExchange();
-    tradeService = new BybitTradeService(bybitExchange, bybitExchange.getResilienceRegistries());
+    tradeService = createExchange().getTradeService();
   }
 
   @Test

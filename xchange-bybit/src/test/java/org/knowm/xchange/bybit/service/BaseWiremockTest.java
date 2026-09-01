@@ -3,7 +3,6 @@ package org.knowm.xchange.bybit.service;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
@@ -38,7 +37,7 @@ public class BaseWiremockTest {
   }
 
   protected void initGetStub(String url, String responseBody) throws IOException {
-    stubFor(
+    wireMockRule.stubFor(
         get(urlPathEqualTo(url))
             .willReturn(
                 aResponse()
@@ -60,7 +59,7 @@ public class BaseWiremockTest {
       String queryParams,
       StringValuePattern stringValuePattern)
       throws IOException {
-    stubFor(
+    wireMockRule.stubFor(
         get(urlPathEqualTo(baseUrl))
             .withQueryParam(queryParams, stringValuePattern)
             .willReturn(
@@ -74,7 +73,7 @@ public class BaseWiremockTest {
   protected void initGetStub(
       String baseUrl, String responseBody, Map<String, StringValuePattern> queryParams)
       throws IOException {
-    stubFor(
+    wireMockRule.stubFor(
         get(urlPathEqualTo(baseUrl))
             .withQueryParams(queryParams)
             .willReturn(
@@ -85,7 +84,7 @@ public class BaseWiremockTest {
   }
 
   protected void initPostStub(String url, String responseBody) throws IOException {
-    stubFor(
+    wireMockRule.stubFor(
         post(urlPathEqualTo(url))
             .willReturn(
                 aResponse()

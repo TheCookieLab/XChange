@@ -19,6 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.common.FileSource;
@@ -55,6 +58,7 @@ import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.mexc.v3.config.MexcV3Configuration;
+import org.knowm.xchange.mexc.v3.service.MexcV3AccountService;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 
 /** Streaming exchange wiring: default URI, connect lifecycle, and service accessors. */
@@ -65,6 +69,7 @@ class MexcV3StreamingExchangeTest {
   @AfterEach
   void tearDown() {
     RxJavaPlugins.setIoSchedulerHandler(null);
+    RxJavaPlugins.setErrorHandler(null);
     if (wireMock != null) {
       wireMock.stop();
     }
@@ -368,6 +373,48 @@ class MexcV3StreamingExchangeTest {
 
     wireMock.verify(
         1, deleteRequestedFor(urlEqualTo("/api/v3/userDataStream?listenKey=test-listen-key")));
+  }
+
+  @Test
+  void disposedKeepaliveFailureDoesNotEscapeToRxGlobalHandler() throws Exception {
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    MexcV3AccountService accountService = mock(MexcV3AccountService.class);
+    CountDownLatch requestStarted = new CountDownLatch(1);
+    CountDownLatch releaseRequest = new CountDownLatch(1);
+    doAnswer(
+            invocation -> {
+              requestStarted.countDown();
+              assertTrue(releaseRequest.await(10, TimeUnit.SECONDS));
+              throw new IOException("HTTP 500");
+            })
+        .when(accountService)
+        .keepAliveListenKey(null);
+    AtomicReference<Throwable> undeliverable = new AtomicReference<>();
+    RxJavaPlugins.setErrorHandler(undeliverable::set);
+
+    TestObserver<Void> observer = new TestObserver<>();
+    Thread worker = new Thread(() -> exchange.keepAliveAttempt(accountService).subscribe(observer));
+    worker.start();
+    assertTrue(requestStarted.await(10, TimeUnit.SECONDS));
+
+    observer.dispose();
+    releaseRequest.countDown();
+    worker.join(TimeUnit.SECONDS.toMillis(10));
+
+    assertFalse(worker.isAlive(), "keepalive attempt did not finish");
+    assertNull(undeliverable.get());
+  }
+
+  @Test
+  void disposedKeepaliveAttemptDoesNotStartRequest() {
+    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
+    MexcV3AccountService accountService = mock(MexcV3AccountService.class);
+    TestObserver<Void> observer = new TestObserver<>();
+    observer.dispose();
+
+    exchange.keepAliveAttempt(accountService).subscribe(observer);
+
+    verifyNoInteractions(accountService);
   }
 
   @Test

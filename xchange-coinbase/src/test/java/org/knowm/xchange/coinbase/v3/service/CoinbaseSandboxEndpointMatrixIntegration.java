@@ -42,14 +42,14 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseV3OrderRequests;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseAllocatePortfolioRequest;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralRequest;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPositionsResponse;
-import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralRequest;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbaseMovePortfolioFundsRequest;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolio;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioAmount;
-import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioRequest;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.trade.CoinbaseTradeHistoryParams;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -63,10 +63,10 @@ import si.mazi.rescu.ParamsDigest;
 /**
  * Sandbox-first integration matrix for Coinbase Advanced Trade REST endpoints.
  *
- * <p>This suite prioritizes sandbox connectivity and systematically exercises public and authenticated
- * endpoint variants exposed by the XChange Coinbase module. Endpoint-level HTTP errors (for example
- * 4xx/5xx due to unsupported sandbox features or business-rule validation) are treated as reachable,
- * while transport/connectivity failures fail the test.
+ * <p>This suite prioritizes sandbox connectivity and systematically exercises public and
+ * authenticated endpoint variants exposed by the XChange Coinbase module. Endpoint-level HTTP
+ * errors (for example 4xx/5xx due to unsupported sandbox features or business-rule validation) are
+ * treated as reachable, while transport/connectivity failures fail the test.
  */
 public class CoinbaseSandboxEndpointMatrixIntegration {
 
@@ -93,7 +93,8 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
     assertNotNull("Sandbox auth digest must be available", authDigest);
 
     publicClient = ExchangeRestProxyBuilder.forInterface(Coinbase.class, spec).build();
-    authenticatedClient = ExchangeRestProxyBuilder.forInterface(CoinbaseAuthenticated.class, spec).build();
+    authenticatedClient =
+        ExchangeRestProxyBuilder.forInterface(CoinbaseAuthenticated.class, spec).build();
 
     CoinbaseExchange exchange = (CoinbaseExchange) ExchangeFactory.INSTANCE.createExchange(spec);
     accountService = (CoinbaseAccountService) exchange.getAccountService();
@@ -101,9 +102,7 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
     tradeService = (CoinbaseTradeService) exchange.getTradeService();
   }
 
-  /**
-   * Covers all public market endpoints with multiple argument combinations.
-   */
+  /** Covers all public market endpoints with multiple argument combinations. */
   @Test
   public void testPublicEndpointVariations() throws Exception {
     String start = isoNowMinusDays(2);
@@ -141,7 +140,8 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
         () -> publicClient.getPublicProductCandles(PRIMARY_PRODUCT_ID, null, null, "ONE_HOUR", 10));
     assertEndpointReachable(
         "GET /market/products/{product_id}/candles explicit range",
-        () -> publicClient.getPublicProductCandles(PRIMARY_PRODUCT_ID, start, end, "ONE_MINUTE", 25));
+        () ->
+            publicClient.getPublicProductCandles(PRIMARY_PRODUCT_ID, start, end, "ONE_MINUTE", 25));
     assertEndpointReachable(
         "GET /market/products/{product_id}/ticker default range",
         () -> publicClient.getPublicMarketTrades(PRIMARY_PRODUCT_ID, 25, null, null));
@@ -150,9 +150,7 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
         () -> publicClient.getPublicMarketTrades(PRIMARY_PRODUCT_ID, 25, start, end));
   }
 
-  /**
-   * Covers authenticated market-data endpoints and parameter combinations.
-   */
+  /** Covers authenticated market-data endpoints and parameter combinations. */
   @Test
   public void testMarketDataEndpointVariations() throws Exception {
     String start = isoNowMinusDays(2);
@@ -162,19 +160,16 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
         "GET /best_bid_ask single product",
         () -> marketDataService.getBestBidAsk(PRIMARY_PRODUCT_ID));
     assertEndpointReachable(
-        "GET /best_bid_ask all products",
-        () -> marketDataService.getBestBidAsk((String) null));
+        "GET /best_bid_ask all products", () -> marketDataService.getBestBidAsk((String) null));
 
     assertEndpointReachable(
-        "GET /products/{product_id}",
-        () -> marketDataService.getProduct(PRIMARY_PRODUCT_ID));
+        "GET /products/{product_id}", () -> marketDataService.getProduct(PRIMARY_PRODUCT_ID));
     assertEndpointReachable(
         "GET /products/{product_id} with tradability",
         () -> authenticatedClient.getProduct(authDigest, PRIMARY_PRODUCT_ID, Boolean.TRUE));
 
     assertEndpointReachable(
-        "GET /products list via service",
-        () -> marketDataService.listProducts("SPOT"));
+        "GET /products list via service", () -> marketDataService.listProducts("SPOT"));
     assertEndpointReachable(
         "GET /products list with full filters",
         () ->
@@ -202,7 +197,8 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
         () -> marketDataService.getProductCandles(PRIMARY_PRODUCT_ID, "ONE_HOUR", 25, null, null));
     assertEndpointReachable(
         "GET /products/{product_id}/candles explicit range",
-        () -> marketDataService.getProductCandles(PRIMARY_PRODUCT_ID, "ONE_MINUTE", 25, start, end));
+        () ->
+            marketDataService.getProductCandles(PRIMARY_PRODUCT_ID, "ONE_MINUTE", 25, start, end));
 
     assertEndpointReachable(
         "GET /product_book default",
@@ -212,9 +208,7 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
         () -> marketDataService.getProductBook(PRIMARY_PRODUCT_ID, 50, 0.01d));
   }
 
-  /**
-   * Covers authenticated account/portfolio/futures/perpetual/v2 account endpoints and variants.
-   */
+  /** Covers authenticated account/portfolio/futures/perpetual/v2 account endpoints and variants. */
   @Test
   public void testAccountEndpointVariations() throws Exception {
     List<CoinbaseAccount> accounts =
@@ -222,8 +216,7 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
     String accountId = firstAccountId(accounts);
 
     assertEndpointReachable(
-        "GET /accounts default",
-        () -> authenticatedClient.listAccounts(authDigest, 250, null));
+        "GET /accounts default", () -> authenticatedClient.listAccounts(authDigest, 250, null));
     assertEndpointReachable(
         "GET /accounts with cursor",
         () -> authenticatedClient.listAccounts(authDigest, 25, "cursor-placeholder"));
@@ -231,11 +224,11 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
         "GET /accounts/{account_id}",
         () -> accountService.getCoinbaseAccount(nonEmpty(accountId, SYNTHETIC_ACCOUNT_ID)));
 
-    invokeEndpoint("GET /payment_methods discovery", () -> accountService.getCoinbasePaymentMethods());
+    invokeEndpoint(
+        "GET /payment_methods discovery", () -> accountService.getCoinbasePaymentMethods());
 
     assertEndpointReachable(
-        "GET /payment_methods",
-        () -> accountService.getCoinbasePaymentMethods());
+        "GET /payment_methods", () -> accountService.getCoinbasePaymentMethods());
     assertEndpointReachable(
         "GET /payment_methods/{payment_method_id}",
         () -> accountService.getCoinbasePaymentMethod("sandbox-payment-method"));
@@ -247,10 +240,12 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
     String perpetualPortfolioUuid = firstPerpetualPortfolioUuid(portfolios);
 
     assertEndpointReachable("GET /portfolios default", () -> accountService.listPortfolios(null));
-    assertEndpointReachable("GET /portfolios type filter", () -> accountService.listPortfolios("CONSUMER"));
+    assertEndpointReachable(
+        "GET /portfolios type filter", () -> accountService.listPortfolios("CONSUMER"));
     assertEndpointReachable(
         "GET /portfolios/{portfolio_uuid}",
-        () -> accountService.getPortfolioBreakdown(nonEmpty(portfolioUuid, SYNTHETIC_PORTFOLIO_ID)));
+        () ->
+            accountService.getPortfolioBreakdown(nonEmpty(portfolioUuid, SYNTHETIC_PORTFOLIO_ID)));
 
     String createName = "xchange-it-" + System.currentTimeMillis();
     CoinbasePortfolioResponse createdPortfolio =
@@ -262,13 +257,15 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
             ? createdPortfolio.getPortfolio().getUuid()
             : null;
 
-    String editTarget = nonEmpty(createdPortfolioUuid, nonEmpty(portfolioUuid, SYNTHETIC_PORTFOLIO_ID));
+    String editTarget =
+        nonEmpty(createdPortfolioUuid, nonEmpty(portfolioUuid, SYNTHETIC_PORTFOLIO_ID));
     assertEndpointReachable(
         "PUT /portfolios/{portfolio_uuid}",
-        () -> accountService.editPortfolio(editTarget, new CoinbasePortfolioRequest(createName + "-edited")));
+        () ->
+            accountService.editPortfolio(
+                editTarget, new CoinbasePortfolioRequest(createName + "-edited")));
     assertEndpointReachable(
-        "DELETE /portfolios/{portfolio_uuid}",
-        () -> accountService.deletePortfolio(editTarget));
+        "DELETE /portfolios/{portfolio_uuid}", () -> accountService.deletePortfolio(editTarget));
 
     String sourcePortfolio = nonEmpty(portfolioUuid, SYNTHETIC_PORTFOLIO_ID);
     String targetPortfolio = nonEmpty(createdPortfolioUuid, sourcePortfolio);
@@ -281,36 +278,38 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
                     sourcePortfolio,
                     targetPortfolio)));
 
-    assertEndpointReachable("GET /transaction_summary default", () -> accountService.getTransactionSummary());
+    assertEndpointReachable(
+        "GET /transaction_summary default", () -> accountService.getTransactionSummary());
     assertEndpointReachable(
         "GET /transaction_summary filtered",
         () -> accountService.getTransactionSummary("SPOT", null, "neptune"));
 
     CoinbaseV2AccountsResponse v2Accounts =
-        invokeEndpoint("GET /v2/accounts discovery", () -> accountService.listV2Accounts(25, null, null, "desc"));
+        invokeEndpoint(
+            "GET /v2/accounts discovery",
+            () -> accountService.listV2Accounts(25, null, null, "desc"));
     String v2AccountId = firstV2AccountId(v2Accounts);
 
     assertEndpointReachable(
-        "GET /v2/accounts basic",
-        () -> accountService.listV2Accounts(10, null, null, null));
+        "GET /v2/accounts basic", () -> accountService.listV2Accounts(10, null, null, null));
     assertEndpointReachable(
         "GET /v2/accounts/{account_id}/transactions",
         () ->
             accountService.listV2AccountTransactions(
-                nonEmpty(v2AccountId, SYNTHETIC_ACCOUNT_ID),
-                10,
-                null,
-                null,
-                "desc"));
+                nonEmpty(v2AccountId, SYNTHETIC_ACCOUNT_ID), 10, null, null, "desc"));
 
-    assertEndpointReachable("GET /cfm/balance_summary", () -> accountService.getFuturesBalanceSummary());
+    assertEndpointReachable(
+        "GET /cfm/balance_summary", () -> accountService.getFuturesBalanceSummary());
     assertEndpointReachable(
         "POST /cfm/sweeps/schedule",
-        () -> accountService.scheduleFuturesSweep(new CoinbaseFuturesSweepRequest(new BigDecimal("10"))));
+        () ->
+            accountService.scheduleFuturesSweep(
+                new CoinbaseFuturesSweepRequest(new BigDecimal("10"))));
     assertEndpointReachable("GET /cfm/sweeps", () -> accountService.listFuturesSweeps());
     assertEndpointReachable("DELETE /cfm/sweeps", () -> accountService.cancelFuturesSweep());
 
-    assertEndpointReachable("GET /cfm/intraday/margin_setting", () -> accountService.getIntradayMarginSetting());
+    assertEndpointReachable(
+        "GET /cfm/intraday/margin_setting", () -> accountService.getIntradayMarginSetting());
     assertEndpointReachable(
         "POST /cfm/intraday/margin_setting",
         () ->
@@ -318,10 +317,10 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
                 new CoinbaseIntradayMarginSettingRequest(
                     CoinbaseIntradayMarginSetting.INTRADAY_MARGIN_SETTING_STANDARD)));
     assertEndpointReachable(
-        "GET /cfm/intraday/current_margin_window",
-        () -> accountService.getCurrentMarginWindow());
+        "GET /cfm/intraday/current_margin_window", () -> accountService.getCurrentMarginWindow());
 
-    String perpetualPortfolio = nonEmpty(perpetualPortfolioUuid, nonEmpty(portfolioUuid, SYNTHETIC_PORTFOLIO_ID));
+    String perpetualPortfolio =
+        nonEmpty(perpetualPortfolioUuid, nonEmpty(portfolioUuid, SYNTHETIC_PORTFOLIO_ID));
     assertEndpointReachable(
         "GET /intx/portfolio/{portfolio_uuid}",
         () -> accountService.getPerpetualsPortfolioSummary(perpetualPortfolio));
@@ -341,9 +340,7 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
                     perpetualPortfolio, SYNTHETIC_SYMBOL, new BigDecimal("1"), "USD")));
   }
 
-  /**
-   * Covers authenticated trade/order/fills/positions/convert endpoints and variants.
-   */
+  /** Covers authenticated trade/order/fills/positions/convert endpoints and variants. */
   @Test
   public void testTradeEndpointVariations() throws Exception {
     String start = isoNowMinusDays(2);
@@ -354,7 +351,8 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
     historyParams.addCurrencyPair(CurrencyPair.BTC_USD);
     historyParams.setStartTime(Date.from(Instant.parse(start)));
     historyParams.setEndTime(Date.from(Instant.parse(end)));
-    assertEndpointReachable("GET /orders/historical/fills basic", () -> tradeService.listFills(historyParams));
+    assertEndpointReachable(
+        "GET /orders/historical/fills basic", () -> tradeService.listFills(historyParams));
 
     CoinbaseTradeHistoryParams filteredHistory = new CoinbaseTradeHistoryParams();
     filteredHistory.addProductId(PRIMARY_PRODUCT_ID);
@@ -362,14 +360,14 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
     filteredHistory.setTransactionId(SYNTHETIC_TRADE_ID);
     filteredHistory.setLimit(10);
     assertEndpointReachable(
-        "GET /orders/historical/fills filtered",
-        () -> tradeService.listFills(filteredHistory));
+        "GET /orders/historical/fills filtered", () -> tradeService.listFills(filteredHistory));
 
     CoinbaseListOrdersResponse orders =
         invokeEndpoint("GET /orders/historical/batch discovery", () -> tradeService.listOrders());
     String orderId = firstOrderId(orders);
 
-    assertEndpointReachable("GET /orders/historical/batch default", () -> tradeService.listOrders());
+    assertEndpointReachable(
+        "GET /orders/historical/batch default", () -> tradeService.listOrders());
     assertEndpointReachable(
         "GET /orders/historical/batch filtered",
         () ->
@@ -417,33 +415,45 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
             .userReference("xchange-it-stop-" + System.currentTimeMillis())
             .build();
 
-    CoinbaseOrderRequest previewMarketRequest = CoinbaseV3OrderRequests.previewMarketOrderRequest(marketOrder);
-    CoinbaseOrderRequest previewLimitRequest = CoinbaseV3OrderRequests.previewLimitOrderRequest(limitOrder);
-    CoinbaseOrderRequest previewStopRequest = CoinbaseV3OrderRequests.previewStopOrderRequest(stopOrder);
-    CoinbaseEditOrderRequest editRequest = CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
+    CoinbaseOrderRequest previewMarketRequest =
+        CoinbaseV3OrderRequests.previewMarketOrderRequest(marketOrder);
+    CoinbaseOrderRequest previewLimitRequest =
+        CoinbaseV3OrderRequests.previewLimitOrderRequest(limitOrder);
+    CoinbaseOrderRequest previewStopRequest =
+        CoinbaseV3OrderRequests.previewStopOrderRequest(stopOrder);
+    CoinbaseEditOrderRequest editRequest =
+        CoinbaseV3OrderRequests.editLimitOrderRequest(limitOrder);
 
-    assertEndpointReachable("POST /orders/preview market", () -> tradeService.previewOrder(previewMarketRequest));
-    assertEndpointReachable("POST /orders/preview limit", () -> tradeService.previewOrder(previewLimitRequest));
-    assertEndpointReachable("POST /orders/preview stop", () -> tradeService.previewOrder(previewStopRequest));
-    assertEndpointReachable("POST /orders/edit_preview", () -> tradeService.previewEditOrder(editRequest));
+    assertEndpointReachable(
+        "POST /orders/preview market", () -> tradeService.previewOrderCurrent(previewMarketRequest));
+    assertEndpointReachable(
+        "POST /orders/preview limit", () -> tradeService.previewOrderCurrent(previewLimitRequest));
+    assertEndpointReachable(
+        "POST /orders/preview stop", () -> tradeService.previewOrderCurrent(previewStopRequest));
+    assertEndpointReachable(
+        "POST /orders/edit_preview", () -> tradeService.previewEditOrderCurrent(editRequest));
 
     assertEndpointReachable(
         "POST /orders create",
         () -> tradeService.createOrder(CoinbaseV3OrderRequests.limitOrderRequest(limitOrder)));
-    assertEndpointReachable("POST /orders/edit", () -> tradeService.editOrder(editRequest));
+    assertEndpointReachable("POST /orders/edit", () -> tradeService.editOrderCurrent(editRequest));
     assertEndpointReachable(
         "POST /orders/batch_cancel",
-        () -> tradeService.cancelOrders(Collections.singletonList(nonEmpty(orderId, SYNTHETIC_ORDER_ID)), null));
+        () ->
+            tradeService.cancelOrders(
+                Collections.singletonList(nonEmpty(orderId, SYNTHETIC_ORDER_ID))));
     assertEndpointReachable(
         "POST /orders/batch_cancel single id",
-        () -> tradeService.cancelOrderById(nonEmpty(orderId, SYNTHETIC_ORDER_ID)));
+        () -> tradeService.cancelOrderByIdCurrent(nonEmpty(orderId, SYNTHETIC_ORDER_ID)));
 
     assertEndpointReachable(
         "POST /orders/close_position",
         () ->
             tradeService.closePosition(
                 new org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest(
-                    "xchange-close-" + System.currentTimeMillis(), SYNTHETIC_FUTURES_PRODUCT_ID, new BigDecimal("1"))));
+                    "xchange-close-" + System.currentTimeMillis(),
+                    SYNTHETIC_FUTURES_PRODUCT_ID,
+                    new BigDecimal("1"))));
 
     CoinbaseFuturesPositionsResponse futuresPositions =
         invokeEndpoint("GET /cfm/positions discovery", () -> tradeService.listFuturesPositions());
@@ -451,11 +461,17 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
     assertEndpointReachable("GET /cfm/positions", () -> tradeService.listFuturesPositions());
     assertEndpointReachable(
         "GET /cfm/positions/{product_id}",
-        () -> tradeService.getFuturesPosition(nonEmpty(futuresProductId, SYNTHETIC_FUTURES_PRODUCT_ID)));
+        () ->
+            tradeService.getFuturesPosition(
+                nonEmpty(futuresProductId, SYNTHETIC_FUTURES_PRODUCT_ID)));
 
-    String perpetualPortfolioId = nonEmpty(firstPerpetualPortfolioUuid(
-        invokeEndpoint("GET /portfolios for perpetual discovery", () -> accountService.listPortfolios(null))),
-        SYNTHETIC_PORTFOLIO_ID);
+    String perpetualPortfolioId =
+        nonEmpty(
+            firstPerpetualPortfolioUuid(
+                invokeEndpoint(
+                    "GET /portfolios for perpetual discovery",
+                    () -> accountService.listPortfolios(null))),
+            SYNTHETIC_PORTFOLIO_ID);
     CoinbasePerpetualsPositionsResponse perpetualsPositions =
         invokeEndpoint(
             "GET /intx/positions/{portfolio_uuid} discovery",
@@ -466,17 +482,25 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
         () -> tradeService.listPerpetualsPositions(perpetualPortfolioId));
     assertEndpointReachable(
         "GET /intx/positions/{portfolio_uuid}/{symbol}",
-        () -> tradeService.getPerpetualsPosition(perpetualPortfolioId, nonEmpty(symbol, SYNTHETIC_SYMBOL)));
+        () ->
+            tradeService.getPerpetualsPosition(
+                perpetualPortfolioId, nonEmpty(symbol, SYNTHETIC_SYMBOL)));
 
-    String fromAccount = nonEmpty(firstAccountId(invokeEndpoint(
-        "GET /accounts for convert discovery", () -> accountService.getCoinbaseAccounts())), SYNTHETIC_ACCOUNT_ID);
+    String fromAccount =
+        nonEmpty(
+            firstAccountId(
+                invokeEndpoint(
+                    "GET /accounts for convert discovery",
+                    () -> accountService.getCoinbaseAccounts())),
+            SYNTHETIC_ACCOUNT_ID);
     String toAccount = fromAccount;
     CoinbaseConvertQuoteResponse quote =
         invokeEndpoint(
             "POST /convert/quote",
             () ->
                 tradeService.createConvertQuote(
-                    new CoinbaseConvertQuoteRequest(fromAccount, toAccount, new BigDecimal("1"), null)));
+                    new CoinbaseConvertQuoteRequest(
+                        fromAccount, toAccount, new BigDecimal("1"), null)));
     String tradeId = quote != null ? quote.getTradeId() : null;
     assertEndpointReachable(
         "POST /convert/trade/{trade_id}",
@@ -560,7 +584,8 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
         });
   }
 
-  private static <T> T invokeEndpoint(String endpoint, EndpointSupplier<T> supplier) throws Exception {
+  private static <T> T invokeEndpoint(String endpoint, EndpointSupplier<T> supplier)
+      throws Exception {
     try {
       return supplier.run();
     } catch (Exception e) {

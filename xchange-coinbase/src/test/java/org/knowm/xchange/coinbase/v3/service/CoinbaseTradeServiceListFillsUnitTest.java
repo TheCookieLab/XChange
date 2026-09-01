@@ -44,7 +44,11 @@ public class CoinbaseTradeServiceListFillsUnitTest {
     params.setStartTime(Date.from(Instant.parse("2026-02-08T00:00:00Z")));
     params.setEndTime(Date.from(Instant.parse("2026-02-08T00:01:00Z")));
     params.setLimit(50);
-
+    params.setSortBy("TRADE_TIME");
+    params.setAssetFilters(Collections.singleton("BTC"));
+    params.setOrderTypes(Collections.singleton("LIMIT_LIMIT_FOK"));
+    params.setOrderSide("BUY");
+    params.setProductTypes(Collections.singleton("FUTURE"));
     CoinbaseOrdersResponse response = new CoinbaseOrdersResponse(Collections.emptyList(), null);
     when(api.listFills(eq(digest),
         isNull(),
@@ -55,7 +59,11 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         eq("portfolio-uuid"),
         eq(50),
         isNull(),
-        isNull())).thenReturn(response);
+        eq("TRADE_TIME"),
+        eq(Collections.singletonList("BTC")),
+        eq(Collections.singletonList("LIMIT_LIMIT_FOK")),
+        eq("BUY"),
+        eq(Collections.singletonList("FUTURE")))).thenReturn(response);
 
     CoinbaseOrdersResponse got = raw.listFills(params);
     assertNotNull(got);
@@ -69,7 +77,11 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         eq("portfolio-uuid"),
         eq(50),
         isNull(),
-        isNull());
+        eq("TRADE_TIME"),
+        eq(Collections.singletonList("BTC")),
+        eq(Collections.singletonList("LIMIT_LIMIT_FOK")),
+        eq("BUY"),
+        eq(Collections.singletonList("FUTURE")));
   }
 
   @Test
@@ -88,6 +100,10 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         eq("portfolio-uuid"),
         isNull(),
         isNull(),
+        isNull(),
+        isNull(),
+        isNull(),
+        isNull(),
         isNull())).thenReturn(response);
 
     CoinbaseOrdersResponse got = raw.listFills(params);
@@ -100,6 +116,10 @@ public class CoinbaseTradeServiceListFillsUnitTest {
         isNull(),
         isNull(),
         eq("portfolio-uuid"),
+        isNull(),
+        isNull(),
+        isNull(),
+        isNull(),
         isNull(),
         isNull(),
         isNull());

@@ -10,6 +10,8 @@ import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.coinbase.v2.CoinbaseV2Authenticated;
 import org.knowm.xchange.coinbase.v2.dto.accounts.CoinbaseV2AccountsResponse;
 import org.knowm.xchange.coinbase.v2.dto.transactions.CoinbaseV2TransactionsResponse;
+import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
+import org.knowm.xchange.coinbase.v3.dto.CoinbaseException;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountResponse;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccountsResponse;
@@ -29,25 +31,22 @@ import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateral
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbaseMultiAssetCollateralResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPortfolioSummaryResponse;
-import org.knowm.xchange.coinbase.v3.CoinbaseUnknownOutcomeException;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbaseMovePortfolioFundsRequest;
-import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioRequest;
+import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfolioResponse;
 import org.knowm.xchange.coinbase.v3.dto.portfolios.CoinbasePortfoliosResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import si.mazi.rescu.ParamsDigest;
 
 /**
  * Raw account service implementation for Coinbase Advanced Trade (v3) API.
- * <p>
- * This service provides direct access to Coinbase account-related API endpoints, returning
+ *
+ * <p>This service provides direct access to Coinbase account-related API endpoints, returning
  * Coinbase-specific DTOs without mapping to XChange objects. It extends {@link CoinbaseBaseService}
  * to provide authenticated access to account endpoints.
- * </p>
- * <p>
- * This is a "raw" service layer that returns Coinbase DTOs directly. For high-level XChange DTOs,
- * use {@link CoinbaseAccountService} which wraps this service and provides adapters.
- * </p>
+ *
+ * <p>This is a "raw" service layer that returns Coinbase DTOs directly. For high-level XChange
+ * DTOs, use {@link CoinbaseAccountService} which wraps this service and provides adapters.
  */
 public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
 
@@ -60,28 +59,39 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseAccountServiceRaw(Exchange exchange) {
     super(exchange);
-    this.coinbaseV2 = ExchangeRestProxyBuilder.forInterface(CoinbaseV2Authenticated.class,
-        exchange.getExchangeSpecification()).build();
+    this.coinbaseV2 =
+        ExchangeRestProxyBuilder.forInterface(
+                CoinbaseV2Authenticated.class, exchange.getExchangeSpecification())
+            .build();
   }
 
-  public CoinbaseAccountServiceRaw(Exchange exchange, org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated coinbaseAdvancedTrade,
-      ParamsDigest authTokenCreator, CoinbaseV2Authenticated coinbaseV2) {
+  public CoinbaseAccountServiceRaw(
+      Exchange exchange,
+      org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated coinbaseAdvancedTrade,
+      ParamsDigest authTokenCreator,
+      CoinbaseV2Authenticated coinbaseV2) {
     super(exchange, coinbaseAdvancedTrade, authTokenCreator);
     this.coinbaseV2 = coinbaseV2;
   }
 
-  public CoinbaseAccountServiceRaw(Exchange exchange, org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated coinbaseAdvancedTrade,
+  public CoinbaseAccountServiceRaw(
+      Exchange exchange,
+      org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated coinbaseAdvancedTrade,
       ParamsDigest authTokenCreator) {
-    this(exchange, coinbaseAdvancedTrade, authTokenCreator,
-        ExchangeRestProxyBuilder.forInterface(CoinbaseV2Authenticated.class,
-            exchange.getExchangeSpecification()).build());
+    this(
+        exchange,
+        coinbaseAdvancedTrade,
+        authTokenCreator,
+        ExchangeRestProxyBuilder.forInterface(
+                CoinbaseV2Authenticated.class, exchange.getExchangeSpecification())
+            .build());
   }
 
   /**
    * Authenticated resource that retrieves the current user's accounts.
    *
    * @see <a
-   * href="https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccounts">https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccounts</a>
+   *     href="https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccounts">https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccounts</a>
    */
   public List<CoinbaseAccount> getCoinbaseAccounts() throws IOException {
     List<CoinbaseAccount> returnList = new ArrayList<>();
@@ -93,9 +103,11 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
     int page = 0;
     do {
       final String requestCursor = cursor;
-      CoinbaseAccountsResponse response = CoinbaseRetry.readWithBackoff(() ->
-          coinbaseAdvancedTrade.listAccounts(authTokenCreator, 250, requestCursor));
-      cursor = advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "accounts");
+      CoinbaseAccountsResponse response =
+          CoinbaseRetry.readWithBackoff(
+              () -> coinbaseAdvancedTrade.listAccounts(authTokenCreator, 250, requestCursor));
+      cursor =
+          advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "accounts");
       page++;
       hasNext = response.getHasNext();
       tmpList = response.getAccounts();
@@ -113,11 +125,11 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * Authenticated resource that retrieves the current user's account for the given currency.
    *
    * @see <a
-   * href="https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccount">https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccount</a>
+   *     href="https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccount">https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getaccount</a>
    */
   public CoinbaseAccount getCoinbaseAccount(String accountId) throws IOException {
-    CoinbaseAccountResponse response = coinbaseAdvancedTrade.getAccount(authTokenCreator,
-        accountId);
+    CoinbaseAccountResponse response =
+        coinbaseAdvancedTrade.getAccount(authTokenCreator, accountId);
     return response.getAccount();
   }
 
@@ -125,7 +137,7 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * Authenticated resource that shows the current user payment methods.
    *
    * @see <a
-   * href="https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getpaymentmethods">https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getpaymentmethods</a>
+   *     href="https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getpaymentmethods">https://docs.cdp.coinbase.com/coinbase-app/trade/reference/retailbrokerageapi_getpaymentmethods</a>
    */
   public List<CoinbasePaymentMethod> getCoinbasePaymentMethods() throws IOException {
     return coinbaseAdvancedTrade.getPaymentMethods(authTokenCreator).getPaymentMethods();
@@ -196,8 +208,8 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * @return The edit portfolio response.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public CoinbasePortfolioResponse editPortfolio(String portfolioUuid,
-      CoinbasePortfolioRequest request) throws IOException {
+  public CoinbasePortfolioResponse editPortfolio(
+      String portfolioUuid, CoinbasePortfolioRequest request) throws IOException {
     return coinbaseAdvancedTrade.editPortfolio(authTokenCreator, portfolioUuid, request);
   }
 
@@ -226,38 +238,36 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
 
   /**
    * Retrieves transaction summary information including fee tiers and trading statistics.
-   * <p>
-   * This method authenticates the request using the stored API credentials and returns
-   * a summary of transaction data filtered by the specified parameters. The response includes
-   * fee tier information (maker and taker rates) and trading statistics.
-   * </p>
    *
-   * @param productType        Optional filter for product type (e.g., "SPOT", "FUTURE"). If null,
-   *                           all product types are included.
+   * <p>This method authenticates the request using the stored API credentials and returns a summary
+   * of transaction data filtered by the specified parameters. The response includes fee tier
+   * information (maker and taker rates) and trading statistics.
+   *
+   * @param productType Optional filter for product type (e.g., "SPOT", "FUTURE"). If null, all
+   *     product types are included.
    * @param contractExpiryType Optional filter for contract expiry type. Only applicable if
-   *                           productType is "FUTURE". If null, all contract expiry types are included.
-   * @param productVenue       Optional filter for product venue. If null, all venues are included.
+   *     productType is "FUTURE". If null, all contract expiry types are included.
+   * @param productVenue Optional filter for product venue. If null, all venues are included.
    * @return A {@link CoinbaseTransactionSummaryResponse} containing fee tier information and
-   *         trading statistics for the authenticated user, filtered by the specified parameters.
+   *     trading statistics for the authenticated user, filtered by the specified parameters.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public CoinbaseTransactionSummaryResponse getTransactionSummary(String productType,
-      String contractExpiryType, String productVenue) throws IOException {
-    return coinbaseAdvancedTrade.getTransactionSummary(authTokenCreator, productType,
-        contractExpiryType, productVenue);
+  public CoinbaseTransactionSummaryResponse getTransactionSummary(
+      String productType, String contractExpiryType, String productVenue) throws IOException {
+    return coinbaseAdvancedTrade.getTransactionSummary(
+        authTokenCreator, productType, contractExpiryType, productVenue);
   }
 
   /**
    * List Coinbase API v2 accounts.
    *
    * <p>This is primarily used to discover an account id (for example a USD wallet) for subsequent
-   * calls to {@link #listV2AccountTransactions(String, Integer, String, String, String)}.</p>
+   * calls to {@link #listV2AccountTransactions(String, Integer, String, String, String)}.
    *
-   * <p><strong>Deprecated:</strong> the v2 REST surface is scheduled for removal in the next
-   * major release. Advanced Trade v3 balances are available through
-   * {@link #getCoinbaseAccounts()}; the v2 account-id discovery path remains only until a v3
-   * deposit/withdrawal history endpoint is available. See
-   * docs/coinbase-v2-to-v3-migration.md.</p>
+   * <p><strong>Deprecated:</strong> the v2 REST surface is scheduled for removal in the next major
+   * release. Advanced Trade v3 balances are available through {@link #getCoinbaseAccounts()}; the
+   * v2 account-id discovery path remains only until a v3 deposit/withdrawal history endpoint is
+   * available. See docs/coinbase-v2-to-v3-migration.md.
    *
    * @param limit max results per page (nullable to use server defaults)
    * @param startingAfter pagination cursor (nullable)
@@ -267,8 +277,8 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * @throws IOException if a network or serialization error occurs
    */
   @Deprecated
-  public CoinbaseV2AccountsResponse listV2Accounts(Integer limit, String startingAfter,
-      String endingBefore, String order) throws IOException {
+  public CoinbaseV2AccountsResponse listV2Accounts(
+      Integer limit, String startingAfter, String endingBefore, String order) throws IOException {
     return coinbaseV2.listAccounts(authTokenCreator, limit, startingAfter, endingBefore, order);
   }
 
@@ -277,11 +287,11 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    *
    * <p>Transactions can represent deposits, withdrawals, and transfers that affect collateral
    * independently of trading fills. Callers should apply strict type filtering to avoid double
-   * counting trade-related activity.</p>
+   * counting trade-related activity.
    *
-   * <p><strong>Deprecated:</strong> the v2 REST surface is scheduled for removal in the next
-   * major release. Deposit/withdrawal history is not yet exposed by the Advanced Trade v3 API;
-   * see docs/coinbase-v2-to-v3-migration.md for the migration status.</p>
+   * <p><strong>Deprecated:</strong> the v2 REST surface is scheduled for removal in the next major
+   * release. Deposit/withdrawal history is not yet exposed by the Advanced Trade v3 API; see
+   * docs/coinbase-v2-to-v3-migration.md for the migration status.
    *
    * @param accountId Coinbase v2 account id (required)
    * @param limit max results per page (nullable to use server defaults)
@@ -292,21 +302,22 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * @throws IOException if a network or serialization error occurs
    */
   @Deprecated
-  public CoinbaseV2TransactionsResponse listV2AccountTransactions(String accountId, Integer limit,
-      String startingAfter, String endingBefore, String order) throws IOException {
-    return coinbaseV2.listTransactions(authTokenCreator, accountId, limit, startingAfter, endingBefore, order);
+  public CoinbaseV2TransactionsResponse listV2AccountTransactions(
+      String accountId, Integer limit, String startingAfter, String endingBefore, String order)
+      throws IOException {
+    return coinbaseV2.listTransactions(
+        authTokenCreator, accountId, limit, startingAfter, endingBefore, order);
   }
 
   /**
    * Retrieves transaction summary information for all products and venues.
-   * <p>
-   * This is a convenience method that calls {@link #getTransactionSummary(String, String, String)}
-   * with all parameters set to null, returning a summary across all product types, contract expiry
-   * types, and venues.
-   * </p>
+   *
+   * <p>This is a convenience method that calls {@link #getTransactionSummary(String, String,
+   * String)} with all parameters set to null, returning a summary across all product types,
+   * contract expiry types, and venues.
    *
    * @return A {@link CoinbaseTransactionSummaryResponse} containing fee tier information and
-   *         trading statistics for the authenticated user across all products and venues.
+   *     trading statistics for the authenticated user across all products and venues.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
   public CoinbaseTransactionSummaryResponse getTransactionSummary() throws IOException {
@@ -373,19 +384,32 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
   public CoinbaseIntradayMarginSettingResponse setIntradayMarginSetting(
-      CoinbaseIntradayMarginSettingRequest request)
-      throws IOException {
+      CoinbaseIntradayMarginSettingRequest request) throws IOException {
     return coinbaseAdvancedTrade.setIntradayMarginSetting(authTokenCreator, request);
   }
 
   /**
-   * Retrieves the current margin window.
+   * Retrieves the current margin window for Coinbase's default margin profile.
    *
-   * @return The current margin window response.
-   * @throws IOException If there is an error communicating with the Coinbase API.
+   * @return the current margin window response
+   * @throws IOException if communication or response decoding fails
    */
   public CoinbaseCurrentMarginWindowResponse getCurrentMarginWindow() throws IOException {
-    return coinbaseAdvancedTrade.getCurrentMarginWindow(authTokenCreator);
+    return getCurrentMarginWindow(null);
+  }
+
+  /**
+   * Retrieves the current margin window for a selected Coinbase margin profile.
+   *
+   * @param marginProfileType optional Coinbase margin-profile type; {@code null} selects the
+   *     provider default
+   * @return the selected profile's current margin window
+   * @throws IOException if communication or response decoding fails
+   * @since 1.0.2
+   */
+  public CoinbaseCurrentMarginWindowResponse getCurrentMarginWindow(String marginProfileType)
+      throws IOException {
+    return coinbaseAdvancedTrade.getCurrentMarginWindow(authTokenCreator, marginProfileType);
   }
 
   /**
@@ -420,8 +444,7 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
   public CoinbaseMultiAssetCollateralResponse optInMultiAssetCollateral(
-      CoinbaseMultiAssetCollateralRequest request)
-      throws IOException {
+      CoinbaseMultiAssetCollateralRequest request) throws IOException {
     return coinbaseAdvancedTrade.optInMultiAssetCollateral(authTokenCreator, request);
   }
 
@@ -432,13 +455,15 @@ public class CoinbaseAccountServiceRaw extends CoinbaseBaseService {
    * @return The allocation response.
    * @throws IOException If there is an error communicating with the Coinbase API.
    */
-  public CoinbaseAllocatePortfolioResponse allocatePortfolio(CoinbaseAllocatePortfolioRequest request)
-      throws IOException {
+  public CoinbaseAllocatePortfolioResponse allocatePortfolio(
+      CoinbaseAllocatePortfolioRequest request) throws IOException {
     try {
       return coinbaseAdvancedTrade.allocatePortfolio(authTokenCreator, request);
+    } catch (CoinbaseException providerFailure) {
+      throw providerFailure;
     } catch (IOException transportFailure) {
-      throw new CoinbaseUnknownOutcomeException("allocatePortfolio", request.getPortfolioUuid(), transportFailure);
+      throw new CoinbaseUnknownOutcomeException(
+          "allocatePortfolio", "portfolio_uuid", request.getPortfolioUuid(), transportFailure);
     }
   }
-
 }

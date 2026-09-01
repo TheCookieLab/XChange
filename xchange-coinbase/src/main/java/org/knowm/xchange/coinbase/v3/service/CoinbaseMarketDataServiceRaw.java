@@ -16,6 +16,7 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductCandlesResponse
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductsResponse;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import si.mazi.rescu.ParamsDigest;
 
@@ -120,15 +121,20 @@ public class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
    */
   public List<CoinbaseProductResponse> listProducts(Integer limit, Integer offset, String productType)
       throws Exception {
+    CoinbaseProductsResponse response;
     if (hasAuthentication()) {
-      CoinbaseProductsResponse response =
+      response =
           coinbaseAdvancedTrade.listProducts(authTokenCreator, limit, offset, productType, null, null,
               null, null, null, null);
-      return response == null ? Collections.emptyList() : response.getProducts();
+    } else {
+      response =
+          publicClientOrThrow().listPublicProducts(
+              limit, offset, productType, null, null, null, null, null);
     }
-    CoinbaseProductsResponse response =
-        publicClientOrThrow().listPublicProducts(limit, offset, productType, null, null, null, null, null);
-    return response == null ? Collections.emptyList() : response.getProducts();
+    if (response == null || response.getProducts() == null) {
+      throw new ExchangeException("Coinbase product catalog response omitted products");
+    }
+    return response.getProducts();
   }
 
   /**
@@ -143,7 +149,8 @@ public class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
    */
   public CoinbaseBestBidAsksResponse getBestBidAsk(String productId) throws IOException {
     if (hasAuthentication()) {
-      return coinbaseAdvancedTrade.getBestBidAsk(authTokenCreator, productId);
+      return coinbaseAdvancedTrade.getBestBidAsks(authTokenCreator,
+          productId == null ? null : Collections.singletonList(productId));
     }
     if (productId == null) {
       throw new NotAvailableFromExchangeException(
