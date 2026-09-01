@@ -914,14 +914,17 @@ public final class CoinbaseAdapters {
       CoinbaseProductCandlesResponse candle,
       CoinbasePriceBook priceBook,
       Instrument instrument) {
-    if (instrument == null) {
-      if (priceBook != null) {
-        requireAdaptableProduct(priceBook.getProductId(), "ticker");
-      } else if (product != null) {
-        requireAdaptableProduct(product.getProductId(), "ticker");
-      }
+    String productId =
+        priceBook != null ? priceBook.getProductId() : product == null ? null : product.getProductId();
+    if (instrument == null && productId != null) {
+      requireAdaptableProduct(productId, "ticker");
     }
+    Instrument resolvedInstrument =
+        instrument != null ? instrument : productId == null ? null : adaptInstrument(productId);
     Builder builder = new Ticker.Builder();
+    if (resolvedInstrument != null) {
+      builder = builder.instrument(resolvedInstrument);
+    }
 
     if (product != null) {
       if (product.getPricePercentageChange24H() != null) {
@@ -940,18 +943,14 @@ public final class CoinbaseAdapters {
     }
 
     if (priceBook != null && !priceBook.getAsks().isEmpty() && !priceBook.getBids().isEmpty()) {
-      Instrument resolvedInstrument =
-          instrument == null ? adaptInstrument(priceBook.getProductId()) : instrument;
-      if (resolvedInstrument == null) {
-        return null;
-      }
+
       builder =
           builder
               .ask(priceBook.getAsks().get(0).getPrice())
               .askSize(priceBook.getAsks().get(0).getSize())
               .bid(priceBook.getBids().get(0).getPrice())
               .bidSize(priceBook.getBids().get(0).getSize())
-              .instrument(resolvedInstrument)
+
               .timestamp(
                   Date.from(
                       DateTimeFormatter.ISO_INSTANT.parse(priceBook.getTime(), Instant::from)));

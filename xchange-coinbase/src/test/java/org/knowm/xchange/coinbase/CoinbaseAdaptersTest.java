@@ -691,6 +691,21 @@ public class CoinbaseAdaptersTest {
   }
 
   @Test
+  public void testCatalogTickerRetainsInstrumentWithoutBookSides() {
+    FuturesContract configured = new FuturesContract(CurrencyPair.ETH_USD, "CDE");
+    CoinbasePriceBook priceBook =
+        new CoinbasePriceBook(
+            "ETP-20DEC30-CDE",
+            Collections.emptyList(),
+            Collections.emptyList(),
+            "2026-01-01T00:00:00Z");
+
+    Ticker ticker = CoinbaseAdapters.adaptTicker(null, null, priceBook, configured);
+
+    assertEquals(configured, ticker.getInstrument());
+  }
+
+  @Test
   public void testAdaptQuoteSizedFillConvertsToBaseAmount() {
     CoinbaseFill fill =
         new CoinbaseFill(
