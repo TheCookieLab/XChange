@@ -205,6 +205,47 @@ public class CoinbasePaginationGuardTest {
   }
 
   @Test
+  public void continuationSuppressesRepeatedBoundaryFillOnNextCursorPage() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    when(authenticated.listFills(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenAnswer(
+            invocation -> {
+              String cursor = invocation.getArgument(8);
+              return "next".equals(cursor)
+                  ? new CoinbaseOrdersResponse(Arrays.asList(fill("1"), fill("2")), null)
+                  : new CoinbaseOrdersResponse(Collections.singletonList(fill("1")), "next");
+            });
+    CoinbaseTradeService service =
+        new CoinbaseTradeService(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+    CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
+    params.setLimit(1);
+
+    assertEquals(1, service.getTradeHistory(params).getUserTrades().size());
+    assertEquals("next", params.getNextPageCursor());
+
+    params.setLimit(null);
+    assertEquals(
+        Collections.singletonList("2-order"),
+        service.getTradeHistory(params).getUserTrades().stream()
+            .map(UserTrade::getOrderId)
+            .collect(Collectors.toList()));
+  }
+
+  @Test
   public void fillsFailureDoesNotMutateCallerCursor() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     List<String> requestedCursors = new ArrayList<>();

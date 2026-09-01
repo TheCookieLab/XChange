@@ -38,6 +38,7 @@ import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.CancelAllOrders;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
@@ -187,11 +188,14 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
 
     CoinbaseTradeHistoryParams v3Params = (CoinbaseTradeHistoryParams) params;
     List<UserTrade> trades = new ArrayList<>();
-    Set<String> seenFillIds = new HashSet<>();
+    Set<String> seenFillIds = new HashSet<>(v3Params.getContinuationFillIds());
     Set<String> seenCursors = new HashSet<>();
     int page = 0;
     String cursor = v3Params.getNextPageCursor();
     int fillOffset = v3Params.getNextPageCursorFillOffset();
+    if (cursor == null && fillOffset == 0) {
+      seenFillIds.clear();
+    }
     do {
       final String requestCursor = cursor;
       final int requestFillOffset = fillOffset;
@@ -213,7 +217,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
           fillId = fill.getTradeId();
         }
         if (fillId == null || fillId.isBlank() || seenFillIds.add(fillId)) {
-          trades.add(CoinbaseAdapters.adaptFill(fill));
+          trades.add(CoinbaseAdapters.adaptFill(fill, resolveFillInstrument(fill)));
           if (v3Params.getLimit() != null
               && trades.size() >= v3Params.getLimit()
               && fillIndex + 1 < response.getFills().size()) {
@@ -235,8 +239,13 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
         && !cursor.isEmpty()
         && (v3Params.getLimit() == null || trades.size() < v3Params.getLimit()));
     v3Params.setNextPageCursorContinuation(cursor, fillOffset);
+    v3Params.setContinuationFillIds(cursor == null ? Set.of() : seenFillIds);
 
     return new UserTrades(trades, Trades.TradeSortType.SortByTimestamp);
+  }
+
+  private Instrument resolveFillInstrument(CoinbaseFill fill) {
+    return productIdentity == null ? null : productIdentity.instrument(fill.getProductId());
   }
 
   /**

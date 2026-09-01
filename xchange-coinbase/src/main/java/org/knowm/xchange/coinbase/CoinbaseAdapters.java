@@ -122,6 +122,18 @@ public final class CoinbaseAdapters {
    *     quote-sized fill has no positive execution price
    */
   public static UserTrade adaptFill(CoinbaseFill fill) {
+    return adaptFill(fill, null);
+  }
+
+  /**
+   * Adapts a fill, retaining a catalog-resolved instrument when the exchange's native product id
+   * cannot round-trip through the generic parser.
+   *
+   * @param fill the Coinbase fill
+   * @param instrument catalog-resolved instrument, or {@code null} to parse the native product id
+   * @return a lossless generic trade
+   */
+  public static UserTrade adaptFill(CoinbaseFill fill, Instrument instrument) {
     Objects.requireNonNull(fill, "Cannot adapt a null fill");
     if (fill.getEntryId() == null
         || fill.getEntryId().isBlank()
@@ -167,7 +179,7 @@ public final class CoinbaseAdapters {
         .entryId(fill.getEntryId())
         .id(fill.getTradeId())
         .orderId(fill.getOrderId())
-        .instrument(adaptInstrument(fill.getProductId()))
+        .instrument(instrument == null ? adaptInstrument(fill.getProductId()) : instrument)
         .price(fill.getPrice())
         .originalAmount(amount)
         .timestamp(fill.getTradeTime())

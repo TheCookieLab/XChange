@@ -35,6 +35,7 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
    * partially consumed Coinbase page without changing the raw remote cursor.
    */
   private int nextPageCursorFillOffset;
+  private Set<String> continuationFillIds = new HashSet<>();
   private Date startTime;
   private Date endTime;
   private Integer limit;
@@ -144,6 +145,7 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   public void setNextPageCursor(String cursor) {
     this.nextPageCursor = cursor;
     this.nextPageCursorFillOffset = 0;
+    this.continuationFillIds.clear();
   }
 
   /**
@@ -176,6 +178,20 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
     }
     this.nextPageCursor = cursor;
     this.nextPageCursorFillOffset = fillOffset;
+  }
+
+  /** @return a defensive copy of fill identities emitted before the current continuation cursor */
+  public Set<String> getContinuationFillIds() {
+    return new HashSet<>(continuationFillIds);
+  }
+
+  /**
+   * Records fill identities already emitted before resuming the current cursor.
+   *
+   * @param fillIds fill entry or trade identities, never {@code null}
+   */
+  public void setContinuationFillIds(Collection<String> fillIds) {
+    this.continuationFillIds = new HashSet<>(fillIds);
   }
 
   @Override
