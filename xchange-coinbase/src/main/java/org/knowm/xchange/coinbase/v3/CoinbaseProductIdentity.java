@@ -238,15 +238,16 @@ public final class CoinbaseProductIdentity {
       throw new IllegalArgumentException("raw market data service is required for discovery");
     }
     Map<String, CoinbaseProductResponse> productsById = new LinkedHashMap<>();
-    discoverProductType(rawService, "SPOT", productsById);
-    discoverProductType(rawService, "FUTURE", productsById);
+    discoverProductType(rawService, "SPOT", productsById, false);
+    discoverProductType(rawService, "FUTURE", productsById, true);
     return build(new ArrayList<>(productsById.values()));
   }
 
   private static void discoverProductType(
       CoinbaseMarketDataServiceRaw rawService,
       String productType,
-      Map<String, CoinbaseProductResponse> productsById)
+      Map<String, CoinbaseProductResponse> productsById,
+      boolean includeExpiredFutures)
       throws Exception {
     Set<String> productIdsForType = new HashSet<>();
     int offset = 0;
@@ -255,7 +256,10 @@ public final class CoinbaseProductIdentity {
         throw new IllegalArgumentException("product discovery exceeded its bounded catalog size");
       }
       List<CoinbaseProductResponse> page =
-          rawService.listProducts(DISCOVERY_PAGE_SIZE, offset, productType);
+          includeExpiredFutures
+              ? rawService.listProductsIncludingExpiredFutures(
+                  DISCOVERY_PAGE_SIZE, offset, productType)
+              : rawService.listProducts(DISCOVERY_PAGE_SIZE, offset, productType);
       if (page == null || page.isEmpty()) {
         return;
       }
