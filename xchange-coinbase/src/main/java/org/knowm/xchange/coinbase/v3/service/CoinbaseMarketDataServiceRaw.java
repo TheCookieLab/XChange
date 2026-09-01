@@ -138,7 +138,7 @@ public class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
     if (!"FUTURE".equals(productType)) {
       throw new IllegalArgumentException("expired-contract discovery requires product type FUTURE");
     }
-    return listProducts(limit, offset, productType, "ALL");
+    return listProducts(limit, offset, productType, "STATUS_ALL");
   }
 
   private List<CoinbaseProductResponse> listProducts(

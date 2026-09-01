@@ -197,7 +197,7 @@ public class CoinbaseProductIdentityTest {
             eq("FUTURE"),
             any(),
             any(),
-            eq("ALL"),
+            eq("STATUS_ALL"),
             any(),
             any(),
             any()))
