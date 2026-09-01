@@ -121,15 +121,54 @@ public class CoinbaseMarketDataServiceRaw extends CoinbaseBaseService {
    */
   public List<CoinbaseProductResponse> listProducts(Integer limit, Integer offset, String productType)
       throws Exception {
+    return listProducts(limit, offset, productType, null);
+  }
+
+  /**
+   * Lists one bounded page of futures including expired contracts.
+   *
+   * @param limit maximum results per page (nullable to use server defaults)
+   * @param offset zero-based page offset (nullable)
+   * @param productType product type filter, which must be {@code FUTURE}
+   * @return the page of products
+   * @throws Exception on transport or serialization failure
+   */
+  public List<CoinbaseProductResponse> listProductsIncludingExpiredFutures(
+      Integer limit, Integer offset, String productType) throws Exception {
+    if (!"FUTURE".equals(productType)) {
+      throw new IllegalArgumentException("expired-contract discovery requires product type FUTURE");
+    }
+    return listProducts(limit, offset, productType, "ALL");
+  }
+
+  private List<CoinbaseProductResponse> listProducts(
+      Integer limit, Integer offset, String productType, String expiringContractStatus) throws Exception {
     CoinbaseProductsResponse response;
     if (hasAuthentication()) {
       response =
-          coinbaseAdvancedTrade.listProducts(authTokenCreator, limit, offset, productType, null, null,
-              null, null, null, null);
+          coinbaseAdvancedTrade.listProducts(
+              authTokenCreator,
+              limit,
+              offset,
+              productType,
+              null,
+              null,
+              expiringContractStatus,
+              null,
+              null,
+              null);
     } else {
       response =
-          publicClientOrThrow().listPublicProducts(
-              limit, offset, productType, null, null, null, null, null);
+          publicClientOrThrow()
+              .listPublicProducts(
+                  limit,
+                  offset,
+                  productType,
+                  null,
+                  null,
+                  expiringContractStatus,
+                  null,
+                  null);
     }
     if (response == null || response.getProducts() == null) {
       throw new ExchangeException("Coinbase product catalog response omitted products");

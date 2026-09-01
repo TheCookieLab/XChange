@@ -197,22 +197,26 @@ public class CoinbaseProductIdentityTest {
             eq("FUTURE"),
             any(),
             any(),
-            any(),
+            eq("ALL"),
             any(),
             any(),
             any()))
         .thenReturn(
             new CoinbaseProductsResponse(
-                Collections.singletonList(
-                    future("BTC-PERP-INTX", "BTC", "USD", "INTX", true))));
+                Arrays.asList(
+                    future("BTC-PERP-INTX", "BTC", "USD", "INTX", true),
+                    future("BTC-28MAR25-CFMF", "BTC", "USD", "CFM", false))));
 
     CoinbaseProductIdentity identity = CoinbaseProductIdentity.discover(rawWith(authenticated));
 
-    assertEquals(2, identity.products().size());
+    assertEquals(3, identity.products().size());
     assertEquals("BTC-USD", identity.requireProductId(CurrencyPair.BTC_USD));
     assertEquals(
         "BTC-PERP-INTX",
         identity.requireProductId(new FuturesContract(CurrencyPair.BTC_USD, "PERP")));
+    assertEquals(
+        "BTC-28MAR25-CFMF",
+        identity.requireProductId(new FuturesContract(CurrencyPair.BTC_USD, "28MAR25-CFMF")));
   }
 
   @Test
