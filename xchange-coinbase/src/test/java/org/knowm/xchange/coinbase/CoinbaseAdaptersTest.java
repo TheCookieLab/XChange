@@ -337,6 +337,33 @@ public class CoinbaseAdaptersTest {
   }
 
   @Test
+  public void testCatalogResolvedPerpetualPositionRetainsFuturesContract() {
+    CoinbasePerpetualsPosition position =
+        new CoinbasePerpetualsPosition(
+            "BTC-PERP-INTX",
+            "product-uuid",
+            "portfolio-uuid",
+            "BTC-PERP-INTX",
+            "30010",
+            "LONG",
+            new BigDecimal("1.5"),
+            "30000",
+            new BigDecimal("45000"),
+            new BigDecimal("2"),
+            new BigDecimal("25"),
+            null);
+    FuturesContract configured = new FuturesContract(CurrencyPair.BTC_USD, "PERP");
+
+    assertEquals(
+        configured,
+        CoinbaseAdapters
+            .adaptPerpetualsOpenPositions(Collections.singletonList(position), ignored -> configured)
+            .getOpenPositions()
+            .get(0)
+            .getInstrument());
+  }
+
+  @Test
   public void testAdaptFuturesWallet() {
     CoinbaseFuturesBalanceSummaryResponse response =
         new CoinbaseFuturesBalanceSummaryResponse(

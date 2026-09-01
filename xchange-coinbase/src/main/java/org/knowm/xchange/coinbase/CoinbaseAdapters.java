@@ -646,17 +646,39 @@ public final class CoinbaseAdapters {
 
   public static OpenPositions adaptPerpetualsOpenPositions(
       List<CoinbasePerpetualsPosition> positions) {
+    return adaptPerpetualsOpenPositions(positions, ignored -> null);
+  }
+
+  /**
+   * Adapt perpetual positions with catalog-resolved instruments when available.
+   *
+   * @param positions Coinbase perpetual positions
+   * @param instrumentResolver resolver for one perpetual position
+   * @return adapted open positions
+   */
+  public static OpenPositions adaptPerpetualsOpenPositions(
+      List<CoinbasePerpetualsPosition> positions,
+      Function<CoinbasePerpetualsPosition, Instrument> instrumentResolver) {
+    Objects.requireNonNull(instrumentResolver, "instrumentResolver");
     if (positions == null) {
       return new OpenPositions(Collections.emptyList());
     }
-    for (CoinbasePerpetualsPosition position : positions) {
-      if (position != null) {
-        requireAdaptableProduct(position.getSymbol(), "perpetual position");
-      }
-    }
     List<OpenPosition> openPositions =
         positions.stream()
-            .map(CoinbaseAdapters::adaptPerpetualsOpenPosition)
+            .map(
+                position -> {
+                  if (position == null) {
+                    return null;
+                  }
+                  Instrument instrument = instrumentResolver.apply(position);
+                  if (instrument == null) {
+                    String productId =
+                        position.getProductId() != null ? position.getProductId() : position.getSymbol();
+                    requireAdaptableProduct(productId, "perpetual position");
+                    instrument = productId == null ? null : adaptInstrument(productId);
+                  }
+                  return adaptPerpetualsOpenPosition(position, instrument);
+                })
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     return new OpenPositions(openPositions);
@@ -729,13 +751,13 @@ public final class CoinbaseAdapters {
         .build();
   }
 
-  private static OpenPosition adaptPerpetualsOpenPosition(CoinbasePerpetualsPosition position) {
+  private static OpenPosition adaptPerpetualsOpenPosition(
+      CoinbasePerpetualsPosition position, Instrument instrument) {
     if (position == null) {
       return null;
     }
     String instrumentId =
         position.getProductId() != null ? position.getProductId() : position.getSymbol();
-    Instrument instrument = instrumentId == null ? null : adaptInstrument(instrumentId);
     OpenPosition.Type type = adaptPositionType(position.getSide());
     BigDecimal size = position.getNetSize();
     if (size != null) {

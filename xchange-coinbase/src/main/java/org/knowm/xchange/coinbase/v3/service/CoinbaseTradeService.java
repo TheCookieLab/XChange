@@ -14,6 +14,7 @@ import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
+import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsPosition;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrderResult;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
@@ -261,6 +262,14 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     return productIdentity == null ? null : productIdentity.instrument(position.getProductId());
   }
 
+  private Instrument resolvePerpetualsPositionInstrument(CoinbasePerpetualsPosition position) {
+    if (productIdentity == null) {
+      return null;
+    }
+    String productId = position.getProductId() != null ? position.getProductId() : position.getSymbol();
+    return productIdentity.instrument(productId);
+  }
+
   /**
    * Retrieves all currently open orders for the authenticated user.
    *
@@ -300,7 +309,8 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     for (CoinbasePortfolio portfolio : listPerpetualsPortfolios()) {
       openPositions.addAll(
           CoinbaseAdapters.adaptPerpetualsOpenPositions(
-                  listPerpetualsPositions(portfolio.getUuid()).getPositions())
+                  listPerpetualsPositions(portfolio.getUuid()).getPositions(),
+                  this::resolvePerpetualsPositionInstrument)
               .getOpenPositions());
     }
 
@@ -322,7 +332,8 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
       throw new NotAvailableFromExchangeException("Open positions require authentication");
     }
     return CoinbaseAdapters.adaptPerpetualsOpenPositions(
-        listPerpetualsPositions(portfolioUuid).getPositions());
+        listPerpetualsPositions(portfolioUuid).getPositions(),
+        this::resolvePerpetualsPositionInstrument);
   }
 
   /**
