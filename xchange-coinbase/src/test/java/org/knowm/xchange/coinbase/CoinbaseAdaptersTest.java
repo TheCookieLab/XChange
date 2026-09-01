@@ -604,6 +604,26 @@ public class CoinbaseAdaptersTest {
   }
 
   @Test
+  public void testCatalogResolvedCdePositionRetainsFuturesContract() throws Exception {
+    CoinbaseFuturesPosition position =
+        new ObjectMapper()
+            .readValue(
+                "{\"product_id\":\"ETP-20DEC30-CDE\",\"side\":\"LONG\","
+                    + "\"number_of_contracts\":\"2.5\",\"contract_size\":\"0.1\","
+                    + "\"amount\":\"0.25\",\"entry_price\":\"3200\"}",
+                CoinbaseFuturesPosition.class);
+    FuturesContract configured = new FuturesContract(CurrencyPair.ETH_USD, "CDE");
+
+    assertEquals(
+        configured,
+        CoinbaseAdapters.adaptFuturesOpenPositions(
+                Collections.singletonList(position), ignored -> configured)
+            .getOpenPositions()
+            .get(0)
+            .getInstrument());
+  }
+
+  @Test
   public void testRejectOpaqueCdeInstrumentFromGenericAdapters() {
     String productId = "ETP-20DEC30-CDE";
     CoinbasePriceBookEntry entry = new CoinbasePriceBookEntry(BigDecimal.TEN, BigDecimal.ONE);
