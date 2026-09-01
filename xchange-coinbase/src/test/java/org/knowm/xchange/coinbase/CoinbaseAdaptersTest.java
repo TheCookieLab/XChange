@@ -20,6 +20,7 @@ import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.StopOrder;
+import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseCurrentMarginWindowResponse;
@@ -702,6 +703,32 @@ public class CoinbaseAdaptersTest {
     assertEquals(Currency.USD, adapted.getFeeCurrency());
     assertEquals("trade", adapted.getId());
     assertEquals("entry", adapted.getEntryId());
+  }
+
+  @Test
+  public void testAdaptedFillRetainsUserTradeEquality() {
+    CoinbaseFill fill =
+        new CoinbaseFill(
+            "entry", "trade", "order", "2026-02-08T00:00:00Z", "FILL",
+            new BigDecimal("2500"), new BigDecimal("100"), BigDecimal.ZERO, "ETH-USD",
+            "MAKER", true, "user", "BUY", "portfolio");
+
+    UserTrade adapted = CoinbaseAdapters.adaptFill(fill);
+    UserTrade expected =
+        UserTrade.builder()
+            .id(adapted.getId())
+            .orderId(adapted.getOrderId())
+            .instrument(adapted.getInstrument())
+            .price(adapted.getPrice())
+            .originalAmount(adapted.getOriginalAmount())
+            .timestamp(adapted.getTimestamp())
+            .type(adapted.getType())
+            .feeAmount(adapted.getFeeAmount())
+            .feeCurrency(adapted.getFeeCurrency())
+            .build();
+
+    assertEquals(expected, adapted);
+    assertEquals(adapted, expected);
   }
 
   @Test

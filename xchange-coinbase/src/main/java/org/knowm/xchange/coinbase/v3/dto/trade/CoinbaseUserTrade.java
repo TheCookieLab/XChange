@@ -1,8 +1,9 @@
 package org.knowm.xchange.coinbase.v3.dto.trade;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.knowm.xchange.dto.trade.UserTrade;
 
@@ -13,7 +14,8 @@ import org.knowm.xchange.dto.trade.UserTrade;
  * XChange trade filters. {@link #getEntryId()} is Coinbase's immutable ledger entry identity and
  * must not be sent back as a trade identifier.
  */
-@Data
+@Getter
+@Setter
 @SuperBuilder
 @AllArgsConstructor
 @NoArgsConstructor
