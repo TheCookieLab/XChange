@@ -145,6 +145,66 @@ public class CoinbasePaginationGuardTest {
   }
 
   @Test
+  public void partiallyConsumedFillPageResumesAfterReturnedPrefix() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    List<String> requestedCursors = new ArrayList<>();
+    when(authenticated.listFills(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenAnswer(
+            invocation -> {
+              String requestedCursor = invocation.getArgument(8);
+              requestedCursors.add(requestedCursor);
+              if (requestedCursor == null) {
+                return new CoinbaseOrdersResponse(Collections.singletonList(fill("1")), "next");
+              }
+              if ("next".equals(requestedCursor)) {
+                return new CoinbaseOrdersResponse(
+                    Arrays.asList(fill("1"), fill("2"), fill("3")), "after");
+              }
+              return new CoinbaseOrdersResponse(Collections.emptyList(), null);
+            });
+    CoinbaseTradeService service =
+        new CoinbaseTradeService(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+    CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
+    params.setLimit(2);
+
+    UserTrades limitedTrades = service.getTradeHistory(params);
+
+    assertEquals(
+        Arrays.asList("1-order", "2-order"),
+        limitedTrades.getUserTrades().stream()
+            .map(UserTrade::getOrderId)
+            .collect(Collectors.toList()));
+    assertEquals("next", params.getNextPageCursor());
+    assertEquals(2, params.getNextPageCursorFillOffset());
+
+    params.setLimit(null);
+    UserTrades resumedTrades = service.getTradeHistory(params);
+
+    assertEquals(
+        Collections.singletonList("3-order"),
+        resumedTrades.getUserTrades().stream()
+            .map(UserTrade::getOrderId)
+            .collect(Collectors.toList()));
+    assertEquals(Arrays.asList(null, "next", "next", "after"), requestedCursors);
+    assertEquals(null, params.getNextPageCursor());
+    assertEquals(0, params.getNextPageCursorFillOffset());
+  }
+
+  @Test
   public void fillsFailureDoesNotMutateCallerCursor() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     List<String> requestedCursors = new ArrayList<>();

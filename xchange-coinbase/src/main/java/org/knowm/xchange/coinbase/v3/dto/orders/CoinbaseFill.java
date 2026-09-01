@@ -154,16 +154,18 @@ public class CoinbaseFill {
   /**
    * Returns the commission currency encoded by Coinbase's product conventions.
    *
-   * <p>Pair-shaped spot and dated-futures identifiers use their second component. Coinbase
-   * Derivatives Exchange products are USD-settled despite opaque expiry-bearing identifiers, and
-   * Coinbase International perpetuals are USDC-settled.
+   * <p>Pair-shaped spot identifiers use their second component. CFM/CFMF and Coinbase Derivatives
+   * Exchange futures are USD-settled, so their expiry-bearing product identifiers must not be
+   * interpreted as currency pairs. Coinbase International perpetuals are USDC-settled.
    */
   public Currency getFeeCurrency() {
     if (productId == null) {
       return null;
     }
     String normalized = productId.trim().toUpperCase(java.util.Locale.ROOT);
-    if (normalized.endsWith("-CDE")) {
+    if (normalized.endsWith("-CDE")
+        || normalized.endsWith("-CFM")
+        || normalized.endsWith("-CFMF")) {
       return Currency.USD;
     }
     if (normalized.endsWith("-INTX")) {

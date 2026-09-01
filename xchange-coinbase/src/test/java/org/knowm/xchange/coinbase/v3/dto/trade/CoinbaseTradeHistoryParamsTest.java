@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.dto.trade;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
@@ -20,5 +21,23 @@ public class CoinbaseTradeHistoryParamsTest {
     params.addProductId(" BTC-PERP ");
 
     assertEquals(Collections.singleton("BTC-PERP"), new HashSet<>(params.getProductIds()));
+  }
+
+  @Test
+  public void partialPageContinuationPreservesCursorAndClearsOnCallerReset() {
+    CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
+
+    params.setNextPageCursorContinuation("remote-cursor", 2);
+
+    assertEquals("remote-cursor", params.getNextPageCursor());
+    assertEquals(2, params.getNextPageCursorFillOffset());
+
+    params.setNextPageCursor("caller-cursor");
+
+    assertEquals("caller-cursor", params.getNextPageCursor());
+    assertEquals(0, params.getNextPageCursorFillOffset());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> params.setNextPageCursorContinuation("invalid-cursor", -1));
   }
 }

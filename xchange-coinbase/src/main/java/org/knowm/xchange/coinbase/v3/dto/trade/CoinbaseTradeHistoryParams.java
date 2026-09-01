@@ -27,6 +27,14 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   private String transactionId;
   private String orderId;
   private String nextPageCursor;
+  /**
+   * Number of raw fills already consumed from the page requested with {@link #nextPageCursor}.
+   *
+   * <p>This is continuation state owned by the high-level fill-history adapter. It is zero for a
+   * complete page or a caller-supplied cursor, and permits a later limited request to resume a
+   * partially consumed Coinbase page without changing the raw remote cursor.
+   */
+  private int nextPageCursorFillOffset;
   private Date startTime;
   private Date endTime;
   private Integer limit;
@@ -135,6 +143,39 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   @Override
   public void setNextPageCursor(String cursor) {
     this.nextPageCursor = cursor;
+    this.nextPageCursorFillOffset = 0;
+  }
+
+  /**
+   * Returns the number of raw fills already consumed from the page identified by {@link
+   * #getNextPageCursor()}.
+   *
+   * <p>The offset is reset when callers set a cursor through {@link #setNextPageCursor(String)}.
+   * It is meaningful only when {@link org.knowm.xchange.coinbase.v3.service.CoinbaseTradeService}
+   * has stopped at a configured limit in the middle of that page.
+   *
+   * @return nonnegative raw-result offset for the current cursor
+   */
+  public int getNextPageCursorFillOffset() {
+    return nextPageCursorFillOffset;
+  }
+
+  /**
+   * Stores a raw Coinbase cursor and the number of raw fills already consumed from its page.
+   *
+   * <p>This preserves the remote cursor exactly while recording the high-level continuation state
+   * necessary to resume a partially consumed page. The offset is zero after a complete page.
+   *
+   * @param cursor raw Coinbase cursor used to request the page, or {@code null} for the first page
+   * @param fillOffset nonnegative number of raw fills already consumed from that page
+   * @throws IllegalArgumentException if {@code fillOffset} is negative
+   */
+  public void setNextPageCursorContinuation(String cursor, int fillOffset) {
+    if (fillOffset < 0) {
+      throw new IllegalArgumentException("Fill continuation offset must not be negative");
+    }
+    this.nextPageCursor = cursor;
+    this.nextPageCursorFillOffset = fillOffset;
   }
 
   @Override

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.Instant;
+import org.knowm.xchange.currency.Currency;
 import org.junit.Test;
 
 /**
@@ -106,5 +107,32 @@ public class CoinbaseFillsJsonTest {
     assertEquals("Commission precision should be preserved", 
         new BigDecimal("0.00000025"), fill.getCommission());
   }
+
+  @Test
+  public void testDatedCfmfFillUsesUsdFeeCurrency() {
+    CoinbaseFill fill =
+        new CoinbaseFill(
+            "entry",
+            "trade",
+            "order",
+            null,
+            null,
+            null,
+            null,
+            null,
+            "BTC-28MAR25-CFMF",
+            null,
+            null,
+            false,
+            null,
+            null,
+            null);
+
+    assertEquals(
+        "CFMF futures fees settle in USD rather than the expiry token",
+        Currency.USD,
+        fill.getFeeCurrency());
+  }
+
 }
 

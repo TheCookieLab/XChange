@@ -4,6 +4,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.junit.Assert.assertSame;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
@@ -23,6 +24,7 @@ import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBook;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbasePriceBookEntry;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseProductPriceBookResponse;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
@@ -31,8 +33,10 @@ import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductMarketTradesRes
 import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
 import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
+import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import si.mazi.rescu.ParamsDigest;
@@ -163,6 +167,124 @@ public class CoinbaseMarketDataServiceUnitTest {
     verify(service, atLeastOnce()).getMarketTrades(productId, null, null, null);
     assertEquals(productId, catalog.requireProductId(instrument));
     assertSame(instrument, candleData.getInstrument());
+  }
+
+  @Test
+  public void testCatalogFuturesTickerPreservesRequestedInstrument() throws IOException {
+    String productId = "BTC-28MAR25-CFMF";
+    CoinbaseProductIdentity catalog =
+        CoinbaseProductIdentity.build(
+            Collections.singletonList(
+                new CoinbaseProductResponse(
+                    productId,
+                    new BigDecimal("85000"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    "BTC",
+                    "USD",
+                    "FUTURE",
+                    "CFMF",
+                    null)));
+    FuturesContract requestedInstrument = (FuturesContract) catalog.instrument(productId);
+    Exchange exchange = mock(Exchange.class);
+    CoinbaseAuthenticated api = mock(CoinbaseAuthenticated.class);
+    ParamsDigest digest = mock(ParamsDigest.class);
+    CoinbaseMarketDataService service =
+        spy(new CoinbaseMarketDataService(exchange, api, digest, catalog));
+    CoinbasePriceBookEntry bid =
+        new CoinbasePriceBookEntry(new BigDecimal("84999"), new BigDecimal("0.1"));
+    CoinbasePriceBookEntry ask =
+        new CoinbasePriceBookEntry(new BigDecimal("85001"), new BigDecimal("0.1"));
+    CoinbasePriceBook priceBook =
+        new CoinbasePriceBook(
+            productId,
+            Collections.singletonList(bid),
+            Collections.singletonList(ask),
+            "2026-01-01T00:00:00Z");
+
+    when(service.getProduct(productId))
+        .thenReturn(
+            new CoinbaseProductResponse(
+                productId,
+                new BigDecimal("85000"),
+                null,
+                null,
+                null,
+                null,
+                "BTC",
+                "USD",
+                "FUTURE",
+                "CFMF",
+                null));
+    when(service.getBestBidAsk(productId))
+        .thenReturn(new CoinbaseBestBidAsksResponse(Collections.singletonList(priceBook)));
+    when(service.getProductCandles(productId, "ONE_DAY", 1, null, null))
+        .thenReturn(mapper.readValue("{\"candles\":[]}", CoinbaseProductCandlesResponse.class));
+
+    Ticker ticker = service.getTicker(requestedInstrument);
+
+    assertSame(requestedInstrument, ticker.getInstrument());
+  }
+
+  @Test
+  public void testCatalogFuturesOrderBookAndTradesPreserveRequestedInstrument() throws IOException {
+    String productId = "BTC-28MAR25-CFMF";
+    CoinbaseProductIdentity catalog =
+        CoinbaseProductIdentity.build(
+            Collections.singletonList(
+                new CoinbaseProductResponse(
+                    productId,
+                    new BigDecimal("85000"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    "BTC",
+                    "USD",
+                    "FUTURE",
+                    "CFMF",
+                    null)));
+    FuturesContract requestedInstrument = (FuturesContract) catalog.instrument(productId);
+    Exchange exchange = mock(Exchange.class);
+    CoinbaseAuthenticated api = mock(CoinbaseAuthenticated.class);
+    ParamsDigest digest = mock(ParamsDigest.class);
+    CoinbaseMarketDataService service =
+        spy(new CoinbaseMarketDataService(exchange, api, digest, catalog));
+    CoinbasePriceBook priceBook =
+        new CoinbasePriceBook(
+            productId,
+            Collections.singletonList(
+                new CoinbasePriceBookEntry(new BigDecimal("84999"), new BigDecimal("0.1"))),
+            Collections.singletonList(
+                new CoinbasePriceBookEntry(new BigDecimal("85001"), new BigDecimal("0.1"))),
+            "2026-01-01T00:00:00Z");
+    doReturn(new CoinbaseProductPriceBookResponse(priceBook, null, null, null, null))
+        .when(service)
+        .getProductBook(productId, null, null);
+    doReturn(
+            mapper.readValue(
+                "{\"trades\":["
+                    + "{\"trade_id\":\"1\",\"product_id\":\"BTC-28MAR25-CFMF\","
+                    + "\"price\":\"85000\",\"size\":\"0.1\",\"time\":\"2026-01-01T00:00:00Z\","
+                    + "\"side\":\"BUY\"},"
+                    + "{\"trade_id\":\"2\",\"product_id\":\"BTC-28MAR25-CFMF\","
+                    + "\"price\":\"85001\",\"size\":\"0.2\",\"time\":\"2026-01-01T00:00:01Z\","
+                    + "\"side\":\"SELL\"}]}",
+                CoinbaseProductMarketTradesResponse.class))
+        .when(service)
+        .getMarketTrades(productId, null, null, null);
+
+    OrderBook orderBook = service.getOrderBook(requestedInstrument);
+    Trades trades = service.getTrades(requestedInstrument);
+
+    assertSame(requestedInstrument, orderBook.getAsks().get(0).getInstrument());
+    assertSame(requestedInstrument, orderBook.getBids().get(0).getInstrument());
+    assertEquals(2, trades.getTrades().size());
+    trades.getTrades().forEach(trade -> assertSame(requestedInstrument, trade.getInstrument()));
+    verify(service).getProductBook(productId, null, null);
+    verify(service).getMarketTrades(productId, null, null, null);
   }
 
   @Test

@@ -280,11 +280,10 @@ public class CoinbaseAdaptersTest {
     assertEquals(new BigDecimal("150"), open.getUnRealisedPnl());
   }
 
-  @SuppressWarnings("deprecation")
   @Test
-  public void testAdaptLegacyFuturesPositionFallsBackToAmountAndEntryPrice() {
+  public void testAdaptLegacyFuturesPositionFallsBackToAmountAndEntryPrice() throws Exception {
     CoinbaseFuturesPosition position =
-        new CoinbaseFuturesPosition(
+        legacyFuturesPosition(
             "BTC-USD-PERP",
             "1",
             "LONG",
@@ -960,11 +959,20 @@ public class CoinbaseAdaptersTest {
     assertEquals(new BigDecimal("0.10"), measure.getLiquidationBuffer());
   }
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testLegacyPublicContractsRemainAvailable() throws Exception {
     CoinbaseMarginWindowMeasure margin =
-        new CoinbaseMarginWindowMeasure(
+        legacyConstructor(
+            CoinbaseMarginWindowMeasure.class,
+            new Class<?>[] {
+              String.class,
+              String.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class
+            },
             "INTRADAY",
             "BASE",
             BigDecimal.ONE,
@@ -973,7 +981,17 @@ public class CoinbaseAdaptersTest {
             BigDecimal.ZERO,
             BigDecimal.TEN);
     CoinbaseMarginWindowMeasure absentLegacyPercentage =
-        new CoinbaseMarginWindowMeasure(
+        legacyConstructor(
+            CoinbaseMarginWindowMeasure.class,
+            new Class<?>[] {
+              String.class,
+              String.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class
+            },
             "INTRADAY",
             "BASE",
             BigDecimal.ONE,
@@ -982,7 +1000,7 @@ public class CoinbaseAdaptersTest {
             BigDecimal.ZERO,
             BigDecimal.TEN);
     CoinbaseFuturesPosition position =
-        new CoinbaseFuturesPosition(
+        legacyFuturesPosition(
             "BTC-USD-PERP",
             "1",
             "LONG",
@@ -995,7 +1013,25 @@ public class CoinbaseAdaptersTest {
             BigDecimal.ZERO,
             BigDecimal.TEN);
     CoinbaseFuturesBalanceSummaryResponse balance =
-        new CoinbaseFuturesBalanceSummaryResponse(
+        legacyConstructor(
+            CoinbaseFuturesBalanceSummaryResponse.class,
+            new Class<?>[] {
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              CoinbaseMarginWindowMeasure.class,
+              CoinbaseMarginWindowMeasure.class,
+              List.class
+            },
             BigDecimal.TEN,
             BigDecimal.TEN,
             BigDecimal.ZERO,
@@ -1006,13 +1042,30 @@ public class CoinbaseAdaptersTest {
             BigDecimal.ONE,
             BigDecimal.TEN,
             BigDecimal.ONE,
-            BigDecimal.ONE,
+            BigDecimal.TEN,
             new BigDecimal("0.10"),
             margin,
             margin,
             Collections.singletonList(position));
     CoinbaseFill fill =
-        new CoinbaseFill(
+        legacyConstructor(
+            CoinbaseFill.class,
+            new Class<?>[] {
+              String.class,
+              String.class,
+              String.class,
+              String.class,
+              String.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              BigDecimal.class,
+              String.class,
+              String.class,
+              boolean.class,
+              String.class,
+              String.class,
+              String.class
+            },
             "entry",
             "trade",
             "order",
@@ -1028,17 +1081,22 @@ public class CoinbaseAdaptersTest {
             "BUY",
             "portfolio");
     CoinbaseTransactionSummaryResponse transaction =
-        new CoinbaseTransactionSummaryResponse(
-            BigDecimal.TEN, BigDecimal.ONE, new CoinbaseFeeTier(BigDecimal.ONE, BigDecimal.ZERO));
+        legacyConstructor(
+            CoinbaseTransactionSummaryResponse.class,
+            new Class<?>[] {BigDecimal.class, BigDecimal.class, CoinbaseFeeTier.class},
+            BigDecimal.TEN,
+            BigDecimal.ONE,
+            new CoinbaseFeeTier(BigDecimal.ONE, BigDecimal.ZERO));
 
-    assertEquals(new BigDecimal("0.10"), margin.getLiquidationBufferPercentage());
-    assertNull(absentLegacyPercentage.getLiquidationBufferPercentage());
+    assertEquals(new BigDecimal("0.10"), invokeLegacyMethod(margin, "getLiquidationBufferPercentage"));
+    assertNull(invokeLegacyMethod(absentLegacyPercentage, "getLiquidationBufferPercentage"));
     assertEquals(
         "CoinbaseMarginWindowMeasure [marginWindowType=INTRADAY, marginLevel=BASE]",
         margin.toString());
     assertEquals("1", position.getContractSize());
-    assertEquals(BigDecimal.TEN, balance.getTotalUsdBalance());
-    assertEquals(position, balance.getExpiringFutures().get(0));
+    assertEquals(BigDecimal.TEN, invokeLegacyMethod(balance, "getTotalUsdBalance"));
+    assertEquals(
+        position, ((List<?>) invokeLegacyMethod(balance, "getExpiringFutures")).get(0));
     assertNull(fill.getSequenceTimestamp());
     assertEquals(BigDecimal.TEN, transaction.getTotalVolume());
     Method listFills =
@@ -1113,6 +1171,57 @@ public class CoinbaseAdaptersTest {
     assertEquals("orders/edit", editOrder.getAnnotation(Path.class).value());
   }
 
+  private static CoinbaseFuturesPosition legacyFuturesPosition(
+      String productId,
+      String contractSize,
+      String side,
+      BigDecimal amount,
+      BigDecimal avgEntryPrice,
+      BigDecimal currentPrice,
+      BigDecimal unrealizedPnl,
+      String expiryTime,
+      BigDecimal numberOfContracts,
+      BigDecimal realizedPnl,
+      BigDecimal entryPrice)
+      throws ReflectiveOperationException {
+    return legacyConstructor(
+        CoinbaseFuturesPosition.class,
+        new Class<?>[] {
+          String.class,
+          String.class,
+          String.class,
+          BigDecimal.class,
+          BigDecimal.class,
+          BigDecimal.class,
+          BigDecimal.class,
+          String.class,
+          BigDecimal.class,
+          BigDecimal.class,
+          BigDecimal.class
+        },
+        productId,
+        contractSize,
+        side,
+        amount,
+        avgEntryPrice,
+        currentPrice,
+        unrealizedPnl,
+        expiryTime,
+        numberOfContracts,
+        realizedPnl,
+        entryPrice);
+  }
+
+  private static <T> T legacyConstructor(
+      Class<T> type, Class<?>[] parameterTypes, Object... arguments)
+      throws ReflectiveOperationException {
+    return type.getConstructor(parameterTypes).newInstance(arguments);
+  }
+
+  private static Object invokeLegacyMethod(Object target, String methodName)
+      throws ReflectiveOperationException {
+    return target.getClass().getMethod(methodName).invoke(target);
+  }
   private static void assertUnavailable(Runnable action) {
     try {
       action.run();

@@ -166,7 +166,10 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    * Retrieves the user's trade history using the Coinbase Advanced Trade API.
    *
    * <p>Pagination is handled automatically via the response cursor until it is exhausted or the
-   * optional {@code limit} in {@link CoinbaseTradeHistoryParams} is reached.
+   * optional {@code limit} in {@link CoinbaseTradeHistoryParams} is reached. When a limit stops
+   * iteration partway through a response page, the raw request cursor and its consumed-result
+   * offset are retained on the parameters so the next call skips the returned prefix and reaches
+   * every remaining fill.
    *
    * @param params expected to be {@link CoinbaseTradeHistoryParams}; includes optional time span,
    *     limit and next-page cursor
@@ -188,33 +191,50 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     Set<String> seenCursors = new HashSet<>();
     int page = 0;
     String cursor = v3Params.getNextPageCursor();
+    int fillOffset = v3Params.getNextPageCursorFillOffset();
     do {
       final String requestCursor = cursor;
+      final int requestFillOffset = fillOffset;
       CoinbaseOrdersResponse response =
           CoinbaseRetry.readWithBackoff(() -> listFills(v3Params, requestCursor));
       if (response == null || response.getFills() == null) {
         throw new org.knowm.xchange.exceptions.ExchangeException(
             "Coinbase fills response is missing the required fills collection");
       }
-      cursor =
-          advanceCursor(response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "fills");
-      page++;
-      for (CoinbaseFill fill : response.getFills()) {
+      if (requestFillOffset > response.getFills().size()) {
+        throw new org.knowm.xchange.exceptions.ExchangeException(
+            "Coinbase fills page is shorter than its saved continuation offset");
+      }
+      boolean responseFullyConsumed = true;
+      for (int fillIndex = requestFillOffset; fillIndex < response.getFills().size(); fillIndex++) {
+        CoinbaseFill fill = response.getFills().get(fillIndex);
         String fillId = fill.getEntryId();
         if (fillId == null || fillId.isBlank()) {
           fillId = fill.getTradeId();
         }
         if (fillId == null || fillId.isBlank() || seenFillIds.add(fillId)) {
           trades.add(CoinbaseAdapters.adaptFill(fill));
-          if (v3Params.getLimit() != null && trades.size() >= v3Params.getLimit()) {
+          if (v3Params.getLimit() != null
+              && trades.size() >= v3Params.getLimit()
+              && fillIndex + 1 < response.getFills().size()) {
+            responseFullyConsumed = false;
+            cursor = requestCursor;
+            fillOffset = fillIndex + 1;
             break;
           }
         }
       }
+      if (responseFullyConsumed) {
+        cursor =
+            advanceCursor(
+                response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "fills");
+        fillOffset = 0;
+        page++;
+      }
     } while (cursor != null
         && !cursor.isEmpty()
         && (v3Params.getLimit() == null || trades.size() < v3Params.getLimit()));
-    v3Params.setNextPageCursor(cursor);
+    v3Params.setNextPageCursorContinuation(cursor, fillOffset);
 
     return new UserTrades(trades, Trades.TradeSortType.SortByTimestamp);
   }

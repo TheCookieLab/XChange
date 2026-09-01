@@ -10,7 +10,9 @@ import static org.junit.Assert.assertNotNull;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.List;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,6 +21,7 @@ import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
+import org.knowm.xchange.coinbase.v3.dto.pricebook.CoinbaseBestBidAsksResponse;
 import si.mazi.rescu.ParamsDigest;
 
 /**
@@ -109,17 +112,32 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
 
   @Test
   public void deprecatedListFillsDoesNotSerializeCompleteFilterParameters() throws Exception {
-    CoinbaseOrdersResponse response = api.listFills(
-        digest,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    CoinbaseOrdersResponse response =
+        invokeLegacyApi(
+            "listFills",
+            CoinbaseOrdersResponse.class,
+            new Class<?>[] {
+              ParamsDigest.class,
+              List.class,
+              List.class,
+              List.class,
+              String.class,
+              String.class,
+              String.class,
+              Integer.class,
+              String.class,
+              String.class
+            },
+            digest,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
 
     assertNotNull(response);
     assertEquals(1, server.getAllServeEvents().size());
@@ -147,10 +165,15 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
     assertEquals(CURRENT_MARGIN_WINDOW_PATH, server.getAllServeEvents().get(0).getRequest().getUrl());
   }
 
-  @SuppressWarnings("deprecation")
   @Test
   public void deprecatedBestBidAskRetainsItsProxyBinding() throws Exception {
-    assertNotNull(api.getBestBidAsk(digest, "ETP-20DEC30-CDE"));
+    assertNotNull(
+        invokeLegacyApi(
+            "getBestBidAsk",
+            CoinbaseBestBidAsksResponse.class,
+            new Class<?>[] {ParamsDigest.class, String.class},
+            digest,
+            "ETP-20DEC30-CDE"));
 
     assertEquals(1, server.getAllServeEvents().size());
     LoggedRequest request = server.getAllServeEvents().get(0).getRequest();
@@ -158,4 +181,12 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
         BEST_BID_ASK_PATH + "?product_ids=ETP-20DEC30-CDE",
         request.getUrl());
   }
+
+  private <T> T invokeLegacyApi(
+      String methodName, Class<T> returnType, Class<?>[] parameterTypes, Object... arguments)
+      throws ReflectiveOperationException {
+    Method method = CoinbaseAuthenticated.class.getMethod(methodName, parameterTypes);
+    return returnType.cast(method.invoke(api, arguments));
+  }
+
 }
