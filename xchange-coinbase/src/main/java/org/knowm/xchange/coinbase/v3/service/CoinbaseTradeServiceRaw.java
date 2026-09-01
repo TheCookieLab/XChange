@@ -233,6 +233,20 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
    * @throws ExchangeException when pagination does not advance or returns a malformed continuation
    */
   public List<CoinbaseOrderDetail> listOrdersBounded(Integer limit) throws IOException {
+    return listOrdersBounded(null, limit);
+  }
+
+  /**
+   * Iterates filtered order history across pages with a bounded, loop-safe cursor loop.
+   *
+   * @param orderStatuses optional Coinbase order-status filter
+   * @param limit optional maximum number of orders to collect; null collects all pages
+   * @return all collected orders
+   * @throws IOException on transport failure
+   * @throws ExchangeException when pagination does not advance or returns a malformed continuation
+   */
+  public List<CoinbaseOrderDetail> listOrdersBounded(
+      List<String> orderStatuses, Integer limit) throws IOException {
     List<CoinbaseOrderDetail> orders = new ArrayList<>();
     Set<String> seenOrderIds = new HashSet<>();
     Set<String> seenCursors = new HashSet<>();
@@ -247,7 +261,7 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
                       null,
                       null,
                       null,
-                      null,
+                      orderStatuses,
                       null,
                       null,
                       null,

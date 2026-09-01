@@ -403,6 +403,39 @@ public class CoinbasePaginationGuardTest {
   }
 
   @Test
+  public void openOrderPaginationRequestsOnlyOpenStatuses() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    List<String> openStatuses = Arrays.asList("OPEN", "PENDING");
+    when(authenticated.listOrders(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            eq(openStatuses),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenReturn(
+            new CoinbaseListOrdersResponse(Collections.singletonList(order("open")), "", false));
+
+    CoinbaseTradeServiceRaw service =
+        new CoinbaseTradeServiceRaw(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+
+    assertEquals(1, service.listOrdersBounded(openStatuses, null).size());
+  }
+
+  @Test
   public void orderHistoryRejectsHasNextWithoutContinuationCursor() throws Exception {
     for (String cursor : Arrays.asList((String) null, "", "   ")) {
       CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);

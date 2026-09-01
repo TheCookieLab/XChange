@@ -62,6 +62,8 @@ import si.mazi.rescu.ParamsDigest;
 public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements TradeService {
 
   private final CoinbaseProductIdentity productIdentity;
+  private static final List<String> OPEN_ORDER_STATUSES = List.of("OPEN", "PENDING");
+
 
   /**
    * Constructs a new trade service using the exchange's default configuration.
@@ -271,9 +273,9 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public OpenOrders getOpenOrders() throws IOException {
-    return CoinbaseAdapters.adaptOpenOrders(listOrdersBounded(null), this::resolveOrderInstrument);
+    return CoinbaseAdapters.adaptOpenOrders(
+        listOrdersBounded(OPEN_ORDER_STATUSES, null), this::resolveOrderInstrument);
   }
-
   /**
    * Retrieves open positions for futures and perpetuals (if available).
    *
