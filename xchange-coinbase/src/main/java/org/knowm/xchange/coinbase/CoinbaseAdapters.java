@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
@@ -210,11 +211,24 @@ public final class CoinbaseAdapters {
    * base quantity. Stop-limit configurations preserve both trigger direction and stop price.
    */
   public static Order adaptOrder(CoinbaseOrderDetail detail) {
+    return adaptOrder(detail, null);
+  }
+
+  /**
+   * Adapt a Coinbase Advanced Trade order detail while retaining a catalog-resolved instrument.
+   *
+   * @param detail Coinbase order detail
+   * @param instrument catalog-resolved instrument, or {@code null} to parse the native product ID
+   * @return adapted order, or {@code null} for a null detail
+   */
+  public static Order adaptOrder(CoinbaseOrderDetail detail, Instrument instrument) {
     if (detail == null) return null;
-    requireAdaptableProduct(detail.getProductId(), "order");
+    if (instrument == null) {
+      requireAdaptableProduct(detail.getProductId(), "order");
+    }
     Order.OrderStatus status = adaptOrderStatus(detail.getStatus());
     Order.OrderType orderType = adaptOrderType(detail.getSide());
-    Instrument instrument = adaptInstrument(detail.getProductId());
+    Instrument resolvedInstrument = instrument == null ? adaptInstrument(detail.getProductId()) : instrument;
     CoinbaseOrderConfiguration configuration = detail.getOrderConfiguration();
     String unsupportedConfiguration = unsupportedConfiguration(configuration);
     if (unsupportedConfiguration != null) {
@@ -259,7 +273,7 @@ public final class CoinbaseAdapters {
       stopPrice = configuration.getStopLimitStopLimitGtd().getStopPrice();
       stopDirection = configuration.getStopLimitStopLimitGtd().getStopDirection();
     }
-    if (orderType == null || instrument == null || size == null) {
+    if (orderType == null || resolvedInstrument == null || size == null) {
       return null;
     }
     Order order;
@@ -299,7 +313,7 @@ public final class CoinbaseAdapters {
           new StopOrder(
               orderType,
               size,
-              instrument,
+              resolvedInstrument,
               detail.getOrderId(),
               detail.getCreatedTime(),
               stopPrice,
@@ -316,7 +330,7 @@ public final class CoinbaseAdapters {
           new LimitOrder(
               orderType,
               size,
-              instrument,
+              resolvedInstrument,
               detail.getOrderId(),
               detail.getCreatedTime(),
               price,
@@ -329,7 +343,7 @@ public final class CoinbaseAdapters {
           new org.knowm.xchange.dto.trade.MarketOrder(
               orderType,
               size,
-              instrument,
+              resolvedInstrument,
               detail.getOrderId(),
               detail.getCreatedTime(),
               detail.getAverageFilledPrice(),
@@ -482,13 +496,30 @@ public final class CoinbaseAdapters {
    * merely because its status is not open.
    */
   public static OpenOrders adaptOpenOrders(List<CoinbaseOrderDetail> orders) {
+    return adaptOpenOrders(orders, ignored -> null);
+  }
+
+  /**
+   * Adapt Coinbase order details with catalog-resolved instruments when available.
+   *
+   * @param orders Coinbase order details
+   * @param instrumentResolver resolver for one order detail
+   * @return adapted open orders
+   */
+  public static OpenOrders adaptOpenOrders(
+      List<CoinbaseOrderDetail> orders,
+      Function<CoinbaseOrderDetail, Instrument> instrumentResolver) {
+    Objects.requireNonNull(instrumentResolver, "instrumentResolver");
     List<LimitOrder> visible = new ArrayList<>();
     List<Order> hidden = new ArrayList<>();
     for (CoinbaseOrderDetail detail : orders) {
       if (detail == null) {
         throw new NotAvailableFromExchangeException("Cannot adapt null Coinbase open-order detail");
       }
-      requireAdaptableProduct(detail.getProductId(), "open order");
+      Instrument instrument = instrumentResolver.apply(detail);
+      if (instrument == null) {
+        requireAdaptableProduct(detail.getProductId(), "open order");
+      }
       Order.OrderStatus status = adaptOrderStatus(detail.getStatus());
       if (status == Order.OrderStatus.UNKNOWN) {
         throw new NotAvailableFromExchangeException(
@@ -498,7 +529,7 @@ public final class CoinbaseAdapters {
                 + detail.getOrderId());
       }
       if (status.isOpen()) {
-        Order order = adaptOrder(detail);
+        Order order = adaptOrder(detail, instrument);
         if (order == null) {
           throw new NotAvailableFromExchangeException(
               "Cannot represent open Coinbase order " + detail.getOrderId());
@@ -578,17 +609,36 @@ public final class CoinbaseAdapters {
   }
 
   public static OpenPositions adaptFuturesOpenPositions(List<CoinbaseFuturesPosition> positions) {
+    return adaptFuturesOpenPositions(positions, ignored -> null);
+  }
+
+  /**
+   * Adapt futures positions with catalog-resolved instruments when available.
+   *
+   * @param positions Coinbase futures positions
+   * @param instrumentResolver resolver for one futures position
+   * @return adapted open positions
+   */
+  public static OpenPositions adaptFuturesOpenPositions(
+      List<CoinbaseFuturesPosition> positions,
+      Function<CoinbaseFuturesPosition, Instrument> instrumentResolver) {
+    Objects.requireNonNull(instrumentResolver, "instrumentResolver");
     if (positions == null) {
       return new OpenPositions(Collections.emptyList());
     }
-    for (CoinbaseFuturesPosition position : positions) {
-      if (position != null) {
-        requireAdaptableProduct(position.getProductId(), "futures position");
-      }
-    }
     List<OpenPosition> openPositions =
         positions.stream()
-            .map(CoinbaseAdapters::adaptFuturesOpenPosition)
+            .map(position -> {
+              if (position == null) {
+                return null;
+              }
+              Instrument instrument = instrumentResolver.apply(position);
+              if (instrument == null) {
+                requireAdaptableProduct(position.getProductId(), "futures position");
+                instrument = adaptInstrument(position.getProductId());
+              }
+              return adaptFuturesOpenPosition(position, instrument);
+            })
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     return new OpenPositions(openPositions);
@@ -661,12 +711,9 @@ public final class CoinbaseAdapters {
         .build();
   }
 
-  private static OpenPosition adaptFuturesOpenPosition(CoinbaseFuturesPosition position) {
+  private static OpenPosition adaptFuturesOpenPosition(
+      CoinbaseFuturesPosition position, Instrument instrument) {
     if (position == null) {
-      return null;
-    }
-    Instrument instrument = adaptInstrument(position.getProductId());
-    if (instrument == null) {
       return null;
     }
     OpenPosition.Type type = adaptPositionType(position.getSide());

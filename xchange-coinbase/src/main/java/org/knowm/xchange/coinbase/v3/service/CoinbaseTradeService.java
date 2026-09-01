@@ -13,6 +13,7 @@ import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
+import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesPosition;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrderResult;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseCancelOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseClosePositionRequest;
@@ -21,6 +22,7 @@ import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseEditOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseFill;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseListOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetailResponse;
+import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderDetail;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrderRequest;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseOrdersResponse;
 import org.knowm.xchange.coinbase.v3.dto.orders.CoinbaseV3OrderRequests;
@@ -158,7 +160,8 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     for (OrderQueryParams param : orderQueryParams) {
       String orderId = param.getOrderId();
       if (orderId == null) continue;
-      orders.add(CoinbaseAdapters.adaptOrder(getOrder(orderId).getOrder()));
+      CoinbaseOrderDetail detail = getOrder(orderId).getOrder();
+      orders.add(CoinbaseAdapters.adaptOrder(detail, resolveOrderInstrument(detail)));
     }
     return orders;
   }
@@ -248,6 +251,14 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     return productIdentity == null ? null : productIdentity.instrument(fill.getProductId());
   }
 
+  private Instrument resolveOrderInstrument(CoinbaseOrderDetail detail) {
+    return productIdentity == null ? null : productIdentity.instrument(detail.getProductId());
+  }
+
+  private Instrument resolveFuturesPositionInstrument(CoinbaseFuturesPosition position) {
+    return productIdentity == null ? null : productIdentity.instrument(position.getProductId());
+  }
+
   /**
    * Retrieves all currently open orders for the authenticated user.
    *
@@ -260,7 +271,7 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
    */
   @Override
   public OpenOrders getOpenOrders() throws IOException {
-    return CoinbaseAdapters.adaptOpenOrders(listOrdersBounded(null));
+    return CoinbaseAdapters.adaptOpenOrders(listOrdersBounded(null), this::resolveOrderInstrument);
   }
 
   /**
@@ -279,7 +290,8 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
 
     // Futures positions (CFM)
     openPositions.addAll(
-        CoinbaseAdapters.adaptFuturesOpenPositions(listFuturesPositions().getPositions())
+        CoinbaseAdapters.adaptFuturesOpenPositions(
+                listFuturesPositions().getPositions(), this::resolveFuturesPositionInstrument)
             .getOpenPositions());
 
     // Perpetuals positions (INTX) - require portfolio UUIDs
@@ -298,7 +310,8 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     if (!hasAuthentication()) {
       throw new NotAvailableFromExchangeException("Open positions require authentication");
     }
-    return CoinbaseAdapters.adaptFuturesOpenPositions(listFuturesPositions().getPositions());
+    return CoinbaseAdapters.adaptFuturesOpenPositions(
+        listFuturesPositions().getPositions(), this::resolveFuturesPositionInstrument);
   }
 
   /** Retrieves perpetuals open positions for a specific portfolio UUID. */

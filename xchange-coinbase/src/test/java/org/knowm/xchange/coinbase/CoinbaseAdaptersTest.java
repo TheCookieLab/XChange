@@ -819,6 +819,20 @@ public class CoinbaseAdaptersTest {
   }
 
   @Test
+  public void testCatalogResolvedCdeOrderRetainsFuturesContract() throws Exception {
+    CoinbaseOrderDetail cde =
+        new ObjectMapper()
+            .readValue(
+                "{\"order_id\":\"cde\",\"side\":\"BUY\",\"product_id\":\"ETP-20DEC30-CDE\","
+                    + "\"status\":\"FILLED\",\"order_type\":\"LIMIT\",\"order_configuration\":{"
+                    + "\"limit_limit_fok\":{\"base_size\":\"2\",\"limit_price\":\"2500\"}}}",
+                CoinbaseOrderDetail.class);
+    FuturesContract configured = new FuturesContract(CurrencyPair.ETH_USD, "CDE");
+
+    assertEquals(configured, CoinbaseAdapters.adaptOrder(cde, configured).getInstrument());
+  }
+
+  @Test
   public void testAdvancedLimitConfigurationsFailClosed() throws Exception {
     ObjectMapper mapper = new ObjectMapper();
     String[] unsupportedConfigurations = {
