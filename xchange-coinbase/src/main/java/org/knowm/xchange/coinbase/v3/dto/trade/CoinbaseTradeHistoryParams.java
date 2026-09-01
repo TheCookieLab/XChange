@@ -28,13 +28,10 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   private String orderId;
   private String nextPageCursor;
   /**
-   * Number of raw fills already consumed from the page requested with {@link #nextPageCursor}.
-   *
-   * <p>This is continuation state owned by the high-level fill-history adapter. It is zero for a
-   * complete page or a caller-supplied cursor, and permits a later limited request to resume a
-   * partially consumed Coinbase page without changing the raw remote cursor.
+   * Whether {@link #nextPageCursor} and {@link #continuationFillIds} resume a partially consumed
+   * mutable fill page.
    */
-  private int nextPageCursorFillOffset;
+  private boolean fillContinuationPending;
   private Set<String> continuationFillIds = new HashSet<>();
   private Date startTime;
   private Date endTime;
@@ -144,40 +141,28 @@ public class CoinbaseTradeHistoryParams implements TradeHistoryParamTransactionI
   @Override
   public void setNextPageCursor(String cursor) {
     this.nextPageCursor = cursor;
-    this.nextPageCursorFillOffset = 0;
+    this.fillContinuationPending = false;
     this.continuationFillIds.clear();
   }
 
-  /**
-   * Returns the number of raw fills already consumed from the page identified by {@link
-   * #getNextPageCursor()}.
-   *
-   * <p>The offset is reset when callers set a cursor through {@link #setNextPageCursor(String)}.
-   * It is meaningful only when {@link org.knowm.xchange.coinbase.v3.service.CoinbaseTradeService}
-   * has stopped at a configured limit in the middle of that page.
-   *
-   * @return nonnegative raw-result offset for the current cursor
-   */
-  public int getNextPageCursorFillOffset() {
-    return nextPageCursorFillOffset;
+  /** @return whether the current cursor resumes a partially consumed mutable fills page */
+  public boolean isFillContinuationPending() {
+    return fillContinuationPending;
   }
 
   /**
-   * Stores a raw Coinbase cursor and the number of raw fills already consumed from its page.
+   * Stores the cursor for a partial fills page without using a mutable result index.
    *
-   * <p>This preserves the remote cursor exactly while recording the high-level continuation state
-   * necessary to resume a partially consumed page. The offset is zero after a complete page.
+   * <p>When {@code pending} is true, the next request refetches the page and suppresses only
+   * previously emitted fill identities. This admits new fills inserted ahead of the prior page
+   * contents instead of skipping them by a stale numeric offset.</p>
    *
    * @param cursor raw Coinbase cursor used to request the page, or {@code null} for the first page
-   * @param fillOffset nonnegative number of raw fills already consumed from that page
-   * @throws IllegalArgumentException if {@code fillOffset} is negative
+   * @param pending whether this is a partial-page continuation
    */
-  public void setNextPageCursorContinuation(String cursor, int fillOffset) {
-    if (fillOffset < 0) {
-      throw new IllegalArgumentException("Fill continuation offset must not be negative");
-    }
+  public void setFillContinuation(String cursor, boolean pending) {
     this.nextPageCursor = cursor;
-    this.nextPageCursorFillOffset = fillOffset;
+    this.fillContinuationPending = pending;
   }
 
   /** @return a defensive copy of fill identities emitted before the current continuation cursor */

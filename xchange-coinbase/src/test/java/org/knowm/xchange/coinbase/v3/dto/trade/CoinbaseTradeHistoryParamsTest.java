@@ -1,9 +1,8 @@
 package org.knowm.xchange.coinbase.v3.dto.trade;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.util.Collections;
 import java.util.HashSet;
 import org.junit.Test;
@@ -27,17 +26,14 @@ public class CoinbaseTradeHistoryParamsTest {
   public void partialPageContinuationPreservesCursorAndClearsOnCallerReset() {
     CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
 
-    params.setNextPageCursorContinuation("remote-cursor", 2);
+    params.setFillContinuation(null, true);
 
-    assertEquals("remote-cursor", params.getNextPageCursor());
-    assertEquals(2, params.getNextPageCursorFillOffset());
+    assertEquals(null, params.getNextPageCursor());
+    assertTrue(params.isFillContinuationPending());
 
     params.setNextPageCursor("caller-cursor");
 
     assertEquals("caller-cursor", params.getNextPageCursor());
-    assertEquals(0, params.getNextPageCursorFillOffset());
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> params.setNextPageCursorContinuation("invalid-cursor", -1));
+    assertFalse(params.isFillContinuationPending());
   }
 }

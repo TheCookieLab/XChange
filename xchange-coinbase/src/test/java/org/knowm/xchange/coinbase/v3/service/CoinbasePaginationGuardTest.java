@@ -1,6 +1,7 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.junit.Test;
 import org.knowm.xchange.Exchange;
@@ -189,7 +191,7 @@ public class CoinbasePaginationGuardTest {
             .map(UserTrade::getOrderId)
             .collect(Collectors.toList()));
     assertEquals("next", params.getNextPageCursor());
-    assertEquals(2, params.getNextPageCursorFillOffset());
+    assertTrue(params.isFillContinuationPending());
 
     params.setLimit(null);
     UserTrades resumedTrades = service.getTradeHistory(params);
@@ -201,7 +203,59 @@ public class CoinbasePaginationGuardTest {
             .collect(Collectors.toList()));
     assertEquals(Arrays.asList(null, "next", "next", "after"), requestedCursors);
     assertEquals(null, params.getNextPageCursor());
-    assertEquals(0, params.getNextPageCursorFillOffset());
+    assertFalse(params.isFillContinuationPending());
+  }
+
+  @Test
+  public void partialFirstFillPageRefetchesAndEmitsNewLeadingFill() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    AtomicInteger firstPageCalls = new AtomicInteger();
+    when(authenticated.listFills(
+            any(ParamsDigest.class),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
+        .thenAnswer(
+            invocation -> {
+              if (invocation.getArgument(8) == null) {
+                return firstPageCalls.getAndIncrement() == 0
+                    ? new CoinbaseOrdersResponse(
+                        Arrays.asList(fill("A"), fill("B"), fill("C")), "next")
+                    : new CoinbaseOrdersResponse(
+                        Arrays.asList(fill("X"), fill("A"), fill("B"), fill("C")), "next");
+              }
+              return new CoinbaseOrdersResponse(Collections.emptyList(), null);
+            });
+    CoinbaseTradeService service =
+        new CoinbaseTradeService(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
+    CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
+    params.setLimit(1);
+
+    assertEquals(
+        Collections.singletonList("A-order"),
+        service.getTradeHistory(params).getUserTrades().stream()
+            .map(UserTrade::getOrderId)
+            .collect(Collectors.toList()));
+    assertTrue(params.isFillContinuationPending());
+
+    params.setLimit(null);
+    assertEquals(
+        Arrays.asList("X-order", "B-order", "C-order"),
+        service.getTradeHistory(params).getUserTrades().stream()
+            .map(UserTrade::getOrderId)
+            .collect(Collectors.toList()));
+    assertEquals(2, firstPageCalls.get());
+    assertFalse(params.isFillContinuationPending());
   }
 
   @Test

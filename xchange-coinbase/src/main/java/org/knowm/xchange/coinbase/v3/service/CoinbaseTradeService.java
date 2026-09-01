@@ -199,25 +199,20 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
     Set<String> seenCursors = new HashSet<>();
     int page = 0;
     String cursor = v3Params.getNextPageCursor();
-    int fillOffset = v3Params.getNextPageCursorFillOffset();
-    if (cursor == null && fillOffset == 0) {
+    if (!v3Params.isFillContinuationPending() && cursor == null) {
       seenFillIds.clear();
     }
+    boolean responseFullyConsumed = false;
     do {
       final String requestCursor = cursor;
-      final int requestFillOffset = fillOffset;
       CoinbaseOrdersResponse response =
           CoinbaseRetry.readWithBackoff(() -> listFills(v3Params, requestCursor));
       if (response == null || response.getFills() == null) {
         throw new org.knowm.xchange.exceptions.ExchangeException(
             "Coinbase fills response is missing the required fills collection");
       }
-      if (requestFillOffset > response.getFills().size()) {
-        throw new org.knowm.xchange.exceptions.ExchangeException(
-            "Coinbase fills page is shorter than its saved continuation offset");
-      }
-      boolean responseFullyConsumed = true;
-      for (int fillIndex = requestFillOffset; fillIndex < response.getFills().size(); fillIndex++) {
+      responseFullyConsumed = true;
+      for (int fillIndex = 0; fillIndex < response.getFills().size(); fillIndex++) {
         CoinbaseFill fill = response.getFills().get(fillIndex);
         String fillId = fill.getEntryId();
         if (fillId == null || fillId.isBlank()) {
@@ -230,7 +225,6 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
               && fillIndex + 1 < response.getFills().size()) {
             responseFullyConsumed = false;
             cursor = requestCursor;
-            fillOffset = fillIndex + 1;
             break;
           }
         }
@@ -239,14 +233,14 @@ public class CoinbaseTradeService extends CoinbaseTradeServiceRaw implements Tra
         cursor =
             advanceCursor(
                 response.getCursor(), seenCursors, page, MAX_PAGINATION_PAGES, "fills");
-        fillOffset = 0;
         page++;
       }
     } while (cursor != null
         && !cursor.isEmpty()
         && (v3Params.getLimit() == null || trades.size() < v3Params.getLimit()));
-    v3Params.setNextPageCursorContinuation(cursor, fillOffset);
-    v3Params.setContinuationFillIds(cursor == null ? Set.of() : seenFillIds);
+    v3Params.setFillContinuation(cursor, !responseFullyConsumed);
+    v3Params.setContinuationFillIds(
+        cursor == null && responseFullyConsumed ? Set.of() : seenFillIds);
 
     return new UserTrades(trades, Trades.TradeSortType.SortByTimestamp);
   }
