@@ -7,11 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.core.ProductSubscription;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.plugins.RxJavaPlugins;
-import info.bitrich.xchangestream.core.ProductSubscription;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,12 +21,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.util.function.Supplier;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
+import org.knowm.xchange.coinbase.v3.dto.products.CoinbaseProductResponse;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.instrument.Instrument;
 
 class CoinbaseStreamingExchangeTest {
 
@@ -39,8 +43,43 @@ class CoinbaseStreamingExchangeTest {
     spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
     spec.setApiKey("test-api-key");
     spec.setSecretKey("test-secret-key");
-    // Set exchange specification without calling applySpecification to avoid initializing parent services
+    // Set exchange specification without calling applySpecification to avoid initializing parent
+    // services
     exchange.setExchangeSpecificationForTesting(spec);
+  }
+
+  @Test
+  void nativeProductSubscriptionOpensAllPublicChannelsAndDisconnects() throws Exception {
+    CoinbaseProductResponse product =
+        new ObjectMapper()
+            .readValue(
+                "{\"product_id\":\"ETP-20DEC30-CDE\",\"base_currency_id\":\"ETH\","
+                    + "\"quote_currency_id\":\"USD\",\"product_type\":\"FUTURE\",\"product_venue\":\"FCM\"}",
+                CoinbaseProductResponse.class);
+    CoinbaseProductIdentity identity =
+        CoinbaseProductIdentity.build(Collections.singletonList(product));
+    spec.setExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_PRODUCT_IDENTITY, identity);
+    testStreamingService = new TestStreamingService();
+    exchange.setTestStreamingService(testStreamingService);
+    Instrument contract = identity.instrument("ETP-20DEC30-CDE");
+    exchange.processProductSubscriptions(
+        ProductSubscription.create()
+            .addTicker(contract)
+            .addTrades(contract)
+            .addOrderbook(contract)
+            .build());
+    Set<CoinbaseChannel> channels = new HashSet<>();
+    for (CoinbaseSubscriptionRequest request : testStreamingService.getSubscriptionRequests()) {
+      assertEquals(Collections.singletonList("ETP-20DEC30-CDE"), request.getProductIds());
+      channels.add(request.getChannel());
+    }
+    assertEquals(
+        Set.of(CoinbaseChannel.TICKER, CoinbaseChannel.MARKET_TRADES, CoinbaseChannel.LEVEL2),
+        channels);
+    List<Disposable> active = new ArrayList<>(getProductSubscriptions());
+    exchange.disconnect().blockingAwait();
+    assertTrue(active.stream().allMatch(Disposable::isDisposed));
   }
 
   @Test
@@ -224,10 +263,8 @@ class CoinbaseStreamingExchangeTest {
     testStreamingService = new TestStreamingService();
     exchange.setTestStreamingService(testStreamingService);
 
-    ProductSubscription sub1 =
-        ProductSubscription.create().addTicker(CurrencyPair.BTC_USD).build();
-    ProductSubscription sub2 =
-        ProductSubscription.create().addTrades(CurrencyPair.ETH_USD).build();
+    ProductSubscription sub1 = ProductSubscription.create().addTicker(CurrencyPair.BTC_USD).build();
+    ProductSubscription sub2 = ProductSubscription.create().addTrades(CurrencyPair.ETH_USD).build();
 
     exchange.processProductSubscriptions(sub1, sub2);
 
@@ -334,8 +371,7 @@ class CoinbaseStreamingExchangeTest {
     CoinbaseStreamingService service = exchange.createStreamingService(spec);
     assertNotNull(service);
     assertEquals(
-        CoinbaseStreamingExchange.USER_ORDER_DATA_WS_URI,
-        spec.getOverrideWebsocketApiUri());
+        CoinbaseStreamingExchange.USER_ORDER_DATA_WS_URI, spec.getOverrideWebsocketApiUri());
   }
 
   @Test
@@ -343,13 +379,16 @@ class CoinbaseStreamingExchangeTest {
     TestableCoinbaseStreamingExchange exchange = new TestableCoinbaseStreamingExchange();
     ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
     spec.setApiKey("test-api-key");
-    // Note: Using invalid secret key - JWT supplier will return null but service should still be created
+    // Note: Using invalid secret key - JWT supplier will return null but service should still be
+    // created
     // This tests that the service can be created even with invalid keys (for public channels)
     spec.setSecretKey("test-secret-key");
-    // Don't call applySpecification as it initializes parent services which may fail with invalid keys
+    // Don't call applySpecification as it initializes parent services which may fail with invalid
+    // keys
     exchange.setExchangeSpecificationForTesting(spec);
 
-    // Create streaming service - JWT supplier will be null due to invalid keys, but service should still be created
+    // Create streaming service - JWT supplier will be null due to invalid keys, but service should
+    // still be created
     CoinbaseStreamingService service = exchange.createStreamingService(spec);
     assertNotNull(service);
     // The service should be created successfully even with invalid keys
@@ -379,8 +418,7 @@ class CoinbaseStreamingExchangeTest {
     assertNotNull(service);
     // The default should be MARKET_DATA_WS_URI
     assertEquals(
-        CoinbaseStreamingExchange.MARKET_DATA_WS_URI,
-        CoinbaseStreamingExchange.PROD_WS_URI);
+        CoinbaseStreamingExchange.MARKET_DATA_WS_URI, CoinbaseStreamingExchange.PROD_WS_URI);
   }
 
   @Test
@@ -391,13 +429,15 @@ class CoinbaseStreamingExchangeTest {
     String testSecretKey = "test-secret-key-456";
     spec.setApiKey(testApiKey);
     spec.setSecretKey(testSecretKey);
-    // Don't call applySpecification as it initializes parent services which may fail with invalid keys
+    // Don't call applySpecification as it initializes parent services which may fail with invalid
+    // keys
     exchange.setExchangeSpecificationForTesting(spec);
 
-    // Create service - JWT supplier will be null due to invalid keys, but service should still be created
+    // Create service - JWT supplier will be null due to invalid keys, but service should still be
+    // created
     CoinbaseStreamingService service = exchange.createStreamingService(spec);
     assertNotNull(service);
-    
+
     // Verify the specification still has the API keys
     assertEquals(testApiKey, spec.getApiKey());
     assertEquals(testSecretKey, spec.getSecretKey());
@@ -421,8 +461,7 @@ class CoinbaseStreamingExchangeTest {
   @Test
   void marketDataEndpointIsCorrect() {
     assertEquals(
-        "wss://advanced-trade-ws.coinbase.com",
-        CoinbaseStreamingExchange.MARKET_DATA_WS_URI);
+        "wss://advanced-trade-ws.coinbase.com", CoinbaseStreamingExchange.MARKET_DATA_WS_URI);
   }
 
   @Test
@@ -435,8 +474,7 @@ class CoinbaseStreamingExchangeTest {
   @Test
   void defaultEndpointIsMarketData() {
     assertEquals(
-        CoinbaseStreamingExchange.MARKET_DATA_WS_URI,
-        CoinbaseStreamingExchange.PROD_WS_URI);
+        CoinbaseStreamingExchange.MARKET_DATA_WS_URI, CoinbaseStreamingExchange.PROD_WS_URI);
   }
 
   @Test
@@ -538,11 +576,8 @@ class CoinbaseStreamingExchangeTest {
     return exchange.getProductSubscriptionsForTesting();
   }
 
-  /**
-   * Testable subclass that allows dependency injection without reflection.
-   */
-  private static final class TestableCoinbaseStreamingExchange
-      extends CoinbaseStreamingExchange {
+  /** Testable subclass that allows dependency injection without reflection. */
+  private static final class TestableCoinbaseStreamingExchange extends CoinbaseStreamingExchange {
     private TestStreamingService testStreamingService;
     private ExchangeSpecification testSpec;
 
@@ -586,8 +621,7 @@ class CoinbaseStreamingExchangeTest {
     @SuppressWarnings("unchecked")
     List<Disposable> getProductSubscriptionsForTesting() {
       try {
-        Field field =
-            CoinbaseStreamingExchange.class.getDeclaredField("productSubscriptions");
+        Field field = CoinbaseStreamingExchange.class.getDeclaredField("productSubscriptions");
         field.setAccessible(true);
         return (List<Disposable>) field.get(this);
       } catch (Exception e) {
