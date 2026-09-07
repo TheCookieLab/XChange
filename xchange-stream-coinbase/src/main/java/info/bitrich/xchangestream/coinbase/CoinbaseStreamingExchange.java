@@ -12,7 +12,6 @@ import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
@@ -21,13 +20,11 @@ import org.knowm.xchange.coinbase.v3.CoinbaseV3Digest;
 import org.knowm.xchange.coinbase.v3.service.CoinbaseMarketDataService;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.CandleStick;
-import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Streaming exchange implementation for Coinbase Advanced Trade WebSockets.
- */
+/** Streaming exchange implementation for Coinbase Advanced Trade WebSockets. */
 public class CoinbaseStreamingExchange extends CoinbaseExchange implements StreamingExchange {
   private static final Logger LOG = LoggerFactory.getLogger(CoinbaseStreamingExchange.class);
 
@@ -38,13 +35,15 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
       "Coinbase_Default_Candle_Granularity";
   public static final String PARAM_DEFAULT_CANDLE_PRODUCT_TYPE =
       "Coinbase_Default_Candle_Product_Type";
+
   /**
-   * Optional override for the product id used by market data subscriptions (ticker/trades/candles/order book).
+   * Optional override for the product id used by market data subscriptions
+   * (ticker/trades/candles/order book).
    *
    * <p>By default, {@link CoinbaseStreamingMarketDataService} derives Coinbase product ids from
-   * {@link CurrencyPair} (e.g. {@code BTC/USD -> BTC-USD}). Some Coinbase futures/perpetual products
-   * do not map cleanly to a {@link CurrencyPair} representation. Setting this parameter to a
-   * non-empty string forces market data subscriptions to use that product id while still emitting
+   * {@link CurrencyPair} (e.g. {@code BTC/USD -> BTC-USD}). Some Coinbase futures/perpetual
+   * products do not map cleanly to a {@link CurrencyPair} representation. Setting this parameter to
+   * a non-empty string forces market data subscriptions to use that product id while still emitting
    * DTOs keyed by the requested {@link CurrencyPair}.
    *
    * <p><strong>Note:</strong> The override is global for the exchange instance. If you subscribe to
@@ -53,27 +52,28 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
    * @deprecated use {@link #PARAM_PRODUCT_IDENTITY} with a {@link CoinbaseProductIdentity} catalog;
    *     this global override is retained as a temporary escape hatch and will be removed.
    */
-  @Deprecated
-  public static final String PARAM_PRODUCT_ID_OVERRIDE = "Coinbase_Product_Id_Override";
+  @Deprecated public static final String PARAM_PRODUCT_ID_OVERRIDE = "Coinbase_Product_Id_Override";
+
   /**
    * Optional {@link CoinbaseProductIdentity} catalog resolving Coinbase product ids losslessly for
    * spot, futures, and perpetual instruments. When configured, it is the primary identity strategy
    * and replaces the global {@link #PARAM_PRODUCT_ID_OVERRIDE} workaround.
    */
   public static final String PARAM_PRODUCT_IDENTITY = "Coinbase_Product_Identity";
-  public static final String PARAM_WEBSOCKET_JWT_SUPPLIER =
-      "Coinbase_Websocket_Jwt_Supplier";
+
+  public static final String PARAM_WEBSOCKET_JWT_SUPPLIER = "Coinbase_Websocket_Jwt_Supplier";
+
   /**
    * Optional typed {@link CoinbaseV3Authentication} shared by REST and WebSocket transports.
    * Preferred over {@link #PARAM_WEBSOCKET_JWT_SUPPLIER}; supersedes the reflective
    * CoinbaseWebsocketAuthentication helper path.
    */
-  public static final String PARAM_WEBSOCKET_AUTHENTICATION =
-      "Coinbase_Websocket_Authentication";
+  public static final String PARAM_WEBSOCKET_AUTHENTICATION = "Coinbase_Websocket_Authentication";
+
   /**
-   * Optional override for the private (user) WebSocket endpoint. Defaults to
-   * {@link #USER_ORDER_DATA_WS_URI}; only relevant for authenticated usage, which is the only
-   * usage that opens this socket.
+   * Optional override for the private (user) WebSocket endpoint. Defaults to {@link
+   * #USER_ORDER_DATA_WS_URI}; only relevant for authenticated usage, which is the only usage that
+   * opens this socket.
    */
   public static final String PARAM_USER_WS_URI = "Coinbase_User_WS_URI";
 
@@ -81,7 +81,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   // Note: There is no sandbox environment for WebSocket connections
   public static final String MARKET_DATA_WS_URI = "wss://advanced-trade-ws.coinbase.com";
   public static final String USER_ORDER_DATA_WS_URI = "wss://advanced-trade-ws-user.coinbase.com";
-  
+
   // Default to market data endpoint for backward compatibility
   public static final String PROD_WS_URI = MARKET_DATA_WS_URI;
 
@@ -103,20 +103,20 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   @Override
   public Completable connect(ProductSubscription... args) {
     ExchangeSpecification exchangeSpecification = getExchangeSpecification();
-    
+
     // Create services using factory methods (can be overridden in tests)
     if (streamingService == null) {
       streamingService = createStreamingService(exchangeSpecification);
     }
-    
+
     if (userStreamingService == null && hasUsableCredentials(exchangeSpecification)) {
       userStreamingService = createUserStreamingService(exchangeSpecification);
     }
-    
+
     if (streamingMarketDataService == null) {
       streamingMarketDataService = createStreamingMarketDataService(exchangeSpecification);
     }
-    
+
     if (tradeService == null && userStreamingService != null) {
       tradeService = createStreamingTradeService(exchangeSpecification);
     }
@@ -197,8 +197,10 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
             .map(Integer::parseInt)
             .orElse(750);
 
-    LOG.info("Coinbase WebSocket rate limits - Public: {} per second, Private: {} per second", 
-        publicRateLimit, privateRateLimit);
+    LOG.info(
+        "Coinbase WebSocket rate limits - Public: {} per second, Private: {} per second",
+        publicRateLimit,
+        privateRateLimit);
 
     CoinbaseStreamingService service =
         new CoinbaseStreamingService(
@@ -275,8 +277,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
     if (exchangeSpecification == null) {
       return null;
     }
-    Object raw =
-        exchangeSpecification.getExchangeSpecificParametersItem(PARAM_PRODUCT_IDENTITY);
+    Object raw = exchangeSpecification.getExchangeSpecificParametersItem(PARAM_PRODUCT_IDENTITY);
     if (raw instanceof CoinbaseProductIdentity) {
       return (CoinbaseProductIdentity) raw;
     }
@@ -290,8 +291,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
    * Factory method to create the streaming trade service. Can be overridden in tests to inject
    * mocks.
    *
-   * <p>The trade service rides the private user socket; it is only created for authenticated
-   * usage.
+   * <p>The trade service rides the private user socket; it is only created for authenticated usage.
    *
    * @param exchangeSpecification The exchange specification
    * @return The streaming trade service instance
@@ -319,10 +319,8 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
 
   @Override
   public Completable disconnect() {
-    Optional.ofNullable(reconnectSubscription.getAndSet(null))
-        .ifPresent(Disposable::dispose);
-    Optional.ofNullable(userReconnectSubscription.getAndSet(null))
-        .ifPresent(Disposable::dispose);
+    Optional.ofNullable(reconnectSubscription.getAndSet(null)).ifPresent(Disposable::dispose);
+    Optional.ofNullable(userReconnectSubscription.getAndSet(null)).ifPresent(Disposable::dispose);
     productSubscriptions.forEach(Disposable::dispose);
     productSubscriptions.clear();
     if (streamingService == null) {
@@ -335,9 +333,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
     return userService == null ? disconnect : disconnect.andThen(userService.disconnect());
   }
 
-  /**
-   * Reset service references. Package-private for testing.
-   */
+  /** Reset service references. Package-private for testing. */
   void resetServices() {
     streamingService = null;
     userStreamingService = null;
@@ -347,17 +343,23 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
 
   @Override
   public Observable<Throwable> reconnectFailure() {
-    return streamingService == null ? Observable.empty() : streamingService.subscribeReconnectFailure();
+    return streamingService == null
+        ? Observable.empty()
+        : streamingService.subscribeReconnectFailure();
   }
 
   @Override
   public Observable<Object> connectionSuccess() {
-    return streamingService == null ? Observable.empty() : streamingService.subscribeConnectionSuccess();
+    return streamingService == null
+        ? Observable.empty()
+        : streamingService.subscribeConnectionSuccess();
   }
 
   @Override
   public Observable<State> connectionStateObservable() {
-    return streamingService == null ? Observable.empty() : streamingService.subscribeConnectionState();
+    return streamingService == null
+        ? Observable.empty()
+        : streamingService.subscribeConnectionState();
   }
 
   @Override
@@ -428,8 +430,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
 
   @SuppressWarnings("unchecked")
   private Supplier<String> extractInjectedJwtSupplier(ExchangeSpecification specification) {
-    Object param =
-        specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_JWT_SUPPLIER);
+    Object param = specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_JWT_SUPPLIER);
     if (param == null) {
       return null;
     }
@@ -443,8 +444,7 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
   }
 
   private CoinbaseV3Authentication extractAuthentication(ExchangeSpecification specification) {
-    Object param =
-        specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_AUTHENTICATION);
+    Object param = specification.getExchangeSpecificParametersItem(PARAM_WEBSOCKET_AUTHENTICATION);
     if (param == null) {
       return null;
     }
@@ -486,7 +486,8 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
       };
     } catch (IllegalStateException e) {
       // Handle case where keys are invalid (e.g., in tests with dummy keys)
-      LOG.debug("Inline Coinbase JWT supplier unavailable - invalid API credentials: {}", e.getMessage());
+      LOG.debug(
+          "Inline Coinbase JWT supplier unavailable - invalid API credentials: {}", e.getMessage());
       return () -> null;
     }
   }
@@ -521,69 +522,67 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
 
       // Subscribe to tickers
       for (Instrument instrument : subscription.getTicker()) {
-        if (instrument instanceof CurrencyPair) {
-          CurrencyPair pair = (CurrencyPair) instrument;
-          try {
-            Disposable disposable =
-                streamingMarketDataService
-                    .getTicker(pair)
-                    .subscribe(
-                        ticker -> {
-                          // No-op: subscription is active but data is consumed by explicit subscribers
-                        },
-                        error ->
-                            LOG.debug(
-                                "Error in ticker subscription for {}: {}", pair, error.getMessage()));
-            productSubscriptions.add(disposable);
-          } catch (Exception e) {
-            LOG.warn("Failed to subscribe to ticker for {}", pair, e);
-          }
+        try {
+          Disposable disposable =
+              streamingMarketDataService
+                  .getTicker(instrument)
+                  .subscribe(
+                      ticker -> {
+                        // No-op: subscription is active but data is consumed by explicit
+                        // subscribers
+                      },
+                      error ->
+                          LOG.debug(
+                              "Error in ticker subscription for {}: {}",
+                              instrument,
+                              error.getMessage()));
+          productSubscriptions.add(disposable);
+        } catch (Exception e) {
+          LOG.warn("Failed to subscribe to ticker for {}", instrument, e);
         }
       }
 
       // Subscribe to trades
       for (Instrument instrument : subscription.getTrades()) {
-        if (instrument instanceof CurrencyPair) {
-          CurrencyPair pair = (CurrencyPair) instrument;
-          try {
-            Disposable disposable =
-                streamingMarketDataService
-                    .getTrades(pair)
-                    .subscribe(
-                        trade -> {
-                          // No-op: subscription is active but data is consumed by explicit subscribers
-                        },
-                        error ->
-                            LOG.debug(
-                                "Error in trades subscription for {}: {}", pair, error.getMessage()));
-            productSubscriptions.add(disposable);
-          } catch (Exception e) {
-            LOG.warn("Failed to subscribe to trades for {}", pair, e);
-          }
+        try {
+          Disposable disposable =
+              streamingMarketDataService
+                  .getTrades(instrument)
+                  .subscribe(
+                      trade -> {
+                        // No-op: subscription is active but data is consumed by explicit
+                        // subscribers
+                      },
+                      error ->
+                          LOG.debug(
+                              "Error in trades subscription for {}: {}",
+                              instrument,
+                              error.getMessage()));
+          productSubscriptions.add(disposable);
+        } catch (Exception e) {
+          LOG.warn("Failed to subscribe to trades for {}", instrument, e);
         }
       }
 
       // Subscribe to order books
       for (Instrument instrument : subscription.getOrderBook()) {
-        if (instrument instanceof CurrencyPair) {
-          CurrencyPair pair = (CurrencyPair) instrument;
-          try {
-            Disposable disposable =
-                streamingMarketDataService
-                    .getOrderBook(pair)
-                    .subscribe(
-                        orderBook -> {
-                          // No-op: subscription is active but data is consumed by explicit subscribers
-                        },
-                        error ->
-                            LOG.debug(
-                                "Error in order book subscription for {}: {}",
-                                pair,
-                                error.getMessage()));
-            productSubscriptions.add(disposable);
-          } catch (Exception e) {
-            LOG.warn("Failed to subscribe to order book for {}", pair, e);
-          }
+        try {
+          Disposable disposable =
+              streamingMarketDataService
+                  .getOrderBook(instrument)
+                  .subscribe(
+                      orderBook -> {
+                        // No-op: subscription is active but data is consumed by explicit
+                        // subscribers
+                      },
+                      error ->
+                          LOG.debug(
+                              "Error in order book subscription for {}: {}",
+                              instrument,
+                              error.getMessage()));
+          productSubscriptions.add(disposable);
+        } catch (Exception e) {
+          LOG.warn("Failed to subscribe to order book for {}", instrument, e);
         }
       }
 
@@ -598,7 +597,8 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
                       .getUserTrades(pair)
                       .subscribe(
                           userTrade -> {
-                            // No-op: subscription is active but data is consumed by explicit subscribers
+                            // No-op: subscription is active but data is consumed by explicit
+                            // subscribers
                           },
                           error ->
                               LOG.debug(
@@ -622,7 +622,8 @@ public class CoinbaseStreamingExchange extends CoinbaseExchange implements Strea
                       .getOrderChanges(pair)
                       .subscribe(
                           order -> {
-                            // No-op: subscription is active but data is consumed by explicit subscribers
+                            // No-op: subscription is active but data is consumed by explicit
+                            // subscribers
                           },
                           error ->
                               LOG.debug(

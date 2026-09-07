@@ -32,6 +32,8 @@ import org.knowm.xchange.coinbase.v3.CoinbaseProductIdentity;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.CandleStick;
+import org.knowm.xchange.dto.marketdata.CandleStickData;
+import org.knowm.xchange.dto.marketdata.CandleStickInterval;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
@@ -43,22 +45,25 @@ import org.slf4j.LoggerFactory;
 
 public class CoinbaseStreamingMarketDataService implements StreamingMarketDataService {
 
-  private static final Logger LOG = LoggerFactory.getLogger(CoinbaseStreamingMarketDataService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CoinbaseStreamingMarketDataService.class);
 
   @FunctionalInterface
   interface OrderBookSnapshotProvider {
-    OrderBook fetchSnapshot(CurrencyPair currencyPair) throws IOException;
+    OrderBook fetchSnapshot(Instrument currencyPair) throws IOException;
   }
+
+  private record OrderBookKey(Instrument instrument, String productId, CoinbaseChannel channel) {}
 
   private final CoinbaseStreamingService streamingService;
   private final OrderBookSnapshotProvider snapshotProvider;
   private final ExchangeSpecification exchangeSpecification;
   private final String productIdOverride;
   private final CoinbaseProductIdentity productIdentity;
-  private final Map<CurrencyPair, OrderBookState> orderBooks = new ConcurrentHashMap<>();
-  // Cache observables per currency pair to enable replay for new subscribers
-  // Key format: "CURRENCY_PAIR:channel" to differentiate between level2 and level2_batch
-  private final Map<String, Observable<OrderBook>> orderBookObservables = new ConcurrentHashMap<>();
+  private final Map<Instrument, OrderBookState> orderBooks = new ConcurrentHashMap<>();
+  // Replay state must retain the requested DTO instrument even when a product override is shared.
+  private final Map<OrderBookKey, Observable<OrderBook>> orderBookObservables =
+      new ConcurrentHashMap<>();
 
   private final List<Disposable> internalSubscriptions = new CopyOnWriteArrayList<>();
 
@@ -82,14 +87,15 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   }
 
   void ensureHeartbeatsSubscription() {
-    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(CoinbaseChannel.HEARTBEATS,
-        Collections.emptyList(), Collections.emptyMap());
-    Disposable disposable = streamingService
-        .observeChannel(request)
-        .subscribe(
-            msg -> {
-            },
-            error -> LOG.debug("Heartbeat subscription emitted error: {}", error.getMessage()));
+    CoinbaseSubscriptionRequest request =
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.HEARTBEATS, Collections.emptyList(), Collections.emptyMap());
+    Disposable disposable =
+        streamingService
+            .observeChannel(request)
+            .subscribe(
+                msg -> {},
+                error -> LOG.debug("Heartbeat subscription emitted error: {}", error.getMessage()));
     internalSubscriptions.add(disposable);
   }
 
@@ -99,8 +105,9 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
    * @return Observable that emits heartbeat messages
    */
   public Observable<JsonNode> getHeartbeats() {
-    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(CoinbaseChannel.HEARTBEATS,
-        Collections.emptyList(), Collections.emptyMap());
+    CoinbaseSubscriptionRequest request =
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.HEARTBEATS, Collections.emptyList(), Collections.emptyMap());
     return streamingService.observeChannel(request);
   }
 
@@ -112,11 +119,15 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   @Override
   public Observable<Ticker> getTicker(CurrencyPair currencyPair, Object... args) {
+    return getTicker((Instrument) currencyPair, args);
+  }
+
+  @Override
+  public Observable<Ticker> getTicker(Instrument currencyPair, Object... args) {
     String productId = resolveProductId(currencyPair);
-    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
-        CoinbaseChannel.TICKER,
-        Collections.singletonList(productId),
-        Collections.emptyMap());
+    CoinbaseSubscriptionRequest request =
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.TICKER, Collections.singletonList(productId), Collections.emptyMap());
 
     return streamingService
         .observeChannel(request)
@@ -126,34 +137,24 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   }
 
   @Override
-  public Observable<Ticker> getTicker(Instrument instrument, Object... args) {
-    if (instrument instanceof CurrencyPair) {
-      return getTicker((CurrencyPair) instrument, args);
-    }
-    return StreamingMarketDataService.super.getTicker(instrument, args);
+  public Observable<Trade> getTrades(CurrencyPair currencyPair, Object... args) {
+    return getTrades((Instrument) currencyPair, args);
   }
 
   @Override
-  public Observable<Trade> getTrades(CurrencyPair currencyPair, Object... args) {
+  public Observable<Trade> getTrades(Instrument currencyPair, Object... args) {
     String productId = resolveProductId(currencyPair);
-    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
-        CoinbaseChannel.MARKET_TRADES,
-        Collections.singletonList(productId),
-        Collections.emptyMap());
+    CoinbaseSubscriptionRequest request =
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.MARKET_TRADES,
+            Collections.singletonList(productId),
+            Collections.emptyMap());
 
     return streamingService
         .observeChannel(request)
         .map(CoinbaseStreamingAdapters::toStreamingMessage)
         .flatMapIterable(message -> adaptTrades(message, currencyPair, productId))
         .filter(trade -> instrumentMatches(trade.getInstrument(), currencyPair));
-  }
-
-  @Override
-  public Observable<Trade> getTrades(Instrument instrument, Object... args) {
-    if (instrument instanceof CurrencyPair) {
-      return getTrades((CurrencyPair) instrument, args);
-    }
-    return StreamingMarketDataService.super.getTrades(instrument, args);
   }
 
   public Observable<CandleStick> getCandles(CurrencyPair currencyPair, Object... args) {
@@ -163,15 +164,13 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
   public Observable<CandleStick> getCandles(
       CurrencyPair currencyPair, CoinbaseCandleSubscriptionParams params) {
-    CoinbaseCandleSubscriptionParams effective = params == null ? resolveCandleParams() : resolveCandleParams(params);
+    CoinbaseCandleSubscriptionParams effective =
+        params == null ? resolveCandleParams() : resolveCandleParams(params);
     return subscribeCandles(currencyPair, effective);
   }
 
   public Observable<CandleStick> getCandles(Instrument instrument, Object... args) {
-    if (instrument instanceof CurrencyPair) {
-      return getCandles((CurrencyPair) instrument, args);
-    }
-    throw new IllegalArgumentException("Coinbase candle subscriptions support currency pairs only");
+    return subscribeCandles(instrument, resolveCandleParams(args));
   }
 
   /**
@@ -179,16 +178,18 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
    *
    * <p>The returned Observable uses {@code replay(1).refCount()} to cache and replay the last
    * emitted OrderBook to new subscribers. This ensures that:
+   *
    * <ul>
-   *   <li>New subscribers receive the latest state immediately upon subscription</li>
-   *   <li>Multiple subscribers share the same underlying WebSocket subscription</li>
-   *   <li>The observable is automatically cleaned up when all subscribers unsubscribe</li>
+   *   <li>New subscribers receive the latest state immediately upon subscription
+   *   <li>Multiple subscribers share the same underlying WebSocket subscription
+   *   <li>The observable is automatically cleaned up when all subscribers unsubscribe
    * </ul>
    *
    * <p><strong>Best Practice:</strong> Subscribe to the order book after connecting to ensure you
-   * receive the initial snapshot. If you use {@link ProductSubscription} with order books, you
-   * still need to manually subscribe via this method to receive the data - the replay mechanism
-   * ensures you'll get the latest state even if the snapshot was already processed.
+   * receive the initial snapshot. If you use {@link
+   * info.bitrich.xchangestream.core.ProductSubscription} with order books, you still need to
+   * manually subscribe via this method to receive the data - the replay mechanism ensures you'll
+   * get the latest state even if the snapshot was already processed.
    *
    * @param currencyPair Currency pair of the order book
    * @param args Optional arguments (not currently used)
@@ -196,50 +197,72 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
    */
   @Override
   public Observable<OrderBook> getOrderBook(CurrencyPair currencyPair, Object... args) {
+    return getOrderBook((Instrument) currencyPair, args);
+  }
+
+  @Override
+  public Observable<OrderBook> getOrderBook(Instrument currencyPair, Object... args) {
     // Determine which channel to use from args
     CoinbaseChannel channel = determineChannel(args);
-    
+
     // Use cached observable with replay to ensure new subscribers get the latest state
-    // Include channel in cache key to differentiate between level2 and level2_batch
-    final String cacheKey = currencyPair.toString() + ":" + channel.channelName();
-    final CoinbaseChannel finalChannel = channel; // Make final for lambda
+    // Preserve both the requested identity and the resolved wire product.
     final String productId = resolveProductId(currencyPair);
-    
-    return orderBookObservables.computeIfAbsent(cacheKey, key -> {
-      CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
-          finalChannel,
-          Collections.singletonList(productId),
-          Collections.emptyMap());
+    final OrderBookKey cacheKey = new OrderBookKey(currencyPair, productId, channel);
+    final CoinbaseChannel finalChannel = channel;
 
-      OrderBookState state = orderBooks.computeIfAbsent(
-          currencyPair, pair -> new OrderBookState(pair, snapshotProvider, productId));
+    return orderBookObservables.computeIfAbsent(
+        cacheKey,
+        key -> {
+          CoinbaseSubscriptionRequest request =
+              new CoinbaseSubscriptionRequest(
+                  finalChannel, Collections.singletonList(productId), Collections.emptyMap());
 
-      LOG.info("Creating order book observable for {} on channel {}", currencyPair, finalChannel.channelName());
-      return streamingService
-          .observeChannel(request)
-          .doOnNext(msg -> LOG.debug("Raw level2 message received for {}: {}", currencyPair, msg))
-          .map(CoinbaseStreamingAdapters::toStreamingMessage)
-          .doOnNext(msg -> {
-            LOG.debug("Parsed level2 message for {}: {} events", currencyPair, 
-                msg != null && msg.getEvents() != null ? msg.getEvents().size() : 0);
-            if (msg != null && !msg.getEvents().isEmpty()) {
-              for (CoinbaseStreamingEvent event : msg.getEvents()) {
-                LOG.debug("Level2 event: type={}, productId={}, sequence={}, updates={}, bids={}, asks={}",
-                    event.getType(), event.getProductId(), event.getSequence(),
-                    event.getUpdates() != null ? event.getUpdates().size() : 0,
-                    event.getBids() != null ? event.getBids().size() : 0,
-                    event.getAsks() != null ? event.getAsks().size() : 0);
-              }
-            }
-          })
-          .flatMapMaybe(state::process)
-          .doOnNext(ob -> LOG.info("OrderBook emitted for {}: {} bids, {} asks", 
-              currencyPair, ob.getBids().size(), ob.getAsks().size()))
-          .replay(1)
-          .refCount();
-    });
+          OrderBookState state =
+              orderBooks.computeIfAbsent(
+                  currencyPair, pair -> new OrderBookState(pair, snapshotProvider, productId));
+
+          LOG.info(
+              "Creating order book observable for {} on channel {}",
+              currencyPair,
+              finalChannel.channelName());
+          return streamingService
+              .observeChannel(request)
+              .doOnNext(
+                  msg -> LOG.debug("Raw level2 message received for {}: {}", currencyPair, msg))
+              .map(CoinbaseStreamingAdapters::toStreamingMessage)
+              .doOnNext(
+                  msg -> {
+                    LOG.debug(
+                        "Parsed level2 message for {}: {} events",
+                        currencyPair,
+                        msg != null && msg.getEvents() != null ? msg.getEvents().size() : 0);
+                    if (msg != null && !msg.getEvents().isEmpty()) {
+                      for (CoinbaseStreamingEvent event : msg.getEvents()) {
+                        LOG.debug(
+                            "Level2 event: type={}, productId={}, sequence={}, updates={}, bids={}, asks={}",
+                            event.getType(),
+                            event.getProductId(),
+                            event.getSequence(),
+                            event.getUpdates() != null ? event.getUpdates().size() : 0,
+                            event.getBids() != null ? event.getBids().size() : 0,
+                            event.getAsks() != null ? event.getAsks().size() : 0);
+                      }
+                    }
+                  })
+              .flatMapMaybe(state::process)
+              .doOnNext(
+                  ob ->
+                      LOG.info(
+                          "OrderBook emitted for {}: {} bids, {} asks",
+                          currencyPair,
+                          ob.getBids().size(),
+                          ob.getAsks().size()))
+              .replay(1)
+              .refCount();
+        });
   }
-  
+
   private CoinbaseChannel determineChannel(Object... args) {
     if (args.length > 0) {
       if (args[0] instanceof Boolean && (Boolean) args[0]) {
@@ -256,7 +279,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     }
     return CoinbaseChannel.LEVEL2;
   }
-  
+
   /**
    * Get an order book using the level2_batch channel, which batches updates every 0.05 seconds.
    * This is recommended for high-volume products like BTC-USD to avoid exceeding WebSocket
@@ -270,37 +293,59 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   }
 
   /**
-   * Sequence-discontinuity events for a currency pair's order book.
-   *
-   * <p>Subscribing does not itself open a level2 subscription; the events come from the
-   * {@link #getOrderBook(CurrencyPair)} processing pipeline. Each event reports the expected and
-   * received sequence and whether the book was rebuilt from a REST snapshot; a gap with
-   * {@code recovered=false} leaves a stale book and must not be silently ignored.
+   * Sequence-discontinuity events for a currency-pair order book.
    *
    * @param currencyPair the currency pair whose book is watched
-   * @return gap events for the pair
+   * @return gap events from {@link #getOrderBookGaps(Instrument)}
    */
   public Observable<CoinbaseOrderBookGap> getOrderBookGaps(CurrencyPair currencyPair) {
-    OrderBookState state = orderBooks.computeIfAbsent(
-        currencyPair, pair -> new OrderBookState(pair, snapshotProvider, resolveProductId(pair)));
+    return getOrderBookGaps((Instrument) currencyPair);
+  }
+
+  /**
+   * Sequence-discontinuity events for a spot or native contract order book.
+   *
+   * <p>Subscribing does not itself open a level2 subscription; the events come from the {@link
+   * #getOrderBook(Instrument, Object...)} processing pipeline. Each event reports the expected and
+   * received sequence and whether the book was rebuilt from a REST snapshot; a gap with {@code
+   * recovered=false} leaves a stale book and must not be silently ignored.
+   *
+   * @param currencyPair the spot or native contract instrument whose book is watched
+   * @return gap events carrying the exact instrument
+   */
+  public Observable<CoinbaseOrderBookGap> getOrderBookGaps(Instrument currencyPair) {
+    OrderBookState state =
+        orderBooks.computeIfAbsent(
+            currencyPair,
+            pair -> new OrderBookState(pair, snapshotProvider, resolveProductId(pair)));
     return state.gapEvents();
   }
 
+  /**
+   * Streams native Coinbase five-minute candles through the common market-data API.
+   *
+   * @param instrument catalog-resolved spot or native contract instrument
+   * @param interval the Coinbase websocket interval, {@link CandleStickInterval#m5}
+   * @return candle updates retaining the requested instrument
+   * @throws IllegalArgumentException if another interval is requested
+   */
   @Override
-  public Observable<OrderBook> getOrderBook(Instrument instrument, Object... args) {
-    if (instrument instanceof CurrencyPair) {
-      return getOrderBook((CurrencyPair) instrument, args);
+  public Observable<CandleStickData> getCandleStick(
+      Instrument instrument, CandleStickInterval interval) {
+    if (interval != CandleStickInterval.m5) {
+      throw new IllegalArgumentException("Coinbase websocket candles use five-minute buckets");
     }
-    return StreamingMarketDataService.super.getOrderBook(instrument, args);
+    return subscribeCandles(
+            instrument, new CoinbaseCandleSubscriptionParams(CoinbaseCandleGranularity.FIVE_MINUTE))
+        .map(candle -> new CandleStickData(instrument, Collections.singletonList(candle)));
   }
 
   private Observable<CandleStick> subscribeCandles(
-      CurrencyPair currencyPair, CoinbaseCandleSubscriptionParams params) {
+      Instrument currencyPair, CoinbaseCandleSubscriptionParams params) {
     String productId = resolveProductId(currencyPair);
-    CoinbaseSubscriptionRequest request = new CoinbaseSubscriptionRequest(
-        CoinbaseChannel.CANDLES,
-        Collections.singletonList(productId),
-        params.toChannelArgs());
+    CoinbaseSubscriptionRequest request =
+        new CoinbaseSubscriptionRequest(
+            CoinbaseChannel.CANDLES, Collections.singletonList(productId), params.toChannelArgs());
 
     return streamingService
         .observeChannel(request)
@@ -313,8 +358,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     if (args != null && args.length > 0 && args[0] != null) {
       params = convertToCandleParams(args[0]);
       if (params == null) {
-        throw new IllegalArgumentException(
-            "Unsupported Coinbase candle parameter: " + args[0]);
+        throw new IllegalArgumentException("Unsupported Coinbase candle parameter: " + args[0]);
       }
     }
     if (params == null) {
@@ -408,10 +452,11 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
   }
 
   private CoinbaseCandleGranularity defaultCandleGranularity() {
-    Object raw = exchangeSpecification == null
-        ? null
-        : exchangeSpecification.getExchangeSpecificParametersItem(
-            CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_GRANULARITY);
+    Object raw =
+        exchangeSpecification == null
+            ? null
+            : exchangeSpecification.getExchangeSpecificParametersItem(
+                CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_GRANULARITY);
     return parseGranularity(raw);
   }
 
@@ -419,24 +464,23 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     if (exchangeSpecification == null) {
       return null;
     }
-    Object raw = exchangeSpecification.getExchangeSpecificParametersItem(
-        CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_PRODUCT_TYPE);
+    Object raw =
+        exchangeSpecification.getExchangeSpecificParametersItem(
+            CoinbaseStreamingExchange.PARAM_DEFAULT_CANDLE_PRODUCT_TYPE);
     return parseProductType(raw);
   }
 
-  private static boolean instrumentMatches(Object instrument, CurrencyPair expected) {
-    if (instrument instanceof CurrencyPair) {
-      return instrument.equals(expected);
-    }
-    return false;
+  private static boolean instrumentMatches(Object instrument, Instrument expected) {
+    return expected.equals(instrument);
   }
 
   private static String resolveProductIdOverride(ExchangeSpecification exchangeSpecification) {
     if (exchangeSpecification == null) {
       return null;
     }
-    Object raw = exchangeSpecification.getExchangeSpecificParametersItem(
-        CoinbaseStreamingExchange.PARAM_PRODUCT_ID_OVERRIDE);
+    Object raw =
+        exchangeSpecification.getExchangeSpecificParametersItem(
+            CoinbaseStreamingExchange.PARAM_PRODUCT_ID_OVERRIDE);
     if (raw == null) {
       return null;
     }
@@ -444,7 +488,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     return text.isEmpty() ? null : text;
   }
 
-  private String resolveProductId(CurrencyPair currencyPair) {
+  private String resolveProductId(Instrument currencyPair) {
     if (productIdentity != null) {
       String productId = productIdentity.productId(currencyPair);
       if (productId != null) {
@@ -457,30 +501,33 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
                 + "' in the configured product catalog");
       }
     }
+    if (!(currencyPair instanceof CurrencyPair)) {
+      throw new CoinbaseProductIdentity.AmbiguousMappingException(
+          "native Coinbase contract requires a configured product catalog: " + currencyPair);
+    }
     if (productIdOverride != null) {
       LOG.warn(
           "Coinbase_Product_Id_Override is deprecated and will be removed; use a CoinbaseProductIdentity catalog instead");
       return productIdOverride;
     }
-    return CoinbaseProductIds.productId(currencyPair);
+    return CoinbaseProductIds.productId((CurrencyPair) currencyPair);
   }
-
 
   private static CoinbaseProductIdentity resolveProductIdentity(ExchangeSpecification spec) {
     if (spec == null) {
       return null;
     }
-    Object raw = spec.getExchangeSpecificParametersItem(CoinbaseStreamingExchange.PARAM_PRODUCT_IDENTITY);
+    Object raw =
+        spec.getExchangeSpecificParametersItem(CoinbaseStreamingExchange.PARAM_PRODUCT_IDENTITY);
     if (raw instanceof CoinbaseProductIdentity) {
       return (CoinbaseProductIdentity) raw;
     }
     return null;
   }
 
-  private List<Ticker> adaptTickers(CoinbaseStreamingMessage message,
-      CurrencyPair currencyPair,
-      String expectedProductId) {
-    if (productIdOverride == null) {
+  private List<Ticker> adaptTickers(
+      CoinbaseStreamingMessage message, Instrument currencyPair, String expectedProductId) {
+    if (productIdentity == null && productIdOverride == null) {
       return CoinbaseStreamingAdapters.adaptTickers(message);
     }
     if (message == null || message.getEvents().isEmpty()) {
@@ -502,19 +549,17 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         builder.open(ticker.getOpen24H());
         builder.bid(ticker.getBestBid());
         builder.ask(ticker.getBestAsk());
-        builder.timestamp(CoinbaseStreamingAdapters.parseInstant(ticker.getTime())
-            .map(Date::from)
-            .orElse(null));
+        builder.timestamp(
+            CoinbaseStreamingAdapters.parseInstant(ticker.getTime()).map(Date::from).orElse(null));
         tickers.add(builder.build());
       }
     }
     return tickers;
   }
 
-  private List<Trade> adaptTrades(CoinbaseStreamingMessage message,
-      CurrencyPair currencyPair,
-      String expectedProductId) {
-    if (productIdOverride == null) {
+  private List<Trade> adaptTrades(
+      CoinbaseStreamingMessage message, Instrument currencyPair, String expectedProductId) {
+    if (productIdentity == null && productIdOverride == null) {
       return CoinbaseStreamingAdapters.adaptTrades(message);
     }
     if (message == null || message.getEvents().isEmpty()) {
@@ -527,27 +572,28 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         if (productId == null || !productId.equals(expectedProductId)) {
           continue;
         }
-        Trade mappedTrade = UserTrade.builder()
-            .instrument(currencyPair)
-            .id(trade.getTradeId())
-            .price(trade.getPrice())
-            .originalAmount(trade.getSize())
-            .timestamp(CoinbaseStreamingAdapters.parseInstant(trade.getTime())
-                .map(Date::from)
-                .orElse(null))
-            .type(CoinbaseStreamingAdapters.parseOrderSide(trade.getSide()))
-            .build();
+        Trade mappedTrade =
+            UserTrade.builder()
+                .instrument(currencyPair)
+                .id(trade.getTradeId())
+                .price(trade.getPrice())
+                .originalAmount(trade.getSize())
+                .timestamp(
+                    CoinbaseStreamingAdapters.parseInstant(trade.getTime())
+                        .map(Date::from)
+                        .orElse(null))
+                .type(CoinbaseStreamingAdapters.parseOrderSide(trade.getSide()))
+                .build();
         trades.add(mappedTrade);
       }
     }
     return trades;
   }
 
-  private List<CandleStick> adaptCandles(CoinbaseStreamingMessage message,
-      CurrencyPair currencyPair,
-      String expectedProductId) {
-    if (productIdOverride == null) {
-      return CoinbaseStreamingAdapters.adaptCandles(message, currencyPair);
+  private List<CandleStick> adaptCandles(
+      CoinbaseStreamingMessage message, Instrument currencyPair, String expectedProductId) {
+    if (productIdentity == null && productIdOverride == null) {
+      return CoinbaseStreamingAdapters.adaptCandles(message, (CurrencyPair) currencyPair);
     }
     if (message == null || message.getEvents().isEmpty()) {
       return Collections.emptyList();
@@ -559,21 +605,23 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         if (productId == null || !productId.equals(expectedProductId)) {
           continue;
         }
-        candlesList.add(new CandleStick.Builder()
-            .open(candle.getOpen())
-            .close(candle.getClose())
-            .high(candle.getHigh())
-            .low(candle.getLow())
-            .volume(candle.getVolume())
-            .timestamp(CoinbaseStreamingAdapters.parseUnixTimestamp(candle.getStart()).orElse(null))
-            .build());
+        candlesList.add(
+            new CandleStick.Builder()
+                .open(candle.getOpen())
+                .close(candle.getClose())
+                .high(candle.getHigh())
+                .low(candle.getLow())
+                .volume(candle.getVolume())
+                .timestamp(
+                    CoinbaseStreamingAdapters.parseUnixTimestamp(candle.getStart()).orElse(null))
+                .build());
       }
     }
     return candlesList;
   }
 
   static final class OrderBookState {
-    private final CurrencyPair currencyPair;
+    private final Instrument currencyPair;
     private final OrderBookSnapshotProvider snapshotProvider;
     private final String expectedProductId;
     private final NavigableMap<BigDecimal, LimitOrder> bids =
@@ -586,27 +634,31 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     private volatile boolean hasSnapshot;
     private final PublishSubject<CoinbaseOrderBookGap> gapEvents = PublishSubject.create();
 
-    OrderBookState(CurrencyPair currencyPair, OrderBookSnapshotProvider snapshotProvider) {
+    OrderBookState(Instrument currencyPair, OrderBookSnapshotProvider snapshotProvider) {
       this(currencyPair, snapshotProvider, null);
     }
 
-    OrderBookState(CurrencyPair currencyPair,
+    OrderBookState(
+        Instrument currencyPair,
         OrderBookSnapshotProvider snapshotProvider,
         String expectedProductId) {
       this.currencyPair = currencyPair;
       this.snapshotProvider = snapshotProvider;
-      String defaultProductId = currencyPair == null ? null : CoinbaseProductIds.productId(currencyPair);
-      String resolved = expectedProductId == null || expectedProductId.isBlank()
-          ? defaultProductId
-          : expectedProductId.trim();
+      String defaultProductId =
+          currencyPair instanceof CurrencyPair
+              ? CoinbaseProductIds.productId((CurrencyPair) currencyPair)
+              : null;
+      String resolved =
+          expectedProductId == null || expectedProductId.isBlank()
+              ? defaultProductId
+              : expectedProductId.trim();
       this.expectedProductId = resolved == null || resolved.isBlank() ? defaultProductId : resolved;
     }
 
     /**
-     * Normalizes a BigDecimal price to ensure consistent map key behavior.
-     * This removes trailing zeros and canonicalizes the scale so that
-     * identical numeric values with different scales (e.g., 1.0 vs 1.00) are
-     * treated as the same key.
+     * Normalizes a BigDecimal price to ensure consistent map key behavior. This removes trailing
+     * zeros and canonicalizes the scale so that identical numeric values with different scales
+     * (e.g., 1.0 vs 1.00) are treated as the same key.
      */
     private static BigDecimal normalizePrice(BigDecimal price) {
       if (price == null) {
@@ -622,18 +674,22 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       boolean changed = false;
       for (CoinbaseStreamingEvent event : message.getEvents()) {
         String productId = event.getProductId();
-        if (productId != null && expectedProductId != null && !productId.equals(expectedProductId)) {
+        if (expectedProductId != null && !expectedProductId.equals(productId)) {
           continue;
         }
         String type = event.getType() == null ? "" : event.getType();
         long sequence = event.getSequence() == null ? -1L : event.getSequence();
-        LOG.debug("Processing level2 event: type={}, productId={}, sequence={}, updates={}, bids={}, asks={}", 
-            type, productId, sequence, 
+        LOG.debug(
+            "Processing level2 event: type={}, productId={}, sequence={}, updates={}, bids={}, asks={}",
+            type,
+            productId,
+            sequence,
             event.getUpdates() != null ? event.getUpdates().size() : 0,
             event.getBids() != null ? event.getBids().size() : 0,
             event.getAsks() != null ? event.getAsks().size() : 0);
         if ("snapshot".equalsIgnoreCase(type)) {
-          LOG.info("Processing level2 snapshot for {}: updates={}, bids={}, asks={}", 
+          LOG.info(
+              "Processing level2 snapshot for {}: updates={}, bids={}, asks={}",
               currencyPair,
               event.getUpdates() != null ? event.getUpdates().size() : 0,
               event.getBids() != null ? event.getBids().size() : 0,
@@ -661,8 +717,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
             boolean recovered = recoverFromSnapshot(sequence);
             // Always surface the discontinuity; a failed recovery leaves a stale book
             // and must not be silently swallowed.
-            gapEvents.onNext(
-                new CoinbaseOrderBookGap(currencyPair, expected, sequence, recovered));
+            gapEvents.onNext(new CoinbaseOrderBookGap(currencyPair, expected, sequence, recovered));
             if (recovered) {
               changed = true;
             } else {
@@ -692,10 +747,8 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       if (!changed) {
         return Maybe.empty();
       }
-      OrderBook orderBook = new OrderBook(
-          null,
-          new ArrayList<>(asks.values()),
-          new ArrayList<>(bids.values()));
+      OrderBook orderBook =
+          new OrderBook(null, new ArrayList<>(asks.values()), new ArrayList<>(bids.values()));
       return Maybe.just(orderBook);
     }
 
@@ -709,7 +762,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       if (expectedProductId != null && !productId.equals(expectedProductId)) {
         return;
       }
-      CurrencyPair pair = currencyPair;
+      Instrument pair = currencyPair;
       // Coinbase level2 snapshots can have either:
       // 1. bids/asks arrays (List<List<String>>) - traditional format
       // 2. updates array with price_level/new_quantity - newer format
@@ -737,7 +790,8 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         }
       } else {
         // Snapshot uses bids/asks arrays format
-        LOG.debug("Applying snapshot from bids/asks arrays ({} bids, {} asks)", 
+        LOG.debug(
+            "Applying snapshot from bids/asks arrays ({} bids, {} asks)",
             event.getBids() != null ? event.getBids().size() : 0,
             event.getAsks() != null ? event.getAsks().size() : 0);
         populateSnapshotSide(bids, event.getBids(), Order.OrderType.BID, pair);
@@ -749,7 +803,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         NavigableMap<BigDecimal, LimitOrder> side,
         List<List<String>> levels,
         Order.OrderType orderType,
-        CurrencyPair pair) {
+        Instrument pair) {
       if (levels == null || levels.isEmpty()) {
         return;
       }
@@ -779,7 +833,8 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
 
     private boolean applyUpdates(CoinbaseStreamingEvent event) {
       boolean changed = false;
-      LOG.debug("Applying level2 updates: {} updates total", 
+      LOG.debug(
+          "Applying level2 updates: {} updates total",
           event.getUpdates() != null ? event.getUpdates().size() : 0);
       List<LimitOrder> bidUpdates = adaptLevel2Updates(event, Order.OrderType.BID);
       if (!bidUpdates.isEmpty()) {
@@ -796,12 +851,15 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         }
       }
       if (!changed && !event.getUpdates().isEmpty()) {
-        LOG.warn("Received {} updates but none were applied (possibly filtered out)", event.getUpdates().size());
+        LOG.warn(
+            "Received {} updates but none were applied (possibly filtered out)",
+            event.getUpdates().size());
       }
       return changed;
     }
 
-    private List<LimitOrder> adaptLevel2Updates(CoinbaseStreamingEvent event, Order.OrderType side) {
+    private List<LimitOrder> adaptLevel2Updates(
+        CoinbaseStreamingEvent event, Order.OrderType side) {
       List<LimitOrder> orders = new ArrayList<>();
       if (event == null || event.getUpdates().isEmpty()) {
         return orders;
@@ -865,18 +923,24 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
         }
         bids.clear();
         asks.clear();
-        snapshot.getBids().forEach(order -> {
-          if (order.getLimitPrice() != null && order.getOriginalAmount() != null) {
-            BigDecimal normalizedPrice = normalizePrice(order.getLimitPrice());
-            bids.put(normalizedPrice, order);
-          }
-        });
-        snapshot.getAsks().forEach(order -> {
-          if (order.getLimitPrice() != null && order.getOriginalAmount() != null) {
-            BigDecimal normalizedPrice = normalizePrice(order.getLimitPrice());
-            asks.put(normalizedPrice, order);
-          }
-        });
+        snapshot
+            .getBids()
+            .forEach(
+                order -> {
+                  if (order.getLimitPrice() != null && order.getOriginalAmount() != null) {
+                    BigDecimal normalizedPrice = normalizePrice(order.getLimitPrice());
+                    bids.put(normalizedPrice, order);
+                  }
+                });
+        snapshot
+            .getAsks()
+            .forEach(
+                order -> {
+                  if (order.getLimitPrice() != null && order.getOriginalAmount() != null) {
+                    BigDecimal normalizedPrice = normalizePrice(order.getLimitPrice());
+                    asks.put(normalizedPrice, order);
+                  }
+                });
         hasSnapshot = true;
         if (nextSequence > 0) {
           lastSequence.set(nextSequence - 1);

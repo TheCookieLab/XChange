@@ -36,6 +36,15 @@ exchange.getStreamingMarketDataService()
     .subscribe(System.out::println);
 ```
 
+### Native contract identity
+
+Set `CoinbaseStreamingExchange.PARAM_PRODUCT_IDENTITY` to the same `CoinbaseProductIdentity`
+catalog used by the REST exchange before connecting. Pass its exact native `Instrument`
+to ticker, trade, order-book, candle, and `ProductSubscription` APIs. Native contracts require
+the catalog; a spot `CurrencyPair` or deprecated global product override is not a contract identity.
+Events are filtered by exact product ID, and spot and contract order books have separate replay state.
+Gap notifications expose that identity through `CoinbaseOrderBookGap.getInstrument()`.
+
 ### Exchange-specific parameters
 
 | Parameter key                               | Description                                               |
@@ -85,9 +94,10 @@ The example subscribes to ticker, trades, and order book updates for BTC/USD and
   `open_24_h`, `high_24_h`, `low_24_h`, `volume_24_h`, `best_bid`, and `best_ask`.
 - **Market trades** – Include the executed `price`, `size`, `trade_id`, `side`, and timestamp. The
   adapter maps the `side` to `OrderType.BID`/`ASK`.
-- **Candles** – Require a `granularity` argument (`ONE_MINUTE`, `FIVE_MINUTE`, etc.). Configure it
-  via `CoinbaseCandleSubscriptionParams`, a default exchange parameter, or by passing a duration to
-  `getCandles`.
+- **Candles** – Coinbase publishes five-minute buckets. The common
+  `getCandleStick(instrument, CandleStickInterval.m5)` API preserves native identity and rejects
+  other intervals. The Coinbase-specific `getCandles` API takes `CoinbaseCandleSubscriptionParams`;
+  its granularity argument does not change the exchange's five-minute publication interval.
 - **Level2** – Carries snapshot and incremental `updates` arrays along with `sequence` numbers. The
   module enforces sequencing and automatically falls back to REST snapshots when gaps are detected.
   The order book Observable uses replay(1) to ensure new subscribers receive the latest state
@@ -126,7 +136,7 @@ OrderBook to new subscribers. This ensures that:
 1. **New subscribers receive the latest state immediately** - When you subscribe to an order book
    that has already received a snapshot, you'll get the current state right away.
 
-2. **Multiple subscribers share the same stream** - All subscribers to the same currency pair share
+2. **Multiple subscribers share the same stream** - Subscribers for the same native product and channel share
    the underlying WebSocket subscription, reducing network overhead.
 
 3. **Automatic cleanup** - When all subscribers unsubscribe, the cached observable is automatically
