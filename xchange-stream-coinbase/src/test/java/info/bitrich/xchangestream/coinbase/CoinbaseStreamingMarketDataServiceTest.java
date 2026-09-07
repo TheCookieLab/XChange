@@ -648,39 +648,6 @@ class CoinbaseStreamingMarketDataServiceTest {
     assertEquals(1, book.getAsks().size());
   }
 
-  @Test
-  void snapshotHandlesMissingProductId() throws Exception {
-    CoinbaseStreamingMarketDataService.OrderBookState state =
-        new CoinbaseStreamingMarketDataService.OrderBookState(CurrencyPair.BTC_USD, null);
-
-    JsonNode snapshot =
-        MAPPER.readTree(
-            "{\n"
-                + "  \"events\": [\n"
-                + "    {\n"
-                + "      \"type\": \"snapshot\",\n"
-                + "      \"sequence\": 100,\n"
-                + "      \"bids\": [\n"
-                + "        [\"100.00\", \"2.0\"]\n"
-                + "      ],\n"
-                + "      \"asks\": [\n"
-                + "        [\"110.00\", \"3.0\"]\n"
-                + "      ]\n"
-                + "    }\n"
-                + "  ]\n"
-                + "}");
-
-    // Missing product_id should cause snapshot to be skipped
-    Maybe<OrderBook> result = state.process(CoinbaseStreamingAdapters.toStreamingMessage(snapshot));
-    assertNotNull(result);
-    // The book should still be created but empty or unchanged
-    OrderBook book = result.blockingGet();
-    // Since product_id is missing, the snapshot parsing will return early
-    // and the book will be empty
-    assertTrue(
-        book.getBids().isEmpty() || book.getAsks().isEmpty(),
-        "Missing product_id should result in empty book");
-  }
 
   @Test
   void snapshotClearsPreviousState() throws Exception {

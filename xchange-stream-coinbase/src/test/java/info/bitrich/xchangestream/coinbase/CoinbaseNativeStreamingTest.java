@@ -64,7 +64,8 @@ class CoinbaseNativeStreamingTest {
           {"side":"offer","price_level":"2001","new_quantity":"3"}],"candles":[
           {"product_id":"ETH-USD","start":"1704067200","open":"100","close":"101"},
           {"product_id":"ETP-20DEC30-CDE","start":"1704067200","open":"2000","close":"2001","high":"2002","low":"1999","volume":"7"}]},
-          {"type":"snapshot","product_id":"ETH-USD","sequence":2,"bids":[["100","99"]],"asks":[["101","99"]]}]}
+          {"type":"snapshot","product_id":"ETH-USD","sequence":2,"bids":[["100","99"]],"asks":[["101","99"]]},
+          {"type":"snapshot","sequence":3,"bids":[["1","99"]],"asks":[["2","99"]]}]}
         """);
     CoinbaseStreamingMarketDataService service = service(transport, identity);
     assertEquals(

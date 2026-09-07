@@ -661,9 +661,7 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
       boolean changed = false;
       for (CoinbaseStreamingEvent event : message.getEvents()) {
         String productId = event.getProductId();
-        if (productId != null
-            && expectedProductId != null
-            && !productId.equals(expectedProductId)) {
+        if (expectedProductId != null && !expectedProductId.equals(productId)) {
           continue;
         }
         String type = event.getType() == null ? "" : event.getType();
