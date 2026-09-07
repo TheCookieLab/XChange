@@ -53,14 +53,17 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     OrderBook fetchSnapshot(Instrument currencyPair) throws IOException;
   }
 
+  private record OrderBookKey(Instrument instrument, String productId, CoinbaseChannel channel) {}
+
   private final CoinbaseStreamingService streamingService;
   private final OrderBookSnapshotProvider snapshotProvider;
   private final ExchangeSpecification exchangeSpecification;
   private final String productIdOverride;
   private final CoinbaseProductIdentity productIdentity;
   private final Map<Instrument, OrderBookState> orderBooks = new ConcurrentHashMap<>();
-  // Cache by native product and channel so spot and contracts cannot share replay state.
-  private final Map<String, Observable<OrderBook>> orderBookObservables = new ConcurrentHashMap<>();
+  // Replay state must retain the requested DTO instrument even when a product override is shared.
+  private final Map<OrderBookKey, Observable<OrderBook>> orderBookObservables =
+      new ConcurrentHashMap<>();
 
   private final List<Disposable> internalSubscriptions = new CopyOnWriteArrayList<>();
 
@@ -203,9 +206,9 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
     CoinbaseChannel channel = determineChannel(args);
 
     // Use cached observable with replay to ensure new subscribers get the latest state
-    // Include channel in cache key to differentiate between level2 and level2_batch
+    // Preserve both the requested identity and the resolved wire product.
     final String productId = resolveProductId(currencyPair);
-    final String cacheKey = productId + ":" + channel.channelName();
+    final OrderBookKey cacheKey = new OrderBookKey(currencyPair, productId, channel);
     final CoinbaseChannel finalChannel = channel;
 
     return orderBookObservables.computeIfAbsent(
@@ -287,6 +290,16 @@ public class CoinbaseStreamingMarketDataService implements StreamingMarketDataSe
    */
   public Observable<OrderBook> getOrderBookBatch(CurrencyPair currencyPair) {
     return getOrderBook(currencyPair, true);
+  }
+
+  /**
+   * Sequence-discontinuity events for a currency-pair order book.
+   *
+   * @param currencyPair the currency pair whose book is watched
+   * @return gap events from {@link #getOrderBookGaps(Instrument)}
+   */
+  public Observable<CoinbaseOrderBookGap> getOrderBookGaps(CurrencyPair currencyPair) {
+    return getOrderBookGaps((Instrument) currencyPair);
   }
 
   /**

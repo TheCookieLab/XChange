@@ -87,6 +87,28 @@ class CoinbaseNativeStreamingTest {
   }
 
   @Test
+  void sharedProductOverrideKeepsEachRequestedOrderBookInstrument() throws Exception {
+    StubStreamingService transport =
+        transport(
+            """
+        {"events":[{"type":"snapshot","product_id":"ETP-20DEC30-CDE","sequence":1,
+          "bids":[["1999","2"]],"asks":[["2001","3"]]}]}
+        """);
+    ExchangeSpecification spec = new ExchangeSpecification(CoinbaseStreamingExchange.class);
+    spec.setExchangeSpecificParametersItem(
+        CoinbaseStreamingExchange.PARAM_PRODUCT_ID_OVERRIDE, PRODUCT);
+    CoinbaseStreamingMarketDataService service =
+        new CoinbaseStreamingMarketDataService(transport, null, spec);
+    OrderBook usd = service.getOrderBook(CurrencyPair.ETH_USD).singleOrError().blockingGet();
+    CurrencyPair ethUsdc = new CurrencyPair("ETH/USDC");
+    OrderBook usdc = service.getOrderBook(ethUsdc).singleOrError().blockingGet();
+    assertEquals(CurrencyPair.ETH_USD, usd.getBids().get(0).getInstrument());
+    assertEquals(ethUsdc, usdc.getBids().get(0).getInstrument());
+    assertEquals(ethUsdc, usdc.getAsks().get(0).getInstrument());
+    assertEquals(new BigDecimal("1999"), usdc.getBids().get(0).getLimitPrice());
+  }
+
+  @Test
   void nativeSequenceGapRecoversUsingTheContractRatherThanItsSpotPair() throws Exception {
     Instrument contract = identity().instrument(PRODUCT);
     CoinbaseStreamingMarketDataService.OrderBookState state =
