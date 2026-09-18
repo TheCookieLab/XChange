@@ -3,7 +3,9 @@ package org.knowm.xchange.polymarket.service;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.knowm.xchange.polymarket.PolymarketExchange;
 import org.knowm.xchange.polymarket.dto.data.PolymarketDataPosition;
 import org.knowm.xchange.polymarket.dto.data.PolymarketDataTrade;
@@ -42,12 +44,16 @@ public class PolymarketMarketDataServiceRaw extends PolymarketBaseService {
    * All active, non-closed Gamma markets, read with keyset pagination. The walk is unbounded by
    * default, so the catalog is never silently truncated; {@code polymarket.gamma.discovery.pages}
    * bounds it explicitly (a bounded walk returns the first N pages of markets as they are ordered
-   * by market id, and neither reads nor writes the catalog cache).
+   * by market id, and neither reads nor writes the catalog cache). A cursor the provider repeats
+   * means the walk is not advancing, which cannot yield the whole catalog: it fails with
+   * {@link IllegalStateException} rather than looping or returning a partial catalog.
    *
    * <p>With {@code polymarket.gamma.discovery.cache} set to a file path, the catalog is persisted
    * and a later call within the cache max age resumes from the stored cursor instead of re-reading
-   * every page; the age is measured from the last completed from-the-start sweep, so state changes
-   * on older rows (a market closing) are still reconciled.
+   * every page; the age is measured from the last completed from-the-start sweep. A resumed walk
+   * merges its rows into the cache, while a from-the-start sweep replaces it — that sweep is
+   * authoritative, so a market the provider no longer returns (closed or deactivated) is dropped
+   * instead of being republished indefinitely.
    */
   public List<PolymarketGammaMarket> getAllActiveGammaMarkets() throws IOException {
     Integer maxPages = configuredMaxPages();
@@ -70,11 +76,15 @@ public class PolymarketMarketDataServiceRaw extends PolymarketBaseService {
       startCursor = null;
       walk = walkGammaMarkets(null, null);
     }
-    cache.merge(walk.markets());
-    cache.advanceCursor(walk.checkpointCursor());
     if (startCursor == null) {
+      // A from-the-start sweep is authoritative: replace the cached catalog so rows the provider
+      // no longer returns (closed or deactivated markets) cannot survive as stale contracts.
+      cache.replace(walk.markets());
       cache.markFullWalk();
+    } else {
+      cache.merge(walk.markets());
     }
+    cache.advanceCursor(walk.checkpointCursor());
     cache.save();
     return cache.markets();
   }
@@ -89,9 +99,13 @@ public class PolymarketMarketDataServiceRaw extends PolymarketBaseService {
    */
   private GammaWalk walkGammaMarkets(String startCursor, Integer maxPages) throws IOException {
     List<PolymarketGammaMarket> markets = new ArrayList<>();
+    Set<String> requestedCursors = new HashSet<>();
     String cursor = startCursor;
     String checkpoint = startCursor;
     for (int page = 0; maxPages == null || page < maxPages; page++) {
+      if (cursor != null) {
+        requestedCursors.add(cursor);
+      }
       PolymarketGammaMarketsKeysetResponse response =
           gammaPublic.getMarketsKeyset(GAMMA_PAGE_SIZE, cursor, Boolean.FALSE);
       List<PolymarketGammaMarket> batch = response == null ? null : response.markets();
@@ -108,6 +122,19 @@ public class PolymarketMarketDataServiceRaw extends PolymarketBaseService {
         // that produced this page (re-reading it next time is one request, deduplicated on merge).
         checkpoint = cursor;
         break;
+      }
+      if (!requestedCursors.add(next)) {
+        // The provider handed back a cursor this walk already requested, so it is not advancing:
+        // continuing would re-read and duplicate pages forever, and stopping would silently
+        // truncate the catalog. Fail loudly instead. (The bounded Kalshi walk ends its slice on a
+        // repeated cursor because a partial catalog is that walk's documented contract; this walk
+        // is unbounded by default and promises the whole catalog.)
+        throw new IllegalStateException(
+            "Polymarket Gamma keyset pagination did not advance after "
+                + (page + 1)
+                + " pages: the provider returned cursor "
+                + next
+                + " again; refusing to return a partial catalog");
       }
       checkpoint = next;
       cursor = next;

@@ -106,6 +106,16 @@ final class PolymarketGammaCatalogCache {
     }
   }
 
+  /**
+   * Replaces the cached catalog with the rows of a from-the-start sweep. A sweep re-reads every
+   * page, so it is authoritative: rows the provider no longer returns (closed or deactivated
+   * markets) must not survive it as republished contracts.
+   */
+  void replace(List<PolymarketGammaMarket> discovered) {
+    markets.clear();
+    merge(discovered);
+  }
+
   void advanceCursor(String nextCursor) {
     this.cursor = nextCursor;
   }

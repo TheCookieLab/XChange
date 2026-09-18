@@ -7,7 +7,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -151,6 +153,59 @@ class PolymarketExchangeTest {
         3,
         server.getAllServeEvents().size(),
         "a fresh cache resumes at the stored cursor instead of re-reading the catalog");
+  }
+
+  @Test
+  void remoteInitReplacesTheCachedCatalogOnAFullSweep() throws Exception {
+    Path cache = tempDir.resolve("gamma-catalog.jsonl");
+    exchange
+        .getExchangeSpecification()
+        .setExchangeSpecificParametersItem(
+            PolymarketExchange.PARAM_GAMMA_DISCOVERY_CACHE, cache.toString());
+    // TTL 0: every run sweeps from the start rather than resuming.
+    exchange
+        .getExchangeSpecification()
+        .setExchangeSpecificParametersItem(
+            PolymarketExchange.PARAM_GAMMA_DISCOVERY_CACHE_TTL, 0);
+    stubFirstKeysetPage(keysetPage(PAGE_TWO_CURSOR, marketJson("0xaaa", "t1", "t2", false)));
+    stubKeysetPage(PAGE_TWO_CURSOR, keysetPage("", marketJson("0xbbb", "t3", "t4", false)));
+
+    exchange.remoteInit();
+    assertEquals(4, exchange.getExchangeMetaData().getInstruments().size());
+
+    // The provider no longer returns 0xaaa: it closed or deactivated, so a from-the-start sweep
+    // must drop its cached row instead of republishing a stale contract forever.
+    stubFirstKeysetPage(keysetPage("", marketJson("0xddd", "t7", "t8", false)));
+    exchange.remoteInit();
+
+    var instruments = exchange.getExchangeMetaData().getInstruments();
+    assertEquals(2, instruments.size(), "a full sweep must replace the cached catalog");
+    assertTrue(
+        instruments.containsKey(
+            new PredictionMarketContract("polymarket", null, "0xddd", "t7", Currency.PUSD)));
+    assertFalse(
+        instruments.containsKey(
+            new PredictionMarketContract("polymarket", null, "0xaaa", "t1", Currency.PUSD)),
+        "a row the provider stopped returning must not survive the sweep");
+  }
+
+  @Test
+  void remoteInitFailsWhenTheKeysetCursorDoesNotAdvance() {
+    // A bound keeps a regression from hanging this test; the guard under test is the same code
+    // path as the unbounded default walk.
+    exchange
+        .getExchangeSpecification()
+        .setExchangeSpecificParametersItem(PolymarketExchange.PARAM_GAMMA_DISCOVERY_PAGES, 3);
+    stubFirstKeysetPage(keysetPage("stuck-cursor", marketJson("0xaaa", "t1", "t2", false)));
+    stubKeysetPage(
+        "stuck-cursor", keysetPage("stuck-cursor", marketJson("0xaaa", "t1", "t2", false)));
+
+    IllegalStateException error =
+        assertThrows(IllegalStateException.class, () -> exchange.remoteInit());
+
+    assertTrue(error.getMessage().contains("did not advance"), error.getMessage());
+    assertEquals(
+        2, server.getAllServeEvents().size(), "a repeated cursor must stop the walk, not loop");
   }
 
   @Test
