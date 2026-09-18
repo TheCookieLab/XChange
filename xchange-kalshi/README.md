@@ -70,10 +70,17 @@ materially different instruction than the user requested.
 
 ## Pagination
 
-Generic collection reads — `getOpenOrders`, `getTradeHistory`,
-`getOpenPositions`, and `getAllOpenKalshiMarkets` — follow the provider's
-`cursor` pagination to exhaustion (bounded to 100 pages, de-duplicated by id)
-and fail loudly instead of silently returning a truncated account or catalog.
+Account reads — `getOpenOrders`, `getTradeHistory`, `getOpenPositions` — follow
+the provider's `cursor` pagination to exhaustion (bounded to 100 pages,
+de-duplicated by id) and fail loudly instead of silently returning a truncated
+collection.
+
+The market catalog is read by `getAllOpenKalshiMarkets()`, which is deliberately
+bounded to the first `kalshi.markets.pages` pages
+(`KalshiExchange.MARKETS_PAGES_PARAMETER`, default 100 pages = 100,000 markets)
+and de-duplicated by ticker. The provider's active catalog is far larger than
+that, so the bound is a documented slice rather than an error: page the raw
+`getKalshiMarkets(status, cursor, limit)` accessor yourself for a complete crawl.
 `remoteInit()` registers only markets whose lifecycle status is `active`.
 
 ## Sample

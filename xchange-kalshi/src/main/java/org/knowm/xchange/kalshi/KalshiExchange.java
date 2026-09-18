@@ -29,6 +29,9 @@ public class KalshiExchange extends BaseExchange {
   /** Exchange-specific parameter overriding the REST base URI, for example a demo host. */
   public static final String SSL_URI_PARAMETER = "SslUri";
 
+  /** Exchange-specific parameter bounding the market-catalog pages fetched by {@code remoteInit}. */
+  public static final String MARKETS_PAGES_PARAMETER = "kalshi.markets.pages";
+
   @Override
   protected void initServices() {
     marketDataService = new KalshiMarketDataService(this);
@@ -46,6 +49,11 @@ public class KalshiExchange extends BaseExchange {
     return specification;
   }
 
+  /**
+   * Registers the first {@code kalshi.markets.pages} pages (default 100 pages, 100,000 markets) of
+   * the provider's {@code open} markets; the active catalog is far larger than that, so callers
+   * that need the whole catalog page the raw {@code getKalshiMarkets} accessor themselves.
+   */
   @Override
   public void remoteInit() throws IOException {
     List<KalshiMarket> markets =
