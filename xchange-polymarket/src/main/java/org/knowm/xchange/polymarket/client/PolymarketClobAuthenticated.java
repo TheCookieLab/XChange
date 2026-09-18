@@ -32,7 +32,6 @@ import si.mazi.rescu.SynchronizedValueFactory;
  */
 @Path("")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public interface PolymarketClobAuthenticated {
 
   /** Derives (or returns) the L2 API credentials for the signing wallet; L1-signed. */
@@ -48,6 +47,7 @@ public interface PolymarketClobAuthenticated {
   /** Posts a signed order; L2-signed. */
   @POST
   @Path("order")
+  @Consumes(MediaType.APPLICATION_JSON)
   PolymarketPostOrderResponse postOrder(
       @HeaderParam("POLY_ADDRESS") String walletAddress,
       @HeaderParam("POLY_TIMESTAMP") SynchronizedValueFactory<Long> timestampSeconds,
@@ -60,6 +60,7 @@ public interface PolymarketClobAuthenticated {
   /** Cancels one order by provider order id; L2-signed. */
   @DELETE
   @Path("order")
+  @Consumes(MediaType.APPLICATION_JSON)
   PolymarketCancelResponse cancelOrder(
       @HeaderParam("POLY_ADDRESS") String walletAddress,
       @HeaderParam("POLY_TIMESTAMP") SynchronizedValueFactory<Long> timestampSeconds,

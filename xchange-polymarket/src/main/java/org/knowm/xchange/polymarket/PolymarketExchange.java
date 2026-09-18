@@ -52,6 +52,19 @@ public class PolymarketExchange extends BaseExchange {
   /** Exchange-specific parameter overriding the Data base URI. */
   public static final String PARAM_DATA_URI = "polymarket.data.uri";
 
+  /**
+   * Exchange-specific parameter capping Gamma keyset pages per discovery walk (default: the whole
+   * catalog). A bounded walk returns the first pages of markets in market-id order and neither
+   * reads nor writes the catalog cache.
+   */
+  public static final String PARAM_GAMMA_DISCOVERY_PAGES = "polymarket.gamma.discovery.pages";
+
+  /** Exchange-specific parameter enabling the persisted Gamma catalog cache (file path). */
+  public static final String PARAM_GAMMA_DISCOVERY_CACHE = "polymarket.gamma.discovery.cache";
+
+  /** Exchange-specific parameter overriding the catalog cache max age in seconds (default 86400). */
+  public static final String PARAM_GAMMA_DISCOVERY_CACHE_TTL = "polymarket.gamma.discovery.cache.ttl";
+
   @Override
   protected void initServices() {
     marketDataService = new PolymarketMarketDataService(this);
@@ -75,6 +88,12 @@ public class PolymarketExchange extends BaseExchange {
     return override == null ? defaultUri : override.toString();
   }
 
+  /**
+   * Registers every active, non-closed Gamma market (about 189,000 markets) by walking the
+   * provider's keyset pagination to the end of the catalog. Callers that want a smaller catalog
+   * either bound the walk with {@link #PARAM_GAMMA_DISCOVERY_PAGES} or disable remote metadata
+   * loading altogether.
+   */
   @Override
   public void remoteInit() throws IOException {
     List<PolymarketGammaMarket> markets =
