@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -457,16 +458,20 @@ public class CoinbasePaginationGuardTest {
   }
 
   @Test
-  public void openOrderPaginationRequestsOnlyOpenStatuses() throws Exception {
+  public void openOrderPaginationRequestsOneStatusPerRequest() throws Exception {
+    // Coinbase parses order_status as a repeated query parameter and rejects a comma-joined list
+    // with HTTP 400, and rescu can only emit a comma-joined value for a List: every requested
+    // status must therefore travel on its own request, never as one multi-value filter.
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     List<String> openStatuses =
         Arrays.asList("OPEN", "PENDING", "QUEUED", "CANCEL_QUEUED", "EDIT_QUEUED");
+    List<List<String>> requestedStatuses = new ArrayList<>();
     when(authenticated.listOrders(
             any(ParamsDigest.class),
             any(),
             any(),
             any(),
-            eq(openStatuses),
+            anyList(),
             any(),
             any(),
             any(),
@@ -481,13 +486,25 @@ public class CoinbasePaginationGuardTest {
             any(),
             any(),
             any()))
-        .thenReturn(
-            new CoinbaseListOrdersResponse(Collections.singletonList(order("open")), "", false));
+        .thenAnswer(
+            invocation -> {
+              List<String> statuses = invocation.getArgument(4);
+              requestedStatuses.add(new ArrayList<>(statuses));
+              return new CoinbaseListOrdersResponse(
+                  Collections.singletonList(order("open")), "", false);
+            });
 
     CoinbaseTradeServiceRaw service =
         new CoinbaseTradeServiceRaw(mock(Exchange.class), authenticated, mock(ParamsDigest.class));
 
     assertEquals(1, service.listOrdersBounded(openStatuses, null).size());
+    assertEquals(openStatuses.size(), requestedStatuses.size());
+    for (List<String> statuses : requestedStatuses) {
+      assertEquals("each request must carry exactly one order_status value", 1, statuses.size());
+    }
+    assertEquals(
+        openStatuses,
+        requestedStatuses.stream().map(statuses -> statuses.get(0)).collect(Collectors.toList()));
   }
 
   @Test
