@@ -31,27 +31,23 @@ import com.github.tomakehurst.wiremock.http.Request;
 import com.github.tomakehurst.wiremock.http.Response;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.observers.TestObserver;
 import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
-import java.io.ByteArrayOutputStream;
+import io.reactivex.rxjava3.subjects.CompletableSubject;
+import io.reactivex.rxjava3.subjects.PublishSubject;
+import io.reactivex.rxjava3.subjects.Subject;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.Field;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.ArrayDeque;
-import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -570,18 +566,16 @@ class MexcV3StreamingExchangeTest {
 
   @Test
   void simultaneousConnectSubscriptionsShareOneInFlightAttempt() throws Exception {
-    // RFC 5737 TEST-NET addresses are unroutable: the TCP connect stays pending until the
-    // connect timeout, so the attempt is deterministically in flight and isAlive() false
-    // while both chains subscribe.
-    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
-    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
-    spec.setShouldLoadRemoteMetaData(false);
-    spec.setExchangeSpecificParametersItem(
-        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://192.0.2.1:80/ws");
-    exchange.applySpecification(spec);
+    // The transport double's connect stays pending until the test settles it, so the attempt is
+    // deterministically in flight (and isAlive() false) while both chains subscribe — no
+    // unroutable address, connect timeout, or real socket involved.
+    TransportDouble transport = new TransportDouble("ws://transport-double/ws");
+    MexcV3StreamingExchange exchange = exchangeWithTransports(transport);
 
     Completable first = exchange.connect();
     first.test(); // builds the transport; the attempt stays in flight (connect pending)
+    assertEquals(1, transport.connectCalls());
+    assertFalse(exchange.isAlive());
     Object serviceAfterFirst = streamingServiceInstance(exchange);
     assertNotNull(serviceAfterFirst);
 
@@ -591,8 +585,14 @@ class MexcV3StreamingExchangeTest {
     Completable second = exchange.connect();
     second.test();
     assertSame(serviceAfterFirst, streamingServiceInstance(exchange));
+    assertEquals(
+        1, transport.connectCalls(), "the second subscription must neither rebuild nor reconnect");
 
+    // Cleanup: the pending attempt cannot be cancelled, so settle it and let the post-completion
+    // invalidation tear its transport down.
     exchange.disconnect().onErrorComplete().blockingAwait();
+    transport.connectOutcome.onComplete();
+    assertFalse(exchange.isAlive());
   }
 
   @Test
@@ -1100,81 +1100,32 @@ class MexcV3StreamingExchangeTest {
   }
 
   @Test
-  void disconnectClosesAnInFlightTransportConnectThatCompletesAfterwards() throws Exception {
-    // Deterministic seam: a backlog-1 raw TCP server. A filler connection fills the accept
-    // queue, so the client's SYN is dropped and its TCP connect stays pending; the disconnect
-    // therefore runs while the transport connect is genuinely in progress (no channel is
-    // assigned yet, so NettyStreamingService.disconnect() cannot cancel it). Releasing the
-    // queue lets the client's retried SYN through, the WebSocket handshake completes, and
-    // only the post-completion invalidation can tear the socket down afterwards.
-    ServerSocket serverSocket = new ServerSocket(0, 1);
-    CountDownLatch releaseQueue = new CountDownLatch(1);
-    CountDownLatch tcpAccepted = new CountDownLatch(1);
-    CountDownLatch releaseUpgrade = new CountDownLatch(1);
-    CountDownLatch socketClosed = new CountDownLatch(1);
-    startUpgradeServer(
-        serverSocket, releaseQueue, tcpAccepted, releaseUpgrade, socketClosed, true);
-
-    // Fills the accept queue: while it stays full the client's SYN is dropped, so the
-    // exchange's transport connect cannot complete.
-    Socket filler = new Socket();
-    filler.connect(new InetSocketAddress("127.0.0.1", serverSocket.getLocalPort()));
-
-    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
-    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
-    spec.setShouldLoadRemoteMetaData(false);
-    spec.setExchangeSpecificParametersItem(
-        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
-        "ws://127.0.0.1:" + serverSocket.getLocalPort() + "/ws");
-    exchange.applySpecification(spec);
+  void disconnectClosesAnInFlightTransportConnectThatCompletesAfterwards() {
+    // The disconnect runs while the transport connect is genuinely in progress: no channel is
+    // assigned yet, so the delegated disconnect cannot cancel it. The connect therefore settles
+    // afterwards, and only the post-completion invalidation can tear the transport down.
+    TransportDouble transport = new TransportDouble("ws://transport-double/ws");
+    MexcV3StreamingExchange exchange = exchangeWithTransports(transport);
 
     TestObserver<Void> observer = exchange.connect().test();
-    // The transport connect is guaranteed in flight here: the queue is still full, so the SYN
-    // is dropped and the retry cannot complete until the server accepts the filler.
-    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
-    releaseQueue.countDown();
-    // The client's retried SYN lands once the queue frees; TCP is established only now, after
-    // the disconnect already completed.
-    assertTrue(tcpAccepted.await(10, TimeUnit.SECONDS));
+    exchange.disconnect().blockingAwait();
 
-    // The disconnect cannot cancel the in-progress connect; it must complete and let the
-    // connect finish, then tear the socket down at the connect's asynchronous completion.
-    releaseUpgrade.countDown();
+    assertTrue(transport.isSocketOpen(), "the pending disconnect cannot cancel the connect");
+    transport.connectOutcome.onComplete();
+    observer.assertComplete();
 
-    observer.awaitDone(10, TimeUnit.SECONDS).assertComplete();
-    // Without the post-completion invalidation no close would ever be issued and the server
-    // would drain forever, so this latch only opens when the connect's completion tore the
-    // transport down.
-    assertTrue(socketClosed.await(10, TimeUnit.SECONDS));
+    assertFalse(
+        transport.isSocketOpen(), "the post-completion invalidation must tear the transport down");
     assertFalse(exchange.isAlive());
-    filler.close();
   }
 
   @Test
-  void preConnectLifecycleObserversObserveTheFirstConnection() throws Exception {
+  void preConnectLifecycleObserversObserveTheFirstConnection() {
     // Lifecycle observers subscribed before any connect (the transport is built lazily on
     // connect) must stay subscribed instead of receiving an immediately-completing empty
-    // observable: they have to observe the events of the first connection. A real upgrade
-    // server makes the initial connection succeed deterministically.
-    ServerSocket serverSocket = new ServerSocket(0, 1);
-    CountDownLatch releaseQueue = new CountDownLatch(1);
-    CountDownLatch tcpAccepted = new CountDownLatch(1);
-    CountDownLatch releaseUpgrade = new CountDownLatch(1);
-    CountDownLatch socketClosed = new CountDownLatch(1);
-    startUpgradeServer(serverSocket, releaseQueue, tcpAccepted, releaseUpgrade, socketClosed, true);
-
-    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
-    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
-    spec.setShouldLoadRemoteMetaData(false);
-    spec.setExchangeSpecificParametersItem(
-        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
-        "ws://127.0.0.1:" + serverSocket.getLocalPort() + "/ws");
-    exchange.applySpecification(spec);
-
-    // Fills the accept queue so the helper's first accept() consumes the filler, not the
-    // client's connection.
-    Socket filler = new Socket();
-    filler.connect(new InetSocketAddress("127.0.0.1", serverSocket.getLocalPort()));
+    // observable: they have to observe the events of the first connection.
+    TransportDouble transport = new TransportDouble("ws://transport-double/ws");
+    MexcV3StreamingExchange exchange = exchangeWithTransports(transport);
 
     TestObserver<Throwable> reconnectFailure = exchange.reconnectFailure().test();
     TestObserver<Object> connectionSuccess = exchange.connectionSuccess().test();
@@ -1185,20 +1136,14 @@ class MexcV3StreamingExchangeTest {
     disconnect.assertNotComplete();
 
     TestObserver<Void> connect = exchange.connect().test();
-    releaseQueue.countDown();
-    assertTrue(tcpAccepted.await(10, TimeUnit.SECONDS));
-    releaseUpgrade.countDown();
-    connect.awaitDone(10, TimeUnit.SECONDS).assertComplete();
+    transport.connectOutcome.onComplete();
+    connect.assertComplete();
     // The pre-connect subscriber observes the first connection.
-    connectionSuccess.awaitCount(1);
-    assertTrue(connectionSuccess.values().size() >= 1);
+    connectionSuccess.assertValueCount(1);
 
-    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
-    disconnect.awaitCount(1);
-    assertTrue(disconnect.values().size() >= 1);
-    assertTrue(socketClosed.await(10, TimeUnit.SECONDS));
+    exchange.disconnect().blockingAwait();
+    disconnect.assertValueCount(1);
     assertFalse(exchange.isAlive());
-    filler.close();
   }
 
   @Test
@@ -1293,140 +1238,81 @@ class MexcV3StreamingExchangeTest {
   }
 
   @Test
-  void settlingAttemptClearsTheSlotEvenWhenItsInitiatorDisposed() throws Exception {
+  void settlingAttemptClearsTheSlotEvenWhenItsInitiatorDisposed() {
     // Reviewer scenario: the observer that initiated the connection disposes before the attempt
     // settles. cache() keeps the upstream attempt running and retains its terminal result, so
     // the slot must clear when the cached attempt itself settles: a per-subscriber callback
     // never runs for the disposed initiator, and every later connect() would replay the cached
     // failure instead of retrying.
-    ServerSocket serverSocket = new ServerSocket(0, 1);
-    CountDownLatch releaseQueue = new CountDownLatch(1);
-    CountDownLatch tcpAccepted = new CountDownLatch(1);
-    CountDownLatch releaseUpgrade = new CountDownLatch(1);
-    CountDownLatch socketClosed = new CountDownLatch(1);
-    // No 101: the server closes the connection after reading the upgrade request, so the
-    // pending attempt settles with a handshake failure.
-    startUpgradeServer(
-        serverSocket, releaseQueue, tcpAccepted, releaseUpgrade, socketClosed, false);
-
-    // Fills the accept queue: while it stays full the client's SYN is dropped, so the
-    // exchange's transport connect cannot complete.
-    Socket filler = new Socket();
-    filler.connect(new InetSocketAddress("127.0.0.1", serverSocket.getLocalPort()));
-
-    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
-    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
-    spec.setShouldLoadRemoteMetaData(false);
-    spec.setExchangeSpecificParametersItem(
-        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
-        "ws://127.0.0.1:" + serverSocket.getLocalPort() + "/ws");
-    exchange.applySpecification(spec);
+    TransportDouble first = new TransportDouble("ws://first/ws");
+    TransportDouble retry = new TransportDouble("ws://retry/ws");
+    MexcV3StreamingExchange exchange = exchangeWithTransports(first, retry);
 
     TestObserver<Void> initiator = exchange.connect().test();
-    // The transport connect is guaranteed pending here (the queue is still full); dispose the
-    // initiating observer before the attempt settles.
+    // The attempt is in flight (the transport connect is pending); dispose the initiating
+    // observer before the attempt settles.
     initiator.dispose();
 
-    // A joining subscriber receives the settled error; it captures the exact cached instance
-    // that a stale slot would replay to later callers.
+    // A joining subscriber receives the settled error.
     AtomicReference<Throwable> settledError = new AtomicReference<>();
-    CountDownLatch settled = new CountDownLatch(1);
-    exchange
-        .connect()
-        .subscribe(
-            () -> settled.countDown(),
-            t -> {
-              settledError.set(t);
-              settled.countDown();
-            });
-
-    releaseQueue.countDown();
-    assertTrue(tcpAccepted.await(10, TimeUnit.SECONDS));
-    assertTrue(
-        socketClosed.await(10, TimeUnit.SECONDS),
-        "server never closed the client socket");
-    assertTrue(settled.await(10, TimeUnit.SECONDS));
+    exchange.connect().subscribe(() -> {}, settledError::set);
+    first.connectOutcome.onError(new IOException("handshake failed"));
     assertNotNull(settledError.get());
+    assertFalse(exchange.isAlive());
 
     // The settled attempt must have cleared the slot: the retry runs a fresh transport attempt
-    // instead of replaying the cached failure. Point the URI at a refused port so the fresh
-    // attempt settles deterministically (the helper's server socket is closed by now).
-    spec.setExchangeSpecificParametersItem(
-        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
+    // instead of replaying the cached failure.
+    TestObserver<Void> retryObserver = exchange.connect().test();
+    assertEquals(1, retry.connectCalls(), "the retry must connect a fresh transport");
+    retry.connectOutcome.onError(new IOException("retry failed"));
     AtomicReference<Throwable> retryError = new AtomicReference<>();
-    exchange
-        .connect()
-        .test()
-        .awaitDone(10, TimeUnit.SECONDS)
-        .assertError(t -> retryError.compareAndSet(null, t));
+    retryObserver.assertError(t -> retryError.compareAndSet(null, t));
     assertNotNull(retryError.get());
     assertNotSame(settledError.get(), retryError.get());
     assertFalse(exchange.isAlive());
-    filler.close();
   }
 
   @Test
   void joiningSubscriberWhileTheHandshakeIsPendingSharesTheAttempt() throws Exception {
-    // The CI-failing window: the initiator's TCP connect has established (the server accepted
-    // and read the upgrade request) but the server has not answered the 101 yet. The transport
-    // must not count as alive in that window — the upgrade can still fail — so a joining
-    // subscriber shares the in-flight attempt and settles only when the handshake settles,
-    // instead of completing early on a transport that may be about to fail.
-    ServerSocket serverSocket = new ServerSocket(0, 1);
-    CountDownLatch releaseQueue = new CountDownLatch(1);
-    CountDownLatch tcpAccepted = new CountDownLatch(1);
-    CountDownLatch releaseUpgrade = new CountDownLatch(1);
-    CountDownLatch socketClosed = new CountDownLatch(1);
-    startUpgradeServer(
-        serverSocket, releaseQueue, tcpAccepted, releaseUpgrade, socketClosed, true);
-
-    // Fills the accept queue so the client's SYN is dropped while it stays full.
-    Socket filler = new Socket();
-    filler.connect(new InetSocketAddress("127.0.0.1", serverSocket.getLocalPort()));
-
-    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
-    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
-    spec.setShouldLoadRemoteMetaData(false);
-    spec.setExchangeSpecificParametersItem(
-        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
-        "ws://127.0.0.1:" + serverSocket.getLocalPort() + "/ws");
-    exchange.applySpecification(spec);
+    // The initiator's TCP connect has established but the handshake has not settled. The
+    // transport must not count as alive in that window — the upgrade can still fail — so a
+    // joining subscriber shares the in-flight attempt and settles only when the handshake
+    // settles, instead of completing early on a transport that may be about to fail.
+    TransportDouble transport = new TransportDouble("ws://transport-double/ws");
+    MexcV3StreamingExchange exchange = exchangeWithTransports(transport);
 
     TestObserver<Void> initiator = exchange.connect().test();
-    releaseQueue.countDown();
-    assertTrue(tcpAccepted.await(10, TimeUnit.SECONDS));
-    // The server holds the upgrade request; the handshake is genuinely pending. Dispose the
-    // initiating observer so only the joining subscriber remains on the cached attempt.
+    // The TCP transport is open but the upgrade is pending: not alive.
+    assertTrue(transport.isSocketOpen());
+    assertFalse(exchange.isAlive());
+    // Dispose the initiating observer so only the joining subscriber remains on the attempt.
     initiator.dispose();
 
-    Object serviceBefore = streamingServiceInstance(exchange);
-    CountDownLatch joinedSettled = new CountDownLatch(1);
+    AtomicBoolean joinedSettled = new AtomicBoolean();
     AtomicReference<Throwable> joinedError = new AtomicReference<>();
     exchange
         .connect()
         .subscribe(
-            () -> joinedSettled.countDown(),
+            () -> joinedSettled.set(true),
             t -> {
               joinedError.set(t);
-              joinedSettled.countDown();
+              joinedSettled.set(true);
             });
 
-    // No completion signal exists before the server releases the 101: an early settle can only
-    // come from classifying the pending-handshake transport as alive, which is the CI race.
-    assertFalse(
-        joinedSettled.await(1, TimeUnit.SECONDS),
-        "joining subscriber completed before the handshake settled");
-    assertSame(serviceBefore, streamingServiceInstance(exchange));
+    // No completion signal exists before the handshake settles: an early settle could only come
+    // from classifying the pending-handshake transport as alive.
+    assertFalse(joinedSettled.get(), "joining subscriber completed before the handshake settled");
+    assertEquals(1, transport.connectCalls(), "the joining subscriber must share the attempt");
+    assertSame(transport, streamingServiceInstance(exchange));
 
-    releaseUpgrade.countDown();
-    assertTrue(joinedSettled.await(10, TimeUnit.SECONDS));
+    transport.connectOutcome.onComplete();
+    assertTrue(joinedSettled.get());
     assertNull(joinedError.get());
     assertTrue(exchange.isAlive());
 
-    // Cleanup: the explicit disconnect closes the live socket so the server sees EOF.
-    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
-    assertTrue(socketClosed.await(10, TimeUnit.SECONDS));
-    filler.close();
+    // Cleanup: the explicit disconnect closes the live transport.
+    exchange.disconnect().blockingAwait();
+    assertFalse(transport.isSocketOpen());
   }
 
   @Test
@@ -1484,187 +1370,159 @@ class MexcV3StreamingExchangeTest {
   }
 
   @Test
-  void staleAttemptTeardownTouchesOnlyItsOwnTransport() throws Exception {
-    // Two backlog-1 TCP servers: the first connection attempt stays pending (its queue is
-    // full), a disconnect invalidates it, and a second attempt starts on a fresh service while
-    // the first attempt's transport is still pending. Completing the second attempt first makes
-    // its transport the live one when the stale first attempt settles; the post-completion
-    // teardown must close only the first attempt's own transport, not the newer connection.
-    ServerSocket firstServer = new ServerSocket(0, 1);
-    ServerSocket secondServer = new ServerSocket(0, 1);
-    CountDownLatch releaseFirstQueue = new CountDownLatch(1);
-    CountDownLatch firstAccepted = new CountDownLatch(1);
-    CountDownLatch releaseFirstUpgrade = new CountDownLatch(1);
-    CountDownLatch firstClosed = new CountDownLatch(1);
-    CountDownLatch releaseSecondQueue = new CountDownLatch(1);
-    CountDownLatch secondAccepted = new CountDownLatch(1);
-    CountDownLatch releaseSecondUpgrade = new CountDownLatch(1);
-    CountDownLatch secondClosed = new CountDownLatch(1);
-    startUpgradeServer(
-        firstServer, releaseFirstQueue, firstAccepted, releaseFirstUpgrade, firstClosed, true);
-    startUpgradeServer(
-        secondServer,
-        releaseSecondQueue,
-        secondAccepted,
-        releaseSecondUpgrade,
-        secondClosed,
-        true);
+  void staleAttemptTeardownTouchesOnlyItsOwnTransport() {
+    // The first attempt's transport connect stays pending while a disconnect invalidates it; a
+    // second attempt then builds a fresh transport that becomes the live connection. Only when
+    // that is in place does the stale first attempt settle: its post-completion teardown must
+    // close only the first attempt's own transport, never the newer connection.
+    TransportDouble first = new TransportDouble("ws://first/ws");
+    TransportDouble second = new TransportDouble("ws://second/ws");
+    MexcV3StreamingExchange exchange = exchangeWithTransports(first, second);
 
-    // Fill both accept queues before any client connects.
-    Socket filler1 = new Socket();
-    filler1.connect(new InetSocketAddress("127.0.0.1", firstServer.getLocalPort()));
-    Socket filler2 = new Socket();
-    filler2.connect(new InetSocketAddress("127.0.0.1", secondServer.getLocalPort()));
-
-    MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
-    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
-    spec.setShouldLoadRemoteMetaData(false);
-    spec.setExchangeSpecificParametersItem(
-        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
-        "ws://127.0.0.1:" + firstServer.getLocalPort() + "/ws");
-    exchange.applySpecification(spec);
-
-    // First attempt: held pending by the full accept queue.
-    TestObserver<Void> first = exchange.connect().test();
+    TestObserver<Void> firstAttempt = exchange.connect().test();
     // The disconnect cannot cancel the pending transport connect; it invalidates the attempt
     // and reports complete.
-    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
+    exchange.disconnect().blockingAwait();
 
-    // Second attempt on a fresh service, also held pending. The URI parameter is read live by
-    // connect(), so pointing it at the second server switches the transport.
-    spec.setExchangeSpecificParametersItem(
-        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI,
-        "ws://127.0.0.1:" + secondServer.getLocalPort() + "/ws");
-    TestObserver<Void> second = exchange.connect().test();
+    // Second attempt on a fresh transport, still pending.
+    TestObserver<Void> secondAttempt = exchange.connect().test();
+    assertEquals(1, second.connectCalls(), "the second attempt must build and connect its own transport");
 
     // Complete the second attempt first: its transport is live when the stale first attempt
     // settles.
-    releaseSecondQueue.countDown();
-    assertTrue(secondAccepted.await(10, TimeUnit.SECONDS));
-    releaseSecondUpgrade.countDown();
-    second.awaitDone(10, TimeUnit.SECONDS).assertComplete();
+    second.connectOutcome.onComplete();
+    secondAttempt.assertComplete();
     assertTrue(exchange.isAlive());
 
-    // Now settle the stale first attempt; its teardown must close only its own transport.
-    releaseFirstQueue.countDown();
-    assertTrue(firstAccepted.await(10, TimeUnit.SECONDS));
-    releaseFirstUpgrade.countDown();
-    first.awaitDone(10, TimeUnit.SECONDS).assertComplete();
+    int disconnectsBeforeStaleSettle = first.disconnectCalls();
+    first.connectOutcome.onComplete();
+    firstAttempt.assertComplete();
+
     // The stale attempt's own transport is torn down...
-    assertTrue(firstClosed.await(10, TimeUnit.SECONDS));
+    assertEquals(
+        disconnectsBeforeStaleSettle + 1,
+        first.disconnectCalls(),
+        "the stale attempt's teardown must close its own transport");
+    assertFalse(first.isSocketOpen());
     // ...while the newer connection is untouched.
+    assertEquals(0, second.disconnectCalls(), "the live replacement transport must not be touched");
     assertTrue(exchange.isAlive());
 
     // Cleanup: the explicit disconnect closes the live transport.
-    exchange.disconnect().blockingAwait(10, TimeUnit.SECONDS);
-    assertTrue(secondClosed.await(10, TimeUnit.SECONDS));
-    filler1.close();
-    filler2.close();
+    exchange.disconnect().blockingAwait();
+    assertFalse(second.isSocketOpen());
   }
 
   /**
-   * Starts a backlog-1 raw TCP server that withholds the WebSocket 101 until released.
-   *
-   * <p>Holds the accept queue full until {@code releaseQueue} fires (the queued filler keeps the
-   * client's SYN dropped, so its TCP connect stays pending), accepts the filler plus one client,
-   * reads the client's upgrade request, and — when {@code send101} is set — withholds the 101
-   * until {@code releaseUpgrade} fires. It then drains the client socket until EOF and opens
-   * {@code closed}. Without {@code send101} the request is answered with an HTTP 400, failing
-   * the client's WebSocket handshake. Latches are left unsatisfied on failure so the test's
-   * awaits surface it.
+   * Controllable transport double: no sockets, threads, waits, or timeouts. It models the
+   * transport states the exchange's connection lifecycle keys on — a connect that stays pending
+   * until the test settles it, an open socket whose WebSocket upgrade has not settled (not
+   * alive), and a disconnect that cannot cancel a connect still in flight — so the code under
+   * test cannot tell it apart from a real transport.
    */
-  private static void startUpgradeServer(
-      ServerSocket serverSocket,
-      CountDownLatch releaseQueue,
-      CountDownLatch accepted,
-      CountDownLatch releaseUpgrade,
-      CountDownLatch closed,
-      boolean send101) {
-    Thread serverThread =
-        new Thread(
-            () -> {
-              try {
-                if (!releaseQueue.await(10, TimeUnit.SECONDS)) {
-                  throw new IllegalStateException(
-                      "timed out waiting for the test to release the accept queue");
-                }
-                Socket filler = serverSocket.accept();
-                filler.close();
-                try (Socket socket = serverSocket.accept()) {
-                  accepted.countDown();
-                  InputStream in = socket.getInputStream();
-                  ByteArrayOutputStream request = new ByteArrayOutputStream();
-                  byte[] buffer = new byte[1024];
-                  while (!request.toString(StandardCharsets.UTF_8).contains("\r\n\r\n")) {
-                    int n = in.read(buffer);
-                    if (n < 0) {
-                      return;
-                    }
-                    request.write(buffer, 0, n);
-                  }
-                  String key = null;
-                  for (String line : request.toString(StandardCharsets.UTF_8).split("\r\n")) {
-                    if (line.regionMatches(true, 0, "sec-websocket-key:", 0, 18)) {
-                      key = line.substring(18).trim();
-                    }
-                  }
-                  if (send101) {
-                    if (!releaseUpgrade.await(10, TimeUnit.SECONDS)) {
-                      throw new IllegalStateException(
-                          "timed out waiting for the test to release the WebSocket upgrade");
-                    }
-                    if (key != null) {
-                      String accept =
-                          Base64.getEncoder()
-                              .encodeToString(
-                                  MessageDigest.getInstance("SHA-1")
-                                      .digest(
-                                          (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
-                                              .getBytes(StandardCharsets.UTF_8)));
-                      OutputStream out = socket.getOutputStream();
-                      out.write(
-                          ("HTTP/1.1 101 Switching Protocols\r\n"
-                                  + "Upgrade: websocket\r\n"
-                                  + "Connection: Upgrade\r\n"
-                                  + "Sec-WebSocket-Accept: "
-                                  + accept
-                                  + "\r\n\r\n")
-                              .getBytes(StandardCharsets.UTF_8));
-                      out.flush();
-                    }
-                  } else {
-                    // Fail the client's WebSocket handshake: answer the upgrade request with an
-                    // HTTP error instead of the 101. The client's handshake future fails
-                    // deterministically (a bare close would only fire channelInactive, which
-                    // this pipeline does not turn into a handshake failure).
-                    OutputStream out = socket.getOutputStream();
-                    out.write(
-                        ("HTTP/1.1 400 Bad Request\r\n"
-                                + "Content-Length: 0\r\n"
-                                + "Connection: close\r\n"
-                                + "\r\n")
-                            .getBytes(StandardCharsets.UTF_8));
-                    out.flush();
-                  }
-                  // EOF means the client closed the socket; only the expected teardown closes
-                  // it, so its arrival is the deterministic signal.
-                  while (in.read(buffer) >= 0) {
-                    // drain until the client closes
-                  }
-                  closed.countDown();
-                }
-              } catch (Throwable t) {
-                // leave the latches unsatisfied: the test's awaits fail and surface the failure
-              } finally {
-                try {
-                  serverSocket.close();
-                } catch (Exception ignored) {
-                  // best-effort cleanup
-                }
-              }
-            });
-    serverThread.setDaemon(true);
-    serverThread.start();
+  private static final class TransportDouble extends MexcV3StreamingService {
+
+    private final CompletableSubject connectOutcome = CompletableSubject.create();
+    private final Subject<Object> connectionSuccess = PublishSubject.create();
+    private final Subject<Object> disconnectEvents = PublishSubject.create();
+    private final Subject<Throwable> reconnectFailures = PublishSubject.create();
+    private final AtomicInteger connectCalls = new AtomicInteger();
+    private final AtomicInteger disconnectCalls = new AtomicInteger();
+    private final AtomicBoolean socketOpen = new AtomicBoolean(true);
+    private final AtomicBoolean connectionEstablished = new AtomicBoolean();
+
+    TransportDouble(String uri) {
+      super(uri);
+    }
+
+    @Override
+    public Completable connect() {
+      connectCalls.incrementAndGet();
+      return connectOutcome
+          .doOnComplete(
+              () -> {
+                // The handshake settled: the transport is a usable WebSocket from here on.
+                connectionEstablished.set(true);
+                connectionSuccess.onNext(new Object());
+              })
+          .doOnError(reconnectFailures::onNext);
+    }
+
+    @Override
+    public Completable disconnect() {
+      disconnectCalls.incrementAndGet();
+      if (connectionEstablished.getAndSet(false)) {
+        // The connect settled, so a channel is assigned and this disconnect closes it.
+        socketOpen.set(false);
+        disconnectEvents.onNext(new Object());
+      }
+      // A disconnect issued while the connect is still pending cannot cancel it: no channel is
+      // assigned yet, so it reports completion and leaves the socket open.
+      return Completable.complete();
+    }
+
+    @Override
+    public boolean isSocketOpen() {
+      return socketOpen.get();
+    }
+
+    @Override
+    public boolean isConnectionEstablished() {
+      return connectionEstablished.get();
+    }
+
+    @Override
+    public Observable<Object> subscribeConnectionSuccess() {
+      return connectionSuccess;
+    }
+
+    @Override
+    public Observable<Object> subscribeDisconnect() {
+      return disconnectEvents;
+    }
+
+    @Override
+    public Observable<Throwable> subscribeReconnectFailure() {
+      return reconnectFailures;
+    }
+
+    int connectCalls() {
+      return connectCalls.get();
+    }
+
+    int disconnectCalls() {
+      return disconnectCalls.get();
+    }
+  }
+
+  /**
+   * An exchange whose transports are the supplied doubles, consumed in the order they are built.
+   * The double replaces the real netty transport, so these tests exercise the exchange's
+   * connection lifecycle without sockets, threads, or waits.
+   */
+  private static MexcV3StreamingExchange exchangeWithTransports(
+      MexcV3StreamingService... transports) {
+    ArrayDeque<MexcV3StreamingService> remaining = new ArrayDeque<>();
+    for (MexcV3StreamingService transport : transports) {
+      remaining.addLast(transport);
+    }
+    MexcV3StreamingExchange exchange =
+        new MexcV3StreamingExchange() {
+          @Override
+          MexcV3StreamingService createStreamingService(String uri) {
+            MexcV3StreamingService transport = remaining.poll();
+            if (transport == null) {
+              throw new AssertionError("The test supplied no transport for the build of " + uri);
+            }
+            return transport;
+          }
+        };
+    ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
+    spec.setExchangeSpecificParametersItem(
+        MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://transport-double/ws");
+    exchange.applySpecification(spec);
+    return exchange;
   }
 
   private static String listenKeyInstance(MexcV3StreamingExchange exchange) throws Exception {
