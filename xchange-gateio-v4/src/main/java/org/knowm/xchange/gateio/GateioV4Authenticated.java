@@ -1,39 +1,16 @@
 package org.knowm.xchange.gateio;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.PATCH;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-import java.io.IOException;
-import java.util.List;
 import org.knowm.xchange.gateio.dto.GateioException;
-import org.knowm.xchange.gateio.dto.account.GateioAccountBookRecord;
-import org.knowm.xchange.gateio.dto.account.GateioAddressRecord;
-import org.knowm.xchange.gateio.dto.account.GateioAmendOrderRequest;
-import org.knowm.xchange.gateio.dto.account.GateioBatchOrderResult;
-import org.knowm.xchange.gateio.dto.account.GateioCancelBatchRequest;
-import org.knowm.xchange.gateio.dto.account.GateioCancelOrderResult;
-import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelRequest;
-import org.knowm.xchange.gateio.dto.account.GateioTriggerTime;
-import org.knowm.xchange.gateio.dto.account.GateioCurrencyBalance;
-import org.knowm.xchange.gateio.dto.account.GateioDepositAddress;
-import org.knowm.xchange.gateio.dto.account.GateioDepositRecord;
-import org.knowm.xchange.gateio.dto.account.GateioOpenOrders;
-import org.knowm.xchange.gateio.dto.account.GateioOrder;
-import org.knowm.xchange.gateio.dto.account.GateioSubAccountTransfer;
-import org.knowm.xchange.gateio.dto.account.GateioWithdrawStatus;
-import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRecord;
-import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRequest;
-import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
+import org.knowm.xchange.gateio.dto.account.*;
+import org.knowm.xchange.gateio.dto.trade.*;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 @Path("api/v4")
 @Produces(MediaType.APPLICATION_JSON)
@@ -67,6 +44,25 @@ public interface GateioV4Authenticated {
       throws IOException, GateioException;
 
   @GET
+  @Path("/wallet/fee")
+  GateioSpotFee getSpotFee(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @QueryParam("currency_pair") String currencyPair)
+      throws IOException, GateioException;
+
+  @GET
+  @Path("futures/{settle}/fee")
+  Map<String, GateioFuturesFee> getFuturesFee(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @PathParam("settle") String settle,
+      @QueryParam("contract") String contract)
+      throws IOException, GateioException;
+
+  @GET
   @Path("spot/account_book")
   List<GateioAccountBookRecord> getAccountBookRecords(
       @HeaderParam("KEY") String apiKey,
@@ -82,7 +78,7 @@ public interface GateioV4Authenticated {
 
   @GET
   @Path("spot/orders")
-  List<GateioOrder> listOrders(
+  List<GateioSpotOrderResponse> listOrders(
       @HeaderParam("KEY") String apiKey,
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,
@@ -92,7 +88,28 @@ public interface GateioV4Authenticated {
 
   @GET
   @Path("spot/orders/{order_id}")
-  GateioOrder getOrder(
+  GateioSpotOrderResponse getOrder(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @PathParam("order_id") String orderId,
+      @QueryParam("currency_pair") String currencyPair)
+      throws IOException, GateioException;
+
+  @GET
+  @Path("futures/{settle}/orders/{order_id}")
+  GateioFuturesOrderResponse getFuturesOrder(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @HeaderParam("x-gate-exptime") Long expirationTime,
+      @PathParam("settle") String settle,
+      @PathParam("order_id") String orderId)
+      throws IOException, GateioException;
+
+  @DELETE
+  @Path("spot/orders/{order_id}")
+  GateioSpotOrderResponse cancelOrder(
       @HeaderParam("KEY") String apiKey,
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,
@@ -101,23 +118,68 @@ public interface GateioV4Authenticated {
       throws IOException, GateioException;
 
   @DELETE
+  @Path("futures/{settle}/orders/{order_id}")
+  GateioFuturesOrderResponse cancelFuturesOrder(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @HeaderParam("x-gate-exptime") Long expirationTime,
+      @PathParam("settle") String settle,
+      @PathParam("order_id") String orderId)
+      throws IOException, GateioException;
+
+  /**
+   * Amends an existing spot order from a raw request map.
+   *
+   * <p>{@code request} carries only the mutable fields to replace ({@code amount}, {@code price},
+   * {@code amend_text}, ...); the response is the amended order. Gate amends asynchronously: a
+   * non-terminal {@code status} means the amendment is still being applied.
+   */
+  @PATCH
   @Path("spot/orders/{order_id}")
-  GateioOrder cancelOrder(
+  @Consumes(MediaType.APPLICATION_JSON)
+  GateioSpotOrderResponse amendOrder(
       @HeaderParam("KEY") String apiKey,
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,
       @PathParam("order_id") String orderId,
-      @QueryParam("currency_pair") String currencyPair)
+      @QueryParam("currency_pair") String currencyPair,
+      Map<String, Object> request)
+      throws IOException, GateioException;
+
+  @PUT
+  @Path("futures/{settle}/orders/{order_id}")
+  @Consumes(MediaType.APPLICATION_JSON)
+  GateioFuturesOrderResponse amendFuturesOrder(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @HeaderParam("x-gate-exptime") Long expirationTime,
+      @PathParam("settle") String settle,
+      @PathParam("order_id") String orderId,
+      Map<String, Object> request)
       throws IOException, GateioException;
 
   @POST
   @Path("spot/orders")
   @Consumes(MediaType.APPLICATION_JSON)
-  GateioOrder createOrder(
+  GateioSpotOrderResponse createOrder(
       @HeaderParam("KEY") String apiKey,
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,
-      GateioOrder gateioOrder)
+      GateioSpotOrderRequest gateioOrder)
+      throws IOException, GateioException;
+
+  @POST
+  @Path("futures/{settle}/orders")
+  @Consumes(MediaType.APPLICATION_JSON)
+  GateioFuturesOrderResponse createFuturesOrder(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @HeaderParam("x-gate-exptime") Long expirationTime,
+      @PathParam("settle") String settle,
+      GateioFuturesOrderRequest gateioFuturesOrder)
       throws IOException, GateioException;
 
   /** Lists all open spot orders, optionally scoped by page, page size, and account. */
@@ -136,7 +198,7 @@ public interface GateioV4Authenticated {
   @PATCH
   @Path("spot/orders/{order_id}")
   @Consumes(MediaType.APPLICATION_JSON)
-  GateioOrder amendOrder(
+  GateioSpotOrderResponse amendOrder(
       @HeaderParam("KEY") String apiKey,
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,
@@ -172,7 +234,7 @@ public interface GateioV4Authenticated {
       @HeaderParam("KEY") String apiKey,
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,
-      List<GateioOrder> gateioOrders)
+      List<GateioSpotOrderRequest> gateioOrders)
       throws IOException, GateioException;
 
   /** Cancels multiple spot orders in one request and returns per-order outcomes. */
@@ -268,5 +330,18 @@ public interface GateioV4Authenticated {
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,
       GateioWithdrawalRequest gateioWithdrawalRequest)
+      throws IOException, GateioException;
+
+  @POST
+  @Path("futures/{settle}/positions/{contract}/leverage")
+  @Consumes(MediaType.APPLICATION_JSON)
+  GateioPositionLeverageUpdate updatePositionLeverage(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @PathParam("settle") String settle,
+      @PathParam("contract") String contract,
+      @QueryParam("leverage") String leverage,
+      @QueryParam("cross_leverage_limit") String cross_leverage)
       throws IOException, GateioException;
 }

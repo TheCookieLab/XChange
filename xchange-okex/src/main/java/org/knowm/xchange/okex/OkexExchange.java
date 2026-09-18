@@ -47,4 +47,5 @@ public class OkexExchange extends OkxExchange {
     exchangeSpecification.setExchangeName("Okex");
     return exchangeSpecification;
   }
+
 }

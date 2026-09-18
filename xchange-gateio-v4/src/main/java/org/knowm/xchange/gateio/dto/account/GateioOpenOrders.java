@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
+import org.knowm.xchange.gateio.dto.trade.GateioSpotOrderResponse;
 
 /** Provider response group from GET /spot/open_orders. */
 @Data
@@ -19,5 +20,5 @@ public class GateioOpenOrders {
   Integer total;
 
   @JsonProperty("orders")
-  List<GateioOrder> orders;
+  List<GateioSpotOrderResponse> orders;
 }

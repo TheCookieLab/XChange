@@ -175,7 +175,7 @@
         <!-- Optional extra args appended to surefire fork command lines; CI passes -Xmx cap. -->
         <surefire.fork.tuning.args />
         <version.assertj>3.27.7</version.assertj>
-        <version.bouncycastle>1.84</version.bouncycastle>
+        <version.bouncycastle>1.85</version.bouncycastle>
         <version.byte-buddy-agent>1.18.8</version.byte-buddy-agent>
         <version.central-publishing-maven-plugin>0.11.0</version.central-publishing-maven-plugin>
         <version.commons.beanutils>1.11.0</version.commons.beanutils>
@@ -190,7 +190,7 @@
         <version.java-jwt>4.5.2</version.java-jwt>
         <version.json-path-assert>3.0.0</version.json-path-assert>
         <version.junit>5.12.2</version.junit>
-        <version.knowm.xchart>4.0.2</version.knowm.xchart>
+        <version.knowm.xchart>4.0.3</version.knowm.xchart>
         <version.kotlin-stdlib>2.1.0</version.kotlin-stdlib>
         <version.kotlin-stdlib-jdk8>1.9.10</version.kotlin-stdlib-jdk8>
         <version.lombok>1.18.48</version.lombok>
@@ -204,7 +204,7 @@
         <version.maven-source-plugin>3.4.0</version.maven-source-plugin>
         <version.maven-surefire-plugin>3.5.5</version.maven-surefire-plugin>
         <version.mockito>5.23.0</version.mockito>
-        <version.netty>4.2.14.Final</version.netty>
+        <version.netty>4.2.16.Final</version.netty>
         <version.pubnub>4.31.3</version.pubnub>
         <version.qos.logback>1.5.37</version.qos.logback>
         <version.reflections>0.10.2</version.reflections>

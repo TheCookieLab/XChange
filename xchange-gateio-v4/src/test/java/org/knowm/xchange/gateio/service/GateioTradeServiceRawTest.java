@@ -26,7 +26,8 @@ import org.knowm.xchange.gateio.dto.account.GateioCancelBatchRequest;
 import org.knowm.xchange.gateio.dto.account.GateioCancelOrderResult;
 import org.knowm.xchange.gateio.dto.account.GateioCountdownCancelRequest;
 import org.knowm.xchange.gateio.dto.account.GateioTriggerTime;
-import org.knowm.xchange.gateio.dto.account.GateioOrder;
+import org.knowm.xchange.gateio.dto.trade.GateioSpotOrderRequest;
+import org.knowm.xchange.gateio.dto.trade.GateioSpotOrderResponse;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
 import org.knowm.xchange.gateio.dto.trade.Role;
 import org.knowm.xchange.gateio.service.params.GateioTradeHistoryParams;
@@ -36,8 +37,8 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
   GateioTradeServiceRaw gateioTradeServiceRaw = (GateioTradeServiceRaw) exchange.getTradeService();
 
-  GateioOrder sampleMarketOrder =
-      GateioOrder.builder()
+  GateioSpotOrderResponse sampleMarketOrder =
+      GateioSpotOrderResponse.builder()
           .id("342251629898")
           .currencyPair(CurrencyPair.BTC_USDT)
           .clientOrderId("t-valid-market-buy-order")
@@ -69,38 +70,38 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
   @Test
   void valid_market_buy_order() throws IOException {
-    GateioOrder gateioOrder =
-        GateioOrder.builder()
+    GateioSpotOrderRequest gateioOrder =
+        GateioSpotOrderRequest.builder()
             .currencyPair(CurrencyPair.BTC_USDT)
             .clientOrderId("t-valid-market-buy-order")
             .type("market")
             .account("spot")
             .side(OrderType.BID)
             .timeInForce("ioc")
-            .amount(BigDecimal.valueOf(20))
+            .amount(BigDecimal.valueOf(20).toPlainString())
             .build();
 
-    GateioOrder actualResponse = gateioTradeServiceRaw.createOrder(gateioOrder);
+    GateioSpotOrderResponse actualResponse = gateioTradeServiceRaw.createOrder(gateioOrder);
     assertThat(actualResponse).usingRecursiveComparison().isEqualTo(sampleMarketOrder);
   }
 
   @Test
   void valid_market_sell_order() throws IOException {
-    GateioOrder gateioOrder =
-        GateioOrder.builder()
+    GateioSpotOrderRequest gateioOrder =
+        GateioSpotOrderRequest.builder()
             .currencyPair(CurrencyPair.BTC_USDT)
             .clientOrderId("t-valid-market-sell-order")
             .type("market")
             .account("spot")
             .side(OrderType.ASK)
             .timeInForce("ioc")
-            .amount(new BigDecimal("0.0007"))
+            .amount(new BigDecimal("0.0007").toPlainString())
             .build();
 
-    GateioOrder actualResponse = gateioTradeServiceRaw.createOrder(gateioOrder);
+    GateioSpotOrderResponse actualResponse = gateioTradeServiceRaw.createOrder(gateioOrder);
 
-    GateioOrder expectedResponse =
-        GateioOrder.builder()
+    GateioSpotOrderResponse expectedResponse =
+        GateioSpotOrderResponse.builder()
             .id("342260949533")
             .currencyPair(CurrencyPair.BTC_USDT)
             .clientOrderId("t-valid-market-sell-order")
@@ -135,7 +136,7 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
   @Test
   void order_details() throws IOException {
-    GateioOrder actualResponse =
+    GateioSpotOrderResponse actualResponse =
         gateioTradeServiceRaw.getOrder("342251629898", CurrencyPair.BTC_USDT);
 
     assertThat(actualResponse).usingRecursiveComparison().isEqualTo(sampleMarketOrder);
@@ -273,13 +274,13 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
   @Test
   void getOpenOrdersPage_pagination() throws IOException {
-    GateioPage<GateioOrder> firstPage = gateioTradeServiceRaw.getOpenOrdersPage(null, 2);
+    GateioPage<GateioSpotOrderResponse> firstPage = gateioTradeServiceRaw.getOpenOrdersPage(null, 2);
 
     assertThat(firstPage.getItems()).hasSize(2);
     assertThat(firstPage.hasNext()).isTrue();
     assertThat(firstPage.getNextCursor().getPage()).isEqualTo(2);
 
-    GateioPage<GateioOrder> secondPage =
+    GateioPage<GateioSpotOrderResponse> secondPage =
         gateioTradeServiceRaw.getOpenOrdersPage(firstPage.getNextCursor(), 2);
     assertThat(secondPage.getItems()).hasSize(1);
     assertThat(secondPage.getItems().get(0).getId()).isEqualTo("745504484394");
@@ -288,7 +289,7 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
   @Test
   void getOpenOrders_bounded_completed() throws IOException {
-    GateioContinuation<GateioOrder> bounded = gateioTradeServiceRaw.getOpenOrdersBounded(2, 3);
+    GateioContinuation<GateioSpotOrderResponse> bounded = gateioTradeServiceRaw.getOpenOrdersBounded(2, 3);
 
     assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.COMPLETED);
     assertThat(bounded.getItems()).hasSize(3);
@@ -299,7 +300,7 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
   @Test
   void getOpenOrders_bounded_maxResults() throws IOException {
-    GateioContinuation<GateioOrder> bounded = gateioTradeServiceRaw.getOpenOrdersBounded(2, 1);
+    GateioContinuation<GateioSpotOrderResponse> bounded = gateioTradeServiceRaw.getOpenOrdersBounded(2, 1);
 
     assertThat(bounded.getStop()).isEqualTo(GateioIterationStop.MAX_RESULTS);
     // the ceiling is a hard bound: the first page is cut at maxResults
@@ -308,7 +309,7 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
     // the second order of the cut page is not lost: resume drops the consumed prefix
     assertThat(bounded.getNextCursor()).isEqualTo(GateioPageCursor.page(1).withSkip(1));
 
-    GateioPage<GateioOrder> resumed =
+    GateioPage<GateioSpotOrderResponse> resumed =
         gateioTradeServiceRaw.getOpenOrdersPage(bounded.getNextCursor(), 2);
     assertThat(resumed.getItems()).hasSize(1);
     assertThat(resumed.getItems().get(0).getId()).isEqualTo("745504484393");
@@ -317,7 +318,7 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
   
   @Test
   void getOpenOrdersPage_flattensProviderGroups() throws IOException {
-    GateioPage<GateioOrder> page = gateioTradeServiceRaw.getOpenOrdersPage(null, 99);
+    GateioPage<GateioSpotOrderResponse> page = gateioTradeServiceRaw.getOpenOrdersPage(null, 99);
 
     assertThat(page.getItems()).hasSize(1);
     assertThat(page.getItems().get(0).getId()).isEqualTo("745504484392");
@@ -325,7 +326,7 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
 
   @Test
   void amendOrder_valid() throws IOException {
-    GateioOrder actual =
+    GateioSpotOrderResponse actual =
         gateioTradeServiceRaw.amendOrder(
             "1",
             CurrencyPair.BTC_USDT,
@@ -364,7 +365,17 @@ class GateioTradeServiceRawTest extends GateioExchangeWiremock {
   @Test
   void createBatchOrders_valid() throws IOException {
     List<GateioBatchOrderResult> actual =
-        gateioTradeServiceRaw.createBatchOrders(List.of(sampleMarketOrder));
+        gateioTradeServiceRaw.createBatchOrders(
+            List.of(
+                GateioSpotOrderRequest.builder()
+                    .currencyPair(CurrencyPair.BTC_USDT)
+                    .clientOrderId("t-valid-market-buy-order")
+                    .type("market")
+                    .account("spot")
+                    .side(OrderType.BID)
+                    .timeInForce("ioc")
+                    .amount(BigDecimal.valueOf(20).toPlainString())
+                    .build()));
 
     assertThat(actual).hasSize(2);
     assertThat(actual.get(0).getSucceeded()).isTrue();

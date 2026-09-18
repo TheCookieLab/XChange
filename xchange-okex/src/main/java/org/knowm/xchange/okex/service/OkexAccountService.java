@@ -54,9 +54,9 @@ public class OkexAccountService extends OkexAccountServiceRaw implements Account
   }
 
   @Override
-  public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
+  public boolean setLeverage(Instrument instrument, int leverage, Object... args) throws IOException {
     try {
-      return delegate.setLeverage(instrument, leverage);
+      return delegate.setLeverage(instrument, leverage, args);
     } catch (OkxException e) {
       throw new OkexException(e);
     }

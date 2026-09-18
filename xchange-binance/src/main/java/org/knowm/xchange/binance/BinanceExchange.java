@@ -163,42 +163,8 @@ public class BinanceExchange extends BaseExchange implements Exchange {
   @Override
   public void remoteInit() {
     try {
-      BinanceMarketDataServiceRaw marketDataServiceRaw =
-          (BinanceMarketDataServiceRaw) marketDataService;
-      BinanceAccountService accountService = (BinanceAccountService) getAccountService();
-
-      BinanceExchangeInfo exchangeInfo;
-      BinanceProductFamily productFamily = getProductFamily();
-
-      switch (productFamily) {
-        case USDM:
-        case COINM:
-          exchangeInfo = marketDataServiceRaw.getFutureExchangeInfo();
-          BinanceAdapters.adaptFutureExchangeMetaData(exchangeMetaData, exchangeInfo);
-          break;
-        default:
-          Map<String, AssetDetail> assetDetailMap = null;
-          if (!usingSandbox() && isAuthenticated()) {
-            assetDetailMap = accountService.getAssetDetails(); // not available in sndbox
-          }
-          exchangeInfo = marketDataServiceRaw.getExchangeInfo();
-          exchangeMetaData = BinanceAdapters.adaptExchangeMetaData(exchangeInfo, assetDetailMap);
-      }
-
-      // init symbol mappings
-      exchangeInfo.getSymbols().stream()
-          .filter(
-              symbol ->
-                  symbol.getBaseAsset() != null
-                      && symbol.getQuoteAsset() != null
-                      && symbol.getSymbol() != null)
-          .forEach(
-              symbol ->
-                  BinanceAdapters.putSymbolMapping(
-                      symbol.getSymbol(),
-                      new CurrencyPair(symbol.getBaseAsset(), symbol.getQuoteAsset())));
-
-    } catch (IOException e) {
+      updateExchangeMetaData();
+    } catch (Exception e) {
       throw new ExchangeException("Failed to initialize: " + e.getMessage(), e);
     }
   }
@@ -295,5 +261,42 @@ public class BinanceExchange extends BaseExchange implements Exchange {
   private static boolean enabledSandbox(ExchangeSpecification exchangeSpecification) {
     return Boolean.TRUE.equals(
         exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX));
+  }
+
+  @Override
+  public void updateExchangeMetaData() throws IOException {
+    BinanceMarketDataServiceRaw marketDataServiceRaw =
+        (BinanceMarketDataServiceRaw) marketDataService;
+    BinanceAccountService accountService = (BinanceAccountService) getAccountService();
+    BinanceExchangeInfo exchangeInfo;
+    BinanceProductFamily productFamily = getProductFamily();
+
+    switch (productFamily) {
+      case USDM:
+      case COINM:
+        exchangeInfo = marketDataServiceRaw.getFutureExchangeInfo();
+        BinanceAdapters.adaptFutureExchangeMetaData(exchangeMetaData, exchangeInfo);
+        break;
+      default:
+        Map<String, AssetDetail> assetDetailMap = null;
+        if (!usingSandbox() && isAuthenticated()) {
+          assetDetailMap = accountService.getAssetDetails(); // not available in sndbox
+        }
+        exchangeInfo = marketDataServiceRaw.getExchangeInfo();
+        exchangeMetaData = BinanceAdapters.adaptExchangeMetaData(exchangeInfo, assetDetailMap);
+    }
+    // init symbol mappings
+    exchangeInfo.getSymbols().stream()
+        .filter(
+            symbol ->
+                symbol.getBaseAsset() != null
+                    && symbol.getQuoteAsset() != null
+                    && symbol.getSymbol() != null)
+        .forEach(
+            symbol ->
+                BinanceAdapters.putSymbolMapping(
+                    symbol.getSymbol(),
+                    new CurrencyPair(symbol.getBaseAsset(), symbol.getQuoteAsset())));
+
   }
 }

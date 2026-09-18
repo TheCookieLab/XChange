@@ -1,18 +1,20 @@
 package org.knowm.xchange.gateio.service;
 
+import jakarta.ws.rs.HeaderParam;
 import lombok.SneakyThrows;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
+import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.gateio.Gateio;
 import org.knowm.xchange.gateio.GateioExchange;
 import org.knowm.xchange.gateio.GateioV4Authenticated;
 import org.knowm.xchange.gateio.config.Config;
 import org.knowm.xchange.gateio.config.GateioJacksonObjectMapperFactory;
-import org.knowm.xchange.service.BaseExchangeService;
+import org.knowm.xchange.service.BaseResilientExchangeService;
 import org.knowm.xchange.service.BaseService;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.clients.HttpConnectionType;
 
-public class GateioBaseService extends BaseExchangeService<GateioExchange> implements BaseService {
+public class GateioBaseService extends BaseResilientExchangeService<GateioExchange> implements BaseService {
 
   protected final String apiKey;
   protected final Gateio gateio;
@@ -20,15 +22,17 @@ public class GateioBaseService extends BaseExchangeService<GateioExchange> imple
   protected final ParamsDigest gateioV4ParamsDigest;
 
   @SneakyThrows
-  public GateioBaseService(GateioExchange exchange) {
-    super(exchange);
-
+  public GateioBaseService(GateioExchange exchange, ResilienceRegistries resilienceRegistries) {
+    super(exchange, resilienceRegistries);
     gateio =
         ExchangeRestProxyBuilder.forInterface(Gateio.class, exchange.getExchangeSpecification())
             .clientConfigCustomizer(
-                clientConfig ->
-                    clientConfig.setJacksonObjectMapperFactory(
-                        new GateioJacksonObjectMapperFactory()))
+                clientConfig -> {
+                  clientConfig.setJacksonObjectMapperFactory(
+                      new GateioJacksonObjectMapperFactory());
+                  clientConfig.addDefaultParam(HeaderParam.class, "X-Gate-Size-Decimal", "1");
+                }
+            )
             .restProxyFactory(
                 Config.getInstance()
                     .getRestProxyFactoryClass()
@@ -48,6 +52,7 @@ public class GateioBaseService extends BaseExchangeService<GateioExchange> imple
                   // HttpURLConnection transport rejects; rescu's Apache client
                   // supports it (org.apache.httpcomponents:httpclient).
                   clientConfig.setConnectionType(HttpConnectionType.apache);
+                  clientConfig.addDefaultParam(HeaderParam.class, "X-Gate-Size-Decimal", "1");
                 })
             .restProxyFactory(
                 Config.getInstance()

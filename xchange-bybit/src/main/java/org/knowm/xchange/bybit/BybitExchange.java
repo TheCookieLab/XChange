@@ -71,6 +71,11 @@ public class BybitExchange extends BaseExchange implements Exchange {
 
   @Override
   public void remoteInit() throws IOException, ExchangeException {
+    updateExchangeMetaData();
+  }
+
+  @Override
+  public void updateExchangeMetaData() throws IOException {
     BybitMarketDataServiceRaw raw = (BybitMarketDataServiceRaw) marketDataService;
     raw.getAllInstrumentsInfo(BybitCategory.SPOT)
         .forEach(

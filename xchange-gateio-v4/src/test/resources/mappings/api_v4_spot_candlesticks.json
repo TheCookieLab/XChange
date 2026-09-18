@@ -7,7 +7,7 @@
   },
   "response": {
     "status": 200,
-    "bodyFileName": "api_v4_spot_candlesticks.json"
+    "bodyFileName": "api_v4_spot_candlesticks_multi.json"
   },
   "uuid": "9ad51f5b-0eb7-46a9-8085-41f84e4d49a5",
   "persistent": true,

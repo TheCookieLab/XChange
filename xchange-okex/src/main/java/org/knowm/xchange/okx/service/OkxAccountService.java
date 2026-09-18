@@ -121,7 +121,8 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
   }
 
   @Override
-  public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
+  public boolean setLeverage(Instrument instrument, int leverage, Object... args)
+      throws IOException {
     return setLeverage(
             adaptInstrument(instrument),
             "",

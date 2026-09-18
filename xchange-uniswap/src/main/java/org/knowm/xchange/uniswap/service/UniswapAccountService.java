@@ -55,7 +55,7 @@ public class UniswapAccountService extends UniswapAccountServiceRaw implements A
   }
 
   @Override
-  public boolean setLeverage(Instrument instrument, int leverage) {
+  public boolean setLeverage(Instrument instrument, int leverage, Object... args) {
     throw new NotAvailableFromExchangeException("setLeverage");
   }
 }
