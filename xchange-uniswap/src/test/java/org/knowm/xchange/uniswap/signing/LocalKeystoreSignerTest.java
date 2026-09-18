@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.knowm.xchange.uniswap.TestFixtures;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.Hash;
 import org.web3j.crypto.RawTransaction;
@@ -78,6 +79,9 @@ class LocalKeystoreSignerTest {
 
   @Test
   void keystoreFileIsOwnerOnly() throws Exception {
+    // The owner-only guarantee is a POSIX permission: on a filesystem that cannot express it,
+    // createKeystore falls back to the creating process's umask (see LocalKeystoreSigner).
+    TestFixtures.assumePosixPermissions(tempDir);
     char[] password = "right password".toCharArray();
     Path keystore = TestSignerFixtures.keystore(tempDir, password);
     java.util.Set<java.nio.file.attribute.PosixFilePermission> permissions =
