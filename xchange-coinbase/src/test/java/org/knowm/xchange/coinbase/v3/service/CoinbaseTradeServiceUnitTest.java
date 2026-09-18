@@ -202,6 +202,39 @@ public class CoinbaseTradeServiceUnitTest {
   }
 
   @Test
+  public void previewEditOrderAcceptsAPreviewPayloadWithoutSuccessFlag() throws Exception {
+    // POST /orders/edit_preview answers with the preview schema only
+    // ({"errors":[],"slippage":"0","order_total":"..."}) — no success flag — so an empty failure
+    // list is the accepted preview, not a rejection.
+    when(api.previewEditOrderCurrent(any(ParamsDigest.class), any()))
+        .thenReturn(new CoinbaseEditOrderResponse(null, Collections.emptyList()));
+
+    CoinbaseEditOrderResponse response =
+        service.previewEditOrderCurrent(
+            new CoinbaseEditOrderRequest("order-1", null, null, null, null, null));
+
+    assertNotNull(response);
+  }
+
+  @Test
+  public void previewEditOrderRejectsAPreviewFailureReason() throws Exception {
+    when(api.previewEditOrderCurrent(any(ParamsDigest.class), any()))
+        .thenReturn(
+            new CoinbaseEditOrderResponse(
+                null,
+                Collections.singletonList(
+                    new CoinbaseEditOrderResponse.EditOrderError(null, "insufficient balance"))));
+
+    try {
+      service.previewEditOrderCurrent(
+          new CoinbaseEditOrderRequest("order-1", null, null, null, null, null));
+      fail("Expected a preview failure reason to be rejected");
+    } catch (ExchangeException expected) {
+      assertTrue(expected.getMessage().contains("insufficient balance"));
+    }
+  }
+
+  @Test
   public void previewEditOrderRejectsMissingSuccessResponse() throws Exception {
     when(api.previewEditOrderCurrent(any(ParamsDigest.class), any())).thenReturn(null);
     try {

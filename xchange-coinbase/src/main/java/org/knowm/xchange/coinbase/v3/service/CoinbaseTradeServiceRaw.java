@@ -155,6 +155,11 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   /**
    * Lists historical orders with optional filters and returns the raw Coinbase response.
    *
+   * <p>A multi-value {@code orderStatus} filter is serialized as one comma-joined value, which
+   * Coinbase rejects for {@code order_status} with HTTP 400 ({@code parsing list "order_status"});
+   * pass a single status here, or use {@link #listOrdersBounded(List, Integer)}, which queries one
+   * status per request.
+   *
    * @param orderIds optional list of order IDs to filter by
    * @param productIds optional list of product IDs to filter by
    * @param productType optional product type filter (e.g., "SPOT", "FUTURE")
@@ -239,6 +244,11 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
   /**
    * Iterates filtered order history across pages with a bounded, loop-safe cursor loop.
    *
+   * <p>Coinbase parses {@code order_status} as a repeated query parameter and rejects a
+   * comma-joined value with HTTP 400, so each requested status is queried on its own and the
+   * results are merged; the filter stays server-side and the union is exactly the requested
+   * statuses.
+   *
    * @param orderStatuses optional Coinbase order-status filter
    * @param limit optional maximum number of orders to collect; null collects all pages
    * @return all collected orders
@@ -249,6 +259,36 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
       List<String> orderStatuses, Integer limit) throws IOException {
     List<CoinbaseOrderDetail> orders = new ArrayList<>();
     Set<String> seenOrderIds = new HashSet<>();
+    if (orderStatuses == null || orderStatuses.isEmpty()) {
+      collectOrders(null, limit, orders, seenOrderIds);
+      return orders;
+    }
+    for (String orderStatus : orderStatuses) {
+      if (limit != null && orders.size() >= limit) {
+        break;
+      }
+      collectOrders(Collections.singletonList(orderStatus), limit, orders, seenOrderIds);
+    }
+    return orders;
+  }
+
+  /**
+   * Walks one filtered page sequence to its end, collecting orders this call has not seen yet.
+   *
+   * @param orderStatuses single-status filter, or {@code null} to walk without a status filter
+   * @param limit optional maximum number of orders to collect across the whole bounded call; null
+   *     collects every page
+   * @param orders collector shared by the statuses of one bounded call
+   * @param seenOrderIds order ids already collected by that call
+   * @throws IOException on transport failure
+   * @throws ExchangeException when pagination does not advance or returns a malformed continuation
+   */
+  private void collectOrders(
+      List<String> orderStatuses,
+      Integer limit,
+      List<CoinbaseOrderDetail> orders,
+      Set<String> seenOrderIds)
+      throws IOException {
     Set<String> seenCursors = new HashSet<>();
     int page = 0;
     String cursor = null;
@@ -302,7 +342,6 @@ public class CoinbaseTradeServiceRaw extends CoinbaseBaseService {
               : null;
       page++;
     } while (cursor != null && !cursor.isEmpty() && (limit == null || orders.size() < limit));
-    return orders;
   }
 
   /**

@@ -11,6 +11,11 @@ import java.util.List;
  *
  * <p>The HTTP request can complete with status 200 while the operation itself is rejected. Callers
  * must inspect {@link #isSuccess()} and must not treat a false result as an accepted edit.
+ *
+ * <p>The two endpoints report that differently: {@code POST /orders/edit} answers with an explicit
+ * {@code success} flag ({@code {"success":true,"errors":[]}}), while {@code
+ * POST /orders/edit_preview} answers without one and reports a rejected preview only through a
+ * non-empty {@code errors} array ({@code {"errors":[],"slippage":"0","order_total":"..."}}).
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class CoinbaseEditOrderResponse {
@@ -37,9 +42,14 @@ public final class CoinbaseEditOrderResponse {
     return success;
   }
 
-  /** Returns whether the provider explicitly accepted the edit. */
+  /**
+   * Returns whether the provider accepted the edit.
+   *
+   * <p>An explicit {@code success} flag governs when the endpoint sends one. The edit-preview
+   * endpoint sends none, so an absent flag means success exactly when no failure was reported.
+   */
   public boolean isSuccess() {
-    return Boolean.TRUE.equals(success);
+    return success != null ? success : errors.isEmpty();
   }
 
   /** Returns immutable provider failure details. */
