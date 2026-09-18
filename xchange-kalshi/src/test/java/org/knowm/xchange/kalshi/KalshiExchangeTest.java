@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -82,6 +83,38 @@ class KalshiExchangeTest {
             new PredictionMarketContract(
                 "kalshi", "KXFED-26JAN28", "KXFED-26JAN28-H25", "YES", Currency.USD)));
     assertTrue(exchange.getExchangeMetaData().getCurrencies().containsKey(Currency.USD));
+  }
+
+  @Test
+  void remoteInitHonoursConfiguredMarketPageBound() throws Exception {
+    exchange
+        .getExchangeSpecification()
+        .setExchangeSpecificParametersItem(KalshiExchange.MARKETS_PAGES_PARAMETER, 3);
+    // An endless cursor chain: the walk must stop at the configured bound instead of failing, and
+    // must not repeat the ticker it already has.
+    stubMarketPage(absent(), "c1");
+    stubMarketPage(equalTo("c1"), "c2");
+    stubMarketPage(equalTo("c2"), "c3");
+
+    exchange.remoteInit();
+
+    assertEquals(1, exchange.getExchangeMetaData().getInstruments().size());
+    assertEquals(3, server.getAllServeEvents().size(), "the configured page bound must apply");
+  }
+
+  private void stubMarketPage(StringValuePattern cursor, String nextCursor) {
+    server.stubFor(
+        get(urlPathEqualTo("/trade-api/v2/markets"))
+            .withQueryParam("cursor", cursor)
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"markets\":["
+                            + marketJson("KXBTC-25DEC31-T90000", "KXBTC-25DEC31", "active")
+                            + "],\"cursor\":\""
+                            + nextCursor
+                            + "\"}")));
   }
 
   private static String marketJson(String ticker, String eventTicker, String status) {

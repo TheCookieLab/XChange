@@ -647,12 +647,24 @@ public class MexcV3StreamingExchange extends MexcV3Exchange implements Streaming
     }
   }
 
+  /**
+   * Creates the transport for a resolved stream URI.
+   *
+   * <p>Test seam, like {@link #keepAliveScheduler} and {@link #keepAliveIntervalSeconds}:
+   * lifecycle tests substitute a transport double whose {@code connect()}/{@code disconnect()}
+   * the test drives, so the exchange's connection lifecycle is exercised without sockets,
+   * threads, or waits.
+   */
+  MexcV3StreamingService createStreamingService(String uri) {
+    return new MexcV3StreamingService(uri);
+  }
+
   private void buildStreamingService(String uri) {
     if (streamingService != null) {
       // Releasing a previous transport (e.g. a failed connect) before replacing it.
       streamingService.disconnect().onErrorComplete().subscribe();
     }
-    streamingService = new MexcV3StreamingService(uri);
+    streamingService = createStreamingService(uri);
     applyStreamingSpecification(getExchangeSpecification(), streamingService);
     streamingService.useCompressedMessages(compressedMessages);
     // Forward this transport's lifecycle events into the exchange-level relays: subscribers

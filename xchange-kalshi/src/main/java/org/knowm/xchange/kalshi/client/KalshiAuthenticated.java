@@ -32,7 +32,6 @@ import si.mazi.rescu.SynchronizedValueFactory;
  */
 @Path("trade-api/v2")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public interface KalshiAuthenticated {
 
   /** Returns the portfolio balance; the canonical amount is a fixed-point dollar string. */
@@ -84,6 +83,7 @@ public interface KalshiAuthenticated {
    */
   @POST
   @Path("portfolio/events/orders")
+  @Consumes(MediaType.APPLICATION_JSON)
   KalshiCreateOrderResponse createOrder(
       @HeaderParam("KALSHI-ACCESS-KEY") String apiKey,
       @HeaderParam("KALSHI-ACCESS-TIMESTAMP") SynchronizedValueFactory<Long> timestamp,

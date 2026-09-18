@@ -1,6 +1,5 @@
 package org.knowm.xchange.polymarket.client;
 
-import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -14,7 +13,6 @@ import org.knowm.xchange.polymarket.dto.data.PolymarketDataTrade;
 /** Public Data API endpoints (trades and positions are readable by wallet address). */
 @Path("")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public interface PolymarketDataPublic {
 
   /** Recent public trades for a condition id. */

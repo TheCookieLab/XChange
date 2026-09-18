@@ -80,6 +80,7 @@ class PolymarketTradeServiceTest {
   void placeLimitOrderSerializesAndSignsEndToEnd() throws Exception {
     server.stubFor(
         post(urlEqualTo("/order"))
+            .withHeader("Content-Type", equalTo("application/json"))
             .withRequestBody(matchingJsonPath("$.order.tokenId", equalTo(TOKEN_ID)))
             .withRequestBody(matchingJsonPath("$.order.makerAmount", equalTo("5600000")))
             .withRequestBody(matchingJsonPath("$.order.takerAmount", equalTo("10000000")))

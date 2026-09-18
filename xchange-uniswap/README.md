@@ -46,7 +46,7 @@ forward, never an exposed node.
 | `sslUri` / `uniswap.rpc-url` | yes | JSON-RPC endpoint (http/https) |
 | `uniswap.chain-id` | no | default `1` (Ethereum mainnet) |
 | `uniswap.wallet-address` | yes | wallet address owning the keystore |
-| `uniswap.keystore-path` | yes | path of the encrypted V3 keystore (owner-only permissions) |
+| `uniswap.keystore-path` | yes | path of the encrypted V3 keystore (must not be group- or other-writable) |
 | `uniswap.password-provider-class` | no | `SecretProvider` class name; default reads `UNISWAP_KEYSTORE_PASSWORD` |
 | `uniswap.tokens` | yes | JSON array: `{symbol, address, decimals, native?}` |
 | `uniswap.pool-keys` | yes | JSON array: `{pair, currency0, currency1, fee, tickSpacing, hooks?}` |
@@ -124,9 +124,12 @@ String address = LocalKeystoreSigner.createKeystore(Path.of("wallet.json"), pass
 System.out.println(address);
 ```
 
-The keystore is written with owner-only permissions. Provide the password at
-runtime through `UNISWAP_KEYSTORE_PASSWORD` (or a custom `SecretProvider`);
-never store it in configuration or source.
+The keystore is written with owner-only permissions where the filesystem supports
+POSIX permissions, and a configured keystore that is group- or other-writable is
+rejected; on a filesystem that cannot express them (the Windows default) the file
+keeps the creating process's permissions and the check is skipped. Provide the
+password at runtime through `UNISWAP_KEYSTORE_PASSWORD` (or a custom
+`SecretProvider`); never store it in configuration or source.
 
 ## Rollout and rollback
 

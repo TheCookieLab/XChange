@@ -37,6 +37,31 @@ the Gamma catalog. `PolymarketAdapters.tokenId(instrument)` /
 `conditionId(instrument)` recover the native ids. Generic `CurrencyPair` calls
 are rejected with `InstrumentNotValidException` before any request is made.
 
+## Catalog discovery
+
+`remoteInit()` walks the Gamma catalog with keyset pagination
+(`GET /markets/keyset`, `after_cursor`), which reaches the whole catalog. The
+older offset endpoint (`GET /markets`, `getGammaMarkets`) is deprecated by the
+provider and rejects any `offset > 2000` with HTTP 422, so it only reaches the
+first ~2,100 markets.
+
+Two exchange-specific parameters tune discovery:
+
+* `polymarket.gamma.discovery.pages` (`PARAM_GAMMA_DISCOVERY_PAGES`) — stop the
+  walk after N keyset pages (100 markets each) for a fast, partial catalog.
+  Unset (the default) walks the whole catalog.
+* `polymarket.gamma.discovery.cache` (`PARAM_GAMMA_DISCOVERY_CACHE`) — persist
+  the catalog to a file and resume from the stored cursor on later runs instead
+  of re-reading every page, so a repeat run costs one or two requests. The cache
+  is swept from the start again once it is older than
+  `polymarket.gamma.discovery.cache.ttl`
+  (`PARAM_GAMMA_DISCOVERY_CACHE_TTL`, default 86400 seconds), which is what
+  reconciles markets that closed in the meantime. The catalog is about 189,000
+  markets, so the cache file is on the order of 100 MB.
+
+A bounded walk ignores the cache, and `setShouldLoadRemoteMetaData(false)` skips
+discovery entirely.
+
 ## Side semantics
 
 The CLOB quotes prices in dollars per share of the outcome token; the adapters

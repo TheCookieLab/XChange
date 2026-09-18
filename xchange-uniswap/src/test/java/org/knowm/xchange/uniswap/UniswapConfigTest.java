@@ -77,6 +77,7 @@ class UniswapConfigTest {
 
   @Test
   void rejectsGroupWritableKeystore() throws Exception {
+    TestFixtures.assumePosixPermissions(tempDir);
     Path keystore =
         TestFixtures.fileWithPermissions(
             tempDir, "loose.json", EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.GROUP_WRITE));
@@ -224,6 +225,7 @@ class UniswapConfigTest {
 
   @Test
   void unsafeKeystoreFilePermissionsFailEvenWhenReadable() throws Exception {
+    TestFixtures.assumePosixPermissions(tempDir);
     Path keystore =
         TestFixtures.fileWithPermissions(
             tempDir, "loose2.json", EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OTHERS_WRITE));

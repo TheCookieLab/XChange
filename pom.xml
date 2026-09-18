@@ -193,7 +193,7 @@
         <version.knowm.xchart>4.0.2</version.knowm.xchart>
         <version.kotlin-stdlib>2.1.0</version.kotlin-stdlib>
         <version.kotlin-stdlib-jdk8>1.9.10</version.kotlin-stdlib-jdk8>
-        <version.lombok>1.18.46</version.lombok>
+        <version.lombok>1.18.48</version.lombok>
         <version.maven-compiler-plugin>3.15.0</version.maven-compiler-plugin>
         <version.maven-enforcer-plugin>3.6.3</version.maven-enforcer-plugin>
         <version.maven-failsafe-plugin>3.5.5</version.maven-failsafe-plugin>
@@ -585,6 +585,11 @@
                     <release>${version.java}</release>
                     <showDeprecation>true</showDeprecation>
                     <showWarnings>true</showWarnings>
+                    <!-- maven-compiler-plugin only passes -proc when it is configured, and the
+                         javac default is not dependable across JDKs: on JDK 26 Lombok silently
+                         generated nothing, so every @Data/@Builder/@Getter member was missing.
+                         Request annotation processing explicitly. -->
+                    <proc>full</proc>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>

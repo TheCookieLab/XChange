@@ -35,6 +35,12 @@ public final class TestFixtures {
       new org.knowm.xchange.currency.CurrencyPair(
           org.knowm.xchange.currency.Currency.ETH, org.knowm.xchange.currency.Currency.USDC);
 
+  /** Owner read/write, the permissions a keystore must carry to pass the config guard. */
+  private static final Set<java.nio.file.attribute.PosixFilePermission> OWNER_ONLY =
+      Set.of(
+          java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+          java.nio.file.attribute.PosixFilePermission.OWNER_WRITE);
+
   private TestFixtures() {}
 
   public static TokenRegistry tokens() {
@@ -90,7 +96,7 @@ public final class TestFixtures {
         + "\"hooks\":\"" + ZERO + "\"}]";
   }
 
-  /** Creates a keystore for the fixture wallet (private key 1) with owner-only permissions. */
+  /** Creates a keystore for the fixture wallet (private key 1), owner-only where expressible. */
   public static Path keystore(Path tempDir, char[] password) throws Exception {
     Path path = tempDir.resolve("wallet.json");
     org.web3j.crypto.WalletFile walletFile =
@@ -98,12 +104,37 @@ public final class TestFixtures {
             new String(password), org.web3j.crypto.ECKeyPair.create(java.math.BigInteger.ONE));
     byte[] json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsBytes(walletFile);
     Files.write(path, json, java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE);
-    Files.setPosixFilePermissions(
-        path,
-        java.util.Set.of(
-            java.nio.file.attribute.PosixFilePermission.OWNER_READ,
-            java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
+    restrictToOwner(path);
     return path;
+  }
+
+  /**
+   * Restricts a file to owner read/write on filesystems that can express POSIX permissions. On a
+   * filesystem that cannot (the Windows default) the file keeps the creating process's
+   * umask-derived permissions — the same fallback {@code LocalKeystoreSigner.createKeystore} and
+   * {@code UniswapConfig} apply in production.
+   */
+  public static void restrictToOwner(Path path) throws IOException {
+    try {
+      Files.setPosixFilePermissions(path, OWNER_ONLY);
+    } catch (UnsupportedOperationException e) {
+      // Non-POSIX filesystem: the owner-only guarantee is not expressible here.
+    }
+  }
+
+  /** True when {@code path}'s filesystem can express POSIX file permissions. */
+  public static boolean posixPermissionsSupported(Path path) {
+    return path.getFileSystem().supportedFileAttributeViews().contains("posix");
+  }
+
+  /**
+   * Skips the calling test where POSIX permissions cannot exist: the group/other writability this
+   * module fails closed on is a POSIX concept, so a non-POSIX filesystem has nothing to reject.
+   */
+  public static void assumePosixPermissions(Path path) {
+    org.junit.jupiter.api.Assumptions.assumeTrue(
+        posixPermissionsSupported(path),
+        "POSIX file permissions are not supported by this filesystem: " + path);
   }
 
   /** A specification with valid configuration; {@code verifyOnStartup} is off by default. */
@@ -185,7 +216,12 @@ public final class TestFixtures {
     return "0".repeat(64 - hex.length()) + hex;
   }
 
-  /** Writes a keystore-looking file with the given POSIX permissions. */
+  /**
+   * Writes a keystore-looking file with the given POSIX permissions.
+   *
+   * <p>POSIX filesystems only: callers must establish {@link #assumePosixPermissions(Path)} first,
+   * because a filesystem that cannot express the permissions cannot be made unsafe either.
+   */
   public static Path fileWithPermissions(Path tempDir, String name, Set<java.nio.file.attribute.PosixFilePermission> permissions)
       throws IOException {
     Path path = tempDir.resolve(name);

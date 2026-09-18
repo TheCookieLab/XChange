@@ -2,7 +2,9 @@ package org.knowm.xchange.kalshi.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.knowm.xchange.kalshi.KalshiExchange;
 import org.knowm.xchange.kalshi.dto.marketdata.KalshiMarket;
 import org.knowm.xchange.kalshi.dto.marketdata.KalshiMarketResponse;
@@ -13,8 +15,11 @@ import org.knowm.xchange.kalshi.dto.marketdata.KalshiTradesResponse;
 /** Raw Kalshi market-data access returning provider DTOs. */
 public class KalshiMarketDataServiceRaw extends KalshiBaseService {
 
-  /** Safety bound on cursor-following loops. */
-  static final int MAX_PAGES = 50;
+  /** Page size used when walking Kalshi markets; the provider caps {@code limit} at 1000. */
+  static final int KALSHI_PAGE_SIZE = 1000;
+
+  /** Default catalog bound: 100 pages x 1000 markets. */
+  static final int DEFAULT_MAX_PAGES = 100;
 
   protected KalshiMarketDataServiceRaw(KalshiExchange exchange) {
     super(exchange);
@@ -27,27 +32,54 @@ public class KalshiMarketDataServiceRaw extends KalshiBaseService {
   }
 
   /**
-   * All {@code open} markets, following the cursor pagination to completion. Fails loudly when
-   * the cursor never terminates within {@link #MAX_PAGES} pages so a catalog built by {@code
-   * remoteInit} is never silently truncated.
+   * The first {@code kalshi.markets.pages} pages (default {@link #DEFAULT_MAX_PAGES}) of {@code
+   * open} markets, de-duplicated by ticker. The bound is deliberate rather than an error: the
+   * provider's active catalog is far larger than any caller wants materialised by {@code
+   * createExchange()}, and the raw {@link #getKalshiMarkets(String, String, Integer)} accessor is
+   * the complete-crawl path. The walk also stops when the provider repeats a cursor, so a
+   * non-advancing cursor cannot spin.
+   *
+   * @throws IllegalArgumentException when the configured bound is below 1
    */
   public List<KalshiMarket> getAllOpenKalshiMarkets() throws IOException {
+    int maxPages = configuredMaxPages();
     List<KalshiMarket> markets = new ArrayList<>();
+    Set<String> seen = new HashSet<>();
     String cursor = null;
-    for (int page = 0; page < MAX_PAGES; page++) {
-      KalshiMarketsResponse response = kalshiPublic.getMarkets(1000, cursor, "open", null);
-      if (response.markets() != null) {
-        markets.addAll(response.markets());
+    for (int page = 0; page < maxPages; page++) {
+      KalshiMarketsResponse response =
+          kalshiPublic.getMarkets(KALSHI_PAGE_SIZE, cursor, "open", null);
+      List<KalshiMarket> batch = response == null ? null : response.markets();
+      if (batch != null) {
+        for (KalshiMarket market : batch) {
+          if (market.ticker() != null && seen.add(market.ticker())) {
+            markets.add(market);
+          }
+        }
       }
-      cursor = response.cursor();
-      if (cursor == null || cursor.isBlank()) {
-        return markets;
+      String next = response == null ? null : response.cursor();
+      if (next == null || next.isBlank() || next.equals(cursor)) {
+        break;
       }
+      cursor = next;
     }
-    throw new IllegalStateException(
-        "Kalshi market pagination did not terminate within "
-            + MAX_PAGES
-            + " pages; refusing to return a truncated catalog");
+    return markets;
+  }
+
+  private int configuredMaxPages() {
+    Object value =
+        exchange
+            .getExchangeSpecification()
+            .getExchangeSpecificParametersItem(KalshiExchange.MARKETS_PAGES_PARAMETER);
+    if (value == null) {
+      return DEFAULT_MAX_PAGES;
+    }
+    int pages = Integer.parseInt(value.toString().trim());
+    if (pages < 1) {
+      throw new IllegalArgumentException(
+          KalshiExchange.MARKETS_PAGES_PARAMETER + " must be at least 1: " + pages);
+    }
+    return pages;
   }
 
   /** Single market by ticker. */

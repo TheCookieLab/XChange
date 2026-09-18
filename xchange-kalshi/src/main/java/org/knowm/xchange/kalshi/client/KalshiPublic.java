@@ -1,6 +1,5 @@
 package org.knowm.xchange.kalshi.client;
 
-import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -17,7 +16,6 @@ import org.knowm.xchange.kalshi.dto.marketdata.KalshiTradesResponse;
 /** Public Kalshi v2 REST endpoints. Prices and counts are fixed-point strings. */
 @Path("trade-api/v2")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public interface KalshiPublic {
 
   /**

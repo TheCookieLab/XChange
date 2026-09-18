@@ -29,6 +29,9 @@ public abstract class PolymarketBaseService extends BaseExchangeService<Polymark
   protected final PolymarketGammaPublic gammaPublic;
   protected final PolymarketDataPublic dataPublic;
 
+  /** Resolved Gamma base URI backing {@link #gammaPublic}; also the catalog cache's host key. */
+  protected final String gammaUri;
+
   protected final String walletAddress;
   protected final String apiKey;
   protected final String passphrase;
@@ -42,13 +45,11 @@ public abstract class PolymarketBaseService extends BaseExchangeService<Polymark
     clobPublic = ExchangeRestProxyBuilder.forInterface(PolymarketClobPublic.class, spec).build();
     clobAuthenticated =
         ExchangeRestProxyBuilder.forInterface(PolymarketClobAuthenticated.class, spec).build();
+    gammaUri =
+        exchange.resolveUri(PolymarketExchange.PARAM_GAMMA_URI, PolymarketExchange.GAMMA_URI);
     gammaPublic =
         ExchangeRestProxyBuilder.forInterface(
-                PolymarketGammaPublic.class,
-                hostSpec(
-                    spec,
-                    exchange.resolveUri(
-                        PolymarketExchange.PARAM_GAMMA_URI, PolymarketExchange.GAMMA_URI)))
+                PolymarketGammaPublic.class, hostSpec(spec, gammaUri))
             .build();
     dataPublic =
         ExchangeRestProxyBuilder.forInterface(
