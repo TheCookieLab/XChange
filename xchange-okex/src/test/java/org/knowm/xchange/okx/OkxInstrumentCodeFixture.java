@@ -1,7 +1,7 @@
 package org.knowm.xchange.okx;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.instrument.Instrument;
 
@@ -12,7 +12,7 @@ public final class OkxInstrumentCodeFixture implements AutoCloseable {
       OkxAdapters.snapshotInstrumentToInstrumentIdMapForTesting();
 
   public OkxInstrumentCodeFixture() {
-    Map<Instrument, Long> fixture = new HashMap<>(original);
+    Map<Instrument, Long> fixture = new ConcurrentHashMap<>(original);
     fixture.put(CurrencyPair.BTC_USDT, 42L);
     OkxAdapters.replaceInstrumentToInstrumentIdMapForTesting(fixture);
   }
