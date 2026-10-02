@@ -8,7 +8,7 @@ import io.netty.handler.logging.LoggingHandler;
 final class PayloadSafeLoggingHandler extends LoggingHandler {
 
   PayloadSafeLoggingHandler(LogLevel level) {
-    super(level);
+    super(LoggingHandler.class, level);
   }
 
   @Override

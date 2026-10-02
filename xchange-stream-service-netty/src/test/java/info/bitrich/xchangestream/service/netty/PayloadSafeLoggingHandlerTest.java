@@ -16,6 +16,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
@@ -33,8 +34,30 @@ public class PayloadSafeLoggingHandlerTest {
     assertWireLoggingSafe(LogLevel.TRACE, Level.TRACE);
   }
 
+  @Test
+  public void legacyNettyPackageRoutingIsPreserved() {
+    Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+    Logger netty = (Logger) LoggerFactory.getLogger("io.netty");
+    Logger replacement = (Logger) LoggerFactory.getLogger(PayloadSafeLoggingHandler.class);
+    Level originalRootLevel = root.getLevel();
+    Level originalNettyLevel = netty.getLevel();
+    Level originalReplacementLevel = replacement.getLevel();
+    try {
+      root.setLevel(Level.INFO);
+      replacement.setLevel(Level.OFF);
+      netty.setLevel(Level.DEBUG);
+      assertWireLoggingSafe(LogLevel.DEBUG, null);
+      netty.setLevel(Level.TRACE);
+      assertWireLoggingSafe(LogLevel.TRACE, null);
+    } finally {
+      root.setLevel(originalRootLevel);
+      netty.setLevel(originalNettyLevel);
+      replacement.setLevel(originalReplacementLevel);
+    }
+  }
+
   private void assertWireLoggingSafe(LogLevel transportLevel, Level loggerLevel) {
-    Logger logger = (Logger) LoggerFactory.getLogger(PayloadSafeLoggingHandler.class);
+    Logger logger = (Logger) LoggerFactory.getLogger(LoggingHandler.class);
     Level originalLevel = logger.getLevel();
     ListAppender<ILoggingEvent> appender = new ListAppender<>();
     appender.start();
@@ -97,6 +120,7 @@ public class PayloadSafeLoggingHandlerTest {
           .anyMatch(message -> message.contains("READ"))
           .anyMatch(message -> message.contains("EXCEPTION"));
       for (ILoggingEvent event : appender.list) {
+        assertThat(event.getLoggerName()).isEqualTo(LoggingHandler.class.getName());
         assertThat(event.getFormattedMessage()).doesNotContain(payload, "Authorization", "token=");
         assertThat(event.getArgumentArray()).isNullOrEmpty();
         assertThat(event.getThrowableProxy()).isNull();
