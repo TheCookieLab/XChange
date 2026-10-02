@@ -10,17 +10,22 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.okx.OkxAuthenticated;
 import org.knowm.xchange.okx.OkxExchange;
+import org.knowm.xchange.okx.OkxInstrumentCodeFixture;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxPosition;
@@ -38,10 +43,27 @@ import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParamInstr
 public class OkxTradeServiceTest {
 
   private final ObjectMapper mapper = new ObjectMapper();
+  private OkxInstrumentCodeFixture instrumentCodes;
+
+  @Before
+  public void setUpInstrumentCodes() {
+    instrumentCodes = new OkxInstrumentCodeFixture();
+  }
+
+  @After
+  public void restoreInstrumentCodes() {
+    instrumentCodes.close();
+  }
 
   private OkxTradeService service() {
     OkxExchange exchange = new OkxExchange();
-    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
+    exchange
+        .getExchangeMetaData()
+        .setInstruments(
+            Collections.singletonMap(CurrencyPair.BTC_USDT, InstrumentMetaData.builder().build()));
     return new OkxTradeService(exchange, new ResilienceRegistries());
   }
 
@@ -127,7 +149,13 @@ public class OkxTradeServiceTest {
 
   private StubTradeService stubService() {
     OkxExchange exchange = new OkxExchange();
-    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
+    exchange
+        .getExchangeMetaData()
+        .setInstruments(
+            Collections.singletonMap(CurrencyPair.BTC_USDT, InstrumentMetaData.builder().build()));
     return new StubTradeService(exchange);
   }
 

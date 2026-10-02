@@ -230,7 +230,9 @@ public class OkxStreamingExchangeLifecycleTest {
 
   @Test
   public void connectUsesInjectedServicesAndIncrementsConnectionGeneration() {
-    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
     injectAllServices();
     exchange.setRequiredTransports(
         TransportRole.PUBLIC, TransportRole.PRIVATE, TransportRole.BUSINESS);
@@ -249,7 +251,9 @@ public class OkxStreamingExchangeLifecycleTest {
 
   @Test
   public void connectOnlyOpensExplicitlyConfiguredTransports() {
-    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
     injectAllServices();
     exchange.setRequiredTransports(TransportRole.PUBLIC);
     when(streamingService.connect()).thenReturn(Completable.complete());
@@ -265,7 +269,9 @@ public class OkxStreamingExchangeLifecycleTest {
 
   @Test
   public void connectReopensTransportsWithActiveChannelsDespitePublicOnlyOverride() {
-    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
     injectAllServices();
     exchange.setRequiredTransports(TransportRole.PUBLIC);
     when(streamingService.connect()).thenReturn(Completable.complete());
@@ -283,7 +289,9 @@ public class OkxStreamingExchangeLifecycleTest {
 
   @Test
   public void marketDataFacadeIsRebuiltWhenBusinessTransportIsEnabledLater() throws Exception {
-    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
     exchange.setStreamingService(streamingService);
     exchange.setRequiredTransports(TransportRole.PUBLIC);
     when(streamingService.connect()).thenReturn(Completable.complete());
@@ -315,7 +323,9 @@ public class OkxStreamingExchangeLifecycleTest {
 
   @Test
   public void marketDataFacadeDropsBusinessTransportAfterPublicOnlyReconnect() throws Exception {
-    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
     injectAllServices();
     exchange.setRequiredTransports(TransportRole.PUBLIC, TransportRole.BUSINESS);
     when(streamingService.connect()).thenReturn(Completable.complete());
