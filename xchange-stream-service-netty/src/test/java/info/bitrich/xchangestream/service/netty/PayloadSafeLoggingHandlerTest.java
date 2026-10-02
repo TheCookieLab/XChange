@@ -25,14 +25,23 @@ public class PayloadSafeLoggingHandlerTest {
 
   @Test
   public void wireLoggingDoesNotRenderPayloadsOrExceptionCauses() {
+    assertWireLoggingSafe(LogLevel.DEBUG, Level.DEBUG);
+  }
+
+  @Test
+  public void traceWireLoggingDoesNotRenderPayloadsOrExceptionCauses() {
+    assertWireLoggingSafe(LogLevel.TRACE, Level.TRACE);
+  }
+
+  private void assertWireLoggingSafe(LogLevel transportLevel, Level loggerLevel) {
     Logger logger = (Logger) LoggerFactory.getLogger(PayloadSafeLoggingHandler.class);
     Level originalLevel = logger.getLevel();
     ListAppender<ILoggingEvent> appender = new ListAppender<>();
     appender.start();
     logger.addAppender(appender);
-    logger.setLevel(Level.DEBUG);
+    logger.setLevel(loggerLevel);
     AtomicReference<Throwable> propagated = new AtomicReference<>();
-    PayloadSafeLoggingHandler handler = new PayloadSafeLoggingHandler(LogLevel.DEBUG);
+    PayloadSafeLoggingHandler handler = new PayloadSafeLoggingHandler(transportLevel);
     EmbeddedChannel channel =
         new EmbeddedChannel(
             handler,
@@ -82,7 +91,7 @@ public class PayloadSafeLoggingHandlerTest {
       RuntimeException quietFailure = new RuntimeException(payload);
       channel.pipeline().fireExceptionCaught(quietFailure);
       assertThat(propagated.get()).isSameAs(quietFailure);
-      logger.setLevel(Level.DEBUG);
+      logger.setLevel(loggerLevel);
       assertThat(appender.list).extracting(ILoggingEvent::getFormattedMessage)
           .anyMatch(message -> message.contains("WRITE"))
           .anyMatch(message -> message.contains("READ"))

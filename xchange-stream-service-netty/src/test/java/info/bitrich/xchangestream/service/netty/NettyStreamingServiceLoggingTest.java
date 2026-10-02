@@ -57,6 +57,14 @@ public class NettyStreamingServiceLoggingTest {
   }
 
   @Test
+  public void gateioSignedLoginIsSentWithoutLogging() throws Exception {
+    assertPayloadSafe(
+        "{\"time\":123,\"channel\":\"spot.login\",\"event\":\"api\",\"payload\":{"
+            + "\"api_key\":\"synthetic-key\",\"signature\":\"synthetic-signature\","
+            + "\"timestamp\":\"123\",\"req_id\":\"1\"}}");
+  }
+
+  @Test
   public void opaqueAndMalformedMessagesAreSentWithoutLogging() throws Exception {
     assertPayloadSafe("synthetic-secret");
     assertPayloadSafe("{\"unrecognized\":\"synthetic-secret\"");
