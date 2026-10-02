@@ -61,6 +61,7 @@ public class MexcV3ExchangeTest {
   public void applySpecificationWiresAllServices() {
     MexcV3Exchange exchange = createExchange();
     ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
 
     exchange.applySpecification(spec);
 

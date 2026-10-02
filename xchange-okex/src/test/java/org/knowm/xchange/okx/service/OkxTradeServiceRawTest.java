@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.okx.OkxExchange;
@@ -201,7 +202,9 @@ public class OkxTradeServiceRawTest {
   public void setUp() {
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     OkxExchange exchange = new OkxExchange();
-    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
     service = new StubTradeServiceRaw(exchange);
   }
 

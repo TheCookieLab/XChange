@@ -1,7 +1,10 @@
 package org.knowm.xchange.bitget;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
 
+import java.io.IOException;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bitget.config.BitgetApiMode;
 
@@ -14,8 +17,10 @@ class BitgetExchangeTest {
    * not break that contract for the default (classic) mode.
    */
   @Test
-  void applySpecificationNullFallsBackToDefaultClassicMode() {
-    BitgetExchange exchange = new BitgetExchange();
+  void applySpecificationNullFallsBackToDefaultClassicMode() throws IOException {
+    BitgetExchange exchange = spy(new BitgetExchange());
+    // This contract test checks service construction; metadata loading must stay offline.
+    doNothing().when(exchange).remoteInit();
     exchange.applySpecification(null);
 
     assertThat(exchange.getApiMode()).isEqualTo(BitgetApiMode.CLASSIC_V2);

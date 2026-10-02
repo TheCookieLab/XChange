@@ -822,7 +822,9 @@ public class OkexCompatibilityTest {
     // legacy standard services must translate, or existing catch (OkexException) blocks silently
     // stop matching provider failures.
     OkexExchange exchange = new OkexExchange();
-    exchange.applySpecification(exchange.getDefaultExchangeSpecification());
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    exchange.applySpecification(specification);
 
     OkexAccountService account = (OkexAccountService) exchange.getAccountService();
     OkxAccountService canonicalAccount = mock(OkxAccountService.class);
