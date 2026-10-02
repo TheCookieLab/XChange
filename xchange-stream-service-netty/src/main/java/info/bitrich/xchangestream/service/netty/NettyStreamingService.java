@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -233,7 +232,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                             }
                             p.addLast(new HttpClientCodec());
                             if (enableLoggingHandler) {
-                              p.addLast(new LoggingHandler(loggingHandlerLevel));
+                              p.addLast(new PayloadSafeLoggingHandler(loggingHandlerLevel));
                             }
                             if (compressedMessages) {
                               p.addLast(WebSocketClientCompressionHandler.INSTANCE);
@@ -398,7 +397,8 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
   public abstract void messageHandler(String message);
 
   public void sendMessage(String message) {
-    LOG.debug("Sending message: {}", message);
+    // Authentication protocols can carry keys, passphrases, signatures, or opaque tokens.
+    LOG.debug("Sending WebSocket message");
 
     if (webSocketChannel == null || !webSocketChannel.isOpen()) {
       LOG.warn("WebSocket is not open! Call connect first.");

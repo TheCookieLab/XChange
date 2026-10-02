@@ -3,6 +3,7 @@ package org.knowm.xchange;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Data;
+import lombok.ToString;
 
 /**
  * Specification to provide the following to {@link ExchangeFactory}:
@@ -13,12 +14,14 @@ import lombok.Data;
  * </ul>
  */
 @Data
+// Credentials, URIs, and arbitrary exchange parameters must never enter diagnostic output.
+@ToString(onlyExplicitlyIncluded = true)
 public class ExchangeSpecification {
 
   /** The exchange class for loading at runtime */
-  private final Class<? extends Exchange> exchangeClass;
+  @ToString.Include private final Class<? extends Exchange> exchangeClass;
 
-  private String exchangeName;
+  @ToString.Include private String exchangeName;
 
   private String exchangeDescription;
 
@@ -52,29 +55,29 @@ public class ExchangeSpecification {
   private String host;
 
   /** Port number of the server providing direct socket data */
-  private int port = 80;
+  @ToString.Include private int port = 80;
 
   /** Host name of the http proxy server (e.g. "proxy.com") */
   private String proxyHost;
 
   /** Port of the http proxy server (e.g. "80"). */
-  private Integer proxyPort;
+  @ToString.Include private Integer proxyPort;
 
   /**
    * Http connection timeout for the connection. If not supplied the default rescu timeout will be
    * used. Check the exchange code to see if this option has been implemented. (This value can also
    * be set globally in "rescu.properties" by setting the property "rescu.http.connTimeoutMillis".)
    */
-  private int httpConnTimeout;
+  @ToString.Include private int httpConnTimeout;
 
   /**
    * Http read timeout for the connection. If not supplied the default rescu timeout will be used.
    * Check the exchange code to see if this option has been implemented. (This value can also be set
    * globally in "rescu.properties" by setting the property "rescu.http.readTimeoutMillis".)
    */
-  private int httpReadTimeout;
+  @ToString.Include private int httpReadTimeout;
 
-  private ResilienceSpecification resilience = new ResilienceSpecification();
+  @ToString.Include private ResilienceSpecification resilience = new ResilienceSpecification();
 
   /**
    * Override file for generating the {@link org.knowm.xchange.dto.meta.ExchangeMetaData} object. By
@@ -86,7 +89,7 @@ public class ExchangeSpecification {
   private String metaDataJsonFileOverride;
 
   /** By default, some metadata from the exchange is remotely loaded (if implemented). */
-  private boolean shouldLoadRemoteMetaData = true;
+  @ToString.Include private boolean shouldLoadRemoteMetaData = true;
 
   /** arbitrary exchange params that can be set for unique cases */
   private Map<String, Object> exchangeSpecificParameters = new HashMap<>();
