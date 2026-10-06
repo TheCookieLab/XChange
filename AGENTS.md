@@ -17,7 +17,7 @@ comments, and PRD delivery, follow the workspace root instructions first.
 2. Keep changes scoped to the requested module or cross-module concern.
 3. Reuse existing APIs and patterns; avoid new public API unless it is required.
 4. Fix warnings and static-analysis findings at root cause using a red-green refactor approach. Do not add `@SuppressWarnings`, disable rules, widen exclusions, or hide diagnostics.
-5. If a blocker cannot be resolved in scope, record it in `unresolved.md` and schema-aligned `unresolved.json` and raise attention to it during summary/inbox.
+5. If a blocker cannot be resolved in scope, report it in the PR description and final summary; do not commit blocker notes to the repo.
 
 ## Build and Validation
 
@@ -26,7 +26,7 @@ comments, and PRD delivery, follow the workspace root instructions first.
 - Unit and integration tests: `mvn -B clean verify -DskipIntegrationTests=false`
 - Single module: `mvn -B -pl <module> -am test`
 - Compile-only quick check: `mvn -B -pl <module> -am compile`
-- PMD: use the `xchange-pmd-check` skill or `scripts/pmd-check`
+- PMD: `scripts/pmd-check`
 
 Scheduled exchange integration workflows run through
 `scripts/ci/run-integration-module.py`, which preserves the Maven command while
@@ -56,31 +56,7 @@ completion. Use Maven directly; this repo does not provide
 - Keep module-local versions or plugin configuration only when behavior
   intentionally differs, and document the reason in that module.
 - Do not add or retain Maven Enforcer dependency-convergence skips. Fix
-  convergence or record the blocker in `unresolved.md` and `unresolved.json`.
-
-## XChange Agents and Skills
-
-Use repo-local agents and skills for XChange work before broader workspace tools.
-
-### Agents
-
-| Agent | Use |
-| --- | --- |
-| `xchange-module-worker` | One autonomous task in one module, using a dedicated worktree and branch. The worker must inventory, fix, revalidate, produce `worker-result.json`, and report unresolved issues in `unresolved.md` plus `unresolved.json`. |
-| `xchange-module-manager` | Dispatches `xchange-module-worker` across many modules, manages retries/timeouts, validates worker results, integrates green worker commits, and rolls up unresolved issues. |
-
-Use the manager for repeated module work such as warning cleanup, migration passes,
-or build failures that are too broad for one direct edit. Use full artifact IDs in
-worker path and branch names, for example
-`<workspace>/worktrees/xchange-<taskslug>-<artifactId>/` and
-`agent/<taskslug>/<artifactId>`.
-
-### Skills
-
-- `xchange-pmd-check`: runs XChange PMD analysis through `scripts/pmd-check`.
-- `xchange-manager-run`: documents `scripts/run-manager-to-completion.py` setup,
-  probe, integration, and cleanup modes. The script prepares and integrates work;
-  agents perform the fixes.
+  convergence or report the blocker as described in Default Workflow.
 
 ## Repo Conventions
 
@@ -102,9 +78,8 @@ worker path and branch names, for example
   by case (e.g. `T` and `t`): Lombok silently generates one `getT()`/`setT()`
   pair and the other field is never bound.
 - The root project is `xchange-parent`.
-- A single-module worker must not change the parent POM. Record parent-POM needs
-  as unresolved for the manager or a follow-up pass.
-- Subagent contracts live in `.cursor/agents/contracts/`.
+- A single-module change must not change the parent POM. Report parent-POM needs
+  as a blocker for a follow-up pass.
 - For XChange-only summaries, repo-relative paths are acceptable. For cross-repo
   workspace summaries, use worktree-rooted absolute paths.
 

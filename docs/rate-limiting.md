@@ -10,8 +10,8 @@ This page is the adoption inventory (CF-683, AC1) and the one integration path f
 
 ## Adoption table
 
-Generated from the root `pom.xml` `<modules>` list (103 modules: 67 non-stream below,
-36 stream modules in the next section). Every module appears in exactly one row or in
+Generated from the root `pom.xml` `<modules>` list (100 modules: 65 non-stream below,
+35 stream modules in the next section). Every module appears in exactly one row or in
 the stream line. Source traversal date: 2026-10-06.
 
 Dispositions:
@@ -43,7 +43,6 @@ Evidence paths are relative to the row's module directory unless stated otherwis
 | `xchange-bitget` | rescu proxy via `ExchangeRestProxyBuilder` (2 files) | pending | `src/main/java/org/knowm/xchange/bitget/service/BitgetBaseService.java` |
 | `xchange-bitget-futures` | rescu proxy via `ExchangeRestProxyBuilder` (1 file) | pending | `src/main/java/org/knowm/xchange/bitget/service/BitgetFuturesBaseService.java` |
 | `xchange-bithumb` | rescu proxy via `ExchangeRestProxyBuilder` (1 file) | pending | `src/main/java/org/knowm/xchange/bithumb/service/BithumbBaseService.java` |
-| `xchange-bitmex` | rescu proxy via `ExchangeRestProxyBuilder` (1 file) | pending | `src/main/java/org/knowm/xchange/bitmex/service/BitmexBaseService.java` |
 | `xchange-bitso` | rescu proxy via `ExchangeRestProxyBuilder` (3 files) | pending | `src/main/java/org/knowm/xchange/bitso/service/BitsoAccountServiceRaw.java` |
 | `xchange-bitstamp` | rescu proxy via `ExchangeRestProxyBuilder` (3 files) | pending | `src/main/java/org/knowm/xchange/bitstamp/service/BitstampAccountServiceRaw.java` |
 | `xchange-bity` | rescu proxy via `ExchangeRestProxyBuilder` (1 file) | pending | `src/main/java/org/knowm/xchange/bity/service/BityBaseService.java` |
@@ -56,7 +55,6 @@ Evidence paths are relative to the row's module directory unless stated otherwis
 | `xchange-coinbase` | rescu proxy via `ExchangeRestProxyBuilder` (2 files) | adopted | `src/main/java/org/knowm/xchange/coinbase/v3/service/CoinbaseAccountServiceRaw.java`; `src/main/java/org/knowm/xchange/coinbase/v3/CoinbaseRateLimitPolicy.java` |
 | `xchange-coinbase-derivatives` | direct: JSON-RPC over `java.net.http.HttpClient`, admitted by `RateLimitContext.execute` | adopted | `src/main/java/org/knowm/xchange/coinbasederivatives/client/CoinbaseDerivativesJsonRpcTransport.java`; `src/main/java/org/knowm/xchange/coinbasederivatives/client/CoinbaseDerivativesRateLimitPolicy.java` |
 | `xchange-coincheck` | rescu proxy via `ExchangeRestProxyBuilder` (1 file) | pending | `src/main/java/org/knowm/xchange/coincheck/service/CoincheckMarketDataServiceRaw.java` |
-| `xchange-coinex` | rescu proxy via `ExchangeRestProxyBuilder` (1 file) | pending | `src/main/java/org/knowm/xchange/coinex/service/CoinexBaseService.java` |
 | `xchange-coinjar` | rescu proxy via `ExchangeRestProxyBuilder` (1 file) | pending | `src/main/java/org/knowm/xchange/coinjar/service/CoinjarBaseService.java` |
 | `xchange-coinmarketcap` | rescu proxy via `ExchangeRestProxyBuilder` (1 file) | pending | `src/main/java/org/knowm/xchange/coinmarketcap/pro/v1/service/CmcBaseService.java` |
 | `xchange-coinmate` | rescu proxy via `ExchangeRestProxyBuilder` (4 files) | pending | `src/main/java/org/knowm/xchange/coinmate/service/CoinmateAccountServiceRaw.java` |
@@ -122,11 +120,11 @@ Bitso, HitBTC and Latoken modules); they do not open connections.
 
 ## Stream modules
 
-WebSocket transports are out of scope of the REST/JSON-RPC limiter (36 modules). The WebSocket
+WebSocket transports are out of scope of the REST/JSON-RPC limiter (35 modules). The WebSocket
 order APIs of `xchange-stream-binance`, `xchange-stream-bybit` and `xchange-stream-okex` still use
 the resilience4j limiters kept for them in `BinanceResilience`, `BybitResilience`/`BybitBaseService`
 and `OkxResilience`; no REST path uses those limiters. Stream modules (none
-changed by CF-683): `xchange-stream-binance`, `xchange-stream-bitfinex`, `xchange-stream-bitflyer`, `xchange-stream-bitget`, `xchange-stream-bitmex`, `xchange-stream-bitstamp`, `xchange-stream-btcmarkets`, `xchange-stream-bybit`, `xchange-stream-cexio`, `xchange-stream-coinbase`, `xchange-stream-coinbase-derivatives`, `xchange-stream-coincheck`, `xchange-stream-coinjar`, `xchange-stream-coinmate`, `xchange-stream-coinsph`, `xchange-stream-core`, `xchange-stream-cryptocom`, `xchange-stream-deribit`, `xchange-stream-dydx`, `xchange-stream-gateio`, `xchange-stream-gemini`, `xchange-stream-gemini-v2`, `xchange-stream-hitbtc`, `xchange-stream-huobi`, `xchange-stream-kalshi`, `xchange-stream-kraken`, `xchange-stream-kraken-v2`, `xchange-stream-krakenfutures`, `xchange-stream-kucoin`, `xchange-stream-mexc`, `xchange-stream-okex`, `xchange-stream-poloniex2`, `xchange-stream-polymarket`, `xchange-stream-service-core`, `xchange-stream-service-netty`, `xchange-stream-service-pubnub`.
+changed by CF-683): `xchange-stream-binance`, `xchange-stream-bitfinex`, `xchange-stream-bitflyer`, `xchange-stream-bitget`, `xchange-stream-bitstamp`, `xchange-stream-btcmarkets`, `xchange-stream-bybit`, `xchange-stream-cexio`, `xchange-stream-coinbase`, `xchange-stream-coinbase-derivatives`, `xchange-stream-coincheck`, `xchange-stream-coinjar`, `xchange-stream-coinmate`, `xchange-stream-coinsph`, `xchange-stream-core`, `xchange-stream-cryptocom`, `xchange-stream-deribit`, `xchange-stream-dydx`, `xchange-stream-gateio`, `xchange-stream-gemini`, `xchange-stream-gemini-v2`, `xchange-stream-hitbtc`, `xchange-stream-huobi`, `xchange-stream-kalshi`, `xchange-stream-kraken`, `xchange-stream-kraken-v2`, `xchange-stream-krakenfutures`, `xchange-stream-kucoin`, `xchange-stream-mexc`, `xchange-stream-okex`, `xchange-stream-poloniex2`, `xchange-stream-polymarket`, `xchange-stream-service-core`, `xchange-stream-service-netty`, `xchange-stream-service-pubnub`.
 
 ## Integration path for a new adapter
 

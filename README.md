@@ -226,9 +226,7 @@ Before closing dependency work:
 | --- | --- |
 | bitfinex | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitfinex.yaml) |
 | bitget | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitget.yaml) |
-| bitmex | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/bitmex.yaml) |
 | coinbase | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinbase.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinbase.yaml) |
-| coinex | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/coinex.yaml) |
 | deribit | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/deribit.yaml) |
 | gate.io | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/gateio-v4.yaml) |
 | kraken | [![status](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml/badge.svg)](https://github.com/TheCookieLab/XChange/actions/workflows/kraken.yaml) |
