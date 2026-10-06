@@ -2,20 +2,20 @@ package org.knowm.xchange.bitfinex;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Instant;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import java.lang.reflect.Method;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget;
-import org.knowm.xchange.client.ratelimit.RateLimitFeedback;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
+import org.knowm.xchange.client.ratelimit.RateLimitFeedback;
 import org.knowm.xchange.client.ratelimit.RateLimitOperation;
 import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.client.ratelimit.RateLimitPriority;
@@ -118,10 +118,7 @@ class BitfinexRateLimitPolicyTest {
     assertThat(requirements("POST v1/deposit/new", true))
         .isEqualTo(
             Map.of(
-                BitfinexRateLimitPolicy.V1_AUTH,
-                1L,
-                BitfinexRateLimitPolicy.DEPOSIT_ADDRESS,
-                1L));
+                BitfinexRateLimitPolicy.V1_AUTH, 1L, BitfinexRateLimitPolicy.DEPOSIT_ADDRESS, 1L));
     assertThat(requirements("GET v1/pubticker/{symbol}", false))
         .isEqualTo(Map.of(BitfinexRateLimitPolicy.V1_PUBLIC, 1L));
   }
@@ -185,16 +182,10 @@ class BitfinexRateLimitPolicyTest {
   @Test
   void rejectionStatusIsDeclaredAndBlockIsLongerThanSixtySeconds() {
     assertThat(
-            POLICY
-                .getFeedbackInterpreter()
-                .interpret(429, header -> null, Instant.EPOCH)
-                .getKind())
+            POLICY.getFeedbackInterpreter().interpret(429, header -> null, Instant.EPOCH).getKind())
         .isEqualTo(RateLimitFeedback.Kind.RATE_REJECTED);
     assertThat(
-            POLICY
-                .getFeedbackInterpreter()
-                .interpret(200, header -> null, Instant.EPOCH)
-                .getKind())
+            POLICY.getFeedbackInterpreter().interpret(200, header -> null, Instant.EPOCH).getKind())
         .isEqualTo(RateLimitFeedback.Kind.NONE);
     assertThat(POLICY.getFallbackBackoffBase()).isGreaterThanOrEqualTo(Duration.ofSeconds(60));
     assertThat(POLICY.maxWait(RateLimitPriority.MARKET_DATA))

@@ -62,7 +62,9 @@ public class UniswapExchange extends BaseExchange {
     if (this.signer == null) {
       this.signer =
           new LocalKeystoreSigner(
-              config.keystorePath(), secretProvider(config.passwordProviderClass()), config.walletAddress());
+              config.keystorePath(),
+              secretProvider(config.passwordProviderClass()),
+              config.walletAddress());
     }
     if (this.nonceManager == null) {
       this.nonceManager = new NonceManager();
@@ -118,8 +120,8 @@ public class UniswapExchange extends BaseExchange {
   }
 
   /**
-   * Fail-closed startup verification: the node must report the configured chain id and every
-   * pinned deployment contract must carry the expected runtime bytecode.
+   * Fail-closed startup verification: the node must report the configured chain id and every pinned
+   * deployment contract must carry the expected runtime bytecode.
    */
   private void verifyChainAndDeployments() {
     try {
@@ -135,10 +137,13 @@ public class UniswapExchange extends BaseExchange {
         String code = nodeClient.codeAt(address, atBlock);
         if (code == null || code.length() <= 2) {
           throw new ExchangeException(
-              "no runtime code at " + contract + " address " + address + "; wrong chain or deployment?");
+              "no runtime code at "
+                  + contract
+                  + " address "
+                  + address
+                  + "; wrong chain or deployment?");
         }
-        String actualHash =
-            Abi.toHex(org.web3j.crypto.Hash.sha3(Abi.hexToBytes(code)));
+        String actualHash = Abi.toHex(org.web3j.crypto.Hash.sha3(Abi.hexToBytes(code)));
         String expectedHash = deployment.expectedCodeHash(contract);
         if (!actualHash.equalsIgnoreCase(expectedHash)) {
           throw new ExchangeException(
@@ -162,11 +167,13 @@ public class UniswapExchange extends BaseExchange {
     try {
       Object instance = Class.forName(className).getDeclaredConstructor().newInstance();
       if (!(instance instanceof SecretProvider)) {
-        throw new ExchangeException("password provider " + className + " does not implement SecretProvider");
+        throw new ExchangeException(
+            "password provider " + className + " does not implement SecretProvider");
       }
       return (SecretProvider) instance;
     } catch (ReflectiveOperationException e) {
-      throw new ExchangeException("cannot instantiate password provider " + className + ": " + e.getMessage(), e);
+      throw new ExchangeException(
+          "cannot instantiate password provider " + className + ": " + e.getMessage(), e);
     }
   }
 

@@ -25,11 +25,13 @@ public class BinanceExchange extends BaseExchange implements Exchange {
   /**
    * Legacy exchange-type parameter selecting Spot, Futures, Inverse, or Portfolio Margin mode.
    *
-   * @deprecated Use the typed {@link org.knowm.xchange.binance.config.BinanceConfiguration#PRODUCT_FAMILY}
-   *     parameter with a {@link org.knowm.xchange.binance.config.BinanceProductFamily} value
-   *     instead. The legacy parameter remains honored during the documented grace period.
+   * @deprecated Use the typed {@link
+   *     org.knowm.xchange.binance.config.BinanceConfiguration#PRODUCT_FAMILY} parameter with a
+   *     {@link org.knowm.xchange.binance.config.BinanceProductFamily} value instead. The legacy
+   *     parameter remains honored during the documented grace period.
    */
   @Deprecated public static String EXCHANGE_TYPE = "Exchange_Type";
+
   private static final String SPOT_URL = "https://api.binance.com";
   public static final String FUTURES_URL = "https://fapi.binance.com";
   public static final String INVERSE_FUTURES_URL = "https://dapi.binance.com";
@@ -134,9 +136,7 @@ public class BinanceExchange extends BaseExchange implements Exchange {
 
   /** The configured Binance product family (defaults to {@link BinanceProductFamily#SPOT}). */
   public BinanceProductFamily getProductFamily() {
-    return configuration != null
-        ? configuration.getProductFamily()
-        : legacyExchangeTypeOrDefault();
+    return configuration != null ? configuration.getProductFamily() : legacyExchangeTypeOrDefault();
   }
 
   public boolean usingSandbox() {
@@ -216,8 +216,7 @@ public class BinanceExchange extends BaseExchange implements Exchange {
         throw new IllegalStateException(
             "Unsupported Binance product family: " + config.getProductFamily());
     }
-    if (exchangeSpecification.getExchangeSpecificParametersItem(
-            BinanceConfiguration.REST_BASE_URL)
+    if (exchangeSpecification.getExchangeSpecificParametersItem(BinanceConfiguration.REST_BASE_URL)
         != null) {
       exchangeSpecification.setSslUri(config.getRestBaseUrl());
     }
@@ -299,6 +298,5 @@ public class BinanceExchange extends BaseExchange implements Exchange {
                 BinanceAdapters.putSymbolMapping(
                     symbol.getSymbol(),
                     new CurrencyPair(symbol.getBaseAsset(), symbol.getQuoteAsset())));
-
   }
 }

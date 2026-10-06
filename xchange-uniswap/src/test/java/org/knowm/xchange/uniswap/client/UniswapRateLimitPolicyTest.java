@@ -28,20 +28,22 @@ class UniswapRateLimitPolicyTest {
           Map.entry("eth_maxPriorityFeePerGas", 10L),
           Map.entry("eth_getTransactionByHash", 20L),
           Map.entry("eth_getTransactionReceipt", 20L),
-          Map.entry("eth_sendRawTransaction", 40L));
+          Map.entry("eth_sendRawTransaction", 50L));
 
   private final RateLimitPolicy policy = UniswapRateLimitPolicy.defaultPolicy();
 
   @Test
   void classifiesExactlyTheDocumentedMethods() {
-    assertThat(UniswapRateLimitPolicy.methods()).containsExactlyInAnyOrderElementsOf(COMPUTE_UNITS.keySet());
+    assertThat(UniswapRateLimitPolicy.methods())
+        .containsExactlyInAnyOrderElementsOf(COMPUTE_UNITS.keySet());
     assertThat(UniswapRateLimitPolicy.methods()).hasSize(13);
   }
 
   @Test
   void everyMethodCarriesItsComputeUnitWeightOnTheSingleBudget() {
     for (Map.Entry<String, Long> expected : COMPUTE_UNITS.entrySet()) {
-      RateLimitOperation operation = policy.classify(new RateLimitRequest(expected.getKey(), false));
+      RateLimitOperation operation =
+          policy.classify(new RateLimitRequest(expected.getKey(), false));
       assertThat(operation).as(expected.getKey()).isNotNull();
       assertThat(operation.getRequirements())
           .as(expected.getKey())
@@ -74,7 +76,10 @@ class UniswapRateLimitPolicyTest {
     for (String method : UniswapRateLimitPolicy.methods()) {
       assertThat(policy.classify(new RateLimitRequest(method, false)).getPriority())
           .as(method)
-          .isEqualTo(execution.contains(method) ? RateLimitPriority.EXECUTION : RateLimitPriority.MARKET_DATA);
+          .isEqualTo(
+              execution.contains(method)
+                  ? RateLimitPriority.EXECUTION
+                  : RateLimitPriority.MARKET_DATA);
     }
   }
 
@@ -88,9 +93,14 @@ class UniswapRateLimitPolicyTest {
   @Test
   void startupVerificationFitsTheInitialBurst() {
     RateLimitBudget budget = policy.getBudget(UniswapRateLimitPolicy.COMPUTE_UNITS);
-    long startup = COMPUTE_UNITS.get("eth_chainId") + COMPUTE_UNITS.get("eth_blockNumber") + 4 * COMPUTE_UNITS.get("eth_getCode");
+    long startup =
+        COMPUTE_UNITS.get("eth_chainId")
+            + COMPUTE_UNITS.get("eth_blockNumber")
+            + 4 * COMPUTE_UNITS.get("eth_getCode");
     assertThat(budget.getScopeKind()).isEqualTo(RateLimitBudget.ScopeKind.USER);
-    assertThat(budget.getCapacity()).isEqualTo(UniswapRateLimitPolicy.CAPACITY).isGreaterThanOrEqualTo(startup);
+    assertThat(budget.getCapacity())
+        .isEqualTo(UniswapRateLimitPolicy.CAPACITY)
+        .isGreaterThanOrEqualTo(startup);
     assertThat(policy.getBudgets()).hasSize(1);
   }
 

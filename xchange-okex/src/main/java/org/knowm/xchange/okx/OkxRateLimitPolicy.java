@@ -45,18 +45,20 @@ import org.knowm.xchange.client.ratelimit.RateLimitRequest;
  * <p><b>Budgets.</b> One rolling-window budget per documented endpoint limit; public endpoints are
  * keyed by process egress ({@link ScopeKind#EGRESS}, the IP of the provider rule), private
  * endpoints by user ({@link ScopeKind#USER}). OKX additionally keys several limits by instrument
- * ID, instrument type, instrument family or currency. The core budget model has no such
- * dimension, and a REST request body is not visible to the classifier, so each documented
- * per-dimension limit is applied as a single aggregate client budget. This is deliberately
- * conservative: it never admits more than OKX would per dimension, but it can delay traffic spread
- * over many instruments. {@code GET /trade/order} and {@code POST /trade/order} share a path but
- * are independent provider limits and therefore separate budgets. Batch endpoints are documented
- * in orders per 2 seconds and take up to 20 orders per request (10 for cancel algo orders); the
- * order count is only in the body, so each batch request is charged the documented maximum
- * (conservative). The Tier 1 sub-account budget {@value #SUBACCOUNT_ORDERS} is charged in
- * addition for every request that places or amends orders. Limits are shared by OKX with the
- * WebSocket order channels; the WebSocket path is not governed by this policy, so a process mixing
- * both channels must keep its own WebSocket pacing in mind.
+ * ID, instrument type, instrument family or currency. The core budget model has no such dimension,
+ * and a REST request body is not visible to the classifier, so each documented per-dimension limit
+ * is applied as a single aggregate client budget. This is deliberately conservative: it never
+ * admits more than OKX would per dimension, but it can delay traffic spread over many instruments.
+ * {@code GET /trade/order} and {@code POST /trade/order} share a path but are independent provider
+ * limits and therefore separate budgets. Batch endpoints are documented in orders per 2 seconds and
+ * take up to 20 orders per request (10 for cancel algo orders); the order count is only in the
+ * body, so each batch request is charged the documented maximum (conservative). The Tier 1
+ * sub-account budget {@value #SUBACCOUNT_ORDERS} is charged in addition for every request that
+ * places or amends orders. Limits are shared by OKX with the WebSocket order channels; the
+ * WebSocket path is not governed by this policy, so a process mixing both channels must keep its
+ * own WebSocket pacing in mind. A sub-account breach reported only through error 50061 in an HTTP
+ * 200 body is not visible to the feedback interpreter (status and headers only), so it surfaces as
+ * the module's exception instead of starting a cooldown.
  *
  * <p><b>Operation classes.</b> Public market-data reads are {@link RateLimitPriority#MARKET_DATA};
  * every private account, asset, trade, fill and sub-account operation is {@link
@@ -273,7 +275,8 @@ public final class OkxRateLimitPolicy {
 
     // Cancellation: identity-keyed, replay-safe after a confirmed rate rejection (README).
     mutation(list, "trade/cancel-order", "order-cancel", 60, TWO_SECONDS, 1, true);
-    mutation(list, "trade/cancel-batch-orders", "order-cancel-batch", 300, TWO_SECONDS, BATCH, true);
+    mutation(
+        list, "trade/cancel-batch-orders", "order-cancel-batch", 300, TWO_SECONDS, BATCH, true);
 
     // Algo orders.
     mutation(list, "trade/order-algo", "algo-place", 20, TWO_SECONDS, 1, false);
@@ -286,7 +289,8 @@ public final class OkxRateLimitPolicy {
     list.add(
         new Endpoint(
             "GET " + path,
-            RateLimitBudget.rollingWindow("okx.public." + name, ScopeKind.EGRESS, limit, TWO_SECONDS),
+            RateLimitBudget.rollingWindow(
+                "okx.public." + name, ScopeKind.EGRESS, limit, TWO_SECONDS),
             1,
             false,
             RateLimitPriority.MARKET_DATA,

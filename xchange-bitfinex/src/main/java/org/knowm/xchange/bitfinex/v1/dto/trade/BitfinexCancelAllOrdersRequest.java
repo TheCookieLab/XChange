@@ -1,23 +1,16 @@
 package org.knowm.xchange.bitfinex.v1.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
-public class BitfinexCancelAllOrdersRequest {
+public class BitfinexCancelAllOrdersRequest extends BitfinexAuthenticatedRequest {
 
   @JsonProperty("request")
   protected String request;
 
-  @JsonProperty("nonce")
-  protected String nonce;
-
-  /**
-   * Constructor
-   *
-   * @param nonce
-   */
-  public BitfinexCancelAllOrdersRequest(String nonce) {
+  /** Constructor */
+  public BitfinexCancelAllOrdersRequest() {
 
     this.request = "/v1/order/cancel/all";
-    this.nonce = nonce;
   }
 }

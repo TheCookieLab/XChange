@@ -1,22 +1,19 @@
 package org.knowm.xchange.bitfinex.v1.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
-public class BitfinexNewOrderMultiRequest {
+public class BitfinexNewOrderMultiRequest extends BitfinexAuthenticatedRequest {
 
   @JsonProperty("request")
   protected String request;
 
-  @JsonProperty("nonce")
-  protected String nonce;
-
   @JsonProperty("orders")
   protected BitfinexNewOrder[] orders;
 
-  public BitfinexNewOrderMultiRequest(String nonce, BitfinexNewOrder[] orders) {
+  public BitfinexNewOrderMultiRequest(BitfinexNewOrder[] orders) {
 
     this.request = "/v1/order/new/multi";
-    this.nonce = nonce;
     this.orders = orders;
   }
 
@@ -28,16 +25,6 @@ public class BitfinexNewOrderMultiRequest {
   public void setRequest(String request) {
 
     this.request = request;
-  }
-
-  public String getNonce() {
-
-    return nonce;
-  }
-
-  public void setNonce(String nonce) {
-
-    this.nonce = nonce;
   }
 
   public BitfinexNewOrder[] getOrders() {

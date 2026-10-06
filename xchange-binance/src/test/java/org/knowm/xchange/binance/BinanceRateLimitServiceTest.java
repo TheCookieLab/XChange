@@ -126,11 +126,7 @@ public class BinanceRateLimitServiceTest extends AbstractResilienceTest {
   }
 
   private static RateLimitDiagnostics diagnostics(BinanceExchange exchange) {
-    return exchange
-        .getExchangeSpecification()
-        .getResilience()
-        .getRateLimitContext()
-        .diagnostics();
+    return exchange.getExchangeSpecification().getResilience().getRateLimitContext().diagnostics();
   }
 
   private void stubDepthRejectedOnceThenServed() {

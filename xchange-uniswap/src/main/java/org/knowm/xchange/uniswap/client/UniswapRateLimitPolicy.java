@@ -34,9 +34,11 @@ import org.knowm.xchange.client.ratelimit.RateLimitRequest;
  * </ul>
  *
  * <p>Compute-unit weights of the JSON-RPC methods used by {@link UniswapNodeClient} are the
- * documented Alchemy compute-unit costs (the only provider that publishes a per-method table);
- * {@code eth_chainId} is documented as 0 compute units but 5 throughput compute units, the larger
- * figure is used because the budget paces throughput.
+ * documented Alchemy costs (the only provider that publishes a per-method table), taken from the
+ * <i>throughput</i> column where the table lists one, because the budget paces throughput: {@code
+ * eth_chainId} is 0 compute units but 5 throughput compute units, and {@code
+ * eth_sendRawTransaction} is 40 compute units (billing) but 50 throughput compute units. Every
+ * other method has no separate throughput figure, so its listed compute-unit cost applies.
  *
  * <p>Sources (retrieved 2026-10-06):
  *
@@ -52,8 +54,8 @@ import org.knowm.xchange.client.ratelimit.RateLimitRequest;
  * eth_sendRawTransaction} is an economic mutation and is never replayed by the rate limiter; the
  * trade service reconciles an ambiguous broadcast by transaction hash instead.
  *
- * <p>Methods outside the allow list are rejected before anything is sent (their weight is
- * unknown); the allow list is pinned against the methods of {@link UniswapNodeClient} by a test.
+ * <p>Methods outside the allow list are rejected before anything is sent (their weight is unknown);
+ * the allow list is pinned against the methods of {@link UniswapNodeClient} by a test.
  *
  * @since 1.0.3
  */
@@ -137,7 +139,7 @@ public final class UniswapRateLimitPolicy {
     rules.put("eth_maxPriorityFeePerGas", new Rule(RateLimitPriority.EXECUTION, 10L, true));
     rules.put("eth_getTransactionByHash", new Rule(RateLimitPriority.EXECUTION, 20L, true));
     rules.put("eth_getTransactionReceipt", new Rule(RateLimitPriority.EXECUTION, 20L, true));
-    rules.put("eth_sendRawTransaction", new Rule(RateLimitPriority.EXECUTION, 40L, false));
+    rules.put("eth_sendRawTransaction", new Rule(RateLimitPriority.EXECUTION, 50L, false));
     return Map.copyOf(rules);
   }
 

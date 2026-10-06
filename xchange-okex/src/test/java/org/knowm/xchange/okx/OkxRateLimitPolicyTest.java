@@ -159,8 +159,7 @@ public class OkxRateLimitPolicyTest {
     assertBudget("okx.user.order-cancel", ScopeKind.USER, 60, Duration.ofSeconds(2));
     assertBudget("okx.user.fills-history", ScopeKind.USER, 10, Duration.ofSeconds(2));
     assertBudget("okx.user.asset-currencies", ScopeKind.USER, 6, Duration.ofSeconds(1));
-    assertBudget(
-        OkxRateLimitPolicy.SUBACCOUNT_ORDERS, ScopeKind.USER, 1000, Duration.ofSeconds(2));
+    assertBudget(OkxRateLimitPolicy.SUBACCOUNT_ORDERS, ScopeKind.USER, 1000, Duration.ofSeconds(2));
   }
 
   @Test

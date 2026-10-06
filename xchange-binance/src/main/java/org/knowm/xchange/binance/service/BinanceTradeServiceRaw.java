@@ -611,18 +611,15 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
   }
 
   public BinanceListenKey startUserDataStream() throws IOException {
-    return decorateApiCall(() -> binanceSpotAuth.startUserDataStream(apiKey))
-        .call();
+    return decorateApiCall(() -> binanceSpotAuth.startUserDataStream(apiKey)).call();
   }
 
   public void keepAliveDataStream(String listenKey) throws IOException {
-    decorateApiCall(() -> binanceSpotAuth.keepAliveUserDataStream(apiKey, listenKey))
-        .call();
+    decorateApiCall(() -> binanceSpotAuth.keepAliveUserDataStream(apiKey, listenKey)).call();
   }
 
   public void closeDataStream(String listenKey) throws IOException {
-    decorateApiCall(() -> binanceSpotAuth.closeUserDataStream(apiKey, listenKey))
-        .call();
+    decorateApiCall(() -> binanceSpotAuth.closeUserDataStream(apiKey, listenKey)).call();
   }
 
   //  protected int myTradesPermits(Integer limit) {

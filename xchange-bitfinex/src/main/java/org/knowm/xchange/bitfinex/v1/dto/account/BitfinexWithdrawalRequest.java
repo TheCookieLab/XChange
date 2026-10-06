@@ -4,9 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRawValue;
 import java.math.BigDecimal;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
 @Data
-public class BitfinexWithdrawalRequest {
+@EqualsAndHashCode(callSuper = true)
+public class BitfinexWithdrawalRequest extends BitfinexAuthenticatedRequest {
 
   @JsonProperty("withdraw_type")
   private final String withdrawType;
@@ -23,8 +26,6 @@ public class BitfinexWithdrawalRequest {
 
   protected String request;
 
-  protected String nonce;
-
   @JsonRawValue protected String options;
 
   private String currency;
@@ -32,14 +33,12 @@ public class BitfinexWithdrawalRequest {
   /**
    * Constructor
    *
-   * @param nonce
    * @param withdrawType
    * @param walletSelected
    * @param amount
    * @param address
    */
   public BitfinexWithdrawalRequest(
-      String nonce,
       String withdrawType,
       String walletSelected,
       BigDecimal amount,
@@ -47,7 +46,6 @@ public class BitfinexWithdrawalRequest {
       String paymentId) {
 
     this.request = "/v1/withdraw";
-    this.nonce = String.valueOf(nonce);
     this.options = "[]";
     this.withdrawType = withdrawType;
     this.walletSelected = walletSelected;

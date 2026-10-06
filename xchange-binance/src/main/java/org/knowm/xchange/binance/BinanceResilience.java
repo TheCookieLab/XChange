@@ -9,8 +9,8 @@ import org.knowm.xchange.client.ResilienceRegistries;
  *
  * <p>REST rate limiting is owned by the universal xchange-core rate limiter configured through
  * {@link BinanceRateLimitPolicy}; no REST call path consults the resilience4j rate limiters
- * registered here. These limiters (and the matching constants) are kept only because the
- * WebSocket API order-placement path in {@code xchange-stream-binance} still consumes them.
+ * registered here. These limiters (and the matching constants) are kept only because the WebSocket
+ * API order-placement path in {@code xchange-stream-binance} still consumes them.
  */
 public final class BinanceResilience {
 

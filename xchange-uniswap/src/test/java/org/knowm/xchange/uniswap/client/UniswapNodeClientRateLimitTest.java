@@ -86,8 +86,7 @@ class UniswapNodeClientRateLimitTest {
 
   @Test
   void rateLimitedReadIsReplayedWithFreshAdmissionAndFeedbackIsObservedOnce() throws Exception {
-    stub.respondWith(
-        (arrival, method) -> arrival == 1 ? Reply.tooManyRequests() : Reply.success());
+    stub.respondWith((arrival, method) -> arrival == 1 ? Reply.tooManyRequests() : Reply.success());
 
     assertThat(client.chainId()).isEqualTo(BigInteger.ONE);
 
@@ -117,13 +116,15 @@ class UniswapNodeClientRateLimitTest {
     stub.respondWith((arrival, method) -> Reply.tooManyRequests());
     client.close();
     client =
-        UniswapNodeClient.create(stub.url(), 2_000, 2_000, policy.withMaxAttempts(3), context, null);
+        UniswapNodeClient.create(
+            stub.url(), 2_000, 2_000, policy.withMaxAttempts(3), context, null);
 
     assertThatThrownBy(() -> client.chainId())
         .isInstanceOfSatisfying(
             RateLimitTerminatedException.class,
             terminated -> {
-              assertThat(terminated.getDispatch()).isEqualTo(RateLimitTerminatedException.Dispatch.REJECTED);
+              assertThat(terminated.getDispatch())
+                  .isEqualTo(RateLimitTerminatedException.Dispatch.REJECTED);
               assertThat(terminated.getReason())
                   .isEqualTo(RateLimitTerminatedException.Reason.REMOTE_PRESSURE_EXHAUSTED);
             });
@@ -141,7 +142,8 @@ class UniswapNodeClientRateLimitTest {
         .isInstanceOfSatisfying(
             RateLimitTerminatedException.class,
             terminated ->
-                assertThat(terminated.getDispatch()).isEqualTo(RateLimitTerminatedException.Dispatch.REJECTED));
+                assertThat(terminated.getDispatch())
+                    .isEqualTo(RateLimitTerminatedException.Dispatch.REJECTED));
 
     assertThat(stub.methods()).containsExactly("eth_sendRawTransaction");
     assertThat(context.diagnostics().getAdmissions()).isEqualTo(1);
@@ -151,8 +153,7 @@ class UniswapNodeClientRateLimitTest {
   @Test
   void redirectsAreNotFollowedBecauseTheyWouldBypassAdmission() {
     stub.respondWith(
-        (arrival, method) ->
-            Reply.status(307, Map.of("Location", stub.url() + "/elsewhere")));
+        (arrival, method) -> Reply.status(307, Map.of("Location", stub.url() + "/elsewhere")));
 
     assertThatThrownBy(() -> client.chainId())
         .isInstanceOfSatisfying(
@@ -171,6 +172,30 @@ class UniswapNodeClientRateLimitTest {
     assertThatThrownBy(() -> client.chainId()).isInstanceOf(ClientConnectionException.class);
 
     assertThat(stub.arrivals()).isEqualTo(1);
+    assertThat(context.diagnostics().getAdmissions()).isEqualTo(1);
+  }
+
+  @Test
+  void aServiceUnavailableWithRetryAfterZeroIsNotFollowedUpByOkHttp() {
+    stub.respondWith((arrival, method) -> Reply.status(503, Map.of("Retry-After", "0")));
+
+    assertThatThrownBy(() -> client.chainId())
+        .isInstanceOfSatisfying(
+            ClientConnectionException.class,
+            failure -> assertThat(failure.getMessage()).contains("503"));
+
+    assertThat(stub.arrivals()).isEqualTo(1);
+    assertThat(context.diagnostics().getAdmissions()).isEqualTo(1);
+  }
+
+  @Test
+  void aBroadcastAnsweredServiceUnavailableWithRetryAfterZeroReachesTheWireOnce() {
+    stub.respondWith((arrival, method) -> Reply.status(503, Map.of("Retry-After", "0")));
+
+    assertThatThrownBy(() -> client.sendRawTransaction(new byte[] {1, 2, 3}))
+        .isInstanceOf(ClientConnectionException.class);
+
+    assertThat(stub.methods()).containsExactly("eth_sendRawTransaction");
     assertThat(context.diagnostics().getAdmissions()).isEqualTo(1);
   }
 
@@ -197,7 +222,8 @@ class UniswapNodeClientRateLimitTest {
           UniswapNodeClient.create(
               "http://127.0.0.1:" + dropper.getLocalPort(), 2_000, 2_000, policy, context, null);
 
-      assertThatThrownBy(() -> client.sendRawTransaction(new byte[] {1})).isInstanceOf(IOException.class);
+      assertThatThrownBy(() -> client.sendRawTransaction(new byte[] {1}))
+          .isInstanceOf(IOException.class);
 
       dropper.close();
       acceptor.join();
@@ -212,13 +238,15 @@ class UniswapNodeClientRateLimitTest {
     MeteredHttpService service =
         new MeteredHttpService(stub.url(), new okhttp3.OkHttpClient(), policy, context, null);
     try {
-      assertThatThrownBy(() -> new Request<>("eth_gasPrice", List.of(), service, EthGasPrice.class).send())
+      assertThatThrownBy(
+              () -> new Request<>("eth_gasPrice", List.of(), service, EthGasPrice.class).send())
           .isInstanceOfSatisfying(
               RateLimitTerminatedException.class,
               terminated -> {
                 assertThat(terminated.getReason())
                     .isEqualTo(RateLimitTerminatedException.Reason.UNCLASSIFIED_OPERATION);
-                assertThat(terminated.getDispatch()).isEqualTo(RateLimitTerminatedException.Dispatch.NOT_SENT);
+                assertThat(terminated.getDispatch())
+                    .isEqualTo(RateLimitTerminatedException.Dispatch.NOT_SENT);
               });
       assertThat(stub.arrivals()).isZero();
     } finally {
@@ -228,7 +256,8 @@ class UniswapNodeClientRateLimitTest {
 
   @Test
   void anUnmeteredClientSendsWithoutAdmission() throws Exception {
-    try (UniswapNodeClient unmetered = UniswapNodeClient.createUnmetered(stub.url(), 2_000, 2_000)) {
+    try (UniswapNodeClient unmetered =
+        UniswapNodeClient.createUnmetered(stub.url(), 2_000, 2_000)) {
       assertThat(unmetered.chainId()).isEqualTo(BigInteger.ONE);
     }
     assertThat(stub.methods()).containsExactly("eth_chainId");

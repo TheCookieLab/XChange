@@ -138,7 +138,10 @@ public final class RpcStub implements AutoCloseable {
     String body = reply.body;
     if (body == null) {
       String result = RESULTS.get(method);
-      body = result == null ? "{\"error\":{\"code\":-32601,\"message\":\"unknown method\"}}" : "{\"result\":" + result + "}";
+      body =
+          result == null
+              ? "{\"error\":{\"code\":-32601,\"message\":\"unknown method\"}}"
+              : "{\"result\":" + result + "}";
     }
     // splice the echoed id into the JSON object
     String payload = "{\"jsonrpc\":\"2.0\",\"id\":" + id + "," + body.substring(1);

@@ -4,14 +4,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Date;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
 /** http://docs.bitfinex.com/#deposit-withdrawal-history */
-public class BitfinexDepositWithdrawalHistoryRequest {
+public class BitfinexDepositWithdrawalHistoryRequest extends BitfinexAuthenticatedRequest {
   @JsonProperty("request")
   private final String request;
-
-  @JsonProperty("nonce")
-  private final String nonce;
 
   /** The currency to look for. */
   @JsonProperty("currency")
@@ -41,9 +39,8 @@ public class BitfinexDepositWithdrawalHistoryRequest {
   private final Integer limit;
 
   public BitfinexDepositWithdrawalHistoryRequest(
-      String nonce, String currency, String method, Date since, Date until, Integer limit) {
+      String currency, String method, Date since, Date until, Integer limit) {
     this.request = "/v1/history/movements";
-    this.nonce = String.valueOf(nonce);
     this.currency = currency;
     this.method = method;
     this.since = since == null ? null : String.valueOf(since.getTime() / 1000);

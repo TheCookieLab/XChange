@@ -152,7 +152,11 @@ There is one normal path. Copy the shape of `CoinbaseRateLimitPolicy`
 4. **Direct transports** (JSON-RPC, web3j, hand-rolled `HttpClient`). Wrap each wire attempt in
    `RateLimitContext.execute(policy, request, userScope, attempt)`; the attempt reports HTTP
    status and headers to the `RateLimitAttemptObserver`. See
-   `CoinbaseDerivativesJsonRpcTransport.admitted` for the reference shape.
+   `CoinbaseDerivativesJsonRpcTransport.admitted` for the reference shape. A direct transport
+   that can resend (OkHttp follow-ups or connection-failure retries) must disable that for the
+   admitted attempt, for example with a one-shot request body. Feedback is read from status and
+   headers only: a rate rejection carried in an HTTP 200 body (Bybit `retCode`, OKX `50061`)
+   surfaces as the module's exception and does not start a cooldown.
 5. **Classification.** The classifier maps `RateLimitRequest.getOperationKey()`
    (`"<HTTP METHOD> <interface @Path>/<method @Path>"`, no leading slash, placeholders
    unexpanded) to a `RateLimitOperation` with the documented cost. Weight that depends on a

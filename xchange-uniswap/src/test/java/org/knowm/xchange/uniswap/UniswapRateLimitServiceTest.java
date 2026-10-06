@@ -16,8 +16,8 @@ import org.knowm.xchange.uniswap.client.UniswapRateLimitPolicy;
 
 /**
  * The public account service reaches the node only through the universal rate limiter: one
- * admission per JSON-RPC wire attempt, rate rejections replayed by the core, and no
- * module-owned limiter on the path.
+ * admission per JSON-RPC wire attempt, rate rejections replayed by the core, and no module-owned
+ * limiter on the path.
  */
 class UniswapRateLimitServiceTest {
 
@@ -30,7 +30,8 @@ class UniswapRateLimitServiceTest {
   @BeforeEach
   void setUp() throws Exception {
     stub = new RpcStub();
-    specification = TestFixtures.specification(TestFixtures.keystore(tempDir, "s3cret".toCharArray()));
+    specification =
+        TestFixtures.specification(TestFixtures.keystore(tempDir, "s3cret".toCharArray()));
     specification.setSslUri(stub.url());
     specification
         .getResilience()

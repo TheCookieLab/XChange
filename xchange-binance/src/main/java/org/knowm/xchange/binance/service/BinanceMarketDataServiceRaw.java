@@ -35,20 +35,15 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
   }
 
   public BinanceTime binanceTime() throws IOException {
-    return decorateApiCall(binanceSpot::time)
-        .call();
+    return decorateApiCall(binanceSpot::time).call();
   }
 
   public BinanceExchangeInfo getExchangeInfo() throws IOException {
-    return decorateApiCall(binanceSpot::exchangeInfo)
-        .withRetry(retry("exchangeInfo"))
-        .call();
+    return decorateApiCall(binanceSpot::exchangeInfo).withRetry(retry("exchangeInfo")).call();
   }
 
   public BinanceExchangeInfo getFutureExchangeInfo() throws IOException {
-    return decorateApiCall(binanceUsdm::exchangeInfo)
-        .withRetry(retry("exchangeInfo"))
-        .call();
+    return decorateApiCall(binanceUsdm::exchangeInfo).withRetry(retry("exchangeInfo")).call();
   }
 
   public BinanceOrderbook getBinanceOrderbookAllProducts(Instrument pair, Integer limit)
@@ -120,13 +115,9 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
 
   public List<BinanceTicker24h> ticker24hAllProducts(boolean isFutures) throws IOException {
     if (isFutures) {
-      return decorateApiCall(binanceUsdm::ticker24h)
-          .withRetry(retry("ticker24h"))
-          .call();
+      return decorateApiCall(binanceUsdm::ticker24h).withRetry(retry("ticker24h")).call();
     } else {
-      return decorateApiCall(binanceSpot::ticker24h)
-          .withRetry(retry("ticker24h"))
-          .call();
+      return decorateApiCall(binanceSpot::ticker24h).withRetry(retry("ticker24h")).call();
     }
   }
 
@@ -143,9 +134,7 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
   }
 
   public List<BinanceFundingRate> getBinanceFundingRates() throws IOException {
-    return decorateApiCall(binanceUsdm::fundingRates)
-        .withRetry(retry("fundingRate"))
-        .call();
+    return decorateApiCall(binanceUsdm::fundingRates).withRetry(retry("fundingRate")).call();
   }
 
   public BinanceFundingRate getBinanceFundingRate(Instrument instrument) throws IOException {
@@ -167,9 +156,7 @@ public class BinanceMarketDataServiceRaw extends BinanceBaseService {
   }
 
   public List<BinancePrice> tickerAllPrices() throws IOException {
-    return decorateApiCall(binanceSpot::tickerAllPrices)
-        .withRetry(retry("tickerAllPrices"))
-        .call();
+    return decorateApiCall(binanceSpot::tickerAllPrices).withRetry(retry("tickerAllPrices")).call();
   }
 
   public List<BinancePriceQuantity> tickerAllBookTickers() throws IOException {

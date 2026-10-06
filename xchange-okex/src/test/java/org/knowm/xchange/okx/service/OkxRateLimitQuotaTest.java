@@ -35,8 +35,8 @@ import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
 /**
  * Service-level proof, over a loopback server on a dynamic port, that the OKX REST services are
  * rate limited exclusively by the core limiter: one admission per wire attempt, replay of a
- * rejected read with fresh admission, no blind replay of order placement, and no resilience4j
- * rate limiter on the REST path. Nothing leaves the machine.
+ * rejected read with fresh admission, no blind replay of order placement, and no resilience4j rate
+ * limiter on the REST path. Nothing leaves the machine.
  */
 public class OkxRateLimitQuotaTest {
 
@@ -100,14 +100,15 @@ public class OkxRateLimitQuotaTest {
     assertThat(response.isSuccess()).isTrue();
     assertThat(stub.arrivals("GET " + TICKER)).as("rejected read replayed once").isEqualTo(2);
     assertThat(admissions()).as("the replay was admitted afresh").isEqualTo(2);
-    assertThat(elapsed).as("Retry-After 1s honoured").isGreaterThanOrEqualTo(Duration.ofMillis(900));
+    assertThat(elapsed)
+        .as("Retry-After 1s honoured")
+        .isGreaterThanOrEqualTo(Duration.ofMillis(900));
   }
 
   @Test(timeout = TIMEOUT_MILLIS)
   public void rejectedOrderPlacementIsSentOnceAndSurfaced() {
     stub.forceRejections("POST " + ORDER, 1, "1");
-    OkxTradeServiceRaw trade =
-        new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
+    OkxTradeServiceRaw trade = new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
 
     assertThatThrownBy(() -> trade.doPlaceOkxOrder(order(null)))
         .isInstanceOfSatisfying(
@@ -122,8 +123,7 @@ public class OkxRateLimitQuotaTest {
 
   @Test(timeout = TIMEOUT_MILLIS)
   public void placementWithReconciliationAdmitsLookupAndPlacementOnce() throws Exception {
-    OkxTradeServiceRaw trade =
-        new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
+    OkxTradeServiceRaw trade = new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
 
     OkxResponse<List<OkxOrderResponse>> response = trade.placeOkxOrder(order("client-order-1"));
 
@@ -137,8 +137,7 @@ public class OkxRateLimitQuotaTest {
   public void noResilience4jRateLimiterGuardsTheRestPath() throws Exception {
     OkxMarketDataServiceRaw market =
         new OkxMarketDataServiceRaw(exchange, exchange.getResilienceRegistries());
-    OkxTradeServiceRaw trade =
-        new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
+    OkxTradeServiceRaw trade = new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
 
     market.getOkxTicker("BTC-USDT");
     trade.doPlaceOkxOrder(order(null));

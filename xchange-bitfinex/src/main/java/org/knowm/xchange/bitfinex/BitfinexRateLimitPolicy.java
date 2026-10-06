@@ -24,34 +24,36 @@ import org.knowm.xchange.client.ratelimit.RateLimitRequest;
  *   <li>Requirements and limitations, https://docs.bitfinex.com/docs/requirements-and-limitations:
  *       the REST limit "ranges from 10 to 90 requests per minute depending on the endpoint"; an IP
  *       address that exceeds it is blocked for 60 seconds and answered with {@code
- *       {"error":"ERR_RATE_LIMIT"}}. The limits are therefore keyed by the caller's IP address,
- *       not by API key, which is why every budget is {@link ScopeKind#EGRESS}.
+ *       {"error":"ERR_RATE_LIMIT"}}. The limits are therefore keyed by the caller's IP address, not
+ *       by API key, which is why every budget is {@link ScopeKind#EGRESS}.
  *   <li>v2 endpoint references, {@code https://docs.bitfinex.com/reference/<endpoint>}: public
  *       trades 15, stats 15, candles 30, tickers 30, platform status 30, derivatives status 90,
  *       conf 90, book 240; authenticated wallets, orders, orders history, order trades, trades,
  *       positions, ledgers, movements and derivative collateral set 90; deposit address 10. The
  *       transfer and withdraw references state no limit.
- *   <li>v1 reference, https://docs.bitfinex.com/v1/docs/rest-general: "10 to 90 requests per
- *       minute depending on factors", no per-endpoint figures.
+ *   <li>v1 reference, https://docs.bitfinex.com/v1/docs/rest-general: "10 to 90 requests per minute
+ *       depending on factors", no per-endpoint figures.
  * </ul>
  *
- * <p><b>Budgets.</b> Every budget is a rolling one-minute window per egress IP. The v2 budgets mirror
- * the documented per-endpoint figures, one budget per documented endpoint family. {@value
+ * <p><b>Budgets.</b> Every budget is a rolling one-minute window per egress IP. The v2 budgets
+ * mirror the documented per-endpoint figures, one budget per documented endpoint family. {@value
  * #V1_PUBLIC}, {@value #V1_AUTH} and {@value #V2_AUTH_OTHER} (v2 transfer) are <em>not published
  * quotas</em>: they carry the 90 requests per minute the module enforced before the universal
- * limiter (the upper end of the documented range) for endpoints whose reference states no
- * figure. {@value #DEPOSIT_ADDRESS} is the documented v2 deposit-address limit of 10; the v1
- * {@code deposit/new} request consumes it as well on the assumption that it is the same provider
- * function (the v1 reference publishes no figure). Costs are always 1: Bitfinex documents no
- * request weights.
+ * limiter (the upper end of the documented range) for endpoints whose reference states no figure.
+ * {@value #DEPOSIT_ADDRESS} is the documented v2 deposit-address limit of 10; the v1 {@code
+ * deposit/new} request consumes it as well on the assumption that it is the same provider function
+ * (the v1 reference publishes no figure). Costs are always 1: Bitfinex documents no request
+ * weights.
  *
- * <p><b>Operation classes.</b> {@link RateLimitPriority#MARKET_DATA} covers public GET
- * endpoints; {@link RateLimitPriority#EXECUTION} covers every authenticated endpoint. An unknown
- * path is unclassified and rejected before anything is sent. Only public GETs and the v2
- * authenticated read POSTs (whose nonce is regenerated for every wire attempt) are replayed after a
- * confirmed rate rejection. Every v1 authenticated POST is surfaced instead: its nonce is baked
- * into the signed request body by the caller, so a replay would reuse a nonce, and the mutations
- * (order, offer, cancel, replace, withdraw, deposit, transfer, collateral) may have been applied.
+ * <p><b>Operation classes.</b> {@link RateLimitPriority#MARKET_DATA} covers public GET endpoints;
+ * {@link RateLimitPriority#EXECUTION} covers every authenticated endpoint. An unknown path is
+ * unclassified and rejected before anything is sent. Only public GETs and the v2 authenticated read
+ * POSTs are replayed after a confirmed rate rejection. Every v1 authenticated POST is surfaced
+ * instead and never replayed by the limiter, because the mutations (order, offer, cancel, replace,
+ * withdraw, deposit, transfer, collateral) may have been applied. The nonce of every authenticated
+ * call, v1 and v2, is created inside the admitted wire attempt (v1: stamped into the body when it
+ * is signed, v2: evaluated as a header), so a call that waited in admission never sends a nonce
+ * older than one consumed meanwhile.
  *
  * <p><b>Bounds.</b> The 60 second IP block is documented, so the fallback backoff starts at 60 s
  * (cap 120 s, jitter 0.1) and market-data operations may wait up to 90 s in total; execution
@@ -225,9 +227,7 @@ public final class BitfinexRateLimitPolicy {
   private static RateLimitOperation classifyV2(String method, String path, String key) {
     if ("GET".equals(method)) {
       String budget = v2PublicBudget(path);
-      return budget == null
-          ? null
-          : operation(key, RateLimitPriority.MARKET_DATA, true, budget);
+      return budget == null ? null : operation(key, RateLimitPriority.MARKET_DATA, true, budget);
     }
     if (!"POST".equals(method)) {
       return null;

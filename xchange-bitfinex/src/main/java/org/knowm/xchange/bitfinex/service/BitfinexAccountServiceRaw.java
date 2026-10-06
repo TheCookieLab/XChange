@@ -52,11 +52,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
       return decorateApiCall(
               () ->
                   bitfinex.tradingFees(
-                      apiKey,
-                      payloadCreator,
-                      signatureCreator,
-                      new BitfinexTradingFeesRequest(
-                          String.valueOf(exchange.getNonceFactory().createValue()))))
+                      apiKey, payloadCreator, signatureCreator, new BitfinexTradingFeesRequest()))
           .withRetry(retry("account-tradingFees"))
           .call();
     } catch (BitfinexException e) {
@@ -68,11 +64,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
     return decorateApiCall(
             () ->
                 bitfinex.balances(
-                    apiKey,
-                    payloadCreator,
-                    signatureCreator,
-                    new BitfinexBalancesRequest(
-                        String.valueOf(exchange.getNonceFactory().createValue()))))
+                    apiKey, payloadCreator, signatureCreator, new BitfinexBalancesRequest()))
         .withRetry(retry("account-accountInfo"))
         .call();
   }
@@ -81,11 +73,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
     return decorateApiCall(
             () ->
                 bitfinex.marginInfos(
-                    apiKey,
-                    payloadCreator,
-                    signatureCreator,
-                    new BitfinexMarginInfosRequest(
-                        String.valueOf(exchange.getNonceFactory().createValue()))))
+                    apiKey, payloadCreator, signatureCreator, new BitfinexMarginInfosRequest()))
         .withRetry(retry("account-marginInfo"))
         .call();
   }
@@ -93,13 +81,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
   public BitfinexDepositWithdrawalHistoryResponse[] getDepositWithdrawalHistory(
       String currency, String method, Date since, Date until, Integer limit) throws IOException {
     BitfinexDepositWithdrawalHistoryRequest request =
-        new BitfinexDepositWithdrawalHistoryRequest(
-            String.valueOf(exchange.getNonceFactory().createValue()),
-            currency,
-            method,
-            since,
-            until,
-            limit);
+        new BitfinexDepositWithdrawalHistoryRequest(currency, method, since, until, limit);
     return decorateApiCall(
             () ->
                 bitfinex.depositWithdrawalHistory(
@@ -135,12 +117,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
 
     BitfinexWithdrawalRequest req =
         new BitfinexWithdrawalRequest(
-            String.valueOf(exchange.getNonceFactory().createValue()),
-            withdrawType,
-            walletSelected,
-            amount,
-            address,
-            tagOrPaymentId);
+            withdrawType, walletSelected, amount, address, tagOrPaymentId);
     req.setCurrency(currency);
     BitfinexWithdrawalResponse[] withdrawResponse =
         decorateApiCall(() -> bitfinex.withdraw(apiKey, payloadCreator, signatureCreator, req))
@@ -194,11 +171,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                     apiKey,
                     payloadCreator,
                     signatureCreator,
-                    new BitfinexDepositAddressRequest(
-                        String.valueOf(exchange.getNonceFactory().createValue()),
-                        finalType,
-                        "exchange",
-                        0)))
+                    new BitfinexDepositAddressRequest(finalType, "exchange", 0)))
         .call();
   }
 
@@ -209,9 +182,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                     apiKey,
                     payloadCreator,
                     signatureCreator,
-                    new BitfinexNonceOnlyRequest(
-                        "/v1/account_fees",
-                        String.valueOf(exchange.getNonceFactory().createValue()))))
+                    new BitfinexNonceOnlyRequest("/v1/account_fees")))
         .withRetry(retry("account-accountFees"))
         .call();
   }
@@ -224,13 +195,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                     apiKey,
                     payloadCreator,
                     signatureCreator,
-                    new BitfinexBalanceHistoryRequest(
-                        String.valueOf(exchange.getNonceFactory().createValue()),
-                        currency,
-                        since,
-                        until,
-                        limit,
-                        wallet)))
+                    new BitfinexBalanceHistoryRequest(currency, since, until, limit, wallet)))
         .withRetry(retry("account-balanceHistory"))
         .call();
   }

@@ -2,14 +2,12 @@ package org.knowm.xchange.bitfinex.v1.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
-public class BitfinexPastTradesRequest {
+public class BitfinexPastTradesRequest extends BitfinexAuthenticatedRequest {
 
   @JsonProperty("request")
   protected String request;
-
-  @JsonProperty("nonce")
-  protected String nonce;
 
   @JsonProperty("symbol")
   protected String symbol;
@@ -36,14 +34,8 @@ public class BitfinexPastTradesRequest {
   protected Integer reverse;
 
   public BitfinexPastTradesRequest(
-      String nonce,
-      String symbol,
-      long startTime,
-      Long endTime,
-      Integer limitTrades,
-      Integer reverse) {
+      String symbol, long startTime, Long endTime, Integer limitTrades, Integer reverse) {
     this.request = "/v1/mytrades";
-    this.nonce = nonce;
     this.symbol = symbol;
     this.startTime = startTime;
     this.endTime = endTime;

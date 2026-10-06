@@ -49,7 +49,9 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
 
   public BinanceAccountInformation account() throws BinanceException, IOException {
     return decorateApiCall(
-            () -> binanceSpotAuth.account(getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
+            () ->
+                binanceSpotAuth.account(
+                    getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("account"))
         .call();
   }

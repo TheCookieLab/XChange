@@ -17,60 +17,73 @@ import org.knowm.xchange.client.ratelimit.RateLimitRequest;
 
 /**
  * Default rate-limit policy of the Binance REST APIs (Spot, SAPI wallet endpoints, USD-M futures,
- * COIN-M futures and Portfolio Margin), enabled by {@link BinanceExchange#getDefaultExchangeSpecification()}
- * and {@link BinanceUsExchange#getDefaultExchangeSpecification()}.
+ * COIN-M futures and Portfolio Margin), enabled by {@link
+ * BinanceExchange#getDefaultExchangeSpecification()} and {@link
+ * BinanceUsExchange#getDefaultExchangeSpecification()}.
  *
  * <p><b>Sources (retrieved 2026-10-06).</b>
  *
  * <ul>
  *   <li>Spot REST API, limits and per-endpoint weights,
  *       https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md and
- *       https://developers.binance.com/docs/binance-spot-api-docs/rest-api/limits:
- *       {@code REQUEST_WEIGHT} 6,000 per minute and {@code RAW_REQUESTS} 61,000 per 5 minutes per
- *       IP; depth weight 5/25/50/250 for limit 1-100/101-500/501-1000/1001-5000; aggTrades 4;
+ *       https://developers.binance.com/docs/binance-spot-api-docs/rest-api/limits: {@code
+ *       REQUEST_WEIGHT} 6,000 per minute and {@code RAW_REQUESTS} 61,000 per 5 minutes per IP;
+ *       depth weight 5/25/50/250 for limit 1-100/101-500/501-1000/1001-5000; aggTrades 4;
  *       ticker/24hr 2 per symbol and 80 without symbol; account 20; myTrades 20 (5 with {@code
  *       orderId}); HTTP 429 on a breach and 418 for an IP ban, both with {@code Retry-After}. The
  *       user-data-stream weight 2 is retained from the previous module documentation.
- *   <li>Binance.US REST API, https://docs.binance.us/ (the same limits and depth weights; the
- *       Spot weight table above applies unchanged to {@link BinanceUsExchange}).
+ *   <li>Binance.US REST API, https://docs.binance.us/ (Rate Limits(REST), Get Order Rate Limits and
+ *       each endpoint's weight): {@link #usPolicy()} carries its own Spot weights, which differ
+ *       from binance.com for {@code GET /api/v3/order} (2), {@code GET /api/v3/openOrders} (3 with
+ *       symbol, 40 without), {@code GET /api/v3/allOrders} (10), {@code GET /api/v3/account} (10),
+ *       {@code klines} (1), {@code ticker/24hr} (1 per symbol, 40 without) and the {@code
+ *       ticker/price}/{@code ticker/bookTicker} reads (1 per symbol, 2 without); limits and depth
+ *       weights equal binance.com. Endpoints docs.binance.us does not document (user data stream,
+ *       wallet SAPI including {@code /sapi/v1/asset/tradeFee}, futures, portfolio margin) keep the
+ *       binance.com values.
  *   <li>Wallet SAPI, https://developers.binance.com/en/docs/products/wallet/general-info.md: each
  *       SAPI endpoint has its own, independent IP limit (12,000 weight per minute) or UID limit
  *       (180,000 weight per minute); endpoint weights from the binance-connector-js wallet,
- *       sub-account, simple-earn and fiat clients (https://github.com/binance/binance-connector-js).
- *   <li>USD-M futures, https://developers.binance.com/en/docs/products/derivatives-trading-usds-futures/general-info.md
+ *       sub-account, simple-earn and fiat clients
+ *       (https://github.com/binance/binance-connector-js).
+ *   <li>USD-M futures,
+ *       https://developers.binance.com/en/docs/products/derivatives-trading-usds-futures/general-info.md
  *       and the binance-connector-js derivatives-trading-usds-futures client: endpoint weights,
  *       order endpoints weigh 0 on the IP limit and 1 on each order-count limit, {@code
  *       fundingRate}/{@code fundingInfo} share one 500 per 5 minutes per IP limit.
- *   <li>COIN-M futures, https://developers.binance.com/en/docs/products/derivatives-trading-coin-futures/general-info.md
+ *   <li>COIN-M futures,
+ *       https://developers.binance.com/en/docs/products/derivatives-trading-coin-futures/general-info.md
  *       and the binance-connector-js derivatives-trading-coin-futures client: endpoint weights,
  *       order placement weighs 0 on the IP limit and 1 on the 1-minute order-count limit.
- *   <li>Portfolio Margin, https://developers.binance.com/en/docs/products/derivatives-trading-portfolio-margin/general-info.md:
+ *   <li>Portfolio Margin,
+ *       https://developers.binance.com/en/docs/products/derivatives-trading-portfolio-margin/general-info.md:
  *       IP limit 6,000 per minute, order limit 1,200 per minute per account.
  * </ul>
  *
  * <p><b>Preserved in-code values.</b> The futures numeric limits (2,400 weight per minute, 1,200
- * orders per minute and 300 orders per 10 seconds) are published only through {@code
- * exchangeInfo}, which was not retrievable from the documentation host during this review; they
- * are kept from the previous module configuration ({@code BinanceResilience}) and are not newly
- * sourced. The Spot order limits (100 orders per 10 seconds and 200,000 per day per account) are
- * preserved from the same configuration; the documents above only show them as {@code exchangeInfo}
- * examples. The daily limit is enforced as 100,000 per rolling 12 hours, which bounds every 24 hour
- * interval to the provider's 200,000.
+ * orders per minute and 300 orders per 10 seconds) are published only through {@code exchangeInfo},
+ * which was not retrievable from the documentation host during this review; they are kept from the
+ * previous module configuration ({@code BinanceResilience}) and are not newly sourced. The Spot
+ * order limits (100 orders per 10 seconds and 200,000 per day per account) are preserved from the
+ * same configuration; the documents above only show them as {@code exchangeInfo} examples. The
+ * daily limit is enforced as 100,000 per rolling 12 hours, which bounds every 24 hour interval to
+ * the provider's 200,000.
  *
  * <p><b>Budgets.</b> Weight and raw-request budgets are IP quotas, modelled as the local
  * contribution of one process egress ({@link ScopeKind#EGRESS}); order-count and UID budgets are
  * per account ({@link ScopeKind#USER}). Windows are rolling, which never admits more than the
- * provider's wall-clock-aligned windows do. Every Spot request also counts one {@code RAW_REQUESTS}
- * unit (conservative: Binance.US documents order placement and cancellation against a separate
- * 300,000 per 5 minutes raw limit).
+ * provider's wall-clock-aligned windows do. Every binance.com Spot request also counts one {@code
+ * RAW_REQUESTS} unit (conservative: Binance.US documents order placement and cancellation against a
+ * separate 300,000 per 5 minutes raw limit, which {@link #usPolicy()} models as its own {@code
+ * spot.raw.orders} budget in place of the 61,000 per 5 minutes one).
  *
  * <p><b>Operation classes.</b> Public market data is {@link RateLimitPriority#MARKET_DATA}; every
  * order, account, wallet and user-data-stream operation is {@link RateLimitPriority#EXECUTION}.
  * Order placement and modification ({@code POST}/{@code PUT} of an order) and the withdrawal
- * request are not replayed after a confirmed rate rejection; every other operation is an
- * idempotent read, cancellation, setting or keep-alive and may be replayed with fresh admission.
- * Binance answers {@code 429} (rate rejection) and {@code 418} (IP ban); both are owned by the
- * core boundary.
+ * request are not replayed after a confirmed rate rejection; every other operation is an idempotent
+ * read, cancellation, setting or keep-alive and may be replayed with fresh admission. Binance
+ * answers {@code 429} (rate rejection) and {@code 418} (IP ban); both are owned by the core
+ * boundary.
  *
  * @since 1.0.3
  */
@@ -90,7 +103,7 @@ public final class BinanceRateLimitPolicy {
           + " https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md and"
           + " https://developers.binance.com/docs/binance-spot-api-docs/rest-api/limits retrieved"
           + " 2026-10-06 (REQUEST_WEIGHT 6000/min and RAW_REQUESTS 61000/5min per IP; HTTP 429 rate"
-          + " rejection, 418 IP ban); Binance.US https://docs.binance.us/ retrieved 2026-10-06;"
+          + " rejection, 418 IP ban);"
           + " Wallet SAPI https://developers.binance.com/en/docs/products/wallet/general-info.md"
           + " retrieved 2026-10-06 (per-endpoint IP 12000/min and UID 180000/min; weights from"
           + " https://github.com/binance/binance-connector-js wallet, sub-account, simple-earn and"
@@ -106,8 +119,28 @@ public final class BinanceRateLimitPolicy {
           + " documented source, was unreachable on 2026-10-06), not newly sourced; spot"
           + " userDataStream weight 2 retained from the previous module documentation";
 
-  private static final RateLimitPolicy DEFAULT = create(NAMESPACE);
-  private static final RateLimitPolicy US = create(US_NAMESPACE);
+  private static final String US_SOURCE =
+      "Binance.US REST limits and weights https://docs.binance.us/ retrieved 2026-10-06"
+          + " (Rate Limits(REST), Get Order Rate Limits and the Weight line of each endpoint):"
+          + " REQUEST_WEIGHT 6000/min per IP, RAW_REQUESTS 61000/5min per IP and 300000/5min for"
+          + " order placement and cancellation, ORDERS 100/10s and 200000/day per account (the"
+          + " Get Order Rate Limits response; the daily limit is enforced as 100000 per rolling"
+          + " 12h), HTTP 429 rate rejection, 418 IP ban; weights ping 1, time 1, exchangeInfo 20,"
+          + " aggTrades 4, depth 5/25/50/250 for limit 1-100/101-500/501-1000/1001-5000, klines 1,"
+          + " ticker/24hr 1 per symbol and 40 without, ticker/price and ticker/bookTicker 1 per"
+          + " symbol and 2 without, order placement 1, order/test 1, GET order 2, DELETE order 1,"
+          + " DELETE openOrders 1, GET openOrders 3 with symbol and 40 without, allOrders 10,"
+          + " account 10, myTrades 20 (5 with orderId); retained from the binance.com policy"
+          + " because docs.binance.us documents no weight for them: spot userDataStream weight 2"
+          + " (docs.binance.us only announces the listenKey stream's deprecation), the wallet SAPI"
+          + " endpoints (including /sapi/v1/asset/tradeFee, which docs.binance.us does not list;"
+          + " it documents /sapi/v1/asset/query/trading-fee with weight 1 instead) from"
+          + " https://developers.binance.com/en/docs/products/wallet/general-info.md retrieved"
+          + " 2026-10-06 and the futures and portfolio margin rules (Binance.US documents no"
+          + " such products), see the binance.com sources of BinanceRateLimitPolicy";
+
+  private static final RateLimitPolicy DEFAULT = create(NAMESPACE, SOURCE, false);
+  private static final RateLimitPolicy US = create(US_NAMESPACE, US_SOURCE, true);
 
   private BinanceRateLimitPolicy() {}
 
@@ -127,12 +160,12 @@ public final class BinanceRateLimitPolicy {
     return US;
   }
 
-  private static RateLimitPolicy create(String namespace) {
-    Table table = new Table(namespace);
+  private static RateLimitPolicy create(String namespace, String source, boolean us) {
+    Table table = new Table(namespace, us);
     return new RateLimitPolicy(
         namespace,
         VERSION,
-        SOURCE,
+        source,
         table.budgets(),
         table::classify,
         RateLimitFeedbackInterpreter.statuses(Set.of(429), Set.of(418)));
@@ -176,7 +209,7 @@ public final class BinanceRateLimitPolicy {
     private final String pmWeight;
     private final String pmOrders1m;
 
-    Table(String namespace) {
+    Table(String namespace, boolean us) {
       this.ns = namespace;
       spotWeight = budget("spot.weight", ScopeKind.EGRESS, 6000, MINUTE);
       spotRaw = budget("spot.raw", ScopeKind.EGRESS, 61000, Duration.ofMinutes(5));
@@ -192,7 +225,11 @@ public final class BinanceRateLimitPolicy {
       coinmOrders1m = budget("coinm.orders.1m", ScopeKind.USER, 1200, MINUTE);
       pmWeight = budget("pm.weight", ScopeKind.EGRESS, 6000, MINUTE);
       pmOrders1m = budget("pm.orders.1m", ScopeKind.USER, 1200, MINUTE);
-      defineSpot();
+      if (us) {
+        defineUsSpot();
+      } else {
+        defineSpot();
+      }
       defineSapi();
       defineUsdm();
       defineCoinm();
@@ -246,7 +283,8 @@ public final class BinanceRateLimitPolicy {
       }
     }
 
-    private void fixed(String key, RateLimitPriority priority, boolean replay, Map<String, Long> costs) {
+    private void fixed(
+        String key, RateLimitPriority priority, boolean replay, Map<String, Long> costs) {
       rule(key, priority, replay, request -> costs);
     }
 
@@ -279,6 +317,42 @@ public final class BinanceRateLimitPolicy {
       rule("GET api/v3/openOrders", EX, true, r -> spot(hasSymbol(r) ? 6 : 80));
       fixed("GET api/v3/allOrders", EX, true, spot(20));
       fixed("GET api/v3/account", EX, true, spot(20));
+      rule("GET api/v3/myTrades", EX, true, r -> spot(r.getParameter("orderId") != null ? 5 : 20));
+      fixed("POST api/v3/userDataStream", EX, true, spot(2));
+      fixed("PUT api/v3/userDataStream", EX, true, spot(2));
+      fixed("DELETE api/v3/userDataStream", EX, true, spot(2));
+    }
+
+    /**
+     * Binance.US Spot weights as documented per endpoint at https://docs.binance.us/ (retrieved
+     * 2026-10-06); order placement and cancellation count against the separate 300,000 per 5
+     * minutes {@code RAW_REQUESTS} limit instead of the 61,000 per 5 minutes one. The user data
+     * stream is not documented with a weight and keeps the binance.com value.
+     */
+    private void defineUsSpot() {
+      String ordersRaw = budget("spot.raw.orders", ScopeKind.EGRESS, 300000, Duration.ofMinutes(5));
+      fixed("GET api/v3/ping", MD, true, spot(1));
+      fixed("GET api/v3/time", MD, true, spot(1));
+      fixed("GET api/v3/exchangeInfo", MD, true, spot(20));
+      rule("GET api/v3/depth", MD, true, r -> spot(spotDepthWeight(limit(r))));
+      fixed("GET api/v3/aggTrades", MD, true, spot(4));
+      fixed("GET api/v3/klines", MD, true, spot(1));
+      rule("GET api/v3/ticker/24hr", MD, true, r -> spot(hasSymbol(r) ? 1 : 40));
+      rule("GET api/v3/ticker/price", MD, true, r -> spot(hasSymbol(r) ? 1 : 2));
+      rule("GET api/v3/ticker/bookTicker", MD, true, r -> spot(hasSymbol(r) ? 1 : 2));
+
+      fixed(
+          "POST api/v3/order",
+          EX,
+          false,
+          costs(spotWeight, 1, ordersRaw, 1, spotOrders10s, 1, spotOrdersDay, 1));
+      fixed("POST api/v3/order/test", EX, true, spot(1));
+      fixed("GET api/v3/order", EX, true, spot(2));
+      fixed("DELETE api/v3/order", EX, true, costs(spotWeight, 1, ordersRaw, 1));
+      fixed("DELETE api/v3/openOrders", EX, true, costs(spotWeight, 1, ordersRaw, 1));
+      rule("GET api/v3/openOrders", EX, true, r -> spot(hasSymbol(r) ? 3 : 40));
+      fixed("GET api/v3/allOrders", EX, true, spot(10));
+      fixed("GET api/v3/account", EX, true, spot(10));
       rule("GET api/v3/myTrades", EX, true, r -> spot(r.getParameter("orderId") != null ? 5 : 20));
       fixed("POST api/v3/userDataStream", EX, true, spot(2));
       fixed("PUT api/v3/userDataStream", EX, true, spot(2));
@@ -435,7 +509,9 @@ public final class BinanceRateLimitPolicy {
       return request.getParameter("symbol") != null;
     }
 
-    /** The {@code limit} query parameter, {@code -1} when absent, {@code MAX_VALUE} if malformed. */
+    /**
+     * The {@code limit} query parameter, {@code -1} when absent, {@code MAX_VALUE} if malformed.
+     */
     private static int limit(RateLimitRequest request) {
       String raw = request.getParameter("limit");
       if (raw == null) {

@@ -19,7 +19,6 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.Transaction;
-import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
@@ -117,8 +116,7 @@ public final class UniswapNodeClient implements AutoCloseable {
   /** Result of an {@code eth_call}: raw output bytes, or empty for a revert with no data. */
   public byte[] call(String from, String to, byte[] data, BigInteger atBlock) throws IOException {
     Transaction transaction = Transaction.createEthCallTransaction(from, to, Abi.toHex(data));
-    EthCall response =
-        web3j.ethCall(transaction, DefaultBlockParameter.valueOf(atBlock)).send();
+    EthCall response = web3j.ethCall(transaction, DefaultBlockParameter.valueOf(atBlock)).send();
     if (response.hasError()) {
       throw new IOException("eth_call to " + to + " failed: " + response.getError().getMessage());
     }
@@ -131,10 +129,7 @@ public final class UniswapNodeClient implements AutoCloseable {
 
   /** Native balance of an address at a block. */
   public BigInteger nativeBalance(String address, BigInteger atBlock) throws IOException {
-    return web3j
-        .ethGetBalance(address, DefaultBlockParameter.valueOf(atBlock))
-        .send()
-        .getBalance();
+    return web3j.ethGetBalance(address, DefaultBlockParameter.valueOf(atBlock)).send().getBalance();
   }
 
   /** ERC-20 balance of an owner at a block, via {@code balanceOf}. */
@@ -161,8 +156,7 @@ public final class UniswapNodeClient implements AutoCloseable {
 
   /** Broadcasts a signed transaction and returns the node-reported hash. */
   public String sendRawTransaction(byte[] signedBytes) throws IOException {
-    EthSendTransaction response =
-        web3j.ethSendRawTransaction(Abi.toHex(signedBytes)).send();
+    EthSendTransaction response = web3j.ethSendRawTransaction(Abi.toHex(signedBytes)).send();
     if (response.hasError()) {
       throw new IOException("eth_sendRawTransaction failed: " + response.getError().getMessage());
     }
@@ -170,8 +164,8 @@ public final class UniswapNodeClient implements AutoCloseable {
   }
 
   /** Looks up a transaction by hash; empty when the node has never seen it. */
-  public Optional<org.web3j.protocol.core.methods.response.Transaction> transactionByHash(String hash)
-      throws IOException {
+  public Optional<org.web3j.protocol.core.methods.response.Transaction> transactionByHash(
+      String hash) throws IOException {
     EthTransaction response = web3j.ethGetTransactionByHash(hash).send();
     return response.getTransaction();
   }
@@ -185,7 +179,10 @@ public final class UniswapNodeClient implements AutoCloseable {
   public BigInteger baseFeePerGas() throws IOException {
     try {
       var feeHistory =
-          web3j.ethFeeHistory(1, DefaultBlockParameterName.LATEST, Collections.emptyList()).send().getFeeHistory();
+          web3j
+              .ethFeeHistory(1, DefaultBlockParameterName.LATEST, Collections.emptyList())
+              .send()
+              .getFeeHistory();
       List<BigInteger> baseFees = feeHistory.getBaseFeePerGas();
       if (baseFees != null && !baseFees.isEmpty() && baseFees.get(baseFees.size() - 1) != null) {
         return baseFees.get(baseFees.size() - 1);
@@ -213,8 +210,7 @@ public final class UniswapNodeClient implements AutoCloseable {
 
   /** Gas estimate for a transaction built from the given from/to/data fields. */
   public BigInteger estimateGas(String from, String to, byte[] data) throws IOException {
-    Transaction transaction =
-        new Transaction(from, null, null, null, to, null, Abi.toHex(data));
+    Transaction transaction = new Transaction(from, null, null, null, to, null, Abi.toHex(data));
     org.web3j.protocol.core.methods.response.EthEstimateGas response =
         web3j.ethEstimateGas(transaction).send();
     if (response.hasError()) {
@@ -230,7 +226,8 @@ public final class UniswapNodeClient implements AutoCloseable {
   /** Decodes an {@code eth_call} output carrying a single uint256. */
   public static BigInteger decodeUint256(byte[] output) {
     List<Type> decoded =
-        FunctionReturnDecoder.decode(Abi.toHex(output), Abi.typeReferences(new TypeReference<Uint256>() {}));
+        FunctionReturnDecoder.decode(
+            Abi.toHex(output), Abi.typeReferences(new TypeReference<Uint256>() {}));
     if (decoded.isEmpty()) {
       throw new IllegalArgumentException("call output is not a uint256: " + Abi.toHex(output));
     }

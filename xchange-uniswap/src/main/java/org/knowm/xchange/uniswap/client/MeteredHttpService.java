@@ -2,11 +2,14 @@ package org.knowm.xchange.uniswap.client;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request.Builder;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import okio.BufferedSink;
 import org.knowm.xchange.client.ratelimit.RateLimitAttemptObserver;
 import org.knowm.xchange.client.ratelimit.RateLimitContext;
 import org.knowm.xchange.client.ratelimit.RateLimitFeedback;
@@ -25,10 +28,12 @@ import org.web3j.protocol.http.HttpService;
  *
  * <p>web3j's own {@code HttpService} discards the HTTP status of a rejected call, so the rate
  * limiter could not see a {@code 429}. This transport performs the OkHttp call itself inside the
- * {@link RateLimitContext#execute admitted attempt}, reports the status and headers to the
- * attempt observer and keeps web3j's {@link ClientConnectionException} for every non-2xx answer.
- * Redirects and silent connection-failure retries are disabled on the OkHttp client by the
- * caller: either would put a second request on the wire without a second admission.
+ * {@link RateLimitContext#execute admitted attempt}, reports the status and headers to the attempt
+ * observer and keeps web3j's {@link ClientConnectionException} for every non-2xx answer. Redirects
+ * and silent connection-failure retries are disabled on the OkHttp client by the caller, and every
+ * request body is one-shot so that OkHttp never resends the POST on its own (an {@code HTTP 503}
+ * with {@code Retry-After: 0} follow-up, connection recovery): any of them would put a second
+ * request on the wire without a second admission.
  *
  * <p>Only single requests are supported; batches are never produced by {@link UniswapNodeClient}
  * and would carry several methods under one admission.
@@ -95,10 +100,8 @@ final class MeteredHttpService extends Service {
   }
 
   private <T extends Response> T attempt(
-      String payload, Class<T> responseType, RateLimitAttemptObserver observer)
-      throws IOException {
-    okhttp3.Request httpRequest =
-        new Builder().url(url).post(RequestBody.create(payload, HttpService.JSON_MEDIA_TYPE)).build();
+      String payload, Class<T> responseType, RateLimitAttemptObserver observer) throws IOException {
+    okhttp3.Request httpRequest = new Builder().url(url).post(new OneShotJsonBody(payload)).build();
     try (okhttp3.Response httpResponse = httpClient.newCall(httpRequest).execute()) {
       observer.observeHttpResponse(httpResponse.code(), httpResponse::header);
       ResponseBody body = httpResponse.body();
@@ -126,9 +129,44 @@ final class MeteredHttpService extends Service {
     }
   }
 
+  /**
+   * JSON body that OkHttp may write exactly once. A one-shot body makes OkHttp's follow-up logic
+   * hand back an {@code HTTP 503 + Retry-After: 0} (or any other follow-up) instead of resending
+   * the POST, and keeps it from recovering a failed call by resending: each admission is one wire
+   * send.
+   */
+  private static final class OneShotJsonBody extends RequestBody {
+    private final byte[] content;
+
+    private OneShotJsonBody(String payload) {
+      this.content = payload.getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public MediaType contentType() {
+      return HttpService.JSON_MEDIA_TYPE;
+    }
+
+    @Override
+    public long contentLength() {
+      return content.length;
+    }
+
+    @Override
+    public boolean isOneShot() {
+      return true;
+    }
+
+    @Override
+    public void writeTo(BufferedSink sink) throws IOException {
+      sink.write(content);
+    }
+  }
+
   @Override
   public BatchResponse sendBatch(BatchRequest batchRequest) {
-    throw new UnsupportedOperationException("JSON-RPC batches are not rate limited and not supported");
+    throw new UnsupportedOperationException(
+        "JSON-RPC batches are not rate limited and not supported");
   }
 
   @Override

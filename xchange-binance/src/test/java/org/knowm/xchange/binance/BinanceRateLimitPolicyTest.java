@@ -13,6 +13,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,6 +28,7 @@ import org.knowm.xchange.binance.spot.BinanceSpotAuthApi;
 import org.knowm.xchange.binance.usdm.BinanceUsdmApi;
 import org.knowm.xchange.binance.usdm.BinanceUsdmAuthApi;
 import org.knowm.xchange.binance.wallet.BinanceWalletApi;
+import org.knowm.xchange.client.ratelimit.RateLimitBudget;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
 import org.knowm.xchange.client.ratelimit.RateLimitOperation;
 import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
@@ -216,8 +218,10 @@ public class BinanceRateLimitPolicyTest {
 
   @Test
   public void fundingEndpointsShareOneBudget() {
-    RateLimitOperation rate = POLICY.classify(new RateLimitRequest("GET fapi/v1/fundingRate", false));
-    RateLimitOperation info = POLICY.classify(new RateLimitRequest("GET fapi/v1/fundingInfo", false));
+    RateLimitOperation rate =
+        POLICY.classify(new RateLimitRequest("GET fapi/v1/fundingRate", false));
+    RateLimitOperation info =
+        POLICY.classify(new RateLimitRequest("GET fapi/v1/fundingInfo", false));
     assertEquals(Map.of("binance.usdm.funding", 1L), rate.getRequirements());
     assertEquals(rate.getRequirements(), info.getRequirements());
   }
@@ -231,7 +235,11 @@ public class BinanceRateLimitPolicyTest {
     assertEquals(1, config.getRequirements().size());
     assertEquals(1, tradeFee.getRequirements().size());
     assertFalse(
-        config.getRequirements().keySet().iterator().next()
+        config
+            .getRequirements()
+            .keySet()
+            .iterator()
+            .next()
             .equals(tradeFee.getRequirements().keySet().iterator().next()));
     assertEquals(10L, (long) config.getRequirements().values().iterator().next());
     RateLimitOperation withdraw =
@@ -268,7 +276,8 @@ public class BinanceRateLimitPolicyTest {
     }
   }
 
-  // ---- structure ---------------------------------------------------------------------------------
+  // ---- structure
+  // ---------------------------------------------------------------------------------
 
   @Test
   public void concreteAndTemplatedKeysClassifyAlike() {
@@ -284,23 +293,114 @@ public class BinanceRateLimitPolicyTest {
   public void unknownOperationsAreUnclassified() {
     for (String key :
         new String[] {
-          "GET api/v3/unknown", "", "GET", "TRACE api/v3/depth", "POST api/v3/depth", "GET fapi/v1/x"
+          "GET api/v3/unknown",
+          "",
+          "GET",
+          "TRACE api/v3/depth",
+          "POST api/v3/depth",
+          "GET fapi/v1/x"
         }) {
       assertNull(key, POLICY.classify(new RateLimitRequest(key, true)));
     }
   }
 
   @Test
-  public void usPolicyUsesItsOwnNamespaceWithTheSameWeights() {
+  public void usPolicyUsesItsOwnNamespace() {
     RateLimitPolicy us = BinanceRateLimitPolicy.usPolicy();
     assertEquals("binanceus", us.getNamespace());
     assertEquals("binance", POLICY.getNamespace());
     RateLimitOperation operation =
         us.classify(new RateLimitRequest("GET api/v3/depth", false, Map.of("limit", "5000")));
-    assertEquals(Map.of("binanceus.spot.weight", 250L, "binanceus.spot.raw", 1L), operation.getRequirements());
+    assertEquals(
+        Map.of("binanceus.spot.weight", 250L, "binanceus.spot.raw", 1L),
+        operation.getRequirements());
     for (String budgetId : operation.getRequirements().keySet()) {
       assertNotNull(us.getBudget(budgetId));
     }
+  }
+
+  /** Binance.US documents its own per-endpoint weights (https://docs.binance.us/). */
+  @Test
+  public void usPolicyChargesTheBinanceUsDocumentedWeights() {
+    assertEquals(2L, usWeight("GET api/v3/order", true, Map.of()));
+    assertEquals(3L, usWeight("GET api/v3/openOrders", true, Map.of("symbol", "BTCUSD")));
+    assertEquals(40L, usWeight("GET api/v3/openOrders", true, Map.of()));
+    assertEquals(10L, usWeight("GET api/v3/allOrders", true, Map.of("symbol", "BTCUSD")));
+    assertEquals(10L, usWeight("GET api/v3/account", true, Map.of()));
+    assertEquals(20L, usWeight("GET api/v3/myTrades", true, Map.of("symbol", "BTCUSD")));
+    assertEquals(
+        5L, usWeight("GET api/v3/myTrades", true, Map.of("symbol", "BTCUSD", "orderId", "7")));
+    assertEquals(1L, usWeight("GET api/v3/klines", false, Map.of()));
+    assertEquals(1L, usWeight("GET api/v3/ticker/24hr", false, Map.of("symbol", "BTCUSD")));
+    assertEquals(40L, usWeight("GET api/v3/ticker/24hr", false, Map.of()));
+    assertEquals(1L, usWeight("GET api/v3/ticker/price", false, Map.of("symbol", "BTCUSD")));
+    assertEquals(2L, usWeight("GET api/v3/ticker/price", false, Map.of()));
+    assertEquals(1L, usWeight("GET api/v3/ticker/bookTicker", false, Map.of("symbol", "BTCUSD")));
+    assertEquals(2L, usWeight("GET api/v3/ticker/bookTicker", false, Map.of()));
+    assertEquals(4L, usWeight("GET api/v3/aggTrades", false, Map.of()));
+    assertEquals(20L, usWeight("GET api/v3/exchangeInfo", false, Map.of()));
+    assertEquals(1L, usWeight("GET api/v3/ping", false, Map.of()));
+    assertEquals(1L, usWeight("GET api/v3/time", false, Map.of()));
+    assertEquals(1L, usWeight("POST api/v3/order", true, Map.of()));
+    assertEquals(1L, usWeight("POST api/v3/order/test", true, Map.of()));
+    assertEquals(1L, usWeight("DELETE api/v3/order", true, Map.of()));
+    assertEquals(1L, usWeight("DELETE api/v3/openOrders", true, Map.of()));
+    assertEquals(5L, usWeight("GET api/v3/depth", false, Map.of("limit", "100")));
+    assertEquals(25L, usWeight("GET api/v3/depth", false, Map.of("limit", "500")));
+    assertEquals(50L, usWeight("GET api/v3/depth", false, Map.of("limit", "1000")));
+    assertEquals(250L, usWeight("GET api/v3/depth", false, Map.of("limit", "5000")));
+  }
+
+  @Test
+  public void usPolicyDoesNotChangeTheBinanceComWeights() {
+    assertEquals(4L, spotWeight("GET api/v3/order", true, Map.of()));
+    assertEquals(6L, spotWeight("GET api/v3/openOrders", true, Map.of("symbol", "BTCUSDT")));
+    assertEquals(80L, spotWeight("GET api/v3/openOrders", true, Map.of()));
+    assertEquals(20L, spotWeight("GET api/v3/allOrders", true, Map.of("symbol", "BTCUSDT")));
+    assertEquals(20L, spotWeight("GET api/v3/account", true, Map.of()));
+  }
+
+  @Test
+  public void usPolicyDeclaresTheBinanceUsBudgets() {
+    RateLimitPolicy us = BinanceRateLimitPolicy.usPolicy();
+    assertBudget(us, "binanceus.spot.weight", ScopeKind.EGRESS, 6000L, Duration.ofMinutes(1));
+    assertBudget(us, "binanceus.spot.raw", ScopeKind.EGRESS, 61000L, Duration.ofMinutes(5));
+    assertBudget(us, "binanceus.spot.raw.orders", ScopeKind.EGRESS, 300000L, Duration.ofMinutes(5));
+    assertBudget(us, "binanceus.spot.orders.10s", ScopeKind.USER, 100L, Duration.ofSeconds(10));
+    assertBudget(us, "binanceus.spot.orders.12h", ScopeKind.USER, 100000L, Duration.ofHours(12));
+  }
+
+  /**
+   * Order placement and cancellation count against the separate 300,000 per 5 minutes raw limit.
+   */
+  @Test
+  public void usOrderPlacementAndCancellationUseTheSeparateRawRequestsBudget() {
+    RateLimitPolicy us = BinanceRateLimitPolicy.usPolicy();
+    assertEquals(
+        Map.of(
+            "binanceus.spot.weight", 1L,
+            "binanceus.spot.raw.orders", 1L,
+            "binanceus.spot.orders.10s", 1L,
+            "binanceus.spot.orders.12h", 1L),
+        us.classify(new RateLimitRequest("POST api/v3/order", true)).getRequirements());
+    assertEquals(
+        Map.of("binanceus.spot.weight", 1L, "binanceus.spot.raw.orders", 1L),
+        us.classify(new RateLimitRequest("DELETE api/v3/order", true)).getRequirements());
+    assertEquals(
+        Map.of("binanceus.spot.weight", 1L, "binanceus.spot.raw.orders", 1L),
+        us.classify(new RateLimitRequest("DELETE api/v3/openOrders", true)).getRequirements());
+    assertEquals(
+        Map.of("binanceus.spot.weight", 2L, "binanceus.spot.raw", 1L),
+        us.classify(new RateLimitRequest("GET api/v3/order", true)).getRequirements());
+  }
+
+  @Test
+  public void usSourceCitesBinanceUsDocumentationAndUndocumentedRetentions() {
+    String source = BinanceRateLimitPolicy.usPolicy().getSource();
+    assertTrue(source.contains("https://docs.binance.us/"));
+    assertTrue(source.contains("2026-10-06"));
+    assertTrue(source.contains("retained"));
+    assertFalse(POLICY.getSource().contains("docs.binance.us"));
   }
 
   @Test
@@ -311,7 +411,8 @@ public class BinanceRateLimitPolicyTest {
     assertTrue(source.contains("preserved"));
   }
 
-  // ---- enablement ---------------------------------------------------------------------------------
+  // ---- enablement
+  // ---------------------------------------------------------------------------------
 
   @Test
   public void defaultSpecificationsEnableTheLimiterWithTheirPolicy() {
@@ -324,7 +425,25 @@ public class BinanceRateLimitPolicyTest {
     assertSame(BinanceRateLimitPolicy.usPolicy(), us.getResilience().getRateLimitPolicy());
   }
 
-  // ---- helpers -------------------------------------------------------------------------------------
+  // ---- helpers
+  // -------------------------------------------------------------------------------------
+
+  private static long usWeight(String key, boolean authenticated, Map<String, String> parameters) {
+    RateLimitOperation operation =
+        BinanceRateLimitPolicy.usPolicy()
+            .classify(new RateLimitRequest(key, authenticated, parameters));
+    assertNotNull(key, operation);
+    return operation.getRequirements().get("binanceus.spot.weight");
+  }
+
+  private static void assertBudget(
+      RateLimitPolicy policy, String id, ScopeKind scope, long limit, Duration period) {
+    RateLimitBudget budget = policy.getBudget(id);
+    assertNotNull(id, budget);
+    assertEquals(id, scope, budget.getScopeKind());
+    assertEquals(id, limit, budget.getCapacity());
+    assertEquals(id, period, budget.getPeriod());
+  }
 
   private static long spotWeight(
       String key, boolean authenticated, Map<String, String> parameters) {

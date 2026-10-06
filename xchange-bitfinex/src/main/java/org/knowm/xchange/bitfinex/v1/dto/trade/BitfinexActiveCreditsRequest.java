@@ -1,18 +1,15 @@
 package org.knowm.xchange.bitfinex.v1.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
-public class BitfinexActiveCreditsRequest {
+public class BitfinexActiveCreditsRequest extends BitfinexAuthenticatedRequest {
 
   @JsonProperty("request")
   protected String request;
 
-  @JsonProperty("nonce")
-  protected String nonce;
-
-  public BitfinexActiveCreditsRequest(String nonce) {
+  public BitfinexActiveCreditsRequest() {
 
     this.request = "/v1/credits";
-    this.nonce = nonce;
   }
 }

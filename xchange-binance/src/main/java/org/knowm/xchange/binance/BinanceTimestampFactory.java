@@ -24,7 +24,9 @@ public class BinanceTimestampFactory implements SynchronizedValueFactory<Long> {
   private Long deltaServerTimeExpire;
   private Long deltaServerTime;
 
-  /** @deprecated Use the constructor accepting a {@link BinanceTimestampUnit}. */
+  /**
+   * @deprecated Use the constructor accepting a {@link BinanceTimestampUnit}.
+   */
   @Deprecated
   public BinanceTimestampFactory(
       ExchangeSpecification.ResilienceSpecification resilienceSpecification,
@@ -43,8 +45,7 @@ public class BinanceTimestampFactory implements SynchronizedValueFactory<Long> {
 
   @Override
   public Long createValue() {
-    return BinanceTimePolicy.applyUnit(
-        BinanceTimePolicy.currentTimestampMillis(), timestampUnit);
+    return BinanceTimePolicy.applyUnit(BinanceTimePolicy.currentTimestampMillis(), timestampUnit);
   }
 
   public void clearDeltaServerTime() {

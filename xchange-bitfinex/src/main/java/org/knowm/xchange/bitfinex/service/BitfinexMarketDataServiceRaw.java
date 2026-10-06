@@ -54,9 +54,7 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
 
   public BitfinexTicker getBitfinexTicker(String pair) throws IOException {
     BitfinexTicker bitfinexTicker =
-        decorateApiCall(() -> bitfinex.getTicker(pair))
-            .withRetry(retry("market-ticker"))
-            .call();
+        decorateApiCall(() -> bitfinex.getTicker(pair)).withRetry(retry("market-ticker")).call();
     return bitfinexTicker;
   }
 
@@ -65,9 +63,7 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
     BitfinexDepth bitfinexDepth;
     if (limitBids == null && limitAsks == null) {
       bitfinexDepth =
-          decorateApiCall(() -> bitfinex.getBook(pair))
-              .withRetry(retry("market-book"))
-              .call();
+          decorateApiCall(() -> bitfinex.getBook(pair)).withRetry(retry("market-book")).call();
     } else {
       bitfinexDepth =
           decorateApiCall(() -> bitfinex.getBook(pair, limitBids, limitAsks))
@@ -104,9 +100,7 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
   }
 
   public Collection<String> getBitfinexSymbols() throws IOException {
-    return decorateApiCall(() -> bitfinex.getSymbols())
-        .withRetry(retry("market-symbols"))
-        .call();
+    return decorateApiCall(() -> bitfinex.getSymbols()).withRetry(retry("market-symbols")).call();
   }
 
   public List<CurrencyPair> getExchangeSymbols() throws IOException {
@@ -335,9 +329,7 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
 
   public List<BitfinexCurrencyChain> allChains() throws IOException {
     List<List<BitfinexCurrencyChain>> list =
-        decorateApiCall(bitfinexV2::allChains)
-            .withRetry(retry("market-allChains"))
-            .call();
+        decorateApiCall(bitfinexV2::allChains).withRetry(retry("market-allChains")).call();
 
     return list.isEmpty() ? Collections.emptyList() : list.get(0);
   }
@@ -353,9 +345,7 @@ public class BitfinexMarketDataServiceRaw extends BitfinexBaseService {
 
   public List<Currency> allCurrencies() throws IOException {
     List<List<String>> list =
-        decorateApiCall(bitfinexV2::allCurrencies)
-            .withRetry(retry("market-allCurrencies"))
-            .call();
+        decorateApiCall(bitfinexV2::allCurrencies).withRetry(retry("market-allCurrencies")).call();
 
     if (list.isEmpty()) {
       return Collections.emptyList();
