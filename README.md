@@ -97,6 +97,61 @@ secret; others also require fields such as username or passphrase. See the
 [FAQ](https://github.com/TheCookieLab/XChange/wiki/Frequently-Asked-Questions)
 for configuration examples.
 
+### Rate Limiting
+
+`xchange-core` provides one rate-limit mechanism (`org.knowm.xchange.client.ratelimit`)
+that sits on the REST proxy and direct-transport boundary. Adoption is
+**Coinbase-first**: `xchange-coinbase` (Advanced Trade v3, including
+`xchange-stream-coinbase` REST calls) and `xchange-coinbase-derivatives` ship a
+default policy. Other modules keep their existing behavior until migrated under
+[CF-683](https://linear.app/cookiefactory/issue/CF-683/xchange-migrate-legacy-resilience4j-modules-to-the-universal-rate).
+
+Policy-bearing modules enable the limiter in `getDefaultExchangeSpecification()`,
+so ordinary construction needs no extra code. A specification built with
+`new ExchangeSpecification(X.class)` carries no policy. An explicit
+`getResilience().setRateLimiterEnabled(false)` stays authoritative and is
+reported as disabled in the diagnostics.
+
+Exchanges that must share one quota (several product views, repeated
+specification copies, credential rotation) share one `RateLimitContext` and one
+opaque user scope:
+
+```java
+RateLimitContext rateLimits = new RateLimitContext(); // one per process/quota owner
+
+ExchangeSpecification spec = new CoinbaseExchange().getDefaultExchangeSpecification();
+spec.setApiKey(keyName);
+spec.setSecretKey(privateKeyPem);
+spec.getResilience().setRateLimitContext(rateLimits);
+spec.getResilience().setRateLimitUserScope("coinbase-user-1"); // never secret material
+Exchange coinbase = ExchangeFactory.INSTANCE.createExchange(spec);
+```
+
+Without an explicit context, each exchange owns one created from its
+specification. Semantics:
+
+- Priority is owned by the module policy, not the caller: `EXECUTION`
+  (mutations and execution-safety reads) is admitted before `MARKET_DATA` on a
+  shared budget; within a class admission is FIFO. Each class has a bounded
+  pending queue and a maximum wait.
+- Timestamps, signatures and JWTs are generated after admission, per wire attempt.
+- Confirmed rate pressure (HTTP 429 and module-specific signals) pauses every
+  sharer of the budget. Replay-safe requests are retried within the policy's
+  attempt bound; mutations are never blindly replayed.
+- Every terminal outcome is a `RateLimitTerminatedException` (a
+  `RateLimitExceededException`) with a `Reason` (`QUEUE_SATURATED`,
+  `DEADLINE_EXCEEDED`, `CANCELLED`, `IMPOSSIBLE_COST`, `SHUTDOWN`,
+  `REMOTE_PRESSURE_EXHAUSTED`, `UNCLASSIFIED_OPERATION`) and a `Dispatch`:
+  `NOT_SENT`, `REJECTED` (sent and definitively rejected) or `UNCERTAIN` (sent,
+  outcome unknown — reconcile, do not replay).
+- Callers with a domain deadline can tighten (never extend) waiting with
+  `RateLimitDeadline.call(Duration, Callable)`.
+- `RateLimitContext.diagnostics()` reports waits, retries, saturation and
+  disabled namespaces. Closing a context terminates its pending operations with
+  `SHUTDOWN`; close it only when every sharer is done.
+
+Callers never need their own throttling or 429 retry loop for adopted modules.
+
 ## WebSocket API
 
 Use `StreamingExchange` for real-time subscriptions when an exchange module
