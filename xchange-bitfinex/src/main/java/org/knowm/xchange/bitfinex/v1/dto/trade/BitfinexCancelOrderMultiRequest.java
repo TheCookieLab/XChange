@@ -1,22 +1,19 @@
 package org.knowm.xchange.bitfinex.v1.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
-public class BitfinexCancelOrderMultiRequest {
+public class BitfinexCancelOrderMultiRequest extends BitfinexAuthenticatedRequest {
 
   @JsonProperty("request")
   protected String request;
 
-  @JsonProperty("nonce")
-  protected String nonce;
-
   @JsonProperty("order_ids")
   protected long[] orderIds;
 
-  public BitfinexCancelOrderMultiRequest(String nonce, long[] orderIds) {
+  public BitfinexCancelOrderMultiRequest(long[] orderIds) {
 
     this.request = "/v1/order/cancel/multi";
-    this.nonce = nonce;
     this.orderIds = orderIds;
   }
 
@@ -26,14 +23,6 @@ public class BitfinexCancelOrderMultiRequest {
 
   public void setRequest(String request) {
     this.request = request;
-  }
-
-  public String getNonce() {
-    return nonce;
-  }
-
-  public void setNonce(String nonce) {
-    this.nonce = nonce;
   }
 
   public long[] getOrderIds() {

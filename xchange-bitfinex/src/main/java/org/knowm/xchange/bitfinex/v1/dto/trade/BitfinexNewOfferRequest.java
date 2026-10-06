@@ -2,14 +2,12 @@ package org.knowm.xchange.bitfinex.v1.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
-public class BitfinexNewOfferRequest {
+public class BitfinexNewOfferRequest extends BitfinexAuthenticatedRequest {
 
   @JsonProperty("request")
   protected String request;
-
-  @JsonProperty("nonce")
-  protected String nonce;
 
   @JsonProperty("currency")
   protected String currency;
@@ -27,15 +25,9 @@ public class BitfinexNewOfferRequest {
   protected String direction;
 
   public BitfinexNewOfferRequest(
-      String nonce,
-      String currency,
-      BigDecimal amount,
-      BigDecimal rate,
-      int period,
-      String direction) {
+      String currency, BigDecimal amount, BigDecimal rate, int period, String direction) {
 
     this.request = "/v1/offer/new";
-    this.nonce = nonce;
     this.currency = currency;
     this.amount = amount;
     this.rate = rate;
@@ -51,16 +43,6 @@ public class BitfinexNewOfferRequest {
   public void setRequest(String request) {
 
     this.request = request;
-  }
-
-  public String getNonce() {
-
-    return nonce;
-  }
-
-  public void setNonce(String nonce) {
-
-    this.nonce = nonce;
   }
 
   public String getCurrency() {

@@ -6,12 +6,15 @@ import java.util.ArrayList;
 import java.util.List;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.client.ratelimit.RateLimitContext;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.uniswap.DeploymentRegistry.Contract;
 import org.knowm.xchange.uniswap.DeploymentRegistry.Deployment;
 import org.knowm.xchange.uniswap.client.UniswapNodeClient;
+import org.knowm.xchange.uniswap.client.UniswapRateLimitPolicy;
 import org.knowm.xchange.uniswap.protocol.Abi;
 import org.knowm.xchange.uniswap.service.UniswapAccountService;
 import org.knowm.xchange.uniswap.service.UniswapMarketDataService;
@@ -41,6 +44,8 @@ public class UniswapExchange extends BaseExchange {
     specification.setShouldLoadRemoteMetaData(false);
     specification.setExchangeName("Uniswap");
     specification.setExchangeDescription("Uniswap v4 (Ethereum mainnet)");
+    specification.getResilience().setRateLimitPolicy(UniswapRateLimitPolicy.defaultPolicy());
+    specification.getResilience().setRateLimiterEnabled(true);
     return specification;
   }
 
@@ -48,25 +53,49 @@ public class UniswapExchange extends BaseExchange {
   public void applySpecification(ExchangeSpecification exchangeSpecification) {
     // Parse and validate the typed configuration before anything becomes usable.
     this.config = UniswapConfig.from(exchangeSpecification);
+    // The base class registers the rate-limit policy into the effective context; the node client
+    // is created afterwards so that it shares that context.
+    super.applySpecification(exchangeSpecification);
     if (this.nodeClient == null) {
-      this.nodeClient =
-          UniswapNodeClient.create(
-              config.rpcUrl(),
-              exchangeSpecification.getHttpConnTimeout(),
-              exchangeSpecification.getHttpReadTimeout());
+      this.nodeClient = newNodeClient(exchangeSpecification, config);
     }
     if (this.signer == null) {
       this.signer =
           new LocalKeystoreSigner(
-              config.keystorePath(), secretProvider(config.passwordProviderClass()), config.walletAddress());
+              config.keystorePath(),
+              secretProvider(config.passwordProviderClass()),
+              config.walletAddress());
     }
     if (this.nonceManager == null) {
       this.nonceManager = new NonceManager();
     }
-    super.applySpecification(exchangeSpecification);
     if (config.verifyOnStartup()) {
       verifyChainAndDeployments();
     }
+  }
+
+  private static UniswapNodeClient newNodeClient(
+      ExchangeSpecification specification, UniswapConfig config) {
+    ExchangeSpecification.ResilienceSpecification resilience = specification.getResilience();
+    if (!resilience.isRateLimiterEnabled()) {
+      return UniswapNodeClient.createUnmetered(
+          config.rpcUrl(), specification.getHttpConnTimeout(), specification.getHttpReadTimeout());
+    }
+    RateLimitPolicy policy =
+        resilience.getRateLimitPolicy() == null
+            ? UniswapRateLimitPolicy.defaultPolicy()
+            : resilience.getRateLimitPolicy();
+    RateLimitContext context =
+        resilience.getRateLimitContext() == null
+            ? new RateLimitContext()
+            : resilience.getRateLimitContext();
+    return UniswapNodeClient.create(
+        config.rpcUrl(),
+        specification.getHttpConnTimeout(),
+        specification.getHttpReadTimeout(),
+        policy,
+        context,
+        resilience.getRateLimitUserScope());
   }
 
   @Override
@@ -91,8 +120,8 @@ public class UniswapExchange extends BaseExchange {
   }
 
   /**
-   * Fail-closed startup verification: the node must report the configured chain id and every
-   * pinned deployment contract must carry the expected runtime bytecode.
+   * Fail-closed startup verification: the node must report the configured chain id and every pinned
+   * deployment contract must carry the expected runtime bytecode.
    */
   private void verifyChainAndDeployments() {
     try {
@@ -108,10 +137,13 @@ public class UniswapExchange extends BaseExchange {
         String code = nodeClient.codeAt(address, atBlock);
         if (code == null || code.length() <= 2) {
           throw new ExchangeException(
-              "no runtime code at " + contract + " address " + address + "; wrong chain or deployment?");
+              "no runtime code at "
+                  + contract
+                  + " address "
+                  + address
+                  + "; wrong chain or deployment?");
         }
-        String actualHash =
-            Abi.toHex(org.web3j.crypto.Hash.sha3(Abi.hexToBytes(code)));
+        String actualHash = Abi.toHex(org.web3j.crypto.Hash.sha3(Abi.hexToBytes(code)));
         String expectedHash = deployment.expectedCodeHash(contract);
         if (!actualHash.equalsIgnoreCase(expectedHash)) {
           throw new ExchangeException(
@@ -135,11 +167,13 @@ public class UniswapExchange extends BaseExchange {
     try {
       Object instance = Class.forName(className).getDeclaredConstructor().newInstance();
       if (!(instance instanceof SecretProvider)) {
-        throw new ExchangeException("password provider " + className + " does not implement SecretProvider");
+        throw new ExchangeException(
+            "password provider " + className + " does not implement SecretProvider");
       }
       return (SecretProvider) instance;
     } catch (ReflectiveOperationException e) {
-      throw new ExchangeException("cannot instantiate password provider " + className + ": " + e.getMessage(), e);
+      throw new ExchangeException(
+          "cannot instantiate password provider " + className + ": " + e.getMessage(), e);
     }
   }
 

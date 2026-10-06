@@ -12,7 +12,6 @@ public class BitfinexReplaceOrderRequest extends BitfinexNewOrderRequest {
   protected boolean useRemaining = false;
 
   public BitfinexReplaceOrderRequest(
-      String nonce,
       long replaceOrderId,
       String symbol,
       BigDecimal amount,
@@ -24,7 +23,7 @@ public class BitfinexReplaceOrderRequest extends BitfinexNewOrderRequest {
       boolean isPostOnly,
       boolean useRemaining) {
 
-    super(nonce, symbol, amount, price, exchange, side, type, isHidden, isPostOnly, null);
+    super(symbol, amount, price, exchange, side, type, isHidden, isPostOnly, null);
 
     request = "/v1/order/cancel/replace";
     this.replaceOrderId = replaceOrderId;

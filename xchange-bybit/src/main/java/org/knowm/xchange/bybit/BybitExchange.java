@@ -64,6 +64,7 @@ public class BybitExchange extends BaseExchange implements Exchange {
         SPECIFIC_PARAM_ACCOUNT_TYPE, BybitAccountType.UNIFIED);
     exchangeSpecification.setExchangeSpecificParametersItem(Exchange.USE_SANDBOX, false);
     exchangeSpecification.setExchangeSpecificParametersItem(SPECIFIC_PARAM_TESTNET, false);
+    exchangeSpecification.getResilience().setRateLimitPolicy(BybitRateLimitPolicy.defaultPolicy());
     exchangeSpecification.getResilience().setRateLimiterEnabled(true);
     AuthUtils.setApiAndSecretKey(exchangeSpecification, "bybit");
     return exchangeSpecification;

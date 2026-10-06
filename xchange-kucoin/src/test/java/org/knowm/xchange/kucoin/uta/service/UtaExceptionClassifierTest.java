@@ -44,7 +44,7 @@ class UtaExceptionClassifierTest {
   }
 
   @Test
-  void rateLimitCodeIsRetryable() {
+  void rateLimitCodeIsOwnedByTheRateLimiterAndNeverRetried() {
     UtaResponse<String> response = new UtaResponse<>();
     response.setCode("429000");
     response.setMsg("Too Many Requests");
@@ -54,7 +54,7 @@ class UtaExceptionClassifierTest {
             () ->
                 UtaExceptionClassifier.classifyingExceptions(
                     () -> response, DOMAIN, ENDPOINT, null, null));
-    assertEquals(RetryClassification.RETRYABLE, e.getRetryClassification());
+    assertEquals(RetryClassification.NON_RETRYABLE, e.getRetryClassification());
     assertTrue(
         UtaExceptionClassifier.mapToExchangeException(e) instanceof RateLimitExceededException);
   }

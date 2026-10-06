@@ -37,7 +37,7 @@ public class BitfinexBaseService extends BaseResilientExchangeService<BitfinexEx
     apiKey = exchange.getExchangeSpecification().getApiKey();
     signatureCreator =
         BitfinexDigest.createInstance(exchange.getExchangeSpecification().getSecretKey());
-    payloadCreator = new BitfinexPayloadDigest();
+    payloadCreator = new BitfinexPayloadDigest(exchange.getNonceFactory());
 
     bitfinexV2 =
         ExchangeRestProxyBuilder.forInterface(

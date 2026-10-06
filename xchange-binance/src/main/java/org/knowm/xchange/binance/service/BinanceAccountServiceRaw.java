@@ -1,6 +1,5 @@
 package org.knowm.xchange.binance.service;
 
-import static org.knowm.xchange.binance.BinanceResilience.REQUEST_WEIGHT_RATE_LIMITER;
 import static org.knowm.xchange.client.ResilienceRegistries.NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME;
 
 import java.io.IOException;
@@ -50,9 +49,10 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
 
   public BinanceAccountInformation account() throws BinanceException, IOException {
     return decorateApiCall(
-            () -> binanceSpotAuth.account(getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
+            () ->
+                binanceSpotAuth.account(
+                    getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("account"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
         .call();
   }
 
@@ -62,7 +62,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                 binanceWallet.getCurrencyInfos(
                     getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("currencyInfo"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
         .call();
   }
 
@@ -80,7 +79,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     : binanceUsdmAuth.futuresAccount(
                         getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("futures-account"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
         .call();
   }
 
@@ -121,7 +119,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("withdraw", NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
         .call();
   }
 
@@ -141,7 +138,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("depositAddress"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -151,7 +147,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                 binanceWallet.assetDetail(
                     getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("assetDetail"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -168,7 +163,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("depositHistory"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -185,7 +179,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("withdrawHistory"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -207,7 +200,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     super.apiKey,
                     super.signatureCreator))
         .withRetry(retry("assetDividend"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call()
         .getData();
   }
@@ -228,7 +220,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     super.apiKey,
                     super.signatureCreator))
         .withRetry(retry("transferHistory"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -248,7 +239,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     super.apiKey,
                     super.signatureCreator))
         .withRetry(retry("transferSubUserHistory"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -269,7 +259,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                         super.apiKey,
                         super.signatureCreator))
             .withRetry(retry("fiatOrders"))
-            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
             .call();
     return response != null ? response.getData() : List.of();
   }
@@ -304,7 +293,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     super.apiKey,
                     super.signatureCreator))
         .withRetry(retry("tradeFee"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -318,7 +306,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     super.apiKey,
                     super.signatureCreator))
         .withRetry(retry("commissionRate"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 20)
         .call();
   }
 
@@ -334,7 +321,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("setMarginType"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -348,7 +334,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("setDualSidePosition"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -363,7 +348,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("setLeverage"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -373,7 +357,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                 binanceWallet.simpleAccount(
                     getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("simpleAccount"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 150)
         .call();
   }
 
@@ -392,7 +375,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("flexiblePosition"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 150)
         .call();
   }
 
@@ -412,7 +394,6 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("lockedPosition"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 150)
         .call();
   }
 }

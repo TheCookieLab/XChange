@@ -1,7 +1,6 @@
 package org.knowm.xchange.kucoin;
 
 import static org.knowm.xchange.kucoin.KucoinExceptionClassifier.classifyingExceptions;
-import static org.knowm.xchange.kucoin.KucoinResilience.PRIVATE_REST_ENDPOINT_RATE_LIMITER;
 
 import java.io.IOException;
 import java.util.List;
@@ -35,7 +34,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                 accountApi.getAccountList(
                     apiKey, digest, nonceFactory, passphrase, currency, accountType))
         .withRetry(retry("accountList"))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
         .call()
         .getData();
   }
@@ -52,14 +50,12 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                             nonceFactory,
                             passphrase,
                             CreateAccountRequest.builder().currency(currency).type(type).build()))
-                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call());
   }
 
   public ApplyWithdrawResponse applyWithdraw(ApplyWithdrawApiRequest req) throws IOException {
     return decorateApiCall(
             () -> withdrawalAPI.applyWithdraw(apiKey, digest, nonceFactory, passphrase, req))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
         .call()
         .getData();
   }
@@ -67,7 +63,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
   public InternalTransferResponse innerTransfer(InnerTransferRequest req) throws IOException {
     return decorateApiCall(
             () -> accountApi.innerTransfer(apiKey, digest, nonceFactory, passphrase, req))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
         .call()
         .getData();
   }
@@ -91,7 +86,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                             endAt,
                             pageSize,
                             currentPage))
-                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call());
   }
 
@@ -121,7 +115,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                             endAt,
                             pageSize,
                             currentPage))
-                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call());
   }
 
@@ -149,7 +142,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                             endAt,
                             pageSize,
                             currentPage))
-                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call());
   }
 
@@ -177,7 +169,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                             endAt,
                             pageSize,
                             currentPage))
-                .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call());
   }
 
@@ -186,7 +177,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
     return decorateApiCall(
             () ->
                 depositAPI.createDepositAddress(apiKey, digest, nonceFactory, passphrase, request))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
         .call()
         .getData();
   }
@@ -201,7 +191,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
             () ->
                 depositAPI.getDepositAddress(
                     apiKey, digest, nonceFactory, passphrase, currencyAdapted, chain))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
         .call()
         .getData();
   }
@@ -210,7 +199,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
     return decorateApiCall(
             () ->
                 depositAPI.getDepositAddresses(apiKey, digest, nonceFactory, passphrase, currency))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
         .call()
         .getData();
   }
@@ -236,7 +224,6 @@ public class KucoinAccountServiceRaw extends KucoinBaseService {
                     currentPage,
                     pageSize))
         .withRetry(retry("getEarnHoldings"))
-        .withRateLimiter(rateLimiter(PRIVATE_REST_ENDPOINT_RATE_LIMITER))
         .call()
         .getData();
   }

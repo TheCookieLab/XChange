@@ -11,10 +11,12 @@ import static org.knowm.xchange.blockchain.service.utils.BlockchainConstants.APP
 import static org.knowm.xchange.blockchain.service.utils.BlockchainConstants.CONTENT_TYPE;
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import java.util.function.UnaryOperator;
 import org.junit.ClassRule;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.blockchain.BlockchainExchange;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 
 public class BlockchainBaseTest {
 
@@ -22,9 +24,16 @@ public class BlockchainBaseTest {
   public static WireMockRule wireMockRule = new WireMockRule(wireMockConfig().dynamicPort());
 
   protected static BlockchainExchange createExchange() {
+    return createExchange(UnaryOperator.identity());
+  }
+
+  protected static BlockchainExchange createExchange(UnaryOperator<RateLimitPolicy> policyTuning) {
     BlockchainExchange exchange =
         ExchangeFactory.INSTANCE.createExchangeWithoutSpecification(BlockchainExchange.class);
     ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification
+        .getResilience()
+        .setRateLimitPolicy(policyTuning.apply(specification.getResilience().getRateLimitPolicy()));
     specification.setHost("localhost");
     specification.setSslUri("http://localhost:" + wireMockRule.port() + "/");
     specification.setPort(wireMockRule.port());

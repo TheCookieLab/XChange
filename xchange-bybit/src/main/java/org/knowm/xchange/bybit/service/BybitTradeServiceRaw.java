@@ -2,9 +2,7 @@ package org.knowm.xchange.bybit.service;
 
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 import static org.knowm.xchange.bybit.BybitAdapters.createBybitExceptionFromResult;
-import static org.knowm.xchange.bybit.BybitResilience.GLOBAL_RATE_LIMITER;
 
-import io.github.resilience4j.ratelimiter.RateLimiter;
 import java.io.IOException;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
@@ -67,15 +65,9 @@ public class BybitTradeServiceRaw extends BybitBaseService {
 
   BybitResult<BybitOrderResponse> amendOrder(BybitAmendOrderPayload payload, BybitCategory category)
       throws IOException {
-    RateLimiter rateLimiter = getAmendOrderRateLimiter(category);
     BybitResult<BybitOrderResponse> amendOrder =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.amendOrder(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter)
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.amendOrder(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!amendOrder.isSuccess()) {
       throw createBybitExceptionFromResult(amendOrder);
     }
@@ -85,13 +77,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
   BybitResult<BybitOrderResponse> placeOrder(BybitPlaceOrderPayload payload, BybitCategory category)
       throws IOException {
     BybitResult<BybitOrderResponse> placeOrder =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.placeOrder(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(getCreateOrderRateLimiter(category))
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.placeOrder(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!placeOrder.isSuccess()) {
       throw createBybitExceptionFromResult(placeOrder);
     }
@@ -101,16 +88,10 @@ public class BybitTradeServiceRaw extends BybitBaseService {
   BybitResult<BybitOrderResponse> cancelOrder(
       BybitCategory category, String symbol, String orderId, String orderLinkId)
       throws IOException {
-    RateLimiter rateLimiter = getCancelOrderRateLimiter(category);
     BybitCancelOrderPayload payload =
         new BybitCancelOrderPayload(category, symbol, orderId, orderLinkId);
-    return decorateApiCall(
-            () ->
-                bybitAuthenticated.cancelOrder(
-                    apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-        .withRateLimiter(rateLimiter)
-        .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-        .call();
+    return bybitAuthenticated.cancelOrder(
+        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
   }
 
   BybitResult<BybitCancelAllOrdersResponse> cancelAllOrders(
@@ -185,12 +166,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
 
   BybitResult<Object> setTradingStop(BybitTradingStopPayload payload) throws IOException {
     BybitResult<Object> response =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.setTradingStop(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.setTradingStop(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!response.isSuccess()) {
       throw createBybitExceptionFromResult(response);
     }
@@ -199,12 +176,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
 
   BybitResult<Object> setRiskLimit(BybitSetRiskLimitPayload payload) throws IOException {
     BybitResult<Object> response =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.setRiskLimit(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.setRiskLimit(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!response.isSuccess()) {
       throw createBybitExceptionFromResult(response);
     }
@@ -213,12 +186,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
 
   BybitResult<Object> addMargin(BybitAddMarginPayload payload) throws IOException {
     BybitResult<Object> response =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.addMargin(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.addMargin(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!response.isSuccess()) {
       throw createBybitExceptionFromResult(response);
     }
@@ -227,12 +196,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
 
   BybitResult<Object> setAutoAddMargin(BybitSetAutoAddMarginPayload payload) throws IOException {
     BybitResult<Object> response =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.setAutoAddMargin(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.setAutoAddMargin(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!response.isSuccess()) {
       throw createBybitExceptionFromResult(response);
     }
@@ -335,12 +300,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
    */
   BybitBatchResult createBatch(BybitBatchPlacePayload payload) throws IOException {
     BybitBatchResult response =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.createBatch(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.createBatch(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!response.isSuccess()) {
       throw new BybitException(response.getRetCode(), response.getRetMsg(), response.getRetExtInfo());
     }
@@ -352,12 +313,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
    */
   BybitBatchResult amendBatch(BybitBatchAmendPayload payload) throws IOException {
     BybitBatchResult response =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.amendBatch(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.amendBatch(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!response.isSuccess()) {
       throw new BybitException(response.getRetCode(), response.getRetMsg(), response.getRetExtInfo());
     }
@@ -369,12 +326,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
    */
   BybitBatchResult cancelBatch(BybitBatchCancelPayload payload) throws IOException {
     BybitBatchResult response =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.cancelBatch(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.cancelBatch(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!response.isSuccess()) {
       throw new BybitException(response.getRetCode(), response.getRetMsg(), response.getRetExtInfo());
     }
@@ -386,12 +339,8 @@ public class BybitTradeServiceRaw extends BybitBaseService {
    */
   BybitResult<BybitPreCheckResult> preCheck(BybitPreCheckPayload payload) throws IOException {
     BybitResult<BybitPreCheckResult> response =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.preCheck(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.preCheck(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     if (!response.isSuccess()) {
       throw createBybitExceptionFromResult(response);
     }

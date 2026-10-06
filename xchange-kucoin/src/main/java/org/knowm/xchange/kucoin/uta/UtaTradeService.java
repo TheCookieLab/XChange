@@ -1,6 +1,5 @@
 package org.knowm.xchange.kucoin.uta;
 
-import static org.knowm.xchange.kucoin.uta.UtaResilience.UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER;
 import static org.knowm.xchange.kucoin.uta.service.UtaConstants.KEY_VERSION;
 import static org.knowm.xchange.kucoin.uta.service.UtaExceptionClassifier.callOrThrow;
 
@@ -18,6 +17,7 @@ import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.dto.trade.UserTrades;
+import org.knowm.xchange.exceptions.RateLimitTerminatedException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kucoin.KucoinExchange;
 import org.knowm.xchange.kucoin.uta.dto.UtaAmendOrderRequest;
@@ -95,7 +95,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                               encryptedPassphrase,
                               KEY_VERSION,
                               request))
-                  .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                   .call(),
           UtaDomains.TRADE,
           "POST /api/ua/v1/unified/order/place",
@@ -169,6 +168,13 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
           null,
           RetryClassification.UNKNOWN_OUTCOME);
     }
+    // A terminal rate-limiter verdict that never reached the engine proves the order was not
+    // placed; only an uncertain dispatch stays unknown-outcome below.
+    if (e.getCause() instanceof RateLimitTerminatedException
+        && ((RateLimitTerminatedException) e.getCause()).getDispatch()
+            != RateLimitTerminatedException.Dispatch.UNCERTAIN) {
+      return e;
+    }
     // Transport-origin failures (no provider code, no HTTP status) or server-side errors after
     // the request reached the engine mean the outcome is unknown: never retryable, reconcile only.
     if ((e.getCode() == null && e.getHttpStatus() == null)
@@ -215,7 +221,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                             KEY_VERSION,
                             request))
                 .withRetry(retry("utaCancelOrder"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.TRADE,
         "POST /api/ua/v1/unified/order/cancel",
@@ -241,7 +246,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                             orderId,
                             clientOid))
                 .withRetry(retry("utaOrderDetail"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.TRADE,
         "GET /api/ua/v1/unified/order/detail",
@@ -279,7 +283,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                             lastId,
                             pageSize))
                 .withRetry(retry("utaOrderHistory"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.TRADE,
         "GET /api/ua/v1/unified/order/history");
@@ -346,7 +349,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                             lastId,
                             pageSize))
                 .withRetry(retry("utaExecutions"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.TRADE,
         "GET /api/ua/v1/unified/order/execution");
@@ -368,7 +370,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                             1,
                             PAGE_SIZE))
                 .withRetry(retry("utaOpenPositions"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.POSITION,
         "GET /api/ua/v1/unified/position/open-list");
@@ -389,7 +390,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                             KEY_VERSION,
                             symbol))
                 .withRetry(retry("utaMarginMode"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.POSITION,
         "GET /api/ua/v1/unified/position/margin-mode");
@@ -416,7 +416,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                             lastId,
                             pageSize))
                 .withRetry(retry("utaPositionHistory"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.POSITION,
         "GET /api/ua/v1/position/history");
@@ -440,7 +439,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                             KEY_VERSION,
                             request))
                 .withRetry(retry("utaBatchCancel"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.TRADE,
         "POST /api/ua/v1/unified/order/cancel-batch");
@@ -461,7 +459,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
                             KEY_VERSION,
                             request))
                 .withRetry(retry("utaAmendOrder"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.TRADE,
         "POST /api/ua/v1/unified/order/amend",
@@ -514,7 +511,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
     }
     return builder.build();
   }
-
 
   @Override
   public boolean cancelOrder(String orderId) throws IOException {
@@ -676,7 +672,6 @@ public class UtaTradeService extends UtaBaseService implements TradeService {
   public TradeHistoryParams createTradeHistoryParams() {
     return new UtaTradeHistoryParams();
   }
-
 
   @Override
   public void verifyOrder(LimitOrder limitOrder) {

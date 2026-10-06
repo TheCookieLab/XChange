@@ -208,7 +208,7 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
     try {
       // Placement is never automatically retried; reconcile on ambiguous transport failure.
       CryptoComResponse response =
-          apiCall("private/advanced/create-order", () -> cryptoCom.createAdvancedOrder(request));
+          decorateApiCall(() -> cryptoCom.createAdvancedOrder(request)).call();
       CryptoComOrderAck ack = toObject(response.getResult(), CryptoComOrderAck.class);
       return new CryptoComOrderPlacementResult(
           CryptoComPlacementOutcome.ACKED,
@@ -226,7 +226,7 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
     params.put("order_id", orderId);
     CryptoComRequest request = buildRequest("private/cancel-order", params);
     CryptoComResponse response =
-        apiCall("private/cancel-order", () -> cryptoCom.cancelOrder(request));
+        decorateApiCall(() -> cryptoCom.cancelOrder(request)).call();
     return toObject(response.getResult(), CryptoComOrderAck.class);
   }
 
@@ -237,7 +237,7 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
       params.put("instrument_name", instrumentName);
     }
     CryptoComRequest request = buildRequest("private/cancel-all-orders", params);
-    apiCall("private/cancel-all-orders", () -> cryptoCom.cancelAllOrders(request));
+    decorateApiCall(() -> cryptoCom.cancelAllOrders(request)).call();
   }
 
   public List<CryptoComOrder> getCryptoComOpenOrders(String instrumentName)
@@ -248,7 +248,7 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
     }
     CryptoComRequest request = buildRequest("private/get-open-orders", params);
     CryptoComResponse response =
-        apiCall("private/get-open-orders", () -> cryptoCom.getOpenOrders(request));
+        decorateApiCall(() -> cryptoCom.getOpenOrders(request)).call();
     return getDataList(response, CryptoComOrder.class);
   }
 
@@ -258,7 +258,7 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
     params.put("order_id", orderId);
     CryptoComRequest request = buildRequest("private/get-order-detail", params);
     CryptoComResponse response =
-        apiCall("private/get-order-detail", () -> cryptoCom.getOrderDetail(request));
+        decorateApiCall(() -> cryptoCom.getOrderDetail(request)).call();
     return toObject(response.getResult(), CryptoComOrder.class);
   }
 
@@ -288,7 +288,7 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
             "private/get-order-history",
             historyParams(instrumentName, startTime, endTime, page, pageSize));
     CryptoComResponse response =
-        apiCall("private/get-order-history", () -> cryptoCom.getOrderHistory(request));
+        decorateApiCall(() -> cryptoCom.getOrderHistory(request)).call();
     return getDataList(response, CryptoComOrder.class);
   }
 
@@ -315,7 +315,7 @@ public class CryptoComTradeServiceRaw extends CryptoComBaseService {
             "private/get-trades",
             historyParams(instrumentName, startTime, endTime, page, pageSize));
     CryptoComResponse response =
-        apiCall("private/get-trades", () -> cryptoCom.getUserTrades(request));
+        decorateApiCall(() -> cryptoCom.getUserTrades(request)).call();
     return getDataList(response, CryptoComUserTrade.class);
   }
 

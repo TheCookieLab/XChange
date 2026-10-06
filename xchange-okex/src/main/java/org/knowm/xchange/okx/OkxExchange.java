@@ -73,6 +73,8 @@ public class OkxExchange extends BaseExchange {
     exchangeSpecification.setExchangeDescription("OKX Exchange");
     // not supported anymore
     exchangeSpecification.setExchangeSpecificParametersItem(PARAM_USE_AWS, false);
+    exchangeSpecification.getResilience().setRateLimitPolicy(OkxRateLimitPolicy.defaultPolicy());
+    exchangeSpecification.getResilience().setRateLimiterEnabled(true);
     return exchangeSpecification;
   }
 

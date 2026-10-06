@@ -1,9 +1,7 @@
 package org.knowm.xchange.cryptocom;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
@@ -26,7 +24,6 @@ public class CryptoComExchange extends BaseExchange implements Exchange {
   protected CryptoCom cryptoCom;
   private final CryptoComRequestIdGenerator requestIdGenerator = new CryptoComRequestIdGenerator();
   private final ResilienceRegistries resilienceRegistries = new ResilienceRegistries();
-  private volatile Set<String> rateLimitedMethods = Collections.emptySet();
 
   public CryptoCom getCryptoCom() {
     return cryptoCom;
@@ -36,14 +33,15 @@ public class CryptoComExchange extends BaseExchange implements Exchange {
     return requestIdGenerator.next();
   }
 
-  /** Whether a per-method rate limiter was configured for {@code apiMethod} by the exchange rate
-   * policy; services attach the limiter only for these methods. */
-  public boolean isMethodRateLimited(String apiMethod) {
-    return rateLimitedMethods.contains(apiMethod);
-  }
-
   @Override
   protected void initServices() {
+    // Built here, not in applySpecification(): super.applySpecification() registers the rate-limit
+    // policy into the shared context before initServices(), and rate-limited proxies need it.
+    Interceptor errorInterceptor = new CryptoComErrorInterceptor();
+    this.cryptoCom =
+        ExchangeRestProxyBuilder.forInterface(CryptoCom.class, exchangeSpecification)
+            .customInterceptor(errorInterceptor)
+            .build();
     this.marketDataService = new CryptoComMarketDataService(this, getResilienceRegistries());
     this.tradeService = new CryptoComTradeService(this, getResilienceRegistries());
     this.accountService = new CryptoComAccountService(this, getResilienceRegistries());
@@ -64,28 +62,14 @@ public class CryptoComExchange extends BaseExchange implements Exchange {
     spec.setExchangeDescription("Crypto.com Exchange.");
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, false);
     AuthUtils.setApiAndSecretKey(spec, "cryptocom");
+    spec.getResilience().setRateLimitPolicy(CryptoComRateLimitPolicy.defaultPolicy());
+    spec.getResilience().setRateLimiterEnabled(true);
     return spec;
   }
 
   @Override
   public void applySpecification(ExchangeSpecification exchangeSpecification) {
     concludeHostParams(exchangeSpecification);
-
-    // Opt-in per-method rate policy (spec param cryptocom_rate_policy); an empty policy is a no-op.
-    CryptoComRatePolicy ratePolicy =
-        CryptoComRatePolicy.parse(
-            (String)
-                exchangeSpecification.getExchangeSpecificParametersItem(
-                    CryptoComRatePolicy.SPEC_PARAM));
-    ratePolicy.registerRateLimiters(resilienceRegistries);
-    this.rateLimitedMethods =
-        Collections.unmodifiableSet(ratePolicy.limitsPerMinute().keySet());
-
-    Interceptor errorInterceptor = new CryptoComErrorInterceptor();
-    this.cryptoCom =
-        ExchangeRestProxyBuilder.forInterface(CryptoCom.class, exchangeSpecification)
-            .customInterceptor(errorInterceptor)
-            .build();
 
     super.applySpecification(exchangeSpecification);
   }

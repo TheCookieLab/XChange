@@ -39,7 +39,7 @@ public class BitfinexExchange extends BaseExchange {
   @Override
   public ResilienceRegistries getResilienceRegistries() {
     if (RESILIENCE_REGISTRIES == null) {
-      RESILIENCE_REGISTRIES = BitfinexResilience.createRegistries();
+      RESILIENCE_REGISTRIES = new ResilienceRegistries();
     }
     return RESILIENCE_REGISTRIES;
   }
@@ -53,6 +53,9 @@ public class BitfinexExchange extends BaseExchange {
     exchangeSpecification.setPort(80);
     exchangeSpecification.setExchangeName("BitFinex");
     exchangeSpecification.setExchangeDescription("BitFinex is a bitcoin exchange.");
+    exchangeSpecification
+        .getResilience()
+        .setRateLimitPolicy(BitfinexRateLimitPolicy.defaultPolicy());
     exchangeSpecification.getResilience().setRateLimiterEnabled(true);
     exchangeSpecification.getResilience().setRetryEnabled(true);
 

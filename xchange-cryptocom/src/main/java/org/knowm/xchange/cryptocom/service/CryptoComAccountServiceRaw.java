@@ -36,7 +36,7 @@ public class CryptoComAccountServiceRaw extends CryptoComBaseService {
 
   public List<CryptoComBalance> getCryptoComBalances() throws IOException, CryptoComException {
     CryptoComRequest request = buildRequest("private/user-balance", null);
-    CryptoComResponse response = apiCall("private/user-balance", () -> cryptoCom.userBalance(request));
+    CryptoComResponse response = decorateApiCall(() -> cryptoCom.userBalance(request)).call();
     return getDataList(response, CryptoComBalance.class);
   }
 
@@ -48,7 +48,7 @@ public class CryptoComAccountServiceRaw extends CryptoComBaseService {
       params.put("instrument_name", instrumentName);
     }
     CryptoComRequest request = buildRequest("private/get-fee-rate", params);
-    CryptoComResponse response = apiCall("private/get-fee-rate", () -> cryptoCom.getFeeRate(request));
+    CryptoComResponse response = decorateApiCall(() -> cryptoCom.getFeeRate(request)).call();
     return getDataList(response, CryptoComFeeRate.class);
   }
 
@@ -63,14 +63,14 @@ public class CryptoComAccountServiceRaw extends CryptoComBaseService {
       params.put("currency", currency);
     }
     CryptoComRequest request = buildRequest("private/get-positions", params);
-    CryptoComResponse response = apiCall("private/get-positions", () -> cryptoCom.getPositions(request));
+    CryptoComResponse response = decorateApiCall(() -> cryptoCom.getPositions(request)).call();
     return getDataList(response, CryptoComPosition.class);
   }
 
   /** Account/risk summary rows (margin risk model, account types) from {@code private/get-accounts}. */
   public List<CryptoComAccount> getCryptoComAccounts() throws IOException, CryptoComException {
     CryptoComRequest request = buildRequest("private/get-accounts", null);
-    CryptoComResponse response = apiCall("private/get-accounts", () -> cryptoCom.getAccounts(request));
+    CryptoComResponse response = decorateApiCall(() -> cryptoCom.getAccounts(request)).call();
     return getDataList(response, CryptoComAccount.class);
   }
 
@@ -108,7 +108,7 @@ public class CryptoComAccountServiceRaw extends CryptoComBaseService {
     params.put("page_size", pageSize);
     CryptoComRequest request = buildRequest("private/user-balance-history", params);
     CryptoComResponse response =
-        apiCall("private/get-user-balance-history", () -> cryptoCom.getUserBalanceHistory(request));
+        decorateApiCall(() -> cryptoCom.getUserBalanceHistory(request)).call();
     return getDataList(response, CryptoComUserBalanceHistoryRecord.class);
   }
 

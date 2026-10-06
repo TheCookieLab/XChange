@@ -130,7 +130,6 @@ public class BitfinexTradeService extends BitfinexTradeServiceRaw implements Tra
 
     BitfinexReplaceOrderRequest request =
         new BitfinexReplaceOrderRequest(
-            String.valueOf(exchange.getNonceFactory().createValue()),
             Long.valueOf(order.getId()),
             BitfinexAdapters.adaptCurrencyPair(order.getCurrencyPair()),
             order.getOriginalAmount(),

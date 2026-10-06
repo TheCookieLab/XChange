@@ -65,6 +65,7 @@ Legend: ✅ implemented · ⚠️ partial · ❌ not implemented.
 | Structured errors | product family, endpoint, code, retry classification, client order id, redacted ✅ |
 | Retry classification | `BinanceErrorClassifier` (replay-safe / no-retry / reconcile / rate-limited / transient / auth) ✅ |
 | Endpoint policies | `BinanceEndpointPolicies` registry (weight, order-count, retry safety) ✅ |
+| REST rate limiting | xchange-core limiter via `BinanceRateLimitPolicy` (weights, order counts, 429/418 cooldown, replay only for replay-safe operations) ✅ |
 | Rate-limit telemetry | `x-mbx-used-weight-1m`, `x-mbx-order-count-10s`, `Retry-After` parsing ✅ |
 | Redaction | API keys, signatures, PEM private keys ✅ |
 

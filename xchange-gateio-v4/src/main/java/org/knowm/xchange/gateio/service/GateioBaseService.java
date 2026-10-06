@@ -1,13 +1,12 @@
 package org.knowm.xchange.gateio.service;
 
 import jakarta.ws.rs.HeaderParam;
-import lombok.SneakyThrows;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.gateio.Gateio;
 import org.knowm.xchange.gateio.GateioExchange;
 import org.knowm.xchange.gateio.GateioV4Authenticated;
-import org.knowm.xchange.gateio.config.Config;
 import org.knowm.xchange.gateio.config.GateioJacksonObjectMapperFactory;
 import org.knowm.xchange.service.BaseResilientExchangeService;
 import org.knowm.xchange.service.BaseService;
@@ -21,9 +20,14 @@ public class GateioBaseService extends BaseResilientExchangeService<GateioExchan
   protected final GateioV4Authenticated gateioV4Authenticated;
   protected final ParamsDigest gateioV4ParamsDigest;
 
-  @SneakyThrows
   public GateioBaseService(GateioExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
+    ExchangeSpecification.ResilienceSpecification resilience =
+        exchange.getExchangeSpecification().getResilience();
+    boolean rateLimited =
+        resilience != null
+            && resilience.isRateLimiterEnabled()
+            && resilience.getRateLimitPolicy() != null;
     gateio =
         ExchangeRestProxyBuilder.forInterface(Gateio.class, exchange.getExchangeSpecification())
             .clientConfigCustomizer(
@@ -33,11 +37,6 @@ public class GateioBaseService extends BaseResilientExchangeService<GateioExchan
                   clientConfig.addDefaultParam(HeaderParam.class, "X-Gate-Size-Decimal", "1");
                 }
             )
-            .restProxyFactory(
-                Config.getInstance()
-                    .getRestProxyFactoryClass()
-                    .getDeclaredConstructor()
-                    .newInstance())
             .build();
     apiKey = exchange.getExchangeSpecification().getApiKey();
 
@@ -48,17 +47,15 @@ public class GateioBaseService extends BaseResilientExchangeService<GateioExchan
                 clientConfig -> {
                   clientConfig.setJacksonObjectMapperFactory(
                       new GateioJacksonObjectMapperFactory());
-                  // The amend-order endpoint uses PATCH, which the default
-                  // HttpURLConnection transport rejects; rescu's Apache client
-                  // supports it (org.apache.httpcomponents:httpclient).
-                  clientConfig.setConnectionType(HttpConnectionType.apache);
+                  // The amend-order endpoint uses PATCH, which the default HttpURLConnection
+                  // transport rejects. With the core rate limiter enabled the core transport
+                  // carries it; only a limiter-less specification needs rescu's Apache client
+                  // (org.apache.httpcomponents:httpclient), which the core boundary refuses.
+                  if (!rateLimited) {
+                    clientConfig.setConnectionType(HttpConnectionType.apache);
+                  }
                   clientConfig.addDefaultParam(HeaderParam.class, "X-Gate-Size-Decimal", "1");
                 })
-            .restProxyFactory(
-                Config.getInstance()
-                    .getRestProxyFactoryClass()
-                    .getDeclaredConstructor()
-                    .newInstance())
             .build();
 
     gateioV4ParamsDigest =

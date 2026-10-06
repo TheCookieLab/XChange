@@ -1,13 +1,11 @@
 package org.knowm.xchange.bitfinex.v1.dto.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
-public class BitfinexDepositAddressRequest {
+public class BitfinexDepositAddressRequest extends BitfinexAuthenticatedRequest {
   @JsonProperty("request")
   protected String request;
-
-  @JsonProperty("nonce")
-  protected String nonce;
 
   @JsonProperty("method")
   private String method;
@@ -18,9 +16,8 @@ public class BitfinexDepositAddressRequest {
   @JsonProperty("renew")
   private int renew;
 
-  public BitfinexDepositAddressRequest(String nonce, String method, String wallet_name, int renew) {
+  public BitfinexDepositAddressRequest(String method, String wallet_name, int renew) {
     this.request = "/v1/deposit/new";
-    this.nonce = String.valueOf(nonce);
     this.method = method;
     this.wallet_name = wallet_name;
     this.renew = renew;
@@ -56,13 +53,5 @@ public class BitfinexDepositAddressRequest {
 
   public void setRequest(String request) {
     this.request = request;
-  }
-
-  public String getNonce() {
-    return nonce;
-  }
-
-  public void setNonce(String nonce) {
-    this.nonce = nonce;
   }
 }

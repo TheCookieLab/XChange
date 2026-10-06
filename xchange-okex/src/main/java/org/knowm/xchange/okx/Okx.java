@@ -29,17 +29,6 @@ public interface Okx {
   String fundingRateHistoryPath = "/public/funding-rate-history"; // Stated as 10 req/2 sec
   String candlesHistoryPath = "/market/history-candles"; // Stated as 20 req/2 sec
 
-  // To avoid 429s, actual req/second may need to be lowered!
-  OkxRateLimitPolicy publicPathRateLimits =
-      OkxRateLimitPolicy.builder()
-          .limit(instrumentsPath, 8, 1)
-          .limit(underlyingPath, 10, 2)
-          .limit(tickerPath, 8, 1)
-          .limit(tickersPath, 8, 1)
-          .limit(fundingRateHistoryPath, 4, 1)
-          .limit(candlesHistoryPath, 8, 1)
-          .build();
-
   @GET
   @Path(instrumentsPath)
   OkxResponse<List<OkxInstrument>> getInstruments(

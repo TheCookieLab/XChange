@@ -2,14 +2,12 @@ package org.knowm.xchange.bitfinex.v1.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
-public class BitfinexNewOrderRequest {
+public class BitfinexNewOrderRequest extends BitfinexAuthenticatedRequest {
 
   @JsonProperty("request")
   protected String request;
-
-  @JsonProperty("nonce")
-  protected String nonce;
 
   @JsonProperty("symbol")
   protected String symbol;
@@ -45,7 +43,6 @@ public class BitfinexNewOrderRequest {
   protected String sell_price_oco;
 
   public BitfinexNewOrderRequest(
-      String nonce,
       String symbol,
       BigDecimal amount,
       BigDecimal price,
@@ -55,7 +52,6 @@ public class BitfinexNewOrderRequest {
       BigDecimal ocoAmount) {
 
     this.request = "/v1/order/new";
-    this.nonce = nonce;
     this.symbol = symbol;
     if (amount != null) {
       this.amount = amount.toPlainString();
@@ -77,7 +73,6 @@ public class BitfinexNewOrderRequest {
   }
 
   public BitfinexNewOrderRequest(
-      String nonce,
       String symbol,
       BigDecimal amount,
       BigDecimal price,
@@ -88,7 +83,7 @@ public class BitfinexNewOrderRequest {
       boolean isPostOnly,
       BigDecimal ocoAmount) {
 
-    this(nonce, symbol, amount, price, exchange, side, type, ocoAmount);
+    this(symbol, amount, price, exchange, side, type, ocoAmount);
     this.is_hidden = isHidden;
     this.is_postonly = isPostOnly;
   }
@@ -101,16 +96,6 @@ public class BitfinexNewOrderRequest {
   public void setRequest(String request) {
 
     this.request = request;
-  }
-
-  public String getNonce() {
-
-    return nonce;
-  }
-
-  public void setNonce(String nonce) {
-
-    this.nonce = nonce;
   }
 
   public String getSide() {

@@ -19,7 +19,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
-import org.knowm.xchange.client.ResilienceUtils;
 import org.knowm.xchange.cryptocom.CryptoCom;
 import org.knowm.xchange.cryptocom.CryptoComExchange;
 import org.knowm.xchange.cryptocom.dto.CryptoComRequest;
@@ -228,7 +227,7 @@ public class CryptoComTradeServiceRawTest {
   public void standardOrder_staysOutsideTheResilienceChain() throws Exception {
     // A non-idempotent placement is deliberately NOT wrapped in resilience decorators: an
     // automatic retry could double-fill after an ambiguous transport failure, so the standard
-    // order must reach the wire directly (no apiCall limiter/decorator key, no retry).
+    // order must reach the wire directly (no decorator, no retry).
     CryptoCom cryptoCom = mock(CryptoCom.class);
     when(cryptoCom.createOrder(any()))
         .thenAnswer(
@@ -240,17 +239,16 @@ public class CryptoComTradeServiceRawTest {
               response.setResult(result);
               return response;
             });
-    RecordingRaw raw = newRecordingRaw(cryptoCom);
+    CryptoComTradeServiceRaw raw = newRaw(cryptoCom);
 
     raw.createCryptoComOrder(
         "BTC_USDT", CryptoComOrderSide.BUY, CryptoComOrderType.LIMIT, "50000", "0.5", null, "client-ABC");
 
-    assertThat(raw.lastApiMethod).isNull();
     verify(cryptoCom, times(1)).createOrder(any());
   }
 
   @Test
-  public void advancedOrder_limiterKeyMatchesTheWireMethod() throws Exception {
+  public void advancedOrder_usesTheAdvancedWireMethod() throws Exception {
     CryptoCom cryptoCom = mock(CryptoCom.class);
     when(cryptoCom.createAdvancedOrder(any()))
         .thenAnswer(
@@ -262,7 +260,7 @@ public class CryptoComTradeServiceRawTest {
               response.setResult(result);
               return response;
             });
-    RecordingRaw raw = newRecordingRaw(cryptoCom);
+    CryptoComTradeServiceRaw raw = newRaw(cryptoCom);
 
     raw.createCryptoComAdvancedOrder(
         "BTC_USDT",
@@ -275,7 +273,7 @@ public class CryptoComTradeServiceRawTest {
         CryptoComTimeInForce.GOOD_TILL_CANCEL,
         "client-STOP");
 
-    assertThat(raw.lastApiMethod).isEqualTo("private/advanced/create-order");
+    assertThat(lastRequest.getMethod()).isEqualTo("private/advanced/create-order");
     verify(cryptoCom, times(1)).createAdvancedOrder(any());
   }
 
@@ -454,23 +452,6 @@ public class CryptoComTradeServiceRawTest {
 
   private CryptoComRequest lastRequest;
 
-  /** Raw-service subclass that records the per-method resilience key used by apiCall. */
-  private static final class RecordingRaw extends CryptoComTradeServiceRaw {
-
-    String lastApiMethod;
-
-    RecordingRaw(CryptoComExchange exchange, ResilienceRegistries resilienceRegistries) {
-      super(exchange, resilienceRegistries);
-    }
-
-    @Override
-    protected <T> T apiCall(String apiMethod, ResilienceUtils.CallableApi<T> callable)
-        throws IOException {
-      lastApiMethod = apiMethod;
-      return super.apiCall(apiMethod, callable);
-    }
-  }
-
   private CryptoComTradeServiceRaw newRaw() throws Exception {
     return newRaw("key", "secret");
   }
@@ -518,17 +499,6 @@ public class CryptoComTradeServiceRawTest {
     when(exchange.getCryptoCom()).thenReturn(cryptoCom);
     when(exchange.nextRequestId()).thenReturn(1L);
     return new CryptoComTradeService(exchange, new ResilienceRegistries());
-  }
-
-  private RecordingRaw newRecordingRaw(CryptoCom cryptoCom) throws Exception {
-    CryptoComExchange exchange = mock(CryptoComExchange.class);
-    ExchangeSpecification spec = new ExchangeSpecification(CryptoComExchange.class);
-    spec.setApiKey("key");
-    spec.setSecretKey("secret");
-    when(exchange.getExchangeSpecification()).thenReturn(spec);
-    when(exchange.getCryptoCom()).thenReturn(cryptoCom);
-    when(exchange.nextRequestId()).thenReturn(1L);
-    return new RecordingRaw(exchange, new ResilienceRegistries());
   }
 
   private CryptoComTradeServiceRaw newRaw(CryptoCom cryptoCom, String apiKey, String secretKey)

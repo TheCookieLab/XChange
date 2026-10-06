@@ -1,7 +1,5 @@
 package org.knowm.xchange.bitfinex.service;
 
-import static org.knowm.xchange.bitfinex.BitfinexResilience.BITFINEX_RATE_LIMITER;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -54,13 +52,8 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
       return decorateApiCall(
               () ->
                   bitfinex.tradingFees(
-                      apiKey,
-                      payloadCreator,
-                      signatureCreator,
-                      new BitfinexTradingFeesRequest(
-                          String.valueOf(exchange.getNonceFactory().createValue()))))
+                      apiKey, payloadCreator, signatureCreator, new BitfinexTradingFeesRequest()))
           .withRetry(retry("account-tradingFees"))
-          .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
           .call();
     } catch (BitfinexException e) {
       throw new ExchangeException(e);
@@ -71,13 +64,8 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
     return decorateApiCall(
             () ->
                 bitfinex.balances(
-                    apiKey,
-                    payloadCreator,
-                    signatureCreator,
-                    new BitfinexBalancesRequest(
-                        String.valueOf(exchange.getNonceFactory().createValue()))))
+                    apiKey, payloadCreator, signatureCreator, new BitfinexBalancesRequest()))
         .withRetry(retry("account-accountInfo"))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -85,32 +73,20 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
     return decorateApiCall(
             () ->
                 bitfinex.marginInfos(
-                    apiKey,
-                    payloadCreator,
-                    signatureCreator,
-                    new BitfinexMarginInfosRequest(
-                        String.valueOf(exchange.getNonceFactory().createValue()))))
+                    apiKey, payloadCreator, signatureCreator, new BitfinexMarginInfosRequest()))
         .withRetry(retry("account-marginInfo"))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
   public BitfinexDepositWithdrawalHistoryResponse[] getDepositWithdrawalHistory(
       String currency, String method, Date since, Date until, Integer limit) throws IOException {
     BitfinexDepositWithdrawalHistoryRequest request =
-        new BitfinexDepositWithdrawalHistoryRequest(
-            String.valueOf(exchange.getNonceFactory().createValue()),
-            currency,
-            method,
-            since,
-            until,
-            limit);
+        new BitfinexDepositWithdrawalHistoryRequest(currency, method, since, until, limit);
     return decorateApiCall(
             () ->
                 bitfinex.depositWithdrawalHistory(
                     apiKey, payloadCreator, signatureCreator, request))
         .withRetry(retry("account-withdrawalHistory"))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -141,16 +117,10 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
 
     BitfinexWithdrawalRequest req =
         new BitfinexWithdrawalRequest(
-            String.valueOf(exchange.getNonceFactory().createValue()),
-            withdrawType,
-            walletSelected,
-            amount,
-            address,
-            tagOrPaymentId);
+            withdrawType, walletSelected, amount, address, tagOrPaymentId);
     req.setCurrency(currency);
     BitfinexWithdrawalResponse[] withdrawResponse =
         decorateApiCall(() -> bitfinex.withdraw(apiKey, payloadCreator, signatureCreator, req))
-            .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
             .call();
     if ("error".equalsIgnoreCase(withdrawResponse[0].getStatus())) {
       throw new ExchangeException(withdrawResponse[0].getMessage());
@@ -201,12 +171,7 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                     apiKey,
                     payloadCreator,
                     signatureCreator,
-                    new BitfinexDepositAddressRequest(
-                        String.valueOf(exchange.getNonceFactory().createValue()),
-                        finalType,
-                        "exchange",
-                        0)))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
+                    new BitfinexDepositAddressRequest(finalType, "exchange", 0)))
         .call();
   }
 
@@ -217,11 +182,8 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                     apiKey,
                     payloadCreator,
                     signatureCreator,
-                    new BitfinexNonceOnlyRequest(
-                        "/v1/account_fees",
-                        String.valueOf(exchange.getNonceFactory().createValue()))))
+                    new BitfinexNonceOnlyRequest("/v1/account_fees")))
         .withRetry(retry("account-accountFees"))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -233,15 +195,8 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                     apiKey,
                     payloadCreator,
                     signatureCreator,
-                    new BitfinexBalanceHistoryRequest(
-                        String.valueOf(exchange.getNonceFactory().createValue()),
-                        currency,
-                        since,
-                        until,
-                        limit,
-                        wallet)))
+                    new BitfinexBalanceHistoryRequest(currency, since, until, limit, wallet)))
         .withRetry(retry("account-balanceHistory"))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -260,7 +215,6 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                       limit,
                       new LedgerRequest(category)))
           .withRetry(retry("account-ledgerEntries"))
-          .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
           .call();
     }
     return decorateApiCall(
@@ -275,7 +229,6 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                     limit,
                     new LedgerRequest(category)))
         .withRetry(retry("account-ledgerEntries"))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -293,7 +246,6 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                       limit,
                       EmptyRequest.INSTANCE))
           .withRetry(retry("account-movementHistory"))
-          .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
           .call();
     }
 
@@ -309,7 +261,6 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                     limit,
                     EmptyRequest.INSTANCE))
         .withRetry(retry("account-movementHistory"))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -319,7 +270,6 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
                 bitfinexV2.getWallets(
                     exchange.getNonceFactory(), apiKey, signatureV2, EmptyRequest.INSTANCE))
         .withRetry(retry("account-wallets"))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -329,7 +279,6 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
             () ->
                 bitfinexV2.transferBetweenWallets(
                     exchange.getNonceFactory(), apiKey, signatureV2, req))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -339,7 +288,6 @@ public class BitfinexAccountServiceRaw extends BitfinexBaseService {
             () ->
                 bitfinexV2.updateCollateralDerivativePosition(
                     exchange.getNonceFactory(), apiKey, signatureV2, req))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 }

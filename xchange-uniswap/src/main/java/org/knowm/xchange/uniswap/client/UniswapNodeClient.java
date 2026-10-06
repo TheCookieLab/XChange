@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import okhttp3.OkHttpClient;
+import org.knowm.xchange.client.ratelimit.RateLimitContext;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.uniswap.protocol.Abi;
 import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
@@ -16,13 +19,11 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.Transaction;
-import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.EthTransaction;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
-import org.web3j.protocol.http.HttpService;
 
 /**
  * Small client boundary around web3j's JSON-RPC transport.
@@ -40,16 +41,60 @@ public final class UniswapNodeClient implements AutoCloseable {
     this.web3j = web3j;
   }
 
-  /** Builds a client for an http(s) endpoint with the given connect/read timeouts (0 = default). */
-  public static UniswapNodeClient create(String rpcUrl, int connectTimeoutMillis, int readTimeoutMillis) {
-    OkHttpClient.Builder builder = new OkHttpClient.Builder();
+  /**
+   * Builds a client for an http(s) endpoint whose every JSON-RPC wire attempt is admitted by the
+   * rate limiter.
+   *
+   * @param rpcUrl the node endpoint
+   * @param connectTimeoutMillis connect timeout, 0 for the OkHttp default
+   * @param readTimeoutMillis read timeout, 0 for the OkHttp default
+   * @param policy the rate-limit policy, normally {@link UniswapRateLimitPolicy#defaultPolicy()}
+   * @param context the rate-limit context that owns the budget state
+   * @param userScope the opaque user-scope binding, or {@code null} for the shared default
+   */
+  public static UniswapNodeClient create(
+      String rpcUrl,
+      int connectTimeoutMillis,
+      int readTimeoutMillis,
+      RateLimitPolicy policy,
+      RateLimitContext context,
+      String userScope) {
+    Objects.requireNonNull(policy, "policy");
+    Objects.requireNonNull(context, "context");
+    return build(rpcUrl, connectTimeoutMillis, readTimeoutMillis, policy, context, userScope);
+  }
+
+  /**
+   * Builds a client without any rate limiting, for specifications that explicitly disable the rate
+   * limiter.
+   */
+  public static UniswapNodeClient createUnmetered(
+      String rpcUrl, int connectTimeoutMillis, int readTimeoutMillis) {
+    return build(rpcUrl, connectTimeoutMillis, readTimeoutMillis, null, null, null);
+  }
+
+  private static UniswapNodeClient build(
+      String rpcUrl,
+      int connectTimeoutMillis,
+      int readTimeoutMillis,
+      RateLimitPolicy policy,
+      RateLimitContext context,
+      String userScope) {
+    // Redirects and silent connection-failure retries would put a second request on the wire
+    // without a second rate admission (and could replay a transaction broadcast).
+    OkHttpClient.Builder builder =
+        new OkHttpClient.Builder()
+            .retryOnConnectionFailure(false)
+            .followRedirects(false)
+            .followSslRedirects(false);
     if (connectTimeoutMillis > 0) {
       builder.connectTimeout(connectTimeoutMillis, TimeUnit.MILLISECONDS);
     }
     if (readTimeoutMillis > 0) {
       builder.readTimeout(readTimeoutMillis, TimeUnit.MILLISECONDS);
     }
-    HttpService service = new HttpService(rpcUrl, builder.build(), false);
+    MeteredHttpService service =
+        new MeteredHttpService(rpcUrl, builder.build(), policy, context, userScope);
     return new UniswapNodeClient(Web3j.build(service));
   }
 
@@ -71,8 +116,7 @@ public final class UniswapNodeClient implements AutoCloseable {
   /** Result of an {@code eth_call}: raw output bytes, or empty for a revert with no data. */
   public byte[] call(String from, String to, byte[] data, BigInteger atBlock) throws IOException {
     Transaction transaction = Transaction.createEthCallTransaction(from, to, Abi.toHex(data));
-    EthCall response =
-        web3j.ethCall(transaction, DefaultBlockParameter.valueOf(atBlock)).send();
+    EthCall response = web3j.ethCall(transaction, DefaultBlockParameter.valueOf(atBlock)).send();
     if (response.hasError()) {
       throw new IOException("eth_call to " + to + " failed: " + response.getError().getMessage());
     }
@@ -85,10 +129,7 @@ public final class UniswapNodeClient implements AutoCloseable {
 
   /** Native balance of an address at a block. */
   public BigInteger nativeBalance(String address, BigInteger atBlock) throws IOException {
-    return web3j
-        .ethGetBalance(address, DefaultBlockParameter.valueOf(atBlock))
-        .send()
-        .getBalance();
+    return web3j.ethGetBalance(address, DefaultBlockParameter.valueOf(atBlock)).send().getBalance();
   }
 
   /** ERC-20 balance of an owner at a block, via {@code balanceOf}. */
@@ -115,8 +156,7 @@ public final class UniswapNodeClient implements AutoCloseable {
 
   /** Broadcasts a signed transaction and returns the node-reported hash. */
   public String sendRawTransaction(byte[] signedBytes) throws IOException {
-    EthSendTransaction response =
-        web3j.ethSendRawTransaction(Abi.toHex(signedBytes)).send();
+    EthSendTransaction response = web3j.ethSendRawTransaction(Abi.toHex(signedBytes)).send();
     if (response.hasError()) {
       throw new IOException("eth_sendRawTransaction failed: " + response.getError().getMessage());
     }
@@ -124,8 +164,8 @@ public final class UniswapNodeClient implements AutoCloseable {
   }
 
   /** Looks up a transaction by hash; empty when the node has never seen it. */
-  public Optional<org.web3j.protocol.core.methods.response.Transaction> transactionByHash(String hash)
-      throws IOException {
+  public Optional<org.web3j.protocol.core.methods.response.Transaction> transactionByHash(
+      String hash) throws IOException {
     EthTransaction response = web3j.ethGetTransactionByHash(hash).send();
     return response.getTransaction();
   }
@@ -139,7 +179,10 @@ public final class UniswapNodeClient implements AutoCloseable {
   public BigInteger baseFeePerGas() throws IOException {
     try {
       var feeHistory =
-          web3j.ethFeeHistory(1, DefaultBlockParameterName.LATEST, Collections.emptyList()).send().getFeeHistory();
+          web3j
+              .ethFeeHistory(1, DefaultBlockParameterName.LATEST, Collections.emptyList())
+              .send()
+              .getFeeHistory();
       List<BigInteger> baseFees = feeHistory.getBaseFeePerGas();
       if (baseFees != null && !baseFees.isEmpty() && baseFees.get(baseFees.size() - 1) != null) {
         return baseFees.get(baseFees.size() - 1);
@@ -167,8 +210,7 @@ public final class UniswapNodeClient implements AutoCloseable {
 
   /** Gas estimate for a transaction built from the given from/to/data fields. */
   public BigInteger estimateGas(String from, String to, byte[] data) throws IOException {
-    Transaction transaction =
-        new Transaction(from, null, null, null, to, null, Abi.toHex(data));
+    Transaction transaction = new Transaction(from, null, null, null, to, null, Abi.toHex(data));
     org.web3j.protocol.core.methods.response.EthEstimateGas response =
         web3j.ethEstimateGas(transaction).send();
     if (response.hasError()) {
@@ -184,7 +226,8 @@ public final class UniswapNodeClient implements AutoCloseable {
   /** Decodes an {@code eth_call} output carrying a single uint256. */
   public static BigInteger decodeUint256(byte[] output) {
     List<Type> decoded =
-        FunctionReturnDecoder.decode(Abi.toHex(output), Abi.typeReferences(new TypeReference<Uint256>() {}));
+        FunctionReturnDecoder.decode(
+            Abi.toHex(output), Abi.typeReferences(new TypeReference<Uint256>() {}));
     if (decoded.isEmpty()) {
       throw new IllegalArgumentException("call output is not a uint256: " + Abi.toHex(output));
     }

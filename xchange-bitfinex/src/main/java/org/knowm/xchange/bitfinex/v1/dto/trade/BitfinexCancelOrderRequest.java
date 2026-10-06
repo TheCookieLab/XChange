@@ -2,14 +2,12 @@ package org.knowm.xchange.bitfinex.v1.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRawValue;
+import org.knowm.xchange.bitfinex.v1.dto.BitfinexAuthenticatedRequest;
 
-public class BitfinexCancelOrderRequest {
+public class BitfinexCancelOrderRequest extends BitfinexAuthenticatedRequest {
 
   @JsonProperty("request")
   protected String request;
-
-  @JsonProperty("nonce")
-  protected String nonce;
 
   @JsonProperty("order_id")
   @JsonRawValue
@@ -18,14 +16,12 @@ public class BitfinexCancelOrderRequest {
   /**
    * Constructor
    *
-   * @param nonce
    * @param orderId
    */
-  public BitfinexCancelOrderRequest(String nonce, long orderId) {
+  public BitfinexCancelOrderRequest(long orderId) {
 
     this.request = "/v1/order/cancel";
     this.orderId = orderId;
-    this.nonce = nonce;
   }
 
   public String getOrderId() {

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.Currency;
-import org.knowm.xchange.okx.OkxAuthenticated;
 import org.knowm.xchange.okx.OkxExchange;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
@@ -52,7 +51,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.assetBalancesPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -72,7 +70,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.balancePath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -91,7 +88,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.balancePath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -128,7 +124,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.passphrase(),
                       auth.simulatedTrading(),
                       requestPayload))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.assetWithdrawalPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -165,7 +160,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.passphrase(),
                       auth.simulatedTrading(),
                       requestPayload))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.assetTransferPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -194,7 +188,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.passphrase(),
                       auth.simulatedTrading(),
                       requestPayload))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.setLeveragePath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -219,7 +212,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.passphrase(),
                       auth.simulatedTrading(),
                       requestPayload))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.setPositionModePath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -239,7 +231,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.depositAddressPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -264,7 +255,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.tradeFeePath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -283,7 +273,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(okxAuthenticated.currenciesPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -324,7 +313,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(okxAuthenticated.currenciesPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -365,7 +353,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.billsArchivePath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -402,7 +389,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.passphrase(),
                       auth.simulatedTrading(),
                       requestPayload))
-          .withRateLimiter(rateLimiter(okxAuthenticated.currenciesPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -435,7 +421,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.positionsHistoryPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -455,7 +440,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                     auth.simulatedTrading(),
                     enable == null ? null : enable.toString(),
                     subAcct))
-        .withRateLimiter(rateLimiter(OkxAuthenticated.subAccountList))
         .call();
   }
 
@@ -471,7 +455,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                     auth.passphrase(),
                     auth.simulatedTrading(),
                     subAcct))
-        .withRateLimiter(rateLimiter(OkxAuthenticated.subAccountList))
         .call();
   }
 
@@ -486,7 +469,6 @@ public class OkxAccountServiceRaw extends OkxBaseService {
                     auth.passphrase(),
                     auth.simulatedTrading(),
                     ccy))
-        .withRateLimiter(rateLimiter(OkxAuthenticated.subAccountList))
         .call();
   }
 }

@@ -49,8 +49,7 @@ public class CoinsphTimestampFactory implements SynchronizedValueFactory<Long> {
       return;
     }
     try {
-      // Using a simplified resilience mechanism for this internal call
-      // Or, if a specific retry/rateLimiter is defined for 'time' endpoint, use that.
+      // The time call is admitted by the core rate limiter like every other wire attempt.
       long serverTime = coinsph.time().getServerTime();
       long systemTime = System.currentTimeMillis();
       deltaServerTime = serverTime - systemTime;

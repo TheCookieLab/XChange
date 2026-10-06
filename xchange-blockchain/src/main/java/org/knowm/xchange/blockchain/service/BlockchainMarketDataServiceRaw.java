@@ -1,6 +1,5 @@
 package org.knowm.xchange.blockchain.service;
 
-import static org.knowm.xchange.blockchain.BlockchainConstants.ENDPOINT_RATE_LIMIT;
 import static org.knowm.xchange.blockchain.BlockchainConstants.GET_ORDER_BOOK_L3;
 
 import java.io.IOException;
@@ -26,7 +25,6 @@ public class BlockchainMarketDataServiceRaw extends BlockchainBaseService {
     return decorateApiCall(
             () -> this.blockchainApi.getOrderBookL3(BlockchainAdapters.toSymbol(currencyPair)))
         .withRetry(retry(GET_ORDER_BOOK_L3))
-        .withRateLimiter(rateLimiter(ENDPOINT_RATE_LIMIT))
         .call();
   }
 }

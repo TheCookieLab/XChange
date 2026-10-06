@@ -65,6 +65,10 @@ public class BlockchainExchange extends BaseExchange {
     exchangeSpecification.setPort(80);
     exchangeSpecification.setExchangeName("Blockchain");
     exchangeSpecification.setExchangeDescription("Blockchain Exchange");
+    exchangeSpecification
+        .getResilience()
+        .setRateLimitPolicy(BlockchainRateLimitPolicy.defaultPolicy());
+    exchangeSpecification.getResilience().setRateLimiterEnabled(true);
     return exchangeSpecification;
   }
 
@@ -76,7 +80,7 @@ public class BlockchainExchange extends BaseExchange {
   @Override
   public ResilienceRegistries getResilienceRegistries() {
     if (RESILIENCE_REGISTRIES == null) {
-      RESILIENCE_REGISTRIES = BlockchainResilience.getResilienceRegistries();
+      RESILIENCE_REGISTRIES = new ResilienceRegistries();
     }
     return RESILIENCE_REGISTRIES;
   }

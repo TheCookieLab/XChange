@@ -46,6 +46,15 @@ Binance-specific rules.
 - Reads and cancellations may retry; classify new failure paths in `BinanceErrorClassifier`
   and record endpoint weight/order-count/retry policy in `BinanceEndpointPolicies` so the
   capability matrix stays accurate.
+- REST rate limiting is owned solely by the xchange-core limiter through
+  `BinanceRateLimitPolicy` (set in both default exchange specifications). Every rescu method
+  must classify there (`BinanceRateLimitPolicyTest` enumerates the interfaces reflectively);
+  weights and limits come from the provider docs recorded in its `SOURCE`. Never add
+  `withRateLimiter` or retry on HTTP 429/418 in a service: the core cools down, replays only
+  replay-safe operations and surfaces `RateLimitTerminatedException`. Order placement and
+  modification and withdrawal classify with `replayOnRateLimit=false`.
+- `BinanceResilience` rate-limiter registrations are kept only for the WebSocket API order path
+  in `xchange-stream-binance`; no REST path may use them.
 
 ## Streaming
 

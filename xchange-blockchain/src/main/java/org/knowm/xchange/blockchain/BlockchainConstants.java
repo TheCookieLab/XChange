@@ -4,7 +4,6 @@ import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class BlockchainConstants {
-  public static final String ENDPOINT_RATE_LIMIT = "endpointLimit";
   public static final String GET_DEPOSIT_ADDRESS = "getDepositAddress";
   public static final String GET_ACCOUNT_INFORMATION = "getAccountInformation";
   public static final String GET_WITHDRAWAL = "postWithdrawFunds";

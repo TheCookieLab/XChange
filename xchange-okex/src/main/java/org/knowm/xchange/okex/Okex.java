@@ -8,10 +8,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
@@ -34,18 +31,6 @@ public interface Okex {
   String tickersPath = "/market/tickers"; // Stated as 20 req/2 sec
   String fundingRateHistoryPath = "/public/funding-rate-history"; // Stated as 10 req/2 sec
   String candlesHistoryPath = "/market/history-candles"; // Stated as 20 req/2 sec
-
-  // To avoid 429s, actual req/second may need to be lowered!
-  Map<String, List<Integer>> publicPathRateLimits =
-      new HashMap<String, List<Integer>>() {
-        {
-          put(instrumentsPath, Arrays.asList(8, 1));
-          put(tickerPath, Arrays.asList(8, 1));
-          put(tickersPath, Arrays.asList(8, 1));
-          put(fundingRateHistoryPath, Arrays.asList(4, 1));
-          put(candlesHistoryPath, Arrays.asList(8, 1));
-        }
-      };
 
   @GET
   @Path(instrumentsPath)

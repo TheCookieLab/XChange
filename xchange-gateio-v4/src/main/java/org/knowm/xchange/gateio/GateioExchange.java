@@ -21,7 +21,7 @@ import static org.knowm.xchange.gateio.dto.GateioExchangeType.SPOT;
 
 public class GateioExchange extends BaseExchange {
   public static String EXCHANGE_TYPE = "Exchange_Type";
-  private static ResilienceRegistries RESILIENCE_REGISTRIES;
+  private final ResilienceRegistries resilienceRegistries = new ResilienceRegistries();
   private final SynchronizedValueFactory<Long> nonceFactory =
       new CurrentTimeIncrementalNonceFactory(TimeUnit.SECONDS);
 
@@ -41,6 +41,8 @@ public class GateioExchange extends BaseExchange {
     specification.setSslUri("https://api.gateio.ws");
     specification.setHost("gate.io");
     specification.setExchangeName("Gateio");
+    specification.getResilience().setRateLimitPolicy(GateioRateLimitPolicy.defaultPolicy());
+    specification.getResilience().setRateLimiterEnabled(true);
 
     return specification;
   }
@@ -62,10 +64,7 @@ public class GateioExchange extends BaseExchange {
 
   @Override
   public ResilienceRegistries getResilienceRegistries() {
-    if (RESILIENCE_REGISTRIES == null) {
-      RESILIENCE_REGISTRIES = GateioResilience.createRegistries(isFuturesEnabled());
-    }
-    return RESILIENCE_REGISTRIES;
+    return resilienceRegistries;
   }
 
   @Override
