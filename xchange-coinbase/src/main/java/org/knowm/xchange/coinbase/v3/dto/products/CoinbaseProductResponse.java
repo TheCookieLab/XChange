@@ -40,6 +40,14 @@ public class CoinbaseProductResponse {
   private final CoinbaseFutureProductDetails futureProductDetails;
 
   /**
+   * Whether trading is disabled for the product, from wire key {@code trading_disabled}; {@code
+   * null} when the exchange omitted the field.
+   *
+   * @since 1.0.3
+   */
+  private final Boolean tradingDisabled;
+
+  /**
    * Creates a legacy response containing only the original market summary fields.
    *
    * @deprecated use the full-field constructor so exchange-provided product metadata is retained
@@ -76,6 +84,38 @@ public class CoinbaseProductResponse {
         null, null, null, null, null, null, null, null, null, null, futureProductDetails);
   }
 
+  /**
+   * Creates a response without the {@code trading_disabled} flag; {@link #getTradingDisabled()}
+   * returns {@code null}.
+   */
+  public CoinbaseProductResponse(
+      String productId,
+      BigDecimal price,
+      BigDecimal pricePercentageChange24H,
+      BigDecimal volume24H,
+      BigDecimal volumePercentageChange24H,
+      BigDecimal approximateQuoteVolume24H,
+      String baseCurrencyId,
+      String quoteCurrencyId,
+      String productType,
+      String productVenue,
+      BigDecimal baseIncrement,
+      BigDecimal quoteIncrement,
+      BigDecimal priceIncrement,
+      BigDecimal quoteMinSize,
+      BigDecimal quoteMaxSize,
+      BigDecimal baseMinSize,
+      BigDecimal baseMaxSize,
+      BigDecimal bestBidPrice,
+      BigDecimal bestAskPrice,
+      String status,
+      CoinbaseFutureProductDetails futureProductDetails) {
+    this(productId, price, pricePercentageChange24H, volume24H, volumePercentageChange24H,
+        approximateQuoteVolume24H, baseCurrencyId, quoteCurrencyId, productType, productVenue,
+        baseIncrement, quoteIncrement, priceIncrement, quoteMinSize, quoteMaxSize, baseMinSize,
+        baseMaxSize, bestBidPrice, bestAskPrice, status, futureProductDetails, null);
+  }
+
   @JsonCreator
   public CoinbaseProductResponse(
       @JsonProperty("product_id") String productId,
@@ -98,7 +138,8 @@ public class CoinbaseProductResponse {
       @JsonProperty("best_bid_price") BigDecimal bestBidPrice,
       @JsonProperty("best_ask_price") BigDecimal bestAskPrice,
       @JsonProperty("status") String status,
-      @JsonProperty("future_product_details") CoinbaseFutureProductDetails futureProductDetails) {
+      @JsonProperty("future_product_details") CoinbaseFutureProductDetails futureProductDetails,
+      @JsonProperty("trading_disabled") Boolean tradingDisabled) {
     this.productId = productId;
     this.price = price;
     this.pricePercentageChange24H = pricePercentageChange24H;
@@ -120,6 +161,7 @@ public class CoinbaseProductResponse {
     this.bestAskPrice = bestAskPrice;
     this.status = status;
     this.futureProductDetails = futureProductDetails;
+    this.tradingDisabled = tradingDisabled;
   }
 
   @Override
@@ -127,6 +169,7 @@ public class CoinbaseProductResponse {
     return "CoinbaseProductResponse [productId=" + productId + ", price=" + price
         + ", baseIncrement=" + baseIncrement + ", baseMinSize=" + baseMinSize
         + ", productType=" + productType + ", productVenue=" + productVenue
+        + ", status=" + status + ", tradingDisabled=" + tradingDisabled
         + ", futureProductDetails=" + futureProductDetails + "]";
   }
 }

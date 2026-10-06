@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.Data;
 import lombok.ToString;
+import org.knowm.xchange.client.ratelimit.RateLimitContext;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 
 /**
  * Specification to provide the following to {@link ExchangeFactory}:
@@ -182,5 +184,36 @@ public class ExchangeSpecification {
      * to wait to long.
      */
     private boolean rateLimiterEnabled;
+
+    /**
+     * Rate-limit policy of the exchange API family. Policy-bearing modules provide a default in
+     * their default specification (with {@link #rateLimiterEnabled} set to {@code true}); users
+     * may replace it with a derived policy. Enforcement requires {@link #rateLimiterEnabled}; an
+     * explicit {@code false} stays authoritative and is recorded as disabled in the context
+     * diagnostics.
+     *
+     * @since 1.0.3
+     */
+    private RateLimitPolicy rateLimitPolicy;
+
+    /**
+     * Rate-limit context shared by every exchange that must consume the same budgets. When {@code
+     * null} and a policy is enabled, {@code BaseExchange#applySpecification} creates one owned by
+     * this specification and stores it here, so this getter returns the effective context once the
+     * exchange was constructed.
+     *
+     * @since 1.0.3
+     */
+    private RateLimitContext rateLimitContext;
+
+    /**
+     * Opaque application binding of the user allocation (for example a Coinbase user), never a
+     * hash or fragment of a credential. Exchanges sharing a context and this value share one user
+     * allocation, whatever API keys they use. {@code null} selects the conservative shared binding
+     * {@code "default"}, never a per-key bucket.
+     *
+     * @since 1.0.3
+     */
+    @ToString.Exclude private String rateLimitUserScope;
   }
 }

@@ -2,6 +2,8 @@ package org.knowm.xchange;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
+import org.knowm.xchange.client.ratelimit.RateLimitContext;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
@@ -110,6 +112,8 @@ public abstract class BaseExchange implements Exchange {
           "No \"exchange name\" found in the ExchangeSpecification. The name is used to load the meta data file from the classpath and may lead to unexpected results.");
     }
 
+    registerRateLimitPolicy(this.exchangeSpecification.getResilience());
+
     initServices();
 
     if (this.exchangeSpecification.isShouldLoadRemoteMetaData()) {
@@ -118,6 +122,38 @@ public abstract class BaseExchange implements Exchange {
         remoteInit();
       } catch (IOException e) {
         throw new ExchangeException(e);
+      }
+    }
+  }
+
+  /**
+   * Validates and captures the specification's rate-limit policy before any service or remote
+   * initialization can issue a request. When rate limiting is enabled and a policy is present, the
+   * effective {@link RateLimitContext} is resolved (a missing one is created, owned by this
+   * specification and written back so {@link
+   * ExchangeSpecification.ResilienceSpecification#getRateLimitContext()} always returns the
+   * effective context) and the policy is registered into it. An explicitly disabled policy is only
+   * recorded for diagnostics.
+   *
+   * @throws IllegalArgumentException if the policy conflicts with one already registered in a
+   *     shared context
+   */
+  private static void registerRateLimitPolicy(
+      ExchangeSpecification.ResilienceSpecification resilience) {
+    if (resilience == null || resilience.getRateLimitPolicy() == null) {
+      return;
+    }
+    RateLimitPolicy policy = resilience.getRateLimitPolicy();
+    synchronized (resilience) {
+      RateLimitContext context = resilience.getRateLimitContext();
+      if (resilience.isRateLimiterEnabled()) {
+        if (context == null) {
+          context = new RateLimitContext();
+          resilience.setRateLimitContext(context);
+        }
+        context.register(policy);
+      } else if (context != null) {
+        context.registerDisabled(policy);
       }
     }
   }
