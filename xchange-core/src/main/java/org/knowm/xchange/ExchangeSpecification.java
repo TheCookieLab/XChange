@@ -178,10 +178,11 @@ public class ExchangeSpecification {
      * Flag that lets you enable call rate limiting functionality if it was implemented for the
      * given exchange.
      *
-     * <p>If this featrue is implemented and enabled then we will limit the amount of calls to the
-     * exchanges API to not exceeds its limits. This will result in delaying some calls or throwing
-     * a {@link io.github.resilience4j.ratelimiter.RequestNotPermitted} exception if we would have
-     * to wait to long.
+     * <p>For modules with a {@link #rateLimitPolicy} the limit is enforced by the shared {@link
+     * #rateLimitContext}: calls wait for admission and terminal outcomes are {@link
+     * org.knowm.xchange.exceptions.RateLimitTerminatedException}s. Modules that still use the
+     * legacy per-method resilience4j limiters delay calls or throw {@link
+     * io.github.resilience4j.ratelimiter.RequestNotPermitted} if they would have to wait too long.
      */
     private boolean rateLimiterEnabled;
 
