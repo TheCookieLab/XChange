@@ -7,6 +7,7 @@ import static org.knowm.xchange.client.ratelimit.RateLimitedProxyFixture.SCOPE;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Before;
@@ -68,7 +69,7 @@ public class ExchangeRestProxyBuilderRateLimitTest {
       assertThat(seen)
           .contains(
               new RateLimitRequest("GET api/v3/things", false),
-              new RateLimitRequest("GET api/v3/things/{id}", false));
+              new RateLimitRequest("GET api/v3/things/{id}", false, Map.of("id", "btc")));
     }
   }
 

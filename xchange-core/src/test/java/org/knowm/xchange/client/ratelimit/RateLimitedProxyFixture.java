@@ -8,6 +8,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.time.Duration;
@@ -26,7 +27,10 @@ final class RateLimitedProxyFixture {
 
   private RateLimitedProxyFixture() {}
 
-  /** The proxied interface: a plain read, a path-parameter read, a signed read and a write. */
+  /**
+   * The proxied interface: plain, query-parameter and path-parameter reads, a signed read and a
+   * write.
+   */
   @Path("api/v3")
   @Produces(MediaType.APPLICATION_JSON)
   public interface Api {
@@ -38,6 +42,11 @@ final class RateLimitedProxyFixture {
     @GET
     @Path("things/{id}")
     String one(@PathParam("id") String id) throws IOException;
+
+    @GET
+    @Path("things")
+    String page(@QueryParam("limit") Integer limit, @HeaderParam("X-Key") String key)
+        throws IOException;
 
     @GET
     @Path("signed")

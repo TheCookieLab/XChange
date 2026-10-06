@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Before;
@@ -132,12 +133,30 @@ public class RateLimitedRestProxyTest {
       assertThat(seen)
           .contains(
               new RateLimitRequest("GET api/v3/things", false),
-              new RateLimitRequest("GET api/v3/things/{id}", false),
+              new RateLimitRequest("GET api/v3/things/{id}", false, Map.of("id", "btc usd")),
               new RateLimitRequest("GET api/v3/signed", true),
               new RateLimitRequest("GET api/v3/signed", false),
               new RateLimitRequest("GET api/v3/redirect", false));
     }
     assertThat(server.requests().get(1).target).isEqualTo("/api/v3/things/btc+usd");
+  }
+
+  @Test
+  public void queryFormAndPathArgumentsReachTheClassifierButHeadersAndNullsDoNot()
+      throws Exception {
+    Api api = proxy(100);
+
+    api.page(500, "secret-key");
+    api.page(null, "secret-key");
+    api.create("7");
+
+    synchronized (seen) {
+      assertThat(seen)
+          .containsExactly(
+              new RateLimitRequest("GET api/v3/things", false, Map.of("limit", "500")),
+              new RateLimitRequest("GET api/v3/things", false),
+              new RateLimitRequest("POST api/v3/orders", false, Map.of("n", "7")));
+    }
   }
 
   // ---- AC13 -----------------------------------------------------------------------------

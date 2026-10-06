@@ -1,16 +1,21 @@
 package si.mazi.rescu;
 
+import jakarta.ws.rs.FormParam;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.QueryParam;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import jakarta.ws.rs.Path;
 import org.knowm.xchange.client.ratelimit.RateLimitAttemptObserver;
 import org.knowm.xchange.client.ratelimit.RateLimitContext;
 import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
@@ -40,6 +45,12 @@ import si.mazi.rescu.serialization.jackson.JacksonObjectMapperFactory;
  * Java method is declared with a type assignable to {@link ParamsDigest} and the argument passed
  * is not {@code null}. This is derived from the interface declaration and the call only, never
  * from whether a credential happens to be installed elsewhere.
+ *
+ * <p><b>Parameters.</b> Non-null arguments of query, form and path parameters ({@code
+ * QueryParam}, {@code FormParam}, {@code PathParam}) are passed to the classifier by wire name as
+ * {@code String.valueOf} values, so a policy can price weighted requests (for example an
+ * order-book {@code limit}).
+ * Header, cookie and body parameters and {@link ParamsDigest} arguments are never passed.
  *
  * @since 1.0.3
  */
@@ -90,7 +101,9 @@ final class RateLimitedInvocationHandler extends RestInvocationHandler {
       return super.invoke(proxy, method, args);
     }
     OperationShape shape = shapes.computeIfAbsent(method, this::shapeOf);
-    RateLimitRequest request = new RateLimitRequest(shape.operationKey, shape.isAuthenticated(args));
+    RateLimitRequest request =
+        new RateLimitRequest(
+            shape.operationKey, shape.isAuthenticated(args), shape.parameters(args));
     return context.execute(
         policy,
         request,
@@ -175,21 +188,44 @@ final class RateLimitedInvocationHandler extends RestInvocationHandler {
     String key = metadata.getHttpMethod().name().toUpperCase(Locale.ROOT) + " " + path;
     List<Integer> digestParameters = new ArrayList<>();
     Class<?>[] types = method.getParameterTypes();
+    Annotation[][] annotations = method.getParameterAnnotations();
+    String[] parameterNames = new String[types.length];
     for (int i = 0; i < types.length; i++) {
       if (ParamsDigest.class.isAssignableFrom(types[i])) {
         digestParameters.add(i);
+      } else {
+        parameterNames[i] = classificationName(annotations[i]);
       }
     }
-    return new OperationShape(key, digestParameters.stream().mapToInt(Integer::intValue).toArray());
+    return new OperationShape(
+        key, digestParameters.stream().mapToInt(Integer::intValue).toArray(), parameterNames);
+  }
+
+  /** Query, form and path parameters classify cost; headers and bodies may carry credentials. */
+  private static String classificationName(Annotation[] annotations) {
+    for (Annotation annotation : annotations) {
+      if (annotation instanceof QueryParam) {
+        return ((QueryParam) annotation).value();
+      }
+      if (annotation instanceof FormParam) {
+        return ((FormParam) annotation).value();
+      }
+      if (annotation instanceof PathParam) {
+        return ((PathParam) annotation).value();
+      }
+    }
+    return null;
   }
 
   private static final class OperationShape {
     private final String operationKey;
     private final int[] digestParameters;
+    private final String[] parameterNames;
 
-    private OperationShape(String operationKey, int[] digestParameters) {
+    private OperationShape(String operationKey, int[] digestParameters, String[] parameterNames) {
       this.operationKey = operationKey;
       this.digestParameters = digestParameters;
+      this.parameterNames = parameterNames;
     }
 
     private boolean isAuthenticated(Object[] args) {
@@ -202,6 +238,19 @@ final class RateLimitedInvocationHandler extends RestInvocationHandler {
         }
       }
       return false;
+    }
+
+    private Map<String, String> parameters(Object[] args) {
+      Map<String, String> values = new LinkedHashMap<>();
+      if (args == null) {
+        return values;
+      }
+      for (int i = 0; i < parameterNames.length; i++) {
+        if (parameterNames[i] != null && args[i] != null) {
+          values.put(parameterNames[i], String.valueOf(args[i]));
+        }
+      }
+      return values;
     }
   }
 }
