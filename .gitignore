@@ -40,6 +40,14 @@ mvnw.cmd
 
 # AI
 .agents/
+.codex/
+.cursor/
+.junie/
+.proxyai/
+PROXYAI.md
+unresolved.md
+unresolved.json
+worker-result.json
 
 # externalized configuration file for keys
 exchangeConfiguration.json

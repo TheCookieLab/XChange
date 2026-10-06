@@ -62,15 +62,29 @@ class BitgetMarketDataServiceIntegration extends BitgetIntegrationTestParent {
     List<Ticker> tickers = exchange.getMarketDataService().getTickers(null);
     assertThat(tickers).isNotEmpty();
 
+    // Bitget publishes stale, crossed best bid/ask for some markets with an empty order book
+    // (e.g. RWBD/USDT: bid 36.52 > ask 25.38, while /orderbook returns no levels), so the
+    // uncrossed invariant is only asserted for liquid major markets below.
     assertThat(tickers)
         .allSatisfy(
             ticker -> {
               assertThat(ticker.getInstrument()).isNotNull();
               assertThat(ticker.getLast()).isNotNull();
+              assertThat(ticker.getBid()).isNotNull().isNotNegative();
+              assertThat(ticker.getAsk()).isNotNull().isNotNegative();
+            });
 
-              if (ticker.getBid().signum() > 0 && ticker.getAsk().signum() > 0) {
-                assertThat(ticker.getBid()).isLessThan(ticker.getAsk());
-              }
+    assertThat(tickers)
+        .filteredOn(
+            ticker ->
+                CurrencyPair.BTC_USDT.equals(ticker.getInstrument())
+                    || CurrencyPair.ETH_USDT.equals(ticker.getInstrument()))
+        .hasSize(2)
+        .allSatisfy(
+            ticker -> {
+              assertThat(ticker.getBid()).isPositive();
+              assertThat(ticker.getAsk()).isPositive();
+              assertThat(ticker.getBid()).isLessThan(ticker.getAsk());
             });
   }
 
