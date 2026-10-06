@@ -20,6 +20,8 @@ public class BinanceUsExchange extends BinanceExchange {
     spec.setExchangeName("Binance US");
     spec.setExchangeDescription("Binance US Exchange.");
     AuthUtils.setApiAndSecretKey(spec, "binanceus");
+    spec.getResilience().setRateLimitPolicy(BinanceRateLimitPolicy.usPolicy());
+    spec.getResilience().setRateLimiterEnabled(true);
     return spec;
   }
 

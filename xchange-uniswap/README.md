@@ -98,6 +98,24 @@ hashes** from your own node or the official registry):
 Everything else (limit/stop orders, cancellation, open orders, trade history,
 withdrawals) throws `NotAvailableFromExchangeException`.
 
+## Rate limiting
+
+Every JSON-RPC HTTP attempt is admitted by the universal `xchange-core` rate
+limiter (`UniswapRateLimitPolicy`, namespace `uniswap.rpc`); the default
+specification enables it. The node endpoint is operator-chosen, so the default is
+explicitly **client-side pacing** (a 600 compute-unit burst refilling 150 per
+second, half of the Alchemy free tier) using the Alchemy per-method compute-unit
+weights, plus provider feedback: HTTP `429` (with `Retry-After`) and JSON-RPC
+error `-32005` are rate rejections owned by the core. Reads are replayed after
+the cooldown with a fresh admission, bounded by the policy's maximum attempts;
+`eth_sendRawTransaction` is never replayed by the limiter. Redirects and silent
+connection-failure retries are disabled so no request can bypass admission.
+
+Override for a larger plan or a private node with
+`specification.getResilience().setRateLimitPolicy(...)` (or disable with
+`setRateLimiterEnabled(false)`); a JSON-RPC method outside the policy's 13
+classified methods is rejected before anything is sent.
+
 ## Node hardening (required before any funded use)
 
 The Geth/Prysm host must be locked down before a funded canary:

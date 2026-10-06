@@ -86,44 +86,6 @@ public interface OkxAuthenticated extends Okx {
   String billsArchivePath = "/account/bills-archive"; // Stated as 6 req/sec
   String setPositionModePath = "/account/set-position-mode"; // Stated as 5 req/2 sec
 
-  // To avoid 429s, actual req/second may need to be lowered!
-  OkxRateLimitPolicy privatePathRateLimits =
-      OkxRateLimitPolicy.builder()
-          .limit(balancePath, 5, 1)
-          .limit(currenciesPath, 6, 1)
-          .limit(assetBalancesPath, 6, 1)
-          .limit(positionsPath, 5, 1)
-          .limit(setLeveragePath, 20, 2)
-          .limit(pendingOrdersPath, 20, 2)
-          .limit(orderDetailsPath, 60, 2)
-          .limit(placeOrderPath, 60, 2)
-          .limit(placeBatchOrderPath, 300, 2)
-          .limit(cancelOrderPath, 60, 2)
-          .limit(cancelBatchOrderPath, 300, 2)
-          .limit(amendOrderPath, 60, 2)
-          .limit(amendBatchOrderPath, 300, 2)
-          .limit(fillsPath, 60, 2)
-          .limit(fillsHistoryPath, 10, 2)
-          .limit(orderAlgoPath, 60, 2)
-          .limit(cancelAlgosPath, 60, 2)
-          .limit(amendAlgosPath, 60, 2)
-          .limit(ordersAlgoPendingPath, 10, 2)
-          .limit(ordersAlgoHistoryPath, 20, 2)
-          .limit(depositAddressPath, 6, 1)
-          .limit(ordersHistoryPath, 40, 2)
-          .limit(tradeFeePath, 5, 2)
-          .limit(configPath, 5, 2)
-          .limit(getBillsPath, 6, 1)
-          .limit(changeMarginPath, 20, 2)
-          .limit(subAccountList, 2, 2)
-          .limit(subAccountBalance, 2, 2)
-          .limit(piggyBalance, 6, 1)
-          .limit(assetTransferPath, 6, 1)
-          .limit(positionsHistoryPath, 10, 2)
-          .limit(billsArchivePath, 6, 1)
-          .limit(setPositionModePath, 5, 2)
-          .build();
-
   @GET
   @Path(tradeFeePath)
   OkxResponse<List<OkxTradeFee>> getTradeFee(

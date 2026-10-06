@@ -23,9 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.knowm.xchange.gateio.GateioResilience.DYNAMIC_TRADING_FEE_RATE_LIMITER;
-import static org.knowm.xchange.gateio.GateioResilience.LEVERAGE_RATE_LIMITER;
-
 public class GateioAccountServiceRaw extends GateioBaseService {
 
   public GateioAccountServiceRaw(GateioExchange exchange, ResilienceRegistries resilienceRegistries) {
@@ -61,21 +58,13 @@ public class GateioAccountServiceRaw extends GateioBaseService {
   }
 
   public GateioSpotFee getSpotFee(String currencyPair) throws IOException {
-    return decorateApiCall(
-        () ->
-            gateioV4Authenticated.getSpotFee(
-                apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, currencyPair))
-        .withRateLimiter(rateLimiter(DYNAMIC_TRADING_FEE_RATE_LIMITER))
-        .call();
+    return gateioV4Authenticated.getSpotFee(
+        apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, currencyPair);
   }
 
   public Map<String, GateioFuturesFee> getFuturesFee(String settle, String contract) throws IOException {
-    return decorateApiCall(
-        () ->
-            gateioV4Authenticated.getFuturesFee(
-                apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, settle, contract))
-        .withRateLimiter(rateLimiter(DYNAMIC_TRADING_FEE_RATE_LIMITER))
-        .call();
+    return gateioV4Authenticated.getFuturesFee(
+        apiKey, exchange.getNonceFactory(), gateioV4ParamsDigest, settle, contract);
   }
 
   public List<GateioWithdrawalRecord> getWithdrawals(GateioWithdrawalsParams params)
@@ -245,16 +234,14 @@ public class GateioAccountServiceRaw extends GateioBaseService {
 
   public GateioPositionLeverageUpdate setLeverage(String settle, String contract, String leverage, String cross_leverage) throws IOException {
     try {
-      return decorateApiCall(
-          () -> gateioV4Authenticated.updatePositionLeverage(
-              apiKey,
-              exchange.getNonceFactory(),
-              gateioV4ParamsDigest,
-              settle,
-              contract,
-              leverage,
-              cross_leverage)).withRateLimiter(rateLimiter(LEVERAGE_RATE_LIMITER))
-          .call();
+      return gateioV4Authenticated.updatePositionLeverage(
+          apiKey,
+          exchange.getNonceFactory(),
+          gateioV4ParamsDigest,
+          settle,
+          contract,
+          leverage,
+          cross_leverage);
     } catch (GateioException e) {
       throw GateioErrorAdapter.adapt(e);
     }

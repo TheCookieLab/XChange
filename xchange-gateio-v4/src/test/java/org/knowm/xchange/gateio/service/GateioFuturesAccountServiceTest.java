@@ -10,10 +10,8 @@ import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.gateio.GateioExchange;
-import org.knowm.xchange.gateio.config.Config;
 import org.knowm.xchange.gateio.dto.GateioExchangeType;
 import org.knowm.xchange.instrument.Instrument;
-import si.mazi.rescu.CustomRestProxyFactoryImpl;
 
 import java.io.IOException;
 import java.util.Map;
@@ -30,8 +28,6 @@ public class GateioFuturesAccountServiceTest {
   static void init() {
     wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
     wireMockServer.start();
-
-    Config.getInstance().setRestProxyFactoryClass(CustomRestProxyFactoryImpl.class);
 
     ExchangeSpecification exSpec = new ExchangeSpecification(GateioExchange.class);
     exSpec.setSslUri("http://localhost:" + wireMockServer.port());

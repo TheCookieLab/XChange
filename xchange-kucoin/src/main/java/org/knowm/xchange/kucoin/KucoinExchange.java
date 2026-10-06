@@ -100,13 +100,15 @@ public class KucoinExchange extends BaseExchange implements Exchange {
     exchangeSpecification.setPort(80);
     exchangeSpecification.setExchangeName("Kucoin");
     exchangeSpecification.setExchangeDescription("Kucoin is a bitcoin and altcoin exchange.");
+    exchangeSpecification.getResilience().setRateLimitPolicy(KucoinRateLimitPolicy.defaultPolicy());
+    exchangeSpecification.getResilience().setRateLimiterEnabled(true);
     return exchangeSpecification;
   }
 
   @Override
   public ResilienceRegistries getResilienceRegistries() {
     if (RESILIENCE_REGISTRIES == null) {
-      RESILIENCE_REGISTRIES = KucoinResilience.createRegistries();
+      RESILIENCE_REGISTRIES = new ResilienceRegistries();
     }
     return RESILIENCE_REGISTRIES;
   }

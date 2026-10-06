@@ -1,6 +1,5 @@
 package org.knowm.xchange.kucoin.uta;
 
-import static org.knowm.xchange.kucoin.uta.UtaResilience.UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER;
 import static org.knowm.xchange.kucoin.uta.service.UtaConstants.KEY_VERSION;
 import static org.knowm.xchange.kucoin.uta.service.UtaExceptionClassifier.callOrThrow;
 
@@ -55,7 +54,6 @@ public class UtaAccountService extends UtaBaseService implements AccountService 
                         accountApi.getAccountMode(
                             apiKey, digest, nonceFactory, encryptedPassphrase, KEY_VERSION))
                 .withRetry(retry("utaAccountMode"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.ACCOUNT,
         "GET /api/ua/v1/account/mode");
@@ -89,7 +87,6 @@ public class UtaAccountService extends UtaBaseService implements AccountService 
                         accountApi.getAccountOverview(
                             apiKey, digest, nonceFactory, encryptedPassphrase, KEY_VERSION))
                 .withRetry(retry("utaAccountOverview"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.ACCOUNT,
         "GET /api/ua/v1/unified/account/overview");
@@ -105,7 +102,6 @@ public class UtaAccountService extends UtaBaseService implements AccountService 
                         accountApi.getAccountBalance(
                             apiKey, digest, nonceFactory, encryptedPassphrase, KEY_VERSION))
                 .withRetry(retry("utaAccountBalance"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.ACCOUNT,
         "GET /api/ua/v1/unified/account/balance");
@@ -128,7 +124,6 @@ public class UtaAccountService extends UtaBaseService implements AccountService 
                             accountType,
                             symbol))
                 .withRetry(retry("utaTransferQuota"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.ASSET,
         "GET /api/ua/v1/account/transfer-quota");
@@ -148,7 +143,6 @@ public class UtaAccountService extends UtaBaseService implements AccountService 
                             KEY_VERSION,
                             request))
                 .withRetry(retry("utaTransfer"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.ASSET,
         "POST /api/ua/v1/account/transfer");
@@ -169,7 +163,6 @@ public class UtaAccountService extends UtaBaseService implements AccountService 
                             tradeType,
                             symbol))
                 .withRetry(retry("utaFeeRate"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.FEE,
         "GET /api/ua/v1/user/fee-rate");
@@ -191,7 +184,6 @@ public class UtaAccountService extends UtaBaseService implements AccountService 
                             KEY_VERSION,
                             request))
                 .withRetry(retry("utaModifyLeverage"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.POSITION,
         "POST /api/ua/v1/unified/account/modify-leverage");
@@ -228,7 +220,6 @@ public class UtaAccountService extends UtaBaseService implements AccountService 
                             endAt,
                             pageSize))
                 .withRetry(retry("utaLedger"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.ACCOUNT,
         "GET /api/ua/v1/account/ledger");

@@ -1,62 +1,41 @@
 package org.knowm.xchange.okx;
 
-import static jakarta.ws.rs.core.Response.Status.TOO_MANY_REQUESTS;
-
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import java.time.Duration;
-import java.util.Map;
+import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
-import org.knowm.xchange.client.ResilienceUtils;
 
 /**
- * Builds the resilience4j registries backing OKX v5 REST calls.
+ * Builds the resilience4j registries consumed by the OKX WebSocket trading service.
  *
- * <p>Rate limiters are derived from the typed endpoint policies {@link Okx#publicPathRateLimits}
- * and {@link OkxAuthenticated#privatePathRateLimits}; the registry key for each limiter is the
- * endpoint path, so raw services reference limiters via {@code rateLimiter(<Path constant>)}.
- *
- * <p>Extension point for later phases: endpoints registered in either policy (via {@link
- * OkxRateLimitPolicy.Builder#limit(String, int, int)}) are picked up automatically by {@link
- * #createRegistries()}. Endpoints whose limits cannot be expressed in the static policies can be
- * registered at runtime with {@link #registerRateLimiter(ResilienceRegistries, String,
- * OkxRateLimitPolicy.OkxRateLimit)}.
+ * <p>REST rate limiting is <strong>not</strong> configured here: it is owned by the universal
+ * xchange-core rate limiter driven by {@link OkxRateLimitPolicy}. The limiters registered below
+ * serve only {@code OkxStreamingTradeService} in {@code xchange-stream-okex}, whose WebSocket order
+ * operations do not pass through the REST proxy and are outside the core REST rate-limit boundary.
+ * They are keyed by the REST endpoint path constants and use the OKX documented 60 requests per 2
+ * seconds for order placement, amendment and cancellation.
  */
 public class OkxResilience {
 
-  /**
-   * Registers (or replaces) the rate limiter for one endpoint path on the given registries, using
-   * the same configuration conventions as the static policy entries (default config, refresh
-   * period, limit, and permission drain on HTTP 429).
-   *
-   * @param registries the registries to register on
-   * @param path the endpoint path used as registry key, for example {@code /trade/order}
-   * @param rateLimit the limit to apply
-   */
-  public static void registerRateLimiter(
-      ResilienceRegistries registries, String path, OkxRateLimitPolicy.OkxRateLimit rateLimit) {
-    registries
-        .rateLimiters()
-        .rateLimiter(
-            path,
-            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                .limitRefreshPeriod(Duration.ofSeconds(rateLimit.refreshPeriodSeconds()))
-                .limitForPeriod(rateLimit.limitForPeriod())
-                .drainPermissionsOnResult(
-                    e -> ResilienceUtils.matchesHttpCode(e, TOO_MANY_REQUESTS))
-                .build());
-  }
+  private static final int WEBSOCKET_ORDER_LIMIT_PER_PERIOD = 60;
+  private static final Duration WEBSOCKET_ORDER_LIMIT_PERIOD = Duration.ofSeconds(2);
 
   public static ResilienceRegistries createRegistries() {
     final ResilienceRegistries registries = new ResilienceRegistries();
 
-    for (Map.Entry<String, OkxRateLimitPolicy.OkxRateLimit> entry :
-        Okx.publicPathRateLimits.asMap().entrySet()) {
-      registerRateLimiter(registries, entry.getKey(), entry.getValue());
-    }
-
-    for (Map.Entry<String, OkxRateLimitPolicy.OkxRateLimit> entry :
-        OkxAuthenticated.privatePathRateLimits.asMap().entrySet()) {
-      registerRateLimiter(registries, entry.getKey(), entry.getValue());
+    for (String path :
+        List.of(
+            OkxAuthenticated.placeOrderPath,
+            OkxAuthenticated.amendOrderPath,
+            OkxAuthenticated.cancelOrderPath)) {
+      registries
+          .rateLimiters()
+          .rateLimiter(
+              path,
+              RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
+                  .limitRefreshPeriod(WEBSOCKET_ORDER_LIMIT_PERIOD)
+                  .limitForPeriod(WEBSOCKET_ORDER_LIMIT_PER_PERIOD)
+                  .build());
     }
 
     return registries;

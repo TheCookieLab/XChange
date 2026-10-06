@@ -9,10 +9,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexResponse;
@@ -71,35 +68,6 @@ public interface OkexAuthenticated extends Okex {
   String subAccountList = "/users/subaccount/list"; // Stated as 2 req/2 sec
   String subAccountBalance = "/account/subaccount/balances"; // Stated as 2 req/2 sec
   String piggyBalance = "/asset/piggy-balance"; // Stated as 6 req/1 sec
-
-  // To avoid 429s, actual req/second may need to be lowered!
-  Map<String, List<Integer>> privatePathRateLimits =
-      new HashMap<String, List<Integer>>() {
-        {
-          put(balancePath, Arrays.asList(5, 1));
-          put(currenciesPath, Arrays.asList(6, 1));
-          put(assetBalancesPath, Arrays.asList(6, 1));
-          put(positionsPath, Arrays.asList(5, 1));
-          put(setLeveragePath, Arrays.asList(20, 2));
-          put(pendingOrdersPath, Arrays.asList(20, 2));
-          put(orderDetailsPath, Arrays.asList(60, 2));
-          put(placeOrderPath, Arrays.asList(60, 2));
-          put(placeBatchOrderPath, Arrays.asList(300, 2));
-          put(cancelOrderPath, Arrays.asList(60, 2));
-          put(cancelBatchOrderPath, Arrays.asList(300, 2));
-          put(amendOrderPath, Arrays.asList(60, 2));
-          put(amendBatchOrderPath, Arrays.asList(300, 2));
-          put(depositAddressPath, Arrays.asList(6, 1));
-          put(ordersHistoryPath, Arrays.asList(40, 2));
-          put(tradeFeePath, Arrays.asList(5, 2));
-          put(configPath, Arrays.asList(5, 2));
-          put(getBillsPath, Arrays.asList(6, 1));
-          put(changeMarginPath, Arrays.asList(20, 2));
-          put(subAccountList, Arrays.asList(2, 2));
-          put(subAccountBalance, Arrays.asList(2, 2));
-          put(piggyBalance, Arrays.asList(6, 1));
-        }
-      };
 
   @GET
   @Path(tradeFeePath)

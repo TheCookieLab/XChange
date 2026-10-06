@@ -1,11 +1,6 @@
 package org.knowm.xchange.binance.service;
 
 import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
-import static org.knowm.xchange.binance.BinanceResilience.ORDERS_PER_10_SECONDS_RATE_LIMITER;
-import static org.knowm.xchange.binance.BinanceResilience.ORDERS_PER_MINUTE_RATE_LIMITER;
-import static org.knowm.xchange.binance.BinanceResilience.ORDERS_PER_SECOND_RATE_LIMITER;
-import static org.knowm.xchange.binance.BinanceResilience.RAW_REQUESTS_RATE_LIMITER;
-import static org.knowm.xchange.binance.BinanceResilience.REQUEST_WEIGHT_RATE_LIMITER;
 import static org.knowm.xchange.client.ResilienceRegistries.NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME;
 
 import java.io.IOException;
@@ -51,7 +46,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     binanceUsdmAuth.futureOpenOrders(
                         null, getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
             .withRetry(retry("openOrders"))
-            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(null))
             .call();
       case "INVERSE":
         return decorateApiCall(
@@ -59,7 +53,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     binanceCoinmAuth.futureOpenInverseOrders(
                         null, getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
             .withRetry(retry("openOrders"))
-            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(null))
             .call();
       case "PORTFOLIO_MARGIN":
         return decorateApiCall(
@@ -67,7 +60,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     binancePortfolioMargin.futureOpenPortfolioMarginOrders(
                         null, getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
             .withRetry(retry("openOrders"))
-            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(null))
             .call();
       default: // i.e. SPOT
         return decorateApiCall(
@@ -75,7 +67,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     binanceSpotAuth.openOrders(
                         null, getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
             .withRetry(retry("openOrders"))
-            .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(null))
             .call();
     }
   }
@@ -106,7 +97,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                           apiKey,
                           signatureCreator))
           .withRetry(retry("openOrders"))
-          .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(pair))
           .call();
     } else {
       return decorateApiCall(
@@ -132,7 +122,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                           apiKey,
                           signatureCreator))
           .withRetry(retry("openOrders"))
-          .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), openOrdersPermits(pair))
           .call();
     }
   }
@@ -171,9 +160,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("newOrder", NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME))
-        .withRateLimiter(rateLimiter(ORDERS_PER_SECOND_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(RAW_REQUESTS_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -205,9 +191,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("newFutureOrder", NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME))
-        .withRateLimiter(rateLimiter(ORDERS_PER_SECOND_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(RAW_REQUESTS_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -239,9 +222,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("newFutureOrder", NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME))
-        .withRateLimiter(rateLimiter(ORDERS_PER_SECOND_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(RAW_REQUESTS_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -281,8 +261,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("newFutureOrder", NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME))
-        .withRateLimiter(rateLimiter(ORDERS_PER_10_SECONDS_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(ORDERS_PER_MINUTE_RATE_LIMITER))
         .call();
   }
 
@@ -322,9 +300,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("newFutureOrder", NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME))
-        .withRateLimiter(rateLimiter(ORDERS_PER_SECOND_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(RAW_REQUESTS_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -360,7 +335,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("testNewOrder"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -398,7 +372,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                           super.apiKey,
                           super.signatureCreator))
           .withRetry(retry("orderStatus"))
-          .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
           .call();
     } else {
       return decorateApiCall(
@@ -430,7 +403,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                           super.apiKey,
                           super.signatureCreator))
           .withRetry(retry("orderStatus"))
-          .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
           .call();
     }
   }
@@ -470,7 +442,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                           super.apiKey,
                           super.signatureCreator))
           .withRetry(retry("cancelOrder"))
-          .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
           .call();
     } else {
       return decorateApiCall(
@@ -503,7 +474,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                           super.apiKey,
                           super.signatureCreator))
           .withRetry(retry("cancelOrder"))
-          .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
           .call();
     }
   }
@@ -519,7 +489,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     super.apiKey,
                     super.signatureCreator))
         .withRetry(retry("cancelAllOpenOrders"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -534,7 +503,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     super.apiKey,
                     super.signatureCreator))
         .withRetry(retry("cancelAllOpenOrders"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -551,7 +519,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("allOrders"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
@@ -573,7 +540,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                       apiKey,
                       signatureCreator))
           .withRetry(retry("myTrades"))
-          .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
           .call();
     } else {
       return decorateApiCall(
@@ -590,7 +556,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                       apiKey,
                       signatureCreator))
           .withRetry(retry("myTrades"))
-          .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), orderId != null ? 5 : 20)
           .call();
     }
   }
@@ -608,7 +573,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     : binanceUsdmAuth.futuresAccount(
                         getRecvWindow(), getTimestampFactory(), apiKey, signatureCreator))
         .withRetry(retry("futures-account"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
         .call()
         .getPositions();
   }
@@ -643,35 +607,22 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("myDustLog"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
   public BinanceListenKey startUserDataStream() throws IOException {
     return decorateApiCall(() -> binanceSpotAuth.startUserDataStream(apiKey))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
   public void keepAliveDataStream(String listenKey) throws IOException {
     decorateApiCall(() -> binanceSpotAuth.keepAliveUserDataStream(apiKey, listenKey))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 
   public void closeDataStream(String listenKey) throws IOException {
     decorateApiCall(() -> binanceSpotAuth.closeUserDataStream(apiKey, listenKey))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
-  }
-
-  protected int openOrdersPermits(Instrument pair) {
-    if (exchange
-        .getExchangeSpecification()
-        .getExchangeSpecificParametersItem(EXCHANGE_TYPE)
-        .equals("SPOT")) return pair != null ? 6 : 80;
-    else // FUTURES,INVERSE and MARGIN
-    return pair != null ? 1 : 40;
   }
 
   //  protected int myTradesPermits(Integer limit) {
@@ -703,8 +654,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("modifyOrder"))
-        .withRateLimiter(rateLimiter(ORDERS_PER_10_SECONDS_RATE_LIMITER))
-        .withRateLimiter(rateLimiter(ORDERS_PER_MINUTE_RATE_LIMITER))
         .call();
   }
 
@@ -731,7 +680,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                         apiKey,
                         signatureCreator))
         .withRetry(retry("futuresPositionRisk"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
         .call();
   }
 
@@ -751,7 +699,6 @@ public class BinanceTradeServiceRaw extends BinanceBaseService {
                     apiKey,
                     signatureCreator))
         .withRetry(retry("getAllFutureOrders"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER), 5)
         .call();
   }
 }

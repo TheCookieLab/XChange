@@ -1,6 +1,5 @@
 package org.knowm.xchange.kucoin.uta;
 
-import static org.knowm.xchange.kucoin.uta.UtaResilience.UTA_PUBLIC_REST_ENDPOINT_RATE_LIMITER;
 import static org.knowm.xchange.kucoin.uta.service.UtaExceptionClassifier.callOrThrow;
 
 import java.io.IOException;
@@ -47,7 +46,6 @@ public class UtaMarketDataService extends UtaBaseService implements MarketDataSe
             () ->
                 decorateApiCall(() -> marketApi.getInstruments(tradeType, null))
                     .withRetry(retry("utaInstruments"))
-                    .withRateLimiter(rateLimiter(UTA_PUBLIC_REST_ENDPOINT_RATE_LIMITER))
                     .call(),
             UtaDomains.MARKET,
             "GET /api/ua/v1/market/instrument");
@@ -61,7 +59,6 @@ public class UtaMarketDataService extends UtaBaseService implements MarketDataSe
         () ->
             decorateApiCall(() -> marketApi.getTickers(tradeType, symbol))
                 .withRetry(retry("utaTickers"))
-                .withRateLimiter(rateLimiter(UTA_PUBLIC_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.MARKET,
         "GET /api/ua/v1/market/ticker");
@@ -73,7 +70,6 @@ public class UtaMarketDataService extends UtaBaseService implements MarketDataSe
         () ->
             decorateApiCall(() -> marketApi.getOrderBook(tradeType, symbol, limit, null))
                 .withRetry(retry("utaOrderBook"))
-                .withRateLimiter(rateLimiter(UTA_PUBLIC_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.MARKET,
         "GET /api/ua/v1/market/orderbook");
@@ -87,7 +83,6 @@ public class UtaMarketDataService extends UtaBaseService implements MarketDataSe
             decorateApiCall(
                     () -> marketApi.getKlines(tradeType, symbol, interval, startAtSeconds, endAtSeconds))
                 .withRetry(retry("utaKlines"))
-                .withRateLimiter(rateLimiter(UTA_PUBLIC_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.MARKET,
         "GET /api/ua/v1/market/kline");
@@ -99,7 +94,6 @@ public class UtaMarketDataService extends UtaBaseService implements MarketDataSe
             () ->
                 decorateApiCall(() -> marketApi.getTrades(tradeType, symbol))
                     .withRetry(retry("utaTrades"))
-                    .withRateLimiter(rateLimiter(UTA_PUBLIC_REST_ENDPOINT_RATE_LIMITER))
                     .call(),
             UtaDomains.MARKET,
             "GET /api/ua/v1/market/trade");

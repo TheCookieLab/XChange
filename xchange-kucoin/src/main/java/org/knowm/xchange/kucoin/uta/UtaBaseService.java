@@ -1,7 +1,5 @@
 package org.knowm.xchange.kucoin.uta;
 
-import static org.knowm.xchange.kucoin.uta.UtaResilience.UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER;
-
 import com.google.common.base.Strings;
 import java.io.IOException;
 import java.util.Objects;
@@ -102,7 +100,6 @@ public abstract class UtaBaseService extends BaseResilientExchangeService<Kucoin
                             encryptedPassphrase,
                             UtaConstants.KEY_VERSION))
                 .withRetry(retry("utaPrivateWsToken"))
-                .withRateLimiter(rateLimiter(UTA_PRIVATE_REST_ENDPOINT_RATE_LIMITER))
                 .call(),
         UtaDomains.COMMON,
         "POST /api/v2/bullet-private");

@@ -10,6 +10,7 @@ import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.exceptions.ExchangeUnavailableException;
 import org.knowm.xchange.exceptions.NonceException;
 import org.knowm.xchange.exceptions.RateLimitExceededException;
+import org.knowm.xchange.exceptions.RateLimitTerminatedException;
 import org.knowm.xchange.kucoin.KucoinApiMode;
 
 /**
@@ -63,10 +64,10 @@ public final class UtaExceptionClassifier {
       String clientOrderId,
       String orderId) {
     String text = UtaRedaction.sanitize(message == null ? "Unknown UTA error" : message);
-    UtaApiException.RetryClassification retry =
-        "429000".equals(code) ? RETRYABLE : NON_RETRYABLE;
+    // Rate rejections (429000) are owned by the universal rate limiter: it already waited and
+    // replayed what is replay-safe, so no caller above it may retry them.
     return new UtaApiException(
-        text, code, KucoinApiMode.UTA, domain, endpoint, null, clientOrderId, orderId, retry);
+        text, code, KucoinApiMode.UTA, domain, endpoint, null, clientOrderId, orderId, NON_RETRYABLE);
   }
 
   static UtaApiException classifyTransport(
@@ -74,7 +75,10 @@ public final class UtaExceptionClassifier {
     String text = UtaRedaction.sanitize(cause.getMessage());
     UtaApiException.RetryClassification retry = RETRYABLE;
     int httpStatus = -1;
-    if (cause instanceof jakarta.ws.rs.ProcessingException
+    if (cause instanceof RateLimitTerminatedException) {
+      // Terminal verdict of the universal rate limiter; replay was already decided there.
+      retry = NON_RETRYABLE;
+    } else if (cause instanceof jakarta.ws.rs.ProcessingException
         || cause instanceof java.net.SocketTimeoutException
         || cause instanceof java.net.ConnectException) {
       retry = RETRYABLE;
@@ -100,6 +104,9 @@ public final class UtaExceptionClassifier {
   public static RuntimeException mapToExchangeException(UtaApiException e) {
     if (e.getRetryClassification() == UtaApiException.RetryClassification.UNKNOWN_OUTCOME) {
       return new ExchangeException(e.getMessage(), e);
+    }
+    if (e.getCause() instanceof RateLimitTerminatedException) {
+      return (RateLimitTerminatedException) e.getCause();
     }
     if (e.getHttpStatus() != null && e.getHttpStatus() == 429) {
       return new RateLimitExceededException(e.getMessage(), e);

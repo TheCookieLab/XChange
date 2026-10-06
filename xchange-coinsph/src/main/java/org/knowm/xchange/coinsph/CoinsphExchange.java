@@ -35,7 +35,25 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
 
   @Override
   protected void initServices() {
-    this.timestampFactory = CoinsphTimestampFactory.createFactory(getPublicApi(), getResilienceRegistries());
+    Interceptor errorInterceptor = new CoinsphErrorInterceptor();
+    this.publicApi =
+        ExchangeRestProxyBuilder.forInterface(Coinsph.class, exchangeSpecification)
+            .customInterceptor(errorInterceptor)
+            .clientConfigCustomizer(
+                clientConfig ->
+                    clientConfig.setJacksonObjectMapperFactory(
+                        new CoinsphJacksonObjectMapperFactory()))
+            .build();
+    this.authenticatedApi =
+        ExchangeRestProxyBuilder.forInterface(CoinsphAuthenticated.class, exchangeSpecification)
+            .customInterceptor(errorInterceptor)
+            .clientConfigCustomizer(
+                clientConfig ->
+                    clientConfig.setJacksonObjectMapperFactory(
+                        new CoinsphJacksonObjectMapperFactory()))
+            .build();
+    this.timestampFactory =
+        CoinsphTimestampFactory.createFactory(getPublicApi(), getResilienceRegistries());
     this.marketDataService = new CoinsphMarketDataService(this, getResilienceRegistries());
     this.tradeService = new CoinsphTradeService(this, getResilienceRegistries());
     this.accountService = new CoinsphAccountService(this, getResilienceRegistries());
@@ -86,32 +104,14 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
     spec.setExchangeDescription("Coins.ph Exchange.");
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, false);
     AuthUtils.setApiAndSecretKey(spec, "coinsph"); // For storing API key/secret in properties file
+    spec.getResilience().setRateLimitPolicy(CoinsphRateLimitPolicy.defaultPolicy());
+    spec.getResilience().setRateLimiterEnabled(true);
     return spec;
   }
 
   @Override
   public void applySpecification(ExchangeSpecification exchangeSpecification) {
     concludeHostParams(exchangeSpecification); // Set correct URL based on sandbox mode
-
-    // Initialize API proxies using the provided exchangeSpecification
-    // BEFORE calling super.applySpecification() which might call remoteInit/initServices
-    Interceptor errorInterceptor = new CoinsphErrorInterceptor();
-    this.publicApi =
-        ExchangeRestProxyBuilder.forInterface(Coinsph.class, exchangeSpecification)
-            .customInterceptor(errorInterceptor)
-            .clientConfigCustomizer(
-                clientConfig ->
-                    clientConfig.setJacksonObjectMapperFactory(
-                        new CoinsphJacksonObjectMapperFactory()))
-            .build();
-    this.authenticatedApi =
-        ExchangeRestProxyBuilder.forInterface(CoinsphAuthenticated.class, exchangeSpecification)
-            .customInterceptor(errorInterceptor)
-            .clientConfigCustomizer(
-                clientConfig ->
-                    clientConfig.setJacksonObjectMapperFactory(
-                        new CoinsphJacksonObjectMapperFactory()))
-            .build();
 
     // Initialize signature creator
     // Use the passed exchangeSpecification as this.exchangeSpecification might not be set yet by
@@ -123,9 +123,10 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
       LOG.warn("Secret key not provided. Authenticated services will not be available.");
     }
 
-    super.applySpecification(
-        exchangeSpecification); // Now call super, which will set this.exchangeSpecification and
-    // call initServices/remoteInit
+    // The API proxies are built in initServices(): super.applySpecification() registers the
+    // rate-limit policy into the shared context before initServices(), and rate-limited proxies
+    // need that context.
+    super.applySpecification(exchangeSpecification);
   }
 
   public boolean usingSandbox() {

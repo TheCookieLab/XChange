@@ -93,6 +93,8 @@ public class BinanceExchange extends BaseExchange implements Exchange {
     spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, ExchangeType.SPOT);
     spec.setExchangeSpecificParametersItem(USE_SANDBOX, false);
     AuthUtils.setApiAndSecretKey(spec, "binance");
+    spec.getResilience().setRateLimitPolicy(BinanceRateLimitPolicy.defaultPolicy());
+    spec.getResilience().setRateLimiterEnabled(true);
     return spec;
   }
 

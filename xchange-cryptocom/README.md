@@ -47,6 +47,19 @@ caller gets a structured `CryptoComUnknownOrderOutcomeException` instead of a bl
 Reconciliation happens through exchange order id / client order id: `createCryptoComOrder`
 returns a `CryptoComOrderPlacementResult` that pins both identities when known
 
+## Rate limiting
+
+REST traffic is paced and rate-rejection handled by the universal `xchange-core` rate limiter
+(`CryptoComRateLimitPolicy`, enabled in the default exchange specification). Every rescu method
+is classified: the seven public `GET` methods each own a budget paced per egress IP at
+100 requests/second; the twenty private `POST` methods each own a per-user budget following the
+documented per-method limits (`create-order`, `cancel-order`, `cancel-all-orders` 15 per 100 ms,
+`get-order-detail` 30 per 100 ms, `get-trades` and `get-order-history` 1 per second, all others
+3 per 100 ms). HTTP 429 is owned by the core: reads are cooled down and replayed with a fresh
+admission, while `create-order`, `advanced/create-order`, `cancel-order`, `cancel-all-orders`,
+`create-withdrawal` and `close-position` are never replayed and surface a
+`RateLimitTerminatedException`. The module no longer uses a resilience4j rate limiter.
+
 ## Capability matrix
 
 | Area | v1 method | Surface |

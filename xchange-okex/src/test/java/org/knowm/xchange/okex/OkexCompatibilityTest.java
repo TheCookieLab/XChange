@@ -97,8 +97,6 @@ public class OkexCompatibilityTest {
     assertThat(OkexAuthenticated.class.getAnnotation(Deprecated.class)).isNotNull();
     assertThat(Okex.instrumentsPath).isEqualTo("/public/instruments");
     assertThat(OkexAuthenticated.placeOrderPath).isEqualTo("/trade/order");
-    assertThat(OkexAuthenticated.privatePathRateLimits.get(OkexAuthenticated.placeOrderPath))
-        .isEqualTo(Arrays.asList(60, 2));
     assertThat(
             OkexAuthenticated.class.getMethod(
                 "placeOrder",

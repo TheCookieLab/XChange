@@ -4,13 +4,14 @@ import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import java.time.Duration;
 import org.knowm.xchange.client.ResilienceRegistries;
 
+/**
+ * Per-category resilience4j limiters used only by the WebSocket trading transport of {@code
+ * xchange-stream-bybit}, which does not pass through the REST rate-limit boundary. REST requests
+ * are paced exclusively by {@link BybitRateLimitPolicy} in xchange-core.
+ *
+ * @see <a href="https://bybit-exchange.github.io/docs/v5/rate-limit">Bybit rate limits</a>
+ */
 public class BybitResilience {
-
-  /**
-   * for UTA 2.0 pro account <a
-   * href="https://bybit-exchange.github.io/docs/v5/rate-limit">Documentation</a>
-   */
-  public static final String GLOBAL_RATE_LIMITER = "global";
 
   // /v5/order/create
   public static final String ORDER_CREATE_LINEAR_AND_INVERSE_RATE_LIMITER =
@@ -36,30 +37,8 @@ public class BybitResilience {
   public static final String ORDER_CANCEL_SPOT_RATE_LIMITER = "orderCancelSpot";
   public static final String ORDER_CANCEL_OPTION_LIMITER = "orderCancelOption";
 
-  // /v5/order/cancel-batch
-  public static final String BATCH_ORDER_CANCEL_LINEAR_AND_INVERSE_RATE_LIMITER =
-      "batchOrderCancelLinearAndInverse";
-  public static final String BATCH_ORDER_CANCEL_SPOT_RATE_LIMITER = "batchOrderCancelSpot";
-  public static final String BATCH_ORDER_CANCEL_OPTION_LIMITER = "batchOrderCancelOption";
-
-  // /v5/position/set-leverage
-  public static final String POSITION_SET_LEVERAGE_INVERSE_RATE_LIMITER =
-      "positionSetLeverageInverse";
-  public static final String POSITION_SET_LEVERAGE_LINEAR_RATE_LIMITER =
-      "positionSetLeverageLinear";
-
   public static ResilienceRegistries createRegistries() {
     ResilienceRegistries registries = new ResilienceRegistries();
-
-    registries
-        .rateLimiters()
-        .rateLimiter(
-            GLOBAL_RATE_LIMITER,
-            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                .limitRefreshPeriod(Duration.ofSeconds(5))
-                .limitForPeriod(600)
-                .timeoutDuration(Duration.ofSeconds(1))
-                .build());
 
     // /order/create
     registries
@@ -171,55 +150,6 @@ public class BybitResilience {
         .rateLimiters()
         .rateLimiter(
             ORDER_CANCEL_OPTION_LIMITER,
-            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                .limitRefreshPeriod(Duration.ofSeconds(1))
-                .limitForPeriod(10)
-                .timeoutDuration(Duration.ofSeconds(1))
-                .build());
-
-    // /order/cancel-batch
-    registries
-        .rateLimiters()
-        .rateLimiter(
-            BATCH_ORDER_CANCEL_LINEAR_AND_INVERSE_RATE_LIMITER,
-            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                .limitRefreshPeriod(Duration.ofSeconds(1))
-                .limitForPeriod(10)
-                .timeoutDuration(Duration.ofSeconds(1))
-                .build());
-    registries
-        .rateLimiters()
-        .rateLimiter(
-            BATCH_ORDER_CANCEL_SPOT_RATE_LIMITER,
-            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                .limitRefreshPeriod(Duration.ofSeconds(1))
-                .limitForPeriod(20)
-                .timeoutDuration(Duration.ofSeconds(1))
-                .build());
-    registries
-        .rateLimiters()
-        .rateLimiter(
-            BATCH_ORDER_CANCEL_OPTION_LIMITER,
-            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                .limitRefreshPeriod(Duration.ofSeconds(1))
-                .limitForPeriod(10)
-                .timeoutDuration(Duration.ofSeconds(1))
-                .build());
-
-    // /position/set-leverage
-    registries
-        .rateLimiters()
-        .rateLimiter(
-            POSITION_SET_LEVERAGE_INVERSE_RATE_LIMITER,
-            RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                .limitRefreshPeriod(Duration.ofSeconds(1))
-                .limitForPeriod(10)
-                .timeoutDuration(Duration.ofSeconds(1))
-                .build());
-    registries
-        .rateLimiters()
-        .rateLimiter(
-            POSITION_SET_LEVERAGE_LINEAR_RATE_LIMITER,
             RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
                 .limitRefreshPeriod(Duration.ofSeconds(1))
                 .limitForPeriod(10)

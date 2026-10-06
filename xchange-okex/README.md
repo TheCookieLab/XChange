@@ -73,14 +73,20 @@ spec.setExchangeSpecificParametersItem(OkxExchange.PARAM_SIMULATED, "1");
 
 ## Endpoint policy and resilience
 
-Rate limits are a typed, immutable policy (`OkxRateLimitPolicy`) instead of mutable statics:
-`Okx.publicPathRateLimits` and `OkxAuthenticated.privatePathRateLimits` map each endpoint
-path to a request budget, and `OkxResilience.createRegistries()` derives rate limiters from
-them. Extension point for new endpoints:
-
-```java
-OkxResilience.registerRateLimiter(OkxResilience.createRegistries(), path, requests, seconds);
-```
+REST rate limiting is owned by the universal `xchange-core` rate limiter. The default exchange
+specification installs `OkxRateLimitPolicy.defaultPolicy()` and enables the limiter, so every REST
+wire attempt (built through `ExchangeRestProxyBuilder`) is admitted once against the documented OKX
+budgets (public endpoints per egress IP, private endpoints per User ID, batch order endpoints
+charged their 20-order maximum, plus the 1000 orders / 2 s sub-account budget) and its HTTP
+feedback is interpreted once. HTTP 429 is a rate rejection owned by the core: it triggers a
+cooldown (`Retry-After` honoured when present), reads and cancellations are replayed with fresh
+admission, and order placement, amendment and other mutations are never blindly replayed; an
+exhausted rejection surfaces as `RateLimitTerminatedException`. The old module-owned
+resilience4j limiters, `Okx.publicPathRateLimits` and `OkxAuthenticated.privatePathRateLimits`
+were removed. `OkxResilience.createRegistries()` now only provides the 60 requests / 2 s limiters
+of the WebSocket order channels used by `xchange-stream-okex`, which is outside the core REST
+boundary. Per-instrument, per-instrument-type and per-currency OKX limits are applied as
+single aggregate budgets (conservative), because the core budget model has no such dimension.
 
 ## Structured errors
 

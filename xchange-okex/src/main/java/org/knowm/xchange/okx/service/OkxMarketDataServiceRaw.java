@@ -33,7 +33,6 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
       return decorateApiCall(
               () ->
                   okx.getInstruments(instrumentType, underlying, instrumentId, simulatedTrading()))
-          .withRateLimiter(rateLimiter(Okx.instrumentsPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -58,7 +57,6 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
     try {
       response =
           decorateApiCall(() -> okx.getUnderlyings(instType.name()))
-              .withRateLimiter(rateLimiter(Okx.underlyingPath))
               .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -74,7 +72,6 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
       throws OkxException, IOException {
     try {
       return decorateApiCall(() -> okx.getTicker(instrumentId, simulatedTrading()))
-          .withRateLimiter(rateLimiter(Okx.tickerPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -85,7 +82,6 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
       throws OkxException, IOException {
     try {
       return decorateApiCall(() -> okx.getTickers(instType.toString(), simulatedTrading()))
-          .withRateLimiter(rateLimiter(Okx.tickersPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -96,7 +92,6 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
       throws OkxException, IOException {
     try {
       return decorateApiCall(() -> okx.getFundingRate(instrumentId, simulatedTrading()))
-          .withRateLimiter(rateLimiter(Okx.instrumentsPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -114,7 +109,6 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
                       auth.timestamp(),
                       auth.passphrase(),
                       auth.simulatedTrading()))
-          .withRateLimiter(rateLimiter(OkxAuthenticated.currenciesPath))
           .call();
     } catch (OkxException e) {
       throw handleError(e);
@@ -137,7 +131,6 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
       throws OkxException, IOException {
     return decorateApiCall(
             () -> okx.getHistoryCandles(instrument, after, before, bar, limit, simulatedTrading()))
-        .withRateLimiter(rateLimiter(Okx.candlesHistoryPath))
         .call();
   }
 
@@ -159,7 +152,6 @@ public class OkxMarketDataServiceRaw extends OkxBaseService {
               }
               return response.getData();
             })
-        .withRateLimiter(rateLimiter(Okx.fundingRateHistoryPath))
         .call();
   }
 }

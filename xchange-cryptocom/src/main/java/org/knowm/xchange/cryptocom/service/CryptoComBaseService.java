@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.client.ResilienceRegistries;
-import org.knowm.xchange.client.ResilienceUtils;
 import org.knowm.xchange.cryptocom.CryptoCom;
 import org.knowm.xchange.cryptocom.CryptoComDigest;
 import org.knowm.xchange.cryptocom.CryptoComExchange;
@@ -47,21 +46,6 @@ public class CryptoComBaseService extends BaseResilientExchangeService<CryptoCom
     }
     return CryptoComDigest.sign(
         method, id, nonce, apiKey, apiSecret, params == null ? Collections.emptyMap() : params);
-  }
-
-  /**
-   * Executes an API call through the exchange resilience chain, attaching the per-method rate
-   * limiter only when the exchange-level {@link org.knowm.xchange.cryptocom.CryptoComRatePolicy}
-   * configured one for {@code apiMethod}. Calls to methods without a policy entry run exactly as
-   * before (no implicit limiting).
-   */
-  protected <T> T apiCall(String apiMethod, ResilienceUtils.CallableApi<T> callable)
-      throws IOException {
-    ResilienceUtils.DecorateCallableApi<T> decorated = decorateApiCall(callable);
-    if (exchange.isMethodRateLimited(apiMethod)) {
-      decorated = decorated.withRateLimiter(rateLimiter(apiMethod));
-    }
-    return decorated.call();
   }
 
   protected <T> List<T> toList(JsonNode node, Class<T> elementType) {

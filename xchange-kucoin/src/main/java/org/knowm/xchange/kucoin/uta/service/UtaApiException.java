@@ -15,7 +15,10 @@ public class UtaApiException extends RuntimeException {
   private static final long serialVersionUID = 1L;
 
   public enum RetryClassification {
-    /** Safe to retry: rate limiting, transient provider unavailability, transport timeout. */
+    /**
+     * Safe to retry: transient provider unavailability, transport timeout. Rate rejections are
+     * never retried by callers; the universal rate limiter owns their pacing and replay.
+     */
     RETRYABLE,
     /** Never retry: validation, auth, or state errors that will fail identically. */
     NON_RETRYABLE,

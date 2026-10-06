@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import okhttp3.OkHttpClient;
+import org.knowm.xchange.client.ratelimit.RateLimitContext;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.uniswap.protocol.Abi;
 import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
@@ -22,7 +25,6 @@ import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.EthTransaction;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
-import org.web3j.protocol.http.HttpService;
 
 /**
  * Small client boundary around web3j's JSON-RPC transport.
@@ -40,16 +42,60 @@ public final class UniswapNodeClient implements AutoCloseable {
     this.web3j = web3j;
   }
 
-  /** Builds a client for an http(s) endpoint with the given connect/read timeouts (0 = default). */
-  public static UniswapNodeClient create(String rpcUrl, int connectTimeoutMillis, int readTimeoutMillis) {
-    OkHttpClient.Builder builder = new OkHttpClient.Builder();
+  /**
+   * Builds a client for an http(s) endpoint whose every JSON-RPC wire attempt is admitted by the
+   * rate limiter.
+   *
+   * @param rpcUrl the node endpoint
+   * @param connectTimeoutMillis connect timeout, 0 for the OkHttp default
+   * @param readTimeoutMillis read timeout, 0 for the OkHttp default
+   * @param policy the rate-limit policy, normally {@link UniswapRateLimitPolicy#defaultPolicy()}
+   * @param context the rate-limit context that owns the budget state
+   * @param userScope the opaque user-scope binding, or {@code null} for the shared default
+   */
+  public static UniswapNodeClient create(
+      String rpcUrl,
+      int connectTimeoutMillis,
+      int readTimeoutMillis,
+      RateLimitPolicy policy,
+      RateLimitContext context,
+      String userScope) {
+    Objects.requireNonNull(policy, "policy");
+    Objects.requireNonNull(context, "context");
+    return build(rpcUrl, connectTimeoutMillis, readTimeoutMillis, policy, context, userScope);
+  }
+
+  /**
+   * Builds a client without any rate limiting, for specifications that explicitly disable the rate
+   * limiter.
+   */
+  public static UniswapNodeClient createUnmetered(
+      String rpcUrl, int connectTimeoutMillis, int readTimeoutMillis) {
+    return build(rpcUrl, connectTimeoutMillis, readTimeoutMillis, null, null, null);
+  }
+
+  private static UniswapNodeClient build(
+      String rpcUrl,
+      int connectTimeoutMillis,
+      int readTimeoutMillis,
+      RateLimitPolicy policy,
+      RateLimitContext context,
+      String userScope) {
+    // Redirects and silent connection-failure retries would put a second request on the wire
+    // without a second rate admission (and could replay a transaction broadcast).
+    OkHttpClient.Builder builder =
+        new OkHttpClient.Builder()
+            .retryOnConnectionFailure(false)
+            .followRedirects(false)
+            .followSslRedirects(false);
     if (connectTimeoutMillis > 0) {
       builder.connectTimeout(connectTimeoutMillis, TimeUnit.MILLISECONDS);
     }
     if (readTimeoutMillis > 0) {
       builder.readTimeout(readTimeoutMillis, TimeUnit.MILLISECONDS);
     }
-    HttpService service = new HttpService(rpcUrl, builder.build(), false);
+    MeteredHttpService service =
+        new MeteredHttpService(rpcUrl, builder.build(), policy, context, userScope);
     return new UniswapNodeClient(Web3j.build(service));
   }
 

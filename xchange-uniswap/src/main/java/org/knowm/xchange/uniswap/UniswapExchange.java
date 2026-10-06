@@ -6,12 +6,15 @@ import java.util.ArrayList;
 import java.util.List;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.client.ratelimit.RateLimitContext;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.uniswap.DeploymentRegistry.Contract;
 import org.knowm.xchange.uniswap.DeploymentRegistry.Deployment;
 import org.knowm.xchange.uniswap.client.UniswapNodeClient;
+import org.knowm.xchange.uniswap.client.UniswapRateLimitPolicy;
 import org.knowm.xchange.uniswap.protocol.Abi;
 import org.knowm.xchange.uniswap.service.UniswapAccountService;
 import org.knowm.xchange.uniswap.service.UniswapMarketDataService;
@@ -41,6 +44,8 @@ public class UniswapExchange extends BaseExchange {
     specification.setShouldLoadRemoteMetaData(false);
     specification.setExchangeName("Uniswap");
     specification.setExchangeDescription("Uniswap v4 (Ethereum mainnet)");
+    specification.getResilience().setRateLimitPolicy(UniswapRateLimitPolicy.defaultPolicy());
+    specification.getResilience().setRateLimiterEnabled(true);
     return specification;
   }
 
@@ -48,12 +53,11 @@ public class UniswapExchange extends BaseExchange {
   public void applySpecification(ExchangeSpecification exchangeSpecification) {
     // Parse and validate the typed configuration before anything becomes usable.
     this.config = UniswapConfig.from(exchangeSpecification);
+    // The base class registers the rate-limit policy into the effective context; the node client
+    // is created afterwards so that it shares that context.
+    super.applySpecification(exchangeSpecification);
     if (this.nodeClient == null) {
-      this.nodeClient =
-          UniswapNodeClient.create(
-              config.rpcUrl(),
-              exchangeSpecification.getHttpConnTimeout(),
-              exchangeSpecification.getHttpReadTimeout());
+      this.nodeClient = newNodeClient(exchangeSpecification, config);
     }
     if (this.signer == null) {
       this.signer =
@@ -63,10 +67,33 @@ public class UniswapExchange extends BaseExchange {
     if (this.nonceManager == null) {
       this.nonceManager = new NonceManager();
     }
-    super.applySpecification(exchangeSpecification);
     if (config.verifyOnStartup()) {
       verifyChainAndDeployments();
     }
+  }
+
+  private static UniswapNodeClient newNodeClient(
+      ExchangeSpecification specification, UniswapConfig config) {
+    ExchangeSpecification.ResilienceSpecification resilience = specification.getResilience();
+    if (!resilience.isRateLimiterEnabled()) {
+      return UniswapNodeClient.createUnmetered(
+          config.rpcUrl(), specification.getHttpConnTimeout(), specification.getHttpReadTimeout());
+    }
+    RateLimitPolicy policy =
+        resilience.getRateLimitPolicy() == null
+            ? UniswapRateLimitPolicy.defaultPolicy()
+            : resilience.getRateLimitPolicy();
+    RateLimitContext context =
+        resilience.getRateLimitContext() == null
+            ? new RateLimitContext()
+            : resilience.getRateLimitContext();
+    return UniswapNodeClient.create(
+        config.rpcUrl(),
+        specification.getHttpConnTimeout(),
+        specification.getHttpReadTimeout(),
+        policy,
+        context,
+        resilience.getRateLimitUserScope());
   }
 
   @Override

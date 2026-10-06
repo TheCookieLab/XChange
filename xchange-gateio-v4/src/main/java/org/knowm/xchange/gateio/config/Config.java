@@ -2,13 +2,9 @@ package org.knowm.xchange.gateio.config;
 
 import java.time.Clock;
 import lombok.Data;
-import si.mazi.rescu.IRestProxyFactory;
-import si.mazi.rescu.RestProxyFactoryImpl;
 
 @Data
 public final class Config {
-
-  private Class<? extends IRestProxyFactory> restProxyFactoryClass = RestProxyFactoryImpl.class;
 
   private Clock clock;
 

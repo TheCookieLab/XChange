@@ -1,7 +1,5 @@
 package org.knowm.xchange.bitfinex.service;
 
-import static org.knowm.xchange.bitfinex.BitfinexResilience.BITFINEX_RATE_LIMITER;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -79,7 +77,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     new BitfinexNonceOnlyRequest(
                         "/v1/account_infos",
                         String.valueOf(exchange.getNonceFactory().createValue()))))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -92,7 +89,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     signatureCreator,
                     new BitfinexNonceOnlyRequest(
                         "/v1/orders", String.valueOf(exchange.getNonceFactory().createValue()))))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -105,7 +101,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     signatureCreator,
                     new BitfinexOrdersHistoryRequest(
                         String.valueOf(exchange.getNonceFactory().createValue()), limit)))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -118,7 +113,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     signatureCreator,
                     new BitfinexNonceOnlyRequest(
                         "/v1/offers", String.valueOf(exchange.getNonceFactory().createValue()))))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -148,7 +142,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                         type,
                         orderType,
                         null)))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -213,7 +206,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
       response =
           decorateApiCall(
                   () -> bitfinex.newOrder(apiKey, payloadCreator, signatureCreator, request))
-              .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
               .call();
 
     } else { // order amend
@@ -235,7 +227,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
       response =
           decorateApiCall(
                   () -> bitfinex.replaceOrder(apiKey, payloadCreator, signatureCreator, request))
-              .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
               .call();
     }
 
@@ -290,7 +281,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
             String.valueOf(exchange.getNonceFactory().createValue()), bitfinexOrders);
     return decorateApiCall(
             () -> bitfinex.newOrderMulti(apiKey, payloadCreator, signatureCreator, request))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -310,7 +300,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                         loanOrder.getRate(),
                         loanOrder.getDayPeriod(),
                         direction)))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -332,7 +321,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                         new BigDecimal("0.0"),
                         loanOrder.getDayPeriod(),
                         direction)))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -348,7 +336,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                       new BitfinexCancelOrderRequest(
                           String.valueOf(exchange.getNonceFactory().createValue()),
                           Long.valueOf(orderId))))
-          .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
           .call();
       return true;
     } catch (BitfinexException e) {
@@ -371,7 +358,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                       signatureCreator,
                       new BitfinexCancelAllOrdersRequest(
                           String.valueOf(exchange.getNonceFactory().createValue()))))
-          .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
           .call();
       return true;
     } catch (BitfinexException e) {
@@ -399,7 +385,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     signatureCreator,
                     new BitfinexCancelOrderMultiRequest(
                         String.valueOf(exchange.getNonceFactory().createValue()), cancelOrderIds)))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
     return true;
   }
@@ -414,7 +399,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     new BitfinexCancelOfferRequest(
                         String.valueOf(exchange.getNonceFactory().createValue()),
                         Long.valueOf(offerId))))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -428,7 +412,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     new BitfinexOrderStatusRequest(
                         String.valueOf(exchange.getNonceFactory().createValue()),
                         Long.valueOf(orderId))))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -443,7 +426,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     new BitfinexOfferStatusRequest(
                         String.valueOf(exchange.getNonceFactory().createValue()),
                         Long.valueOf(offerId))))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -460,7 +442,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                         symbol,
                         until,
                         limit_trades)))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -480,7 +461,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                         endTime,
                         limit,
                         reverse)))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -493,7 +473,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     signatureCreator,
                     new BitfinexActiveCreditsRequest(
                         String.valueOf(exchange.getNonceFactory().createValue()))))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -525,7 +504,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                             amount,
                             address,
                             paymentId)))
-            .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
             .call();
     return withdrawRepsonse[0].getWithdrawalId();
   }
@@ -539,7 +517,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     signatureCreator,
                     new BitfinexNonceOnlyRequest(
                         "/v1/positions", String.valueOf(exchange.getNonceFactory().createValue()))))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -548,7 +525,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
             () ->
                 bitfinexV2.activePositions(
                     exchange.getNonceFactory(), apiKey, signatureV2, EmptyRequest.INSTANCE))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -567,7 +543,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                       limit,
                       sort,
                       EmptyRequest.INSTANCE))
-          .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
           .call();
     }
 
@@ -583,7 +558,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     limit,
                     sort,
                     EmptyRequest.INSTANCE))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -607,7 +581,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     BitfinexOpenOrdersRequest.builder().ids(ids).build());
               }
             })
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -642,7 +615,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                         .build());
               }
             })
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 
@@ -663,7 +635,6 @@ public class BitfinexTradeServiceRaw extends BitfinexBaseService {
                     symbol,
                     orderId,
                     EmptyRequest.INSTANCE))
-        .withRateLimiter(rateLimiter(BITFINEX_RATE_LIMITER))
         .call();
   }
 }

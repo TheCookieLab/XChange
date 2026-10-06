@@ -1,7 +1,5 @@
 package org.knowm.xchange.binance;
 
-import static org.knowm.xchange.binance.BinanceResilience.REQUEST_WEIGHT_RATE_LIMITER;
-
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -81,8 +79,6 @@ public class BinanceTimestampFactory implements SynchronizedValueFactory<Long> {
   private BinanceTime binanceTime(BinanceTime binanceTime) throws IOException {
     return ResilienceUtils.decorateApiCall(resilienceSpecification, () -> binanceTime)
         .withRetry(resilienceRegistries.retries().retry("time"))
-        .withRateLimiter(
-            resilienceRegistries.rateLimiters().rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
         .call();
   }
 }

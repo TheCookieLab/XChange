@@ -23,7 +23,6 @@ public class BlockchainTradeServiceRaw extends BlockchainBaseService {
   protected List<BlockchainOrder> getOrders() throws IOException, BlockchainException {
     return decorateApiCall(this.blockchainApi::getOrders)
         .withRetry(retry(GET_ORDERS))
-        .withRateLimiter(rateLimiter(ENDPOINT_RATE_LIMIT))
         .call();
   }
 
@@ -31,7 +30,6 @@ public class BlockchainTradeServiceRaw extends BlockchainBaseService {
       throws IOException, BlockchainException {
     return decorateApiCall(() -> this.blockchainApi.getOrdersBySymbol(symbol))
         .withRetry(retry(GET_ORDERS))
-        .withRateLimiter(rateLimiter(ENDPOINT_RATE_LIMIT))
         .call();
   }
 
@@ -39,7 +37,6 @@ public class BlockchainTradeServiceRaw extends BlockchainBaseService {
     try {
       return decorateApiCall(() -> this.blockchainApi.getOrder(orderId))
           .withRetry(retry(GET_ORDER))
-          .withRateLimiter(rateLimiter(ENDPOINT_RATE_LIMIT))
           .call();
     } catch (BlockchainException e) {
       throw BlockchainErrorAdapter.adapt(e);
@@ -49,7 +46,6 @@ public class BlockchainTradeServiceRaw extends BlockchainBaseService {
   protected BlockchainOrder postOrder(BlockchainOrder blockchainOrder) throws IOException {
     return decorateApiCall(() -> this.blockchainApi.postOrder(blockchainOrder))
         .withRetry(retry(POST_ORDER))
-        .withRateLimiter(rateLimiter(ENDPOINT_RATE_LIMIT))
         .call();
   }
 
@@ -57,7 +53,6 @@ public class BlockchainTradeServiceRaw extends BlockchainBaseService {
     try {
       decorateApiCall(() -> this.blockchainApi.cancelOrder(orderId))
           .withRetry(retry(CANCEL_ORDER))
-          .withRateLimiter(rateLimiter(ENDPOINT_RATE_LIMIT))
           .call();
       return true;
     } catch (BlockchainException e) {
@@ -69,7 +64,6 @@ public class BlockchainTradeServiceRaw extends BlockchainBaseService {
     try {
       decorateApiCall(() -> this.blockchainApi.cancelAllOrders(symbol))
           .withRetry(retry(CANCEL_ALL_ORDERS))
-          .withRateLimiter(rateLimiter(ENDPOINT_RATE_LIMIT))
           .call();
       return true;
     } catch (BlockchainException e) {
@@ -81,7 +75,6 @@ public class BlockchainTradeServiceRaw extends BlockchainBaseService {
       String symbol, Long startTime, Long endTime, Integer limit) throws IOException {
     return decorateApiCall(() -> this.blockchainApi.getTrades(symbol, startTime, endTime, limit))
         .withRetry(retry(GET_TRADES))
-        .withRateLimiter(rateLimiter(ENDPOINT_RATE_LIMIT))
         .call();
   }
 }

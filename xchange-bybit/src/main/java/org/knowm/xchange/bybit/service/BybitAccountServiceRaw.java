@@ -1,11 +1,7 @@
 package org.knowm.xchange.bybit.service;
 
 import static org.knowm.xchange.bybit.BybitAdapters.createBybitExceptionFromResult;
-import static org.knowm.xchange.bybit.BybitResilience.GLOBAL_RATE_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.POSITION_SET_LEVERAGE_INVERSE_RATE_LIMITER;
-import static org.knowm.xchange.bybit.BybitResilience.POSITION_SET_LEVERAGE_LINEAR_RATE_LIMITER;
 
-import io.github.resilience4j.ratelimiter.RateLimiter;
 import java.io.IOException;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
@@ -75,25 +71,12 @@ public class BybitAccountServiceRaw extends BybitBaseService {
     String leverageString = Integer.toString(leverage);
     BybitSetLeveragePayload payload =
         new BybitSetLeveragePayload(category.getValue(), symbol, leverageString, leverageString);
-    RateLimiter rateLimiter = null;
-    switch (category) {
-      case INVERSE:
-        rateLimiter = rateLimiter(POSITION_SET_LEVERAGE_INVERSE_RATE_LIMITER);
-        break;
-      case LINEAR:
-        rateLimiter = rateLimiter(POSITION_SET_LEVERAGE_LINEAR_RATE_LIMITER);
-        break;
-      default:
-        throw new UnsupportedOperationException("Only Linear and Inverse category");
+    if (category != BybitCategory.INVERSE && category != BybitCategory.LINEAR) {
+      throw new UnsupportedOperationException("Only Linear and Inverse category");
     }
     BybitResult<Object> setLeverageResult =
-        decorateApiCall(
-                () ->
-                    bybitAuthenticated.setLeverage(
-                        apiKey, signatureCreator, exchange.getTimeStampFactory(), payload))
-            .withRateLimiter(rateLimiter)
-            .withRateLimiter(rateLimiter(GLOBAL_RATE_LIMITER))
-            .call();
+        bybitAuthenticated.setLeverage(
+            apiKey, signatureCreator, exchange.getTimeStampFactory(), payload);
     // retCode=110043, retMsg=leverage not modified - also is success
     if (!setLeverageResult.isSuccess() && setLeverageResult.getRetCode() != 110043) {
       throw createBybitExceptionFromResult(setLeverageResult);
