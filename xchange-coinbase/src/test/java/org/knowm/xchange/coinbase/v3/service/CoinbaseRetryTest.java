@@ -32,13 +32,27 @@ import si.mazi.rescu.ParamsDigest;
 public class CoinbaseRetryTest {
 
   @Test
-  public void rateCreditFailureThenSuccessCompletesIteration() throws Exception {
+  public void rateCreditFailureIsNeverRetriedByTheReadHelper() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
-    CoinbaseAccountsResponse success =
-        new CoinbaseAccountsResponse(Collections.emptyList(), false, null, null);
     when(authenticated.listAccounts(any(ParamsDigest.class), eq(250), any()))
         .thenThrow(rateLimited())
-        .thenReturn(success);
+        .thenReturn(accountsResponse());
+
+    CoinbaseAccountServiceRaw service =
+        new CoinbaseAccountServiceRaw(coinbaseExchange(), authenticated, mock(ParamsDigest.class));
+
+    CoinbaseException exception =
+        assertThrows(CoinbaseException.class, service::getCoinbaseAccounts);
+    assertEquals(429, exception.getHttpStatusCode());
+    verify(authenticated, times(1)).listAccounts(any(ParamsDigest.class), eq(250), any());
+  }
+
+  @Test
+  public void serverFailureThenSuccessCompletesIteration() throws Exception {
+    CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
+    when(authenticated.listAccounts(any(ParamsDigest.class), eq(250), any()))
+        .thenThrow(serverFailure())
+        .thenReturn(accountsResponse());
 
     CoinbaseAccountServiceRaw service =
         new CoinbaseAccountServiceRaw(coinbaseExchange(), authenticated, mock(ParamsDigest.class));
@@ -48,17 +62,17 @@ public class CoinbaseRetryTest {
   }
 
   @Test
-  public void persistentRateCreditFailsAfterBoundedAttempts() throws Exception {
+  public void persistentServerFailureFailsAfterBoundedAttempts() throws Exception {
     CoinbaseAuthenticated authenticated = mock(CoinbaseAuthenticated.class);
     when(authenticated.listAccounts(any(ParamsDigest.class), eq(250), any()))
-        .thenThrow(rateLimited());
+        .thenThrow(serverFailure());
 
     CoinbaseAccountServiceRaw service =
         new CoinbaseAccountServiceRaw(coinbaseExchange(), authenticated, mock(ParamsDigest.class));
 
     CoinbaseException exception =
         assertThrows(CoinbaseException.class, service::getCoinbaseAccounts);
-    assertEquals(429, exception.getHttpStatusCode());
+    assertEquals(503, exception.getHttpStatusCode());
     verify(authenticated, times(CoinbaseRetry.MAX_ATTEMPTS))
         .listAccounts(any(ParamsDigest.class), eq(250), any());
   }
@@ -180,7 +194,7 @@ public class CoinbaseRetryTest {
               () ->
                   CoinbaseRetry.readWithBackoff(
                       () -> {
-                        throw rateLimited();
+                        throw serverFailure();
                       }));
       assertTrue(failure.getMessage().contains("Interrupted during Coinbase retry backoff"));
     } finally {
@@ -205,6 +219,14 @@ public class CoinbaseRetryTest {
         new CoinbaseException(
             Collections.singletonList(new CoinbaseError("INVALID_ARGUMENT", "nope")));
     failure.setHttpStatusCode(400);
+    return failure;
+  }
+
+  private static CoinbaseException serverFailure() {
+    CoinbaseException failure =
+        new CoinbaseException(
+            Collections.singletonList(new CoinbaseError("INTERNAL", "try later")));
+    failure.setHttpStatusCode(503);
     return failure;
   }
 

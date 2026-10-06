@@ -4,14 +4,15 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.coinbasederivatives.auth.AccessToken;
+import org.knowm.xchange.client.ratelimit.RateLimitContext;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.coinbasederivatives.auth.CoinbaseDerivativesAccessTokenProvider;
 import org.knowm.xchange.coinbasederivatives.auth.CoinbaseDerivativesJwtGenerator;
 import org.knowm.xchange.coinbasederivatives.client.CoinbaseDerivativesJsonRpcTransport;
+import org.knowm.xchange.coinbasederivatives.client.CoinbaseDerivativesRateLimitPolicy;
 import org.knowm.xchange.coinbasederivatives.dto.marketdata.CoinbaseDerivativesInstrument;
 import org.knowm.xchange.coinbasederivatives.service.CoinbaseDerivativesAccountService;
 import org.knowm.xchange.coinbasederivatives.service.CoinbaseDerivativesMarketDataService;
@@ -53,15 +54,34 @@ public class CoinbaseDerivativesExchange extends BaseExchange {
     specification.setOverrideWebsocketApiUri(WEBSOCKET_URI);
     specification.setExchangeSpecificParametersItem(WEBSOCKET_URI_PARAMETER, WEBSOCKET_URI);
     specification.setExchangeSpecificParametersItem(CANCEL_ON_DISCONNECT, false);
+    specification.getResilience().setRateLimiterEnabled(true);
+    specification.getResilience().setRateLimitPolicy(CoinbaseDerivativesRateLimitPolicy.create());
     return specification;
+  }
+
+  private static CoinbaseDerivativesJsonRpcTransport newTransport(
+      ExchangeSpecification specification) {
+    URI endpoint = URI.create(specification.getSslUri());
+    ExchangeSpecification.ResilienceSpecification resilience = specification.getResilience();
+    if (!resilience.isRateLimiterEnabled()) {
+      return CoinbaseDerivativesJsonRpcTransport.unmetered(endpoint);
+    }
+    RateLimitPolicy policy =
+        resilience.getRateLimitPolicy() == null
+            ? CoinbaseDerivativesRateLimitPolicy.create()
+            : resilience.getRateLimitPolicy();
+    RateLimitContext context =
+        resilience.getRateLimitContext() == null
+            ? new RateLimitContext()
+            : resilience.getRateLimitContext();
+    return new CoinbaseDerivativesJsonRpcTransport(
+        endpoint, policy, context, resilience.getRateLimitUserScope());
   }
 
   /** Returns the exchange-owned transport shared by all REST services. */
   public synchronized CoinbaseDerivativesJsonRpcTransport getJsonRpcTransport() {
     if (jsonRpcTransport == null) {
-      jsonRpcTransport =
-          new CoinbaseDerivativesJsonRpcTransport(
-              URI.create(getExchangeSpecification().getSslUri()));
+      jsonRpcTransport = newTransport(getExchangeSpecification());
       String apiKey = getExchangeSpecification().getApiKey();
       String secretKey = getExchangeSpecification().getSecretKey();
       if (apiKey != null && secretKey != null) {
@@ -70,11 +90,7 @@ public class CoinbaseDerivativesExchange extends BaseExchange {
         CoinbaseDerivativesAccessTokenProvider provider =
             new CoinbaseDerivativesAccessTokenProvider(
                 generator,
-                freshJwt ->
-                    jsonRpcTransport.callPublicOnce(
-                        "public/auth",
-                        Map.of("grant_type", "coinbase_cdp", "token", freshJwt),
-                        AccessToken.class));
+                jsonRpcTransport::authenticate);
         jsonRpcTransport.setAccessTokenProvider(provider);
       }
     }

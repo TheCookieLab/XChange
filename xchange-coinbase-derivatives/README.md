@@ -23,3 +23,13 @@ relationships for reconciliation.
 Private reads and cancellation use explicitly replay-safe calls. Callers must
 recover ambiguous placements using exchange order and trade IDs, never by
 assuming that a repeated label refers to the same order.
+
+## Rate limiting
+
+`CoinbaseDerivativesExchange.getDefaultExchangeSpecification()` enables
+`CoinbaseDerivativesRateLimitPolicy` on the core rate-limit context described in
+the [root README](../README.md#rate-limiting). Operations are keyed by JSON-RPC
+method; access tokens are minted after admission. The budget values are
+conservative estimates modeled on the Deribit-style gateway credit scheme, not
+published Coinbase limits; override them with a derived policy when Coinbase
+publishes figures.

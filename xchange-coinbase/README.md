@@ -27,7 +27,21 @@ blind-replayed: transport failures surface `CoinbaseUnknownOutcomeException`
 reconciliation. `CoinbaseException` carries the provider error id/message, HTTP status,
 and a retry classification (`AUTHENTICATION`/`TRANSIENT`/`RATE_CREDIT`/`PERMANENT`/
 `AMBIGUOUS`). Read loops (`getCoinbaseAccounts`, `getTradeHistory`, `listOrdersBounded`)
-retry 429/5xx pages with bounded jittered backoff and abort on repeated cursors.
+retry 5xx pages with bounded jittered backoff and abort on repeated cursors.
+
+## Rate limiting
+
+`CoinbaseExchange.getDefaultExchangeSpecification()` enables
+`CoinbaseRateLimitPolicy` (Advanced Trade private/public budgets, `EXECUTION` vs
+`MARKET_DATA` classification per endpoint) on the core rate-limit context
+described in the [root README](../README.md#rate-limiting). HTTP 429 is handled
+there, once, for every wire attempt including pagination and metadata
+initialization; module read loops do not retry it. Share one `RateLimitContext`
+and user scope across every `CoinbaseExchange`/`CoinbaseStreamingExchange`
+instance that uses the same Coinbase user. A 429 is treated as rejection; the
+response body is not inspected. The rate-limited REST path supports the default
+HTTP client only: custom SSL socket factories, hostname verifiers, OAuth and
+custom proxy factories are rejected while the limiter is enabled.
 
 ## Streaming
 

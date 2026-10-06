@@ -34,6 +34,8 @@ public class CoinbaseExchange extends BaseExchange implements Exchange {
     exchangeSpecification.setExchangeName("Coinbase");
     exchangeSpecification.setExchangeDescription(
         "Founded in June of 2012, Coinbase is a bitcoin wallet and platform where merchants and consumers can transact with the new digital currency bitcoin.");
+    exchangeSpecification.getResilience().setRateLimitPolicy(CoinbaseRateLimitPolicy.defaultPolicy());
+    exchangeSpecification.getResilience().setRateLimiterEnabled(true);
     return exchangeSpecification;
   }
 }

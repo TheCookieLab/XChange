@@ -2,6 +2,7 @@ package org.knowm.xchange.coinbase.v3.dto.products;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +50,48 @@ public class CoinbaseProductJsonTest {
     assertEquals("Product ID should match", "ETH-USD", product.getProductId());
     assertTrue("Minimal payload should not have product type", product.getProductType() == null);
     assertTrue("Minimal payload should not have product venue", product.getProductVenue() == null);
+  }
+
+  @Test
+  public void testDeserializeTradingDisabledAndStatusFromFixture() throws IOException {
+    InputStream is =
+        CoinbaseProductJsonTest.class.getResourceAsStream(
+            "/org/knowm/xchange/coinbase/dto/v3/products/example-product-response.json");
+
+    CoinbaseProductResponse product = mapper.readValue(is, CoinbaseProductResponse.class);
+
+    assertEquals(Boolean.FALSE, product.getTradingDisabled());
+    assertEquals("online", product.getStatus());
+  }
+
+  @Test
+  public void testDeserializeTradingDisabledTrue() throws Exception {
+    String json =
+        "{\"product_id\": \"BTC-USD\", \"trading_disabled\": true, \"status\": \"offline\"}";
+
+    CoinbaseProductResponse product = mapper.readValue(json, CoinbaseProductResponse.class);
+
+    assertEquals(Boolean.TRUE, product.getTradingDisabled());
+    assertEquals("offline", product.getStatus());
+  }
+
+  @Test
+  public void testDeserializeTradingDisabledFalse() throws Exception {
+    String json = "{\"product_id\": \"BTC-USD\", \"trading_disabled\": false}";
+
+    CoinbaseProductResponse product = mapper.readValue(json, CoinbaseProductResponse.class);
+
+    assertEquals(Boolean.FALSE, product.getTradingDisabled());
+    assertNull("Omitted status should be null", product.getStatus());
+  }
+
+  @Test
+  public void testDeserializeTradingDisabledAndStatusOmitted() throws Exception {
+    CoinbaseProductResponse product =
+        mapper.readValue("{\"product_id\": \"ETH-USD\"}", CoinbaseProductResponse.class);
+
+    assertNull("Omitted trading_disabled should be null", product.getTradingDisabled());
+    assertNull("Omitted status should be null", product.getStatus());
   }
 
   @Test
