@@ -2,6 +2,8 @@ package org.knowm.xchange.okx;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -18,6 +20,7 @@ import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
+import org.knowm.xchange.client.ratelimit.RateLimitFeedback;
 import org.knowm.xchange.client.ratelimit.RateLimitOperation;
 import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.client.ratelimit.RateLimitPriority;
@@ -25,6 +28,8 @@ import org.knowm.xchange.client.ratelimit.RateLimitRequest;
 import org.knowm.xchange.okex.Okex;
 import org.knowm.xchange.okex.OkexAuthenticated;
 import org.knowm.xchange.okex.OkexExchange;
+import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
 import si.mazi.rescu.ParamsDigest;
 
 /** Offline checks of the OKX v5 rate-limit policy: classification, scopes, weights, enablement. */
@@ -281,6 +286,27 @@ public class OkxRateLimitPolicyTest {
       }
     }
     return httpMethod(method) + " " + segments.stream().collect(Collectors.joining("/"));
+  }
+
+  @Test
+  public void batchIsRateRejectedOnlyWhenEveryOrderCarries50061() throws Exception {
+    String limited = "{\"sCode\":\"50061\",\"sMsg\":\"Sub-account rate limit exceeded\"}";
+    String placed = "{\"ordId\":\"1\",\"sCode\":\"0\",\"sMsg\":\"\"}";
+
+    assertThat(OkxRateLimitPolicy.interpretBody(batch("1", limited, limited), null).getKind())
+        .isEqualTo(RateLimitFeedback.Kind.RATE_REJECTED);
+    assertThat(OkxRateLimitPolicy.interpretBody(batch("2", placed, limited), null).getKind())
+        .isEqualTo(RateLimitFeedback.Kind.NONE);
+    assertThat(OkxRateLimitPolicy.interpretBody(batch("0"), null).getKind())
+        .isEqualTo(RateLimitFeedback.Kind.NONE);
+  }
+
+  private static OkxResponse<List<OkxOrderResponse>> batch(String code, String... orders)
+      throws Exception {
+    String json =
+        "{\"code\":\"" + code + "\",\"msg\":\"\",\"data\":[" + String.join(",", orders) + "]}";
+    return new ObjectMapper()
+        .readValue(json, new TypeReference<OkxResponse<List<OkxOrderResponse>>>() {});
   }
 
   private static String pathOf(java.lang.reflect.AnnotatedElement element) {

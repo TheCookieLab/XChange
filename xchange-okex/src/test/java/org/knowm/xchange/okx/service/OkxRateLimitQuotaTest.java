@@ -47,6 +47,11 @@ public class OkxRateLimitQuotaTest {
   private static final String RATE_LIMITED_BODY =
       "{\"code\":\"50011\",\"msg\":\"Requests too frequent\",\"data\":[]}";
   private static final String EMPTY_SUCCESS = "{\"code\":\"0\",\"msg\":\"\",\"data\":[]}";
+  private static final String SUBACCOUNT_LIMITED_BODY =
+      "{\"code\":\"50061\",\"msg\":\"Sub-account rate limit exceeded\",\"data\":[]}";
+  private static final String SUBACCOUNT_LIMITED_ORDER_BODY =
+      "{\"code\":\"1\",\"msg\":\"\",\"data\":[{\"sCode\":\"50061\","
+          + "\"sMsg\":\"Sub-account rate limit exceeded\"}]}";
 
   private Stub stub;
   private ExchangeSpecification specification;
@@ -122,6 +127,43 @@ public class OkxRateLimitQuotaTest {
   }
 
   @Test(timeout = TIMEOUT_MILLIS)
+  public void placementRejectedInAnHttp200BodyIsSentOnceAndSurfaced() {
+    stub.forceBodyRejections("POST " + ORDER, 1, SUBACCOUNT_LIMITED_ORDER_BODY);
+    OkxTradeServiceRaw trade = new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
+
+    assertThatThrownBy(() -> trade.doPlaceOkxOrder(order(null)))
+        .isInstanceOfSatisfying(
+            RateLimitTerminatedException.class,
+            terminated ->
+                assertThat(terminated.getDispatch())
+                    .isEqualTo(RateLimitTerminatedException.Dispatch.REJECTED));
+
+    assertThat(stub.arrivals("POST " + ORDER)).as("never blindly replayed").isEqualTo(1);
+    assertThat(admissions()).as("one admission per wire attempt").isEqualTo(1);
+    assertThat(
+            specification
+                .getResilience()
+                .getRateLimitContext()
+                .diagnostics()
+                .getRatePressureEvents())
+        .as("the body rejection started a cooldown")
+        .isEqualTo(1);
+  }
+
+  @Test(timeout = TIMEOUT_MILLIS)
+  public void readRejectedInAnHttp200BodyIsReplayedWithFreshAdmission() throws Exception {
+    stub.forceBodyRejections("GET " + TICKER, 1, SUBACCOUNT_LIMITED_BODY);
+    OkxMarketDataServiceRaw market =
+        new OkxMarketDataServiceRaw(exchange, exchange.getResilienceRegistries());
+
+    OkxResponse<List<OkxTicker>> response = market.getOkxTicker("BTC-USDT");
+
+    assertThat(response.isSuccess()).isTrue();
+    assertThat(stub.arrivals("GET " + TICKER)).as("rejected read replayed once").isEqualTo(2);
+    assertThat(admissions()).as("the replay was admitted afresh").isEqualTo(2);
+  }
+
+  @Test(timeout = TIMEOUT_MILLIS)
   public void placementWithReconciliationAdmitsLookupAndPlacementOnce() throws Exception {
     OkxTradeServiceRaw trade = new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
 
@@ -182,7 +224,7 @@ public class OkxRateLimitQuotaTest {
         .build();
   }
 
-  /** Loopback server that records arrivals and answers 429 on demand. */
+  /** Loopback server that records arrivals and answers rate rejections on demand. */
   private static final class Stub implements AutoCloseable {
 
     private final HttpServer server;
@@ -191,6 +233,7 @@ public class OkxRateLimitQuotaTest {
     private final List<String> arrivalLog = new ArrayList<>();
     private final Map<String, Integer> forcedRejections = new HashMap<>();
     private final Map<String, String> forcedRetryAfter = new HashMap<>();
+    private final Map<String, String> forcedBodies = new HashMap<>();
 
     Stub() throws IOException {
       server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -210,6 +253,14 @@ public class OkxRateLimitQuotaTest {
       }
     }
 
+    /** Answers the next {@code count} calls with HTTP 200 and the given rate-rejection body. */
+    void forceBodyRejections(String methodAndPath, int count, String body) {
+      synchronized (lock) {
+        forcedRejections.put(methodAndPath, count);
+        forcedBodies.put(methodAndPath, body);
+      }
+    }
+
     int arrivals(String methodAndPath) {
       synchronized (lock) {
         return (int) arrivalLog.stream().filter(methodAndPath::equals).count();
@@ -221,14 +272,20 @@ public class OkxRateLimitQuotaTest {
       http.getRequestBody().readAllBytes();
       boolean reject = false;
       String retryAfter = null;
+      String body = null;
       synchronized (lock) {
         arrivalLog.add(key);
         Integer forced = forcedRejections.get(key);
         if (forced != null && forced > 0) {
           forcedRejections.put(key, forced - 1);
           retryAfter = forcedRetryAfter.get(key);
+          body = forcedBodies.get(key);
           reject = true;
         }
+      }
+      if (reject && body != null) {
+        respond(http, 200, body);
+        return;
       }
       if (reject) {
         if (retryAfter != null) {

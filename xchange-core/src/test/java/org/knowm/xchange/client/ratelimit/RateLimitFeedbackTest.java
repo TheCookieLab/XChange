@@ -356,6 +356,79 @@ public class RateLimitFeedbackTest {
     assertThat(fixture.context.diagnostics().getRatePressureEvents()).isZero();
   }
 
+  /** A body interpreter that reads an HTTP-200 "limited" result or a thrown "limited" error. */
+  private static RateLimitPolicy bodyClassified() {
+    return roomy()
+        .withBodyFeedbackInterpreter(
+            (result, failure) -> {
+              if ("limited".equals(result)) {
+                return RateLimitFeedback.rejected(Duration.ofSeconds(10));
+              }
+              if (failure instanceof IllegalArgumentException && "limited".equals(failure.getMessage())) {
+                return RateLimitFeedback.rejected(null);
+              }
+              return RateLimitFeedback.NONE;
+            });
+  }
+
+  @Test
+  public void aBodyRejectionCoolsEverySharerAndANonReplayableWriteIsSentOnce() throws Exception {
+    fixture = RateLimitFixture.autoAdvance();
+    RateLimitPolicy policy = bodyClassified();
+    List<Long> sends = new ArrayList<>();
+    assertThatThrownBy(
+            () ->
+                exec(
+                    policy,
+                    "write",
+                    "u1",
+                    observer -> {
+                      sends.add(fixture.now());
+                      observer.observeHttpResponse(200, name -> null);
+                      return "limited";
+                    }))
+        .isInstanceOfSatisfying(
+            RateLimitTerminatedException.class,
+            e -> {
+              assertThat(e.getReason()).isEqualTo(Reason.REMOTE_PRESSURE_EXHAUSTED);
+              assertThat(e.getDispatch()).isEqualTo(Dispatch.REJECTED);
+            });
+    assertThat(sends).containsExactly(0L);
+    assertThat(fixture.context.diagnostics().getAdmissions()).isEqualTo(1);
+    assertThat(fixture.context.diagnostics().getRatePressureEvents()).isEqualTo(1);
+
+    List<Long> shared = new ArrayList<>();
+    exec(policy, "other", "u1", reply(shared, new AtomicInteger(), new int[] {200}, null));
+    assertThat(shared).as("the body-reported delay cools the shared budget").containsExactly(10 * SEC);
+  }
+
+  @Test
+  public void aReplaySafeReadRejectedInItsBodyIsReplayedWithOneAdmissionPerWireAttempt()
+      throws Exception {
+    fixture = RateLimitFixture.autoAdvance();
+    RateLimitPolicy policy = bodyClassified();
+    List<Long> sends = new ArrayList<>();
+    AtomicInteger calls = new AtomicInteger();
+    String result =
+        exec(
+            policy,
+            "read",
+            "u1",
+            observer -> {
+              sends.add(fixture.now());
+              observer.observeHttpResponse(200, name -> null);
+              if (calls.getAndIncrement() == 0) {
+                throw new IllegalArgumentException("limited");
+              }
+              return "ok";
+            });
+
+    assertThat(result).isEqualTo("ok");
+    assertThat(sends).as("replayed after the fallback backoff").containsExactly(0L, SEC);
+    assertThat(fixture.context.diagnostics().getAdmissions()).isEqualTo(2);
+    assertThat(fixture.context.diagnostics().getRetries()).isEqualTo(1);
+  }
+
   @Test
   public void retryAfterParsingAcceptsDeltaSecondsAndAllHttpDateFormats() {
     Instant now = Instant.parse("2026-01-01T00:00:00Z");

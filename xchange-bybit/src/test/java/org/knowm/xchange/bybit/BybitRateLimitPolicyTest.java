@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -23,6 +24,7 @@ import java.util.Set;
 import java.util.function.Function;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.bybit.dto.trade.batch.BybitBatchResult;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
 import org.knowm.xchange.client.ratelimit.RateLimitContext;
@@ -344,5 +346,28 @@ public class BybitRateLimitPolicyTest {
     }
     String path = String.join("/", parts).replaceAll("/+", "/").replaceAll("^/", "");
     return httpMethod(method) + " " + path;
+  }
+
+  @Test
+  public void batchIsRateRejectedThroughItemsOnlyWhenEveryItemCarriesARateCode() throws Exception {
+    String limited = "{\"code\":10006,\"msg\":\"Too many visits!\"}";
+    String placed = "{\"code\":0,\"msg\":\"OK\"}";
+
+    assertEquals(
+        RateLimitFeedback.Kind.RATE_REJECTED,
+        BybitRateLimitPolicy.interpretBody(batch(limited, limited), null).getKind());
+    assertEquals(
+        RateLimitFeedback.Kind.NONE,
+        BybitRateLimitPolicy.interpretBody(batch(placed, limited), null).getKind());
+    assertEquals(
+        RateLimitFeedback.Kind.NONE, BybitRateLimitPolicy.interpretBody(batch(), null).getKind());
+  }
+
+  private static BybitBatchResult batch(String... items) throws Exception {
+    String json =
+        "{\"retCode\":0,\"retMsg\":\"OK\",\"retExtInfo\":{\"list\":["
+            + String.join(",", items)
+            + "]}}";
+    return new ObjectMapper().readValue(json, BybitBatchResult.class);
   }
 }

@@ -154,9 +154,12 @@ There is one normal path. Copy the shape of `CoinbaseRateLimitPolicy`
    status and headers to the `RateLimitAttemptObserver`. See
    `CoinbaseDerivativesJsonRpcTransport.admitted` for the reference shape. A direct transport
    that can resend (OkHttp follow-ups or connection-failure retries) must disable that for the
-   admitted attempt, for example with a one-shot request body. Feedback is read from status and
-   headers only: a rate rejection carried in an HTTP 200 body (Bybit `retCode`, OKX `50061`)
-   surfaces as the module's exception and does not start a cooldown.
+   admitted attempt, for example with a one-shot request body. The `RateLimitFeedbackInterpreter`
+   reads status and headers. An exchange that reports a rate rejection in an HTTP 200 body adds a
+   `RateLimitBodyFeedbackInterpreter` with `policy.withBodyFeedbackInterpreter(...)`: it sees the
+   attempt's decoded result or thrown exception (never transport types), and a rejection it
+   reports starts the same cooldown and replay rules as HTTP 429. `OkxRateLimitPolicy` (`50061`)
+   and `BybitRateLimitPolicy` (`retCode` `10006`/`10018`) are the reference shapes.
 5. **Classification.** The classifier maps `RateLimitRequest.getOperationKey()`
    (`"<HTTP METHOD> <interface @Path>/<method @Path>"`, no leading slash, placeholders
    unexpanded) to a `RateLimitOperation` with the documented cost. Weight that depends on a

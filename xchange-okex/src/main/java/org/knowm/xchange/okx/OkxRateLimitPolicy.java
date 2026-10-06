@@ -9,11 +9,16 @@ import java.util.Map;
 import java.util.Set;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
+import org.knowm.xchange.client.ratelimit.RateLimitFeedback;
 import org.knowm.xchange.client.ratelimit.RateLimitFeedbackInterpreter;
 import org.knowm.xchange.client.ratelimit.RateLimitOperation;
 import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.client.ratelimit.RateLimitPriority;
 import org.knowm.xchange.client.ratelimit.RateLimitRequest;
+import org.knowm.xchange.okx.dto.OkxException;
+import org.knowm.xchange.okx.dto.OkxResponse;
+import org.knowm.xchange.okx.dto.trade.OkxAlgoOrderResponse;
+import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
 
 /**
  * Default rate-limit policy of the OKX v5 REST API, enabled by {@link
@@ -56,9 +61,12 @@ import org.knowm.xchange.client.ratelimit.RateLimitRequest;
  * sub-account budget {@value #SUBACCOUNT_ORDERS} is charged in addition for every request that
  * places or amends orders. Limits are shared by OKX with the WebSocket order channels; the
  * WebSocket path is not governed by this policy, so a process mixing both channels must keep its
- * own WebSocket pacing in mind. A sub-account breach reported only through error 50061 in an HTTP
- * 200 body is not visible to the feedback interpreter (status and headers only), so it surfaces as
- * the module's exception instead of starting a cooldown.
+ * own WebSocket pacing in mind. A sub-account breach reported through error 50061 (as the response
+ * code of an HTTP 200 body, as the code of every order of a batch response, or as the code of a
+ * decoded {@link OkxException}) is rate feedback: it starts the same cooldown as HTTP 429 and is
+ * replayed only for replay-safe operations. A partially placed batch is returned to the caller.
+ * Responses of the deprecated {@code Okex*} interfaces use deprecated wrapper DTOs that are not
+ * inspected; their exceptions are.
  *
  * <p><b>Operation classes.</b> Public market-data reads are {@link RateLimitPriority#MARKET_DATA};
  * every private account, asset, trade, fill and sub-account operation is {@link
@@ -81,7 +89,7 @@ public final class OkxRateLimitPolicy {
   public static final String NAMESPACE = "okx.rest";
 
   /** Policy version, recorded in context diagnostics. */
-  public static final String VERSION = "2026-10-06.1";
+  public static final String VERSION = "2026-10-06.2";
 
   /**
    * Tier 1 sub-account budget: 1000 new plus amended orders per 2 seconds per User ID, counted per
@@ -95,11 +103,15 @@ public final class OkxRateLimitPolicy {
   /** Pending execution operations, a bound market data cannot consume. */
   public static final int EXECUTION_PENDING_LIMIT = 64;
 
+  /** OKX error code of a sub-account order-rate breach, delivered with HTTP 200. */
+  private static final String SUBACCOUNT_RATE_LIMIT_CODE = "50061";
+
   private static final String SOURCE =
       "OKX API v5 rate limits (public per IP, private per User ID; per-endpoint limits; sub-account"
           + " 1000 orders/2s Tier 1; error 50011) https://www.okx.com/docs-v5/en/#overview-rate-limits"
           + " retrieved 2026-10-06; OKX error codes (50011 and 58102 delivered as HTTP 429, 50061 as"
-          + " HTTP 200) https://www.okx.com/docs-v5/en/#error-code retrieved 2026-10-06;"
+          + " HTTP 200, interpreted from the response body) https://www.okx.com/docs-v5/en/#error-code"
+          + " retrieved 2026-10-06;"
           + " per-instrument, per-instrument-type and per-currency limits are applied as single"
           + " aggregate client budgets and batch requests are charged their documented maximum order"
           + " count (client-side conservative pacing, not a provider quota);"
@@ -152,6 +164,7 @@ public final class OkxRateLimitPolicy {
             budgets,
             OkxRateLimitPolicy::classify,
             RateLimitFeedbackInterpreter.statuses(Set.of(429), Set.of()))
+        .withBodyFeedbackInterpreter(OkxRateLimitPolicy::interpretBody)
         .withPendingLimit(RateLimitPriority.MARKET_DATA, MARKET_DATA_PENDING_LIMIT)
         .withPendingLimit(RateLimitPriority.EXECUTION, EXECUTION_PENDING_LIMIT)
         .withMaxWait(RateLimitPriority.EXECUTION, Duration.ofSeconds(5))
@@ -337,5 +350,43 @@ public final class OkxRateLimitPolicy {
             true,
             RateLimitPriority.EXECUTION,
             replay));
+  }
+
+  /**
+   * Reads a sub-account rate breach (error 50061) from a decoded response code, the per-order codes
+   * of a batch response, or a decoded module exception. A batch is rejected only when every order
+   * carries 50061: a partially placed batch is returned to the caller, because a rejection would
+   * hide the orders OKX accepted. OKX gives no retry delay, so the core fallback backoff applies.
+   */
+  static RateLimitFeedback interpretBody(Object result, Exception failure) {
+    if (failure instanceof OkxException) {
+      return isSubaccountRateLimit(String.valueOf(((OkxException) failure).getCode()))
+          ? RateLimitFeedback.rejected(null)
+          : RateLimitFeedback.NONE;
+    }
+    if (!(result instanceof OkxResponse)) {
+      return RateLimitFeedback.NONE;
+    }
+    OkxResponse<?> response = (OkxResponse<?>) result;
+    if (isSubaccountRateLimit(response.getCode())) {
+      return RateLimitFeedback.rejected(null);
+    }
+    if (!(response.getData() instanceof List) || ((List<?>) response.getData()).isEmpty()) {
+      return RateLimitFeedback.NONE;
+    }
+    for (Object item : (List<?>) response.getData()) {
+      String code =
+          item instanceof OkxOrderResponse
+              ? ((OkxOrderResponse) item).getCode()
+              : item instanceof OkxAlgoOrderResponse ? ((OkxAlgoOrderResponse) item).getCode() : null;
+      if (!isSubaccountRateLimit(code)) {
+        return RateLimitFeedback.NONE;
+      }
+    }
+    return RateLimitFeedback.rejected(null);
+  }
+
+  private static boolean isSubaccountRateLimit(String code) {
+    return SUBACCOUNT_RATE_LIMIT_CODE.equals(code);
   }
 }
