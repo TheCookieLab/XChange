@@ -55,8 +55,9 @@ import org.knowm.xchange.client.ratelimit.RateLimitRequest;
  *
  * <p><b>Body-level rejections.</b> Bybit reports a UID limit breach as {@code retCode 10006} and
  * an IP frequency breach as {@code retCode 10018}, typically in an HTTP 200 body. Either code, in
- * a decoded response, a batch item or a decoded {@link BybitException}, is rate feedback: it
- * starts the same cooldown as HTTP 429 and is replayed only for replay-safe operations. The body
+ * a decoded response, in every item of a batch or in a decoded {@link BybitException}, is rate
+ * feedback: it starts the same cooldown as HTTP 429 and is replayed only for replay-safe
+ * operations. A partially executed batch is returned to the caller. The body
  * interpreter does not see {@code X-Bapi-Limit-Reset-Timestamp}, so the cooldown is the fallback
  * backoff (1 s base, matching the 1 s UID window).
  *
@@ -221,8 +222,10 @@ final class BybitRateLimitPolicy {
   }
 
   /**
-   * Reads a rate breach ({@code retCode} 10006 or 10018) from a decoded response, a batch item or a
-   * decoded module exception.
+   * Reads a rate breach ({@code retCode} 10006 or 10018) from a decoded response, the item codes of
+   * a batch response or a decoded module exception. A batch is rejected through its items only when
+   * every item carries such a code: a partially executed batch is returned to the caller, because a
+   * rejection would hide the orders Bybit accepted.
    */
   static RateLimitFeedback interpretBody(Object result, Exception failure) {
     boolean limited;
@@ -244,15 +247,17 @@ final class BybitRateLimitPolicy {
     if (RATE_LIMIT_RET_CODES.contains(result.getRetCode())) {
       return true;
     }
-    if (result.getRetExtInfo() == null || result.getRetExtInfo().getList() == null) {
+    if (result.getRetExtInfo() == null
+        || result.getRetExtInfo().getList() == null
+        || result.getRetExtInfo().getList().isEmpty()) {
       return false;
     }
     for (BybitBatchRetExtItem item : result.getRetExtInfo().getList()) {
-      if (item != null && item.getCode() != null && RATE_LIMIT_RET_CODES.contains(item.getCode())) {
-        return true;
+      if (item == null || item.getCode() == null || !RATE_LIMIT_RET_CODES.contains(item.getCode())) {
+        return false;
       }
     }
-    return false;
+    return true;
   }
 
   private static Map<String, Spec> operations() {

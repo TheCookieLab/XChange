@@ -62,11 +62,11 @@ import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
  * places or amends orders. Limits are shared by OKX with the WebSocket order channels; the
  * WebSocket path is not governed by this policy, so a process mixing both channels must keep its
  * own WebSocket pacing in mind. A sub-account breach reported through error 50061 (as the response
- * code of an HTTP 200 body, as the per-order code of
- * a batch response, or as the code of a decoded {@link OkxException}) is rate feedback: it starts
- * the same cooldown as HTTP 429 and is replayed only for replay-safe operations. Responses of the
- * deprecated {@code Okex*} interfaces use deprecated wrapper DTOs that are not inspected; their
- * exceptions are.
+ * code of an HTTP 200 body, as the code of every order of a batch response, or as the code of a
+ * decoded {@link OkxException}) is rate feedback: it starts the same cooldown as HTTP 429 and is
+ * replayed only for replay-safe operations. A partially placed batch is returned to the caller.
+ * Responses of the deprecated {@code Okex*} interfaces use deprecated wrapper DTOs that are not
+ * inspected; their exceptions are.
  *
  * <p><b>Operation classes.</b> Public market-data reads are {@link RateLimitPriority#MARKET_DATA};
  * every private account, asset, trade, fill and sub-account operation is {@link
@@ -353,9 +353,10 @@ public final class OkxRateLimitPolicy {
   }
 
   /**
-   * Reads a sub-account rate breach (error 50061) from a decoded response
-   * code, a batch item code, or a decoded module exception. OKX gives no retry delay for it, so
-   * the core fallback backoff applies.
+   * Reads a sub-account rate breach (error 50061) from a decoded response code, the per-order codes
+   * of a batch response, or a decoded module exception. A batch is rejected only when every order
+   * carries 50061: a partially placed batch is returned to the caller, because a rejection would
+   * hide the orders OKX accepted. OKX gives no retry delay, so the core fallback backoff applies.
    */
   static RateLimitFeedback interpretBody(Object result, Exception failure) {
     if (failure instanceof OkxException) {
@@ -370,18 +371,19 @@ public final class OkxRateLimitPolicy {
     if (isSubaccountRateLimit(response.getCode())) {
       return RateLimitFeedback.rejected(null);
     }
-    if (response.getData() instanceof List) {
-      for (Object item : (List<?>) response.getData()) {
-        String code =
-            item instanceof OkxOrderResponse
-                ? ((OkxOrderResponse) item).getCode()
-                : item instanceof OkxAlgoOrderResponse ? ((OkxAlgoOrderResponse) item).getCode() : null;
-        if (isSubaccountRateLimit(code)) {
-          return RateLimitFeedback.rejected(null);
-        }
+    if (!(response.getData() instanceof List) || ((List<?>) response.getData()).isEmpty()) {
+      return RateLimitFeedback.NONE;
+    }
+    for (Object item : (List<?>) response.getData()) {
+      String code =
+          item instanceof OkxOrderResponse
+              ? ((OkxOrderResponse) item).getCode()
+              : item instanceof OkxAlgoOrderResponse ? ((OkxAlgoOrderResponse) item).getCode() : null;
+      if (!isSubaccountRateLimit(code)) {
+        return RateLimitFeedback.NONE;
       }
     }
-    return RateLimitFeedback.NONE;
+    return RateLimitFeedback.rejected(null);
   }
 
   private static boolean isSubaccountRateLimit(String code) {
