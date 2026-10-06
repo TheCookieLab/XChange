@@ -48,7 +48,8 @@ class CoinbaseDerivativesExchangeTest {
                               + "\"expires_in\":900,\"scope\":\"trade\"}}")));
       server.stubFor(
           post(urlEqualTo("/"))
-              .withRequestBody(matchingJsonPath("$.method", equalTo("private/read")))
+              .withRequestBody(
+                  matchingJsonPath("$.method", equalTo("private/get_account_summary")))
               .willReturn(
                   aResponse()
                       .withHeader("Content-Type", "application/json")
@@ -63,7 +64,7 @@ class CoinbaseDerivativesExchangeTest {
 
       exchange
           .getJsonRpcTransport()
-          .callPrivate("private/read", Map.of(), Map.class, ReplaySafety.READ);
+          .callPrivate("private/get_account_summary", Map.of(), Map.class, ReplaySafety.READ);
 
       server.verify(
           postRequestedFor(urlEqualTo("/"))

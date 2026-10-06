@@ -148,7 +148,7 @@ class CoinbaseDerivativesJsonRpcTransportTest {
 
     Map<?, ?> result =
         authenticatedTransport()
-            .callPrivate("private/read", Map.of(), Map.class, ReplaySafety.READ);
+            .callPrivate("private/get_account_summary", Map.of(), Map.class, ReplaySafety.READ);
 
     assertEquals(Map.of(), result);
     server.verify(2, postRequestedFor(urlEqualTo("/")));

@@ -9,11 +9,13 @@ import org.knowm.xchange.coinbase.v3.dto.RetryClassification;
 /**
  * Bounded, jittered retry for Coinbase Advanced Trade read operations.
  *
- * <p>Retries are only attempted for failures classified {@link RetryClassification#TRANSIENT} or
- * {@link RetryClassification#RATE_CREDIT}, and only for replay-safe read calls. Placement-style
- * operations are never routed through this helper: their outcomes may be ambiguous and must be
- * reconciled, not replayed. The backoff mirrors the Coinbase Derivatives transport (jittered
- * linear delay, bounded attempts).
+ * <p>Retries are only attempted for failures classified {@link RetryClassification#TRANSIENT}
+ * (5xx) and for transport failures, and only for replay-safe read calls. Rate-limit rejections
+ * ({@link RetryClassification#RATE_CREDIT}, HTTP 429) are never retried here: the universal rate
+ * limiter owns pacing and replay of rejected reads, and a second retry loop would send
+ * unadmitted requests. Placement-style operations are never routed through this helper: their
+ * outcomes may be ambiguous and must be reconciled, not replayed. The backoff mirrors the
+ * Coinbase Derivatives transport (jittered linear delay, bounded attempts).
  */
 public final class CoinbaseRetry {
 
@@ -33,10 +35,10 @@ public final class CoinbaseRetry {
   }
 
   /**
-   * Invokes the read call, retrying rate-credit, transient, and transport failures with jittered
-   * backoff up to {@link #MAX_ATTEMPTS}. Deterministic failures (authentication, permanent) and
-   * ambiguous outcomes ({@link CoinbaseUnknownOutcomeException}) are rethrown without retry: an
-   * ambiguous placement must never be blind-replayed.
+   * Invokes the read call, retrying transient and transport failures with jittered backoff up to
+   * {@link #MAX_ATTEMPTS}. Deterministic failures (authentication, permanent), rate-limit
+   * rejections and ambiguous outcomes ({@link CoinbaseUnknownOutcomeException}) are rethrown
+   * without retry: an ambiguous placement must never be blind-replayed.
    *
    * @param call the read operation
    * @return the first successful result
@@ -49,8 +51,7 @@ public final class CoinbaseRetry {
         return call.call();
       } catch (CoinbaseException failure) {
         RetryClassification classification = failure.getRetryClassification();
-        if (classification != RetryClassification.TRANSIENT
-            && classification != RetryClassification.RATE_CREDIT) {
+        if (classification != RetryClassification.TRANSIENT) {
           throw failure;
         }
         if (attempt == MAX_ATTEMPTS) {

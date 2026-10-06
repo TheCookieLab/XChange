@@ -5,11 +5,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.client.ratelimit.RateLimitContext;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
 import org.knowm.xchange.interceptor.InterceptorProvider;
 import si.mazi.rescu.ClientConfig;
 import si.mazi.rescu.IRestProxyFactory;
 import si.mazi.rescu.Interceptor;
+import si.mazi.rescu.RateLimitedRestProxies;
 import si.mazi.rescu.RestProxyFactoryImpl;
+import si.mazi.rescu.clients.HttpConnectionType;
 
 public final class ExchangeRestProxyBuilder<T> {
 
@@ -21,6 +25,7 @@ public final class ExchangeRestProxyBuilder<T> {
   private ResilienceRegistries resilienceRegistries;
   private String baseUrl;
   private IRestProxyFactory restProxyFactory = new RestProxyFactoryImpl();
+  private boolean customRestProxyFactory;
 
   private ExchangeRestProxyBuilder(
       Class<T> restInterface, ExchangeSpecification exchangeSpecification) {
@@ -65,9 +70,21 @@ public final class ExchangeRestProxyBuilder<T> {
 
   public ExchangeRestProxyBuilder<T> restProxyFactory(IRestProxyFactory restProxyFactory) {
     this.restProxyFactory = restProxyFactory;
+    this.customRestProxyFactory = true;
     return this;
   }
 
+  /**
+   * Builds the proxy. When the specification's resilience settings enable rate limiting and carry a
+   * policy, every call of the proxy is admitted by the specification's {@link RateLimitContext}
+   * (see {@link RateLimitedRestProxies}); custom interceptors wrap that admission and cannot
+   * bypass it. Otherwise the proxy is a plain rescu proxy.
+   *
+   * @return the proxy
+   * @throws IllegalStateException if rate limiting is enabled but cannot be enforced for this
+   *     builder: a custom {@link #restProxyFactory} or the {@code apache} connection type (neither
+   *     can be held to one wire attempt per admission), or no context is available
+   */
   public T build() {
     if (clientConfig == null) {
       clientConfig = createClientConfig(exchangeSpecification);
@@ -77,8 +94,51 @@ public final class ExchangeRestProxyBuilder<T> {
     }
     clientConfigCustomizers.forEach(
         clientConfigCustomizer -> clientConfigCustomizer.customize(clientConfig));
-    return restProxyFactory.createProxy(
-        restInterface, baseUrl, clientConfig, customInterceptors.toArray(new Interceptor[0]));
+    Interceptor[] interceptors = customInterceptors.toArray(new Interceptor[0]);
+    ExchangeSpecification.ResilienceSpecification resilience = exchangeSpecification.getResilience();
+    if (resilience != null && resilience.isRateLimiterEnabled() && resilience.getRateLimitPolicy() != null) {
+      return buildRateLimited(resilience, interceptors);
+    }
+    return restProxyFactory.createProxy(restInterface, baseUrl, clientConfig, interceptors);
+  }
+
+  private T buildRateLimited(
+      ExchangeSpecification.ResilienceSpecification resilience, Interceptor[] interceptors) {
+    RateLimitPolicy policy = resilience.getRateLimitPolicy();
+    RateLimitContext context = resilience.getRateLimitContext();
+    if (customRestProxyFactory) {
+      throw new IllegalStateException(
+          "Rate limiting is enabled for policy "
+              + policy.getNamespace()
+              + " but a custom IRestProxyFactory was set for "
+              + restInterface.getName()
+              + "; it would bypass admission. Remove the factory or disable the rate limiter.");
+    }
+    if (clientConfig.getConnectionType() != HttpConnectionType.java) {
+      throw new IllegalStateException(
+          "Rate limiting is enabled for policy "
+              + policy.getNamespace()
+              + " but connection type "
+              + clientConfig.getConnectionType()
+              + " cannot be held to one wire attempt per admission for "
+              + restInterface.getName()
+              + "; use the java connection type or disable the rate limiter.");
+    }
+    if (context == null) {
+      throw new IllegalStateException(
+          "Rate limiting is enabled for policy "
+              + policy.getNamespace()
+              + " but the specification has no rate-limit context; apply the specification to an"
+              + " exchange first or set one.");
+    }
+    return RateLimitedRestProxies.createProxy(
+        restInterface,
+        baseUrl,
+        clientConfig,
+        policy,
+        context,
+        resilience.getRateLimitUserScope(),
+        interceptors);
   }
 
   /**

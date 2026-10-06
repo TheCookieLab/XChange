@@ -5,12 +5,23 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /** Maintains the short-lived HTTP bearer token with proactive, single-flight refresh. */
 public final class CoinbaseDerivativesAccessTokenProvider {
+  /** Exchanges a JWT for an access token. */
   @FunctionalInterface
   public interface Authenticator {
-    AccessToken authenticate(String freshJwt) throws IOException;
+    /**
+     * Performs one authentication exchange.
+     *
+     * @param freshJwt supplies a newly minted JWT; it MUST be called only once the exchange is
+     *     admitted for dispatch (for example inside a rate-limited attempt) and again for every
+     *     replay, never earlier and never cached
+     * @return the access token
+     * @throws IOException on transport failure
+     */
+    AccessToken authenticate(Supplier<String> freshJwt) throws IOException;
   }
 
   private record CachedToken(String value, Instant refreshAt) {}
@@ -50,7 +61,7 @@ public final class CoinbaseDerivativesAccessTokenProvider {
       if (now.isBefore(token.refreshAt())) {
         return token.value();
       }
-      AccessToken refreshed = authenticator.authenticate(jwtGenerator.generate());
+      AccessToken refreshed = authenticator.authenticate(jwtGenerator::generate);
       if (refreshed == null
           || refreshed.accessToken() == null
           || refreshed.accessToken().isBlank()) {
