@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.coinbase.v3.Coinbase;
@@ -49,7 +50,11 @@ public class CoinbasePublicEndpointsIntegration {
 
   @BeforeClass
   public static void beforeClass() {
-    ExchangeSpecification spec = CoinbaseTestUtils.createSpecificationWithOverride();
+    // Applying the specification binds the Coinbase rate-limit context the proxy admits through.
+    ExchangeSpecification spec =
+        ExchangeFactory.INSTANCE
+            .createExchange(CoinbaseTestUtils.createSpecificationWithOverride())
+            .getExchangeSpecification();
     coinbase = ExchangeRestProxyBuilder.forInterface(Coinbase.class, spec).build();
   }
 
