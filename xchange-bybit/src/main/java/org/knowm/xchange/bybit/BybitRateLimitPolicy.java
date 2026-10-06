@@ -8,6 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import org.knowm.xchange.bybit.dto.BybitResult;
+import org.knowm.xchange.bybit.dto.trade.batch.BybitBatchResult;
+import org.knowm.xchange.bybit.dto.trade.batch.BybitBatchRetExtItem;
+import org.knowm.xchange.bybit.service.BybitException;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
 import org.knowm.xchange.client.ratelimit.RateLimitFeedback;
@@ -47,9 +51,14 @@ import org.knowm.xchange.client.ratelimit.RateLimitRequest;
  * body-dependent rules are therefore not representable: the category-dependent order limits (spot
  * 20/s for create, cancel, cancel-all and the batch endpoints; option cancel-all 1/s) are paced at
  * the common 10/s of inverse, linear and option, and a batch request costs one unit although
- * Bybit counts each order of the batch. A breach reported only through {@code retCode 10006} in
- * an HTTP 200 body is not visible to the feedback interpreter (status and headers only), so it
- * surfaces as the module's exception instead of starting a cooldown.
+ * Bybit counts each order of the batch.
+ *
+ * <p><b>Body-level rejections.</b> Bybit reports a UID limit breach as {@code retCode 10006} and
+ * an IP frequency breach as {@code retCode 10018}, typically in an HTTP 200 body. Either code, in
+ * a decoded response, a batch item or a decoded {@link BybitException}, is rate feedback: it
+ * starts the same cooldown as HTTP 429 and is replayed only for replay-safe operations. The body
+ * interpreter does not see {@code X-Bapi-Limit-Reset-Timestamp}, so the cooldown is the fallback
+ * backoff (1 s base, matching the 1 s UID window).
  *
  * <p><b>Operation classes.</b> Public market data is {@link RateLimitPriority#MARKET_DATA};
  * every authenticated operation is {@link RateLimitPriority#EXECUTION}. Reads are replayed after a
@@ -72,7 +81,7 @@ final class BybitRateLimitPolicy {
 
   static final String NAMESPACE = "bybit.v5";
 
-  static final String VERSION = "2026-10-06.1";
+  static final String VERSION = "2026-10-06.2";
 
   /** Documented 600 requests per 5 seconds per IP; every request consumes one unit. */
   static final String IP = "bybit.v5.ip";
@@ -115,11 +124,14 @@ final class BybitRateLimitPolicy {
       "Bybit Rate Limit Rules https://bybit-exchange.github.io/docs/v5/rate-limit retrieved"
           + " 2026-10-06: HTTP IP limit 600 requests per 5 s per IP, 403 access too frequent bans"
           + " the IP for at least 10 minutes; API rate limit per UID per endpoint on a rolling 1 s"
-          + " window (retCode 10006 Too many visits), limits from the Trade, Position, Account,"
-          + " Asset and Spot Margin Trade tables; market data is IP limited only. Client choices,"
-          + " not Bybit quotas: set-risk-limit is unlisted and paced at the 10/s of the position"
-          + " mutations; category-dependent order limits use the common 10/s because the JSON body"
-          + " is not visible to the classifier; a batch request costs one unit.";
+          + " window (retCode 10006 Too many visits, read from the HTTP 200 body like retCode"
+          + " 10018), limits from the Trade, Position, Account, Asset and Spot Margin Trade tables;"
+          + " market data is IP limited only. Client choices, not Bybit quotas: set-risk-limit is"
+          + " unlisted and paced at the 10/s of the position mutations; category-dependent order"
+          + " limits use the common 10/s because the JSON body is not visible to the classifier; a"
+          + " batch request costs one unit.";
+
+  private static final Set<Integer> RATE_LIMIT_RET_CODES = Set.of(10006, 10018);
 
   private static final Duration IP_BAN = Duration.ofMinutes(10);
 
@@ -153,6 +165,7 @@ final class BybitRateLimitPolicy {
             budgets,
             BybitRateLimitPolicy::classify,
             BybitRateLimitPolicy::interpret)
+        .withBodyFeedbackInterpreter(BybitRateLimitPolicy::interpretBody)
         .withPendingLimit(RateLimitPriority.MARKET_DATA, MARKET_DATA_PENDING_LIMIT)
         .withPendingLimit(RateLimitPriority.EXECUTION, EXECUTION_PENDING_LIMIT)
         .withMaxWait(RateLimitPriority.EXECUTION, Duration.ofSeconds(5))
@@ -205,6 +218,41 @@ final class BybitRateLimitPolicy {
     } catch (NumberFormatException e) {
       return feedback;
     }
+  }
+
+  /**
+   * Reads a rate breach ({@code retCode} 10006 or 10018) from a decoded response, a batch item or a
+   * decoded module exception.
+   */
+  static RateLimitFeedback interpretBody(Object result, Exception failure) {
+    boolean limited;
+    if (failure != null) {
+      limited =
+          failure instanceof BybitException
+              && RATE_LIMIT_RET_CODES.contains(((BybitException) failure).getRetCode());
+    } else if (result instanceof BybitResult) {
+      limited = RATE_LIMIT_RET_CODES.contains(((BybitResult<?>) result).getRetCode());
+    } else if (result instanceof BybitBatchResult) {
+      limited = isRateLimitedBatch((BybitBatchResult) result);
+    } else {
+      limited = false;
+    }
+    return limited ? RateLimitFeedback.rejected(null) : RateLimitFeedback.NONE;
+  }
+
+  private static boolean isRateLimitedBatch(BybitBatchResult result) {
+    if (RATE_LIMIT_RET_CODES.contains(result.getRetCode())) {
+      return true;
+    }
+    if (result.getRetExtInfo() == null || result.getRetExtInfo().getList() == null) {
+      return false;
+    }
+    for (BybitBatchRetExtItem item : result.getRetExtInfo().getList()) {
+      if (item != null && item.getCode() != null && RATE_LIMIT_RET_CODES.contains(item.getCode())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static Map<String, Spec> operations() {

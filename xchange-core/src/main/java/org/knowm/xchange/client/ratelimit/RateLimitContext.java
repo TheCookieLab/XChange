@@ -175,6 +175,9 @@ public final class RateLimitContext implements AutoCloseable {
       } catch (Exception e) {
         failure = e;
       }
+      recorder.observeFeedback(
+          Objects.requireNonNull(
+              policy.getBodyFeedbackInterpreter().interpret(result, failure), "body feedback"));
       RateLimitFeedback feedback = recorder.feedback();
       if (feedback.getKind() == RateLimitFeedback.Kind.NONE) {
         if (failure != null) {

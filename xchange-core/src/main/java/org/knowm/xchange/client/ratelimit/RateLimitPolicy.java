@@ -12,8 +12,8 @@ import java.util.function.Function;
 
 /**
  * Immutable rate-limit policy of one exchange API family: namespace, version and dated source
- * references, budgets, request classifier, HTTP feedback interpretation, and the finite bounds for
- * waiting, replay and queueing.
+ * references, budgets, request classifier, HTTP and response-body feedback interpretation, and the
+ * finite bounds for waiting, replay and queueing.
  *
  * <p>All bounds are finite. Library defaults (used unless overridden through the {@code with*}
  * copy methods): maximum wait {@code EXECUTION} 5 s and {@code MARKET_DATA} 60 s for the whole
@@ -43,6 +43,7 @@ public final class RateLimitPolicy {
   private final Map<String, RateLimitBudget> budgets;
   private final Function<RateLimitRequest, RateLimitOperation> classifier;
   private final RateLimitFeedbackInterpreter feedbackInterpreter;
+  private final RateLimitBodyFeedbackInterpreter bodyFeedbackInterpreter;
   private final Map<RateLimitPriority, Duration> maxWait;
   private final int maxAttempts;
   private final Map<RateLimitPriority, Integer> pendingLimit;
@@ -76,6 +77,7 @@ public final class RateLimitPolicy {
         indexBudgets(budgets),
         Objects.requireNonNull(classifier, "classifier"),
         Objects.requireNonNull(feedbackInterpreter, "feedbackInterpreter"),
+        RateLimitBodyFeedbackInterpreter.none(),
         defaultMaxWait(),
         DEFAULT_MAX_ATTEMPTS,
         defaultPending(),
@@ -91,6 +93,7 @@ public final class RateLimitPolicy {
       Map<String, RateLimitBudget> budgets,
       Function<RateLimitRequest, RateLimitOperation> classifier,
       RateLimitFeedbackInterpreter feedbackInterpreter,
+      RateLimitBodyFeedbackInterpreter bodyFeedbackInterpreter,
       Map<RateLimitPriority, Duration> maxWait,
       int maxAttempts,
       Map<RateLimitPriority, Integer> pendingLimit,
@@ -103,6 +106,7 @@ public final class RateLimitPolicy {
     this.budgets = budgets;
     this.classifier = classifier;
     this.feedbackInterpreter = feedbackInterpreter;
+    this.bodyFeedbackInterpreter = bodyFeedbackInterpreter;
     this.maxWait = maxWait;
     if (maxAttempts < 1) {
       throw new IllegalArgumentException("maxAttempts must be >= 1");
@@ -176,6 +180,7 @@ public final class RateLimitPolicy {
         newBudgets,
         classifier,
         feedbackInterpreter,
+        bodyFeedbackInterpreter,
         newMaxWait,
         newMaxAttempts,
         newPending,
@@ -282,6 +287,30 @@ public final class RateLimitPolicy {
   }
 
   /**
+   * Copy with an interpreter of decoded response bodies and module exceptions, for exchanges that
+   * report rate rejections in an HTTP 200 body. The default never reports rate pressure.
+   *
+   * @param interpreter the body feedback interpreter
+   * @return the copy
+   */
+  public RateLimitPolicy withBodyFeedbackInterpreter(RateLimitBodyFeedbackInterpreter interpreter) {
+    return new RateLimitPolicy(
+        namespace,
+        version,
+        source,
+        budgets,
+        classifier,
+        feedbackInterpreter,
+        Objects.requireNonNull(interpreter, "interpreter"),
+        maxWait,
+        maxAttempts,
+        pendingLimit,
+        backoffBase,
+        backoffCap,
+        jitterFraction);
+  }
+
+  /**
    * @return provider/API namespace
    */
   public String getNamespace() {
@@ -322,6 +351,13 @@ public final class RateLimitPolicy {
    */
   public RateLimitFeedbackInterpreter getFeedbackInterpreter() {
     return feedbackInterpreter;
+  }
+
+  /**
+   * @return the body feedback interpreter
+   */
+  public RateLimitBodyFeedbackInterpreter getBodyFeedbackInterpreter() {
+    return bodyFeedbackInterpreter;
   }
 
   /**

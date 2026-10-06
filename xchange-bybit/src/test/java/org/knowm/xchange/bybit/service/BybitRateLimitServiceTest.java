@@ -151,6 +151,78 @@ public class BybitRateLimitServiceTest extends BaseWiremockTest {
   }
 
   @Test
+  public void readRejectedInAnHttp200BodyIsReplayedWithFreshAdmission() throws IOException {
+    String body =
+        IOUtils.resourceToString("/getOrderDetailsLinear.json5", StandardCharsets.UTF_8);
+    wireMockRule.stubFor(
+        get(urlPathEqualTo(ORDER_REALTIME))
+            .inScenario("read-body")
+            .whenScenarioStateIs(Scenario.STARTED)
+            .willSetStateTo("recovered")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"retCode\":10006,\"retMsg\":\"Too many visits!\"}")));
+    wireMockRule.stubFor(
+        get(urlPathEqualTo(ORDER_REALTIME))
+            .inScenario("read-body")
+            .whenScenarioStateIs("recovered")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(body)));
+    BybitTradeServiceRaw trade = trade();
+
+    BybitResult<BybitOrderDetails<BybitOrderDetail>> result =
+        trade.getBybitOrder(BybitCategory.LINEAR, null, "fd4300ae-7847-404e-b947-b46980a4d140");
+
+    assertEquals(1, result.getResult().getList().size());
+    wireMockRule.verify(2, getRequestedFor(urlPathEqualTo(ORDER_REALTIME)));
+    assertEquals(
+        "every wire attempt was admitted exactly once by the core",
+        2,
+        context().diagnostics().getAdmissions());
+    assertEquals(1, context().diagnostics().getRetries());
+    assertEquals(1, context().diagnostics().getRatePressureEvents());
+  }
+
+  @Test
+  public void placementRejectedInAnHttp200BodyIsSentOnceAndStartsCooldown() throws IOException {
+    wireMockRule.stubFor(
+        post(urlPathEqualTo(ORDER_CREATE))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"retCode\":10006,\"retMsg\":\"Too many visits!\"}")));
+    BybitTradeServiceRaw trade = trade();
+
+    try {
+      trade.placeOrder(
+          new BybitPlaceOrderPayload(
+              BybitCategory.LINEAR,
+              "ETHUSDT",
+              BybitSide.BUY,
+              BybitOrderType.MARKET,
+              new BigDecimal("0.10"),
+              "link-rate-002"),
+          BybitCategory.LINEAR);
+      fail("a body-rejected placement must surface");
+    } catch (RateLimitTerminatedException terminated) {
+      assertEquals(RateLimitTerminatedException.Dispatch.REJECTED, terminated.getDispatch());
+      assertEquals(
+          RateLimitTerminatedException.Reason.REMOTE_PRESSURE_EXHAUSTED, terminated.getReason());
+    }
+
+    wireMockRule.verify(1, postRequestedFor(urlPathEqualTo(ORDER_CREATE)));
+    assertEquals(1, context().diagnostics().getAdmissions());
+    assertEquals(0, context().diagnostics().getRetries());
+    assertEquals(1, context().diagnostics().getRatePressureEvents());
+  }
+
+  @Test
   public void restPathNeverTouchesTheLegacyResilience4jLimiters() throws IOException {
     initGetStub(ORDER_REALTIME, "/getOrderDetailsLinear.json5");
     wireMockRule.stubFor(
