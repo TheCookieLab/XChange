@@ -13,6 +13,9 @@ import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.RestInvocation;
 
 public class UpbitJWTDigest implements ParamsDigest {
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
   private String accessKey;
   private String secretKey;
 
@@ -34,8 +37,7 @@ public class UpbitJWTDigest implements ParamsDigest {
     } else if (restInvocation.getRequestBody() != null
         && !restInvocation.getRequestBody().isEmpty()) {
       try {
-        ObjectMapper mapper = new ObjectMapper();
-        Map<String, String> map = mapper.readValue(restInvocation.getRequestBody(), Map.class);
+        Map<String, String> map = MAPPER.readValue(restInvocation.getRequestBody(), Map.class);
         Iterator it = map.keySet().iterator();
         while (it.hasNext()) {
           String key = (String) it.next();
