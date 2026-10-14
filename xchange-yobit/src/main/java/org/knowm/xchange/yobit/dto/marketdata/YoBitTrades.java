@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,6 +34,8 @@ public class YoBitTrades {
 
   static class YoBitTradesDeserializer extends JsonDeserializer<YoBitTrades> {
 
+    private static final ObjectReader TRADE_READER = new ObjectMapper().readerFor(YoBitTrade.class);
+
     @Override
     public YoBitTrades deserialize(JsonParser p, DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
@@ -54,8 +57,7 @@ public class YoBitTrades {
 
           if (priceNode.isArray()) {
             for (JsonNode jsonNode : priceNode) {
-              ObjectMapper jsonObjectMapper = new ObjectMapper();
-              res.add(jsonObjectMapper.convertValue(jsonNode, YoBitTrade.class));
+              res.add(TRADE_READER.readValue(jsonNode));
             }
           }
         }

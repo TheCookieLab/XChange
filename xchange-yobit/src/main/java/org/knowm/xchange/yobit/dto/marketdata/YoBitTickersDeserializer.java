@@ -13,6 +13,8 @@ import java.util.Map;
 
 public class YoBitTickersDeserializer extends JsonDeserializer<YoBitTickersReturn> {
 
+  private static final ObjectReader OBJECT_READER = new ObjectMapper().readerFor(YoBitTicker.class);
+
   @Override
   public YoBitTickersReturn deserialize(JsonParser p, DeserializationContext ctxt)
       throws IOException {
@@ -27,8 +29,7 @@ public class YoBitTickersDeserializer extends JsonDeserializer<YoBitTickersRetur
         Map.Entry<String, JsonNode> priceEntryNode = priceEntryIter.next();
 
         JsonNode jsonNode = priceEntryNode.getValue();
-        ObjectReader jsonObjectReader = new ObjectMapper().readerFor(YoBitTicker.class);
-        YoBitTicker ticker = jsonObjectReader.readValue(jsonNode);
+        YoBitTicker ticker = OBJECT_READER.readValue(jsonNode);
         String ccy = priceEntryNode.getKey();
 
         tickers.put(ccy, ticker);
