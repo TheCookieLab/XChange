@@ -1,3 +1,3 @@
-## 2026-10-15 - DateUtils DateTimeFormatter Lenient Suffix Matching
-**Learning:** Replacing `SimpleDateFormat` with `DateTimeFormatter` for date parsing requires handling lenient trailing character parsing behavior. `SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")` ignores trailing sub-seconds/timezones (like `.3817763Z`), whereas `DateTimeFormatter.parse` fails unless `ParsePosition` or `DateTimeFormatterBuilder.optionalStart()` is used.
-**Action:** When refactoring legacy `SimpleDateFormat` parsing in XChange DTO adapters, use `ParsePosition(0)` or optional pattern components to preserve backwards-compatible partial parsing.
+## 2026-10-15 - DateUtils DateTimeFormatter vs ThreadLocal SimpleDateFormat
+**Learning:** `DateTimeFormatter` is strict and fails on non-standard legacy format variations (like 2-space days, 2-digit years in RFC1123, or 6-digit microsecond fields in ISO strings), whereas legacy `SimpleDateFormat` is lenient. Using `ThreadLocal<SimpleDateFormat>` for parsing methods preserves 100% exact lenient parsing behavior across 100+ exchange DTO modules while eliminating object instantiation and pattern compilation overhead.
+**Action:** Use `DateTimeFormatter` for date formatting (`Date` -> `String`) and `ThreadLocal<SimpleDateFormat>` for legacy date parsing (`String` -> `Date`) to achieve max speed and 100% compatibility.

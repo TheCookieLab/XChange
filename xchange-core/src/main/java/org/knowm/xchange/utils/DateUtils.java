@@ -2,18 +2,15 @@ package org.knowm.xchange.utils;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import java.text.ParseException;
-import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAccessor;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Utilities to provide the following to application:
@@ -24,8 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DateUtils {
 
-  // Performance optimization: Thread-safe DateTimeFormatter and ThreadLocal SimpleDateFormat
-  // constants to avoid expensive per-call object allocations and pattern compilation on high-frequency paths.
+  // Performance optimization: Thread-safe DateTimeFormatter constants for formatting and
+  // ThreadLocal SimpleDateFormat instances for parsing to avoid expensive per-call object allocations.
   private static final DateTimeFormatter UTC_STRING_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z", Locale.US).withZone(ZoneId.of("GMT"));
 
@@ -48,15 +45,19 @@ public class DateUtils {
             return sdf;
           });
 
-  private static final DateTimeFormatter ISO_8601_FORMATTER_UTC =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss", Locale.US).withZone(ZoneId.of("UTC"));
+  private static final ThreadLocal<SimpleDateFormat> FROM_ISO_8601_FORMATTER_TL =
+      ThreadLocal.withInitial(
+          () -> {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            return sdf;
+          });
 
-  private static final DateTimeFormatter RFC3339_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US)
-          .withZone(ZoneId.systemDefault());
+  private static final ThreadLocal<SimpleDateFormat> FROM_RFC3339_FORMATTER_TL =
+      ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
 
-  private static final Map<Locale, DateTimeFormatter> RFC1123_FORMATTERS =
-      new ConcurrentHashMap<>();
+  private static final ThreadLocal<Map<Locale, SimpleDateFormat>> FROM_RFC1123_FORMATTERS_TL =
+      ThreadLocal.withInitial(HashMap::new);
 
   /** private Constructor */
   private DateUtils() {}
@@ -126,14 +127,8 @@ public class DateUtils {
       throws com.fasterxml.jackson.databind.exc.InvalidFormatException {
 
     try {
-      ParsePosition pos = new ParsePosition(0);
-      TemporalAccessor ta = ISO_8601_FORMATTER_UTC.parse(iso8601FormattedDate, pos);
-      if (ta == null || pos.getIndex() == 0) {
-        throw new IllegalArgumentException("Failed to parse date: " + iso8601FormattedDate);
-      }
-      Instant instant = Instant.from(ta);
-      return Date.from(instant);
-    } catch (Exception e) {
+      return FROM_ISO_8601_FORMATTER_TL.get().parse(iso8601FormattedDate);
+    } catch (ParseException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", iso8601FormattedDate, Date.class);
     }
@@ -150,14 +145,14 @@ public class DateUtils {
   public static Date fromRfc1123DateString(String rfc1123FormattedDate, Locale locale)
       throws com.fasterxml.jackson.databind.exc.InvalidFormatException {
 
-    DateTimeFormatter formatter =
-        RFC1123_FORMATTERS.computeIfAbsent(
-            locale,
-            loc -> DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz", loc));
+    SimpleDateFormat sdf =
+        FROM_RFC1123_FORMATTERS_TL
+            .get()
+            .computeIfAbsent(
+                locale, loc -> new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", loc));
     try {
-      Instant instant = Instant.from(formatter.parse(rfc1123FormattedDate));
-      return Date.from(instant);
-    } catch (Exception e) {
+      return sdf.parse(rfc1123FormattedDate);
+    } catch (ParseException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", rfc1123FormattedDate, Date.class);
     }
@@ -175,9 +170,8 @@ public class DateUtils {
       throws InvalidFormatException {
 
     try {
-      Instant instant = Instant.from(RFC3339_FORMATTER.parse(rfc3339FormattedDate));
-      return Date.from(instant);
-    } catch (Exception e) {
+      return FROM_RFC3339_FORMATTER_TL.get().parse(rfc3339FormattedDate);
+    } catch (ParseException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", rfc3339FormattedDate, Date.class);
     }
