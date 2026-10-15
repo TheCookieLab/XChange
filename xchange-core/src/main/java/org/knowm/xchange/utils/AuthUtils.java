@@ -80,6 +80,10 @@ public class AuthUtils {
    */
   public static Properties  getSecretProperties(String prefix) {
 
+    if (prefix != null && (prefix.contains("..") || prefix.contains("/") || prefix.contains("\\"))) {
+      throw new IllegalArgumentException("Invalid prefix for secret keys: path traversal detected");
+    }
+
     String resource = prefix != null ? prefix + "-secret.keys" : "secret.keys";
 
     // First try to find the keys in the classpath

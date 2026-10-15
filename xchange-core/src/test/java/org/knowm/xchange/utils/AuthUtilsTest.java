@@ -18,6 +18,21 @@ public class AuthUtilsTest {
   private static final String FILE_API_KEY = "file-api-key";
   private static final String FILE_SECRET_KEY = "file-secret-key";
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testPathTraversalDotDotRejected() {
+    AuthUtils.getSecretProperties("../secret");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testPathTraversalSlashRejected() {
+    AuthUtils.getSecretProperties("sub/dir");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testPathTraversalBackslashRejected() {
+    AuthUtils.getSecretProperties("sub\\dir");
+  }
+
   @Test
   public void testSecretKeysFallbackWhenEnvMissing() {
     assumeSecretKeysAvailable(PREFIX);
