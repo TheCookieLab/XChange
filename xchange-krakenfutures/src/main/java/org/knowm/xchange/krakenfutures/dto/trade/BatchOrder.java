@@ -6,6 +6,8 @@ import java.util.List;
 
 public class BatchOrder {
 
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   private final List<OrderCommand> batchOrder;
 
   public BatchOrder(List<OrderCommand> batchOrder) {
@@ -21,7 +23,7 @@ public class BatchOrder {
   public String toString() {
     try {
       // convert the object to json
-      return new ObjectMapper().writeValueAsString(this);
+      return OBJECT_MAPPER.writeValueAsString(this);
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Could not convert to json.", e);
     }
