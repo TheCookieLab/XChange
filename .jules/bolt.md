@@ -1,0 +1,3 @@
+## 2026-10-15 - DateUtils DateTimeFormatter Lenient Suffix Matching
+**Learning:** Replacing `SimpleDateFormat` with `DateTimeFormatter` for date parsing requires handling lenient trailing character parsing behavior. `SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")` ignores trailing sub-seconds/timezones (like `.3817763Z`), whereas `DateTimeFormatter.parse` fails unless `ParsePosition` or `DateTimeFormatterBuilder.optionalStart()` is used.
+**Action:** When refactoring legacy `SimpleDateFormat` parsing in XChange DTO adapters, use `ParsePosition(0)` or optional pattern components to preserve backwards-compatible partial parsing.
