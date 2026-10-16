@@ -2,6 +2,7 @@ package org.knowm.xchange.polymarket.client;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.Security;
 import java.util.Arrays;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
@@ -277,7 +278,8 @@ public final class PolymarketEip712Signer {
     int recId = -1;
     for (int candidate = 0; candidate < 2; candidate++) {
       byte[] recovered = recoverAddress(digest, r, s, candidate);
-      if (Arrays.equals(recovered, address)) {
+      // Constant-time byte array comparison to prevent timing side-channel attacks during key recovery
+      if (recovered != null && MessageDigest.isEqual(recovered, address)) {
         recId = candidate;
         break;
       }
