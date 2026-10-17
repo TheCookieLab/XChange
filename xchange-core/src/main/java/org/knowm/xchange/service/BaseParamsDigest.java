@@ -17,7 +17,7 @@ public abstract class BaseParamsDigest implements ParamsDigest {
   public static final String HMAC_SHA_1 = "HmacSHA1";
   public static final String HMAC_MD5 = "HmacMD5";
 
-  private final Mac mac;
+  private final ThreadLocal<Mac> threadLocalMac;
 
   /**
    * Constructor
@@ -42,7 +42,18 @@ public abstract class BaseParamsDigest implements ParamsDigest {
       throws IllegalArgumentException {
 
     final SecretKey secretKey = new SecretKeySpec(secretKeyBase64, hmacString);
-    mac = createMac(secretKey, hmacString);
+    final Mac macTemplate = createMac(secretKey, hmacString);
+    // Optimization: Cache Mac per thread using ThreadLocal, cloning only once per thread.
+    // This avoids costly Mac.clone() allocation on every API digest operation.
+    this.threadLocalMac =
+        ThreadLocal.withInitial(
+            () -> {
+              try {
+                return (Mac) macTemplate.clone();
+              } catch (CloneNotSupportedException e) {
+                throw new IllegalStateException(e);
+              }
+            });
   }
 
   private Mac createMac(SecretKey secretKey, String hmacString) {
@@ -62,11 +73,13 @@ public abstract class BaseParamsDigest implements ParamsDigest {
     return Base64.getDecoder().decode(secretKey);
   }
 
+  /**
+   * Returns a thread-local instance of {@link Mac} configured for this digest.
+   * Reuses the instance per thread after resetting its state, avoiding repeated object allocation.
+   */
   public Mac getMac() {
-    try {
-      return (Mac) mac.clone();
-    } catch (CloneNotSupportedException e) {
-      throw new IllegalStateException(e);
-    }
+    Mac mac = threadLocalMac.get();
+    mac.reset();
+    return mac;
   }
 }
