@@ -1,14 +1,19 @@
 package org.knowm.xchange.utils;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.TimeZone;
 
 /**
  * Utilities to provide standard date and time handling.
@@ -20,10 +25,26 @@ public class DateUtils {
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z").withZone(ZoneOffset.UTC);
 
   private static final DateTimeFormatter ISO_UTC_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
+      new DateTimeFormatterBuilder()
+          .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+          .optionalStart()
+          .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+          .optionalEnd()
+          .appendLiteral('Z')
+          .toFormatter()
+          .withZone(ZoneOffset.UTC);
 
   private static final DateTimeFormatter ISO_8601_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss").withZone(ZoneOffset.UTC);
+      new DateTimeFormatterBuilder()
+          .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+          .optionalStart()
+          .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+          .optionalEnd()
+          .optionalStart()
+          .appendZoneOrOffsetId()
+          .optionalEnd()
+          .toFormatter()
+          .withZone(ZoneOffset.UTC);
 
   private static final DateTimeFormatter ISO_LOCAL_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneId.systemDefault());
@@ -81,10 +102,11 @@ public class DateUtils {
   public static Date fromISODateString(String isoFormattedDate)
       throws com.fasterxml.jackson.databind.exc.InvalidFormatException {
 
+    SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    isoDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
     try {
-      Instant instant = Instant.from(ISO_UTC_FORMATTER.parse(isoFormattedDate));
-      return Date.from(instant);
-    } catch (RuntimeException e) {
+      return isoDateFormat.parse(isoFormattedDate);
+    } catch (ParseException e) {
       throw new InvalidFormatException(null, "Error parsing as date", isoFormattedDate, Date.class);
     }
   }
@@ -100,10 +122,11 @@ public class DateUtils {
   public static Date fromISO8601DateString(String iso8601FormattedDate)
       throws com.fasterxml.jackson.databind.exc.InvalidFormatException {
 
+    SimpleDateFormat iso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    iso8601Format.setTimeZone(TimeZone.getTimeZone("UTC"));
     try {
-      Instant instant = Instant.from(ISO_8601_FORMATTER.parse(iso8601FormattedDate));
-      return Date.from(instant);
-    } catch (RuntimeException e) {
+      return iso8601Format.parse(iso8601FormattedDate);
+    } catch (ParseException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", iso8601FormattedDate, Date.class);
     }
