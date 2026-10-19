@@ -5,7 +5,9 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Optional;
@@ -18,7 +20,7 @@ import java.util.Optional;
  */
 public class DateUtils {
 
-  // Thread-safe, pre-compiled DateTimeFormatters for zero-allocation date formatting/parsing
+  // Thread-safe formatters for strict string output formatting
   private static final DateTimeFormatter UTC_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z").withZone(ZoneId.of("GMT"));
 
@@ -31,11 +33,24 @@ public class DateUtils {
   private static final DateTimeFormatter ISO_DEFAULT_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneId.systemDefault());
 
-  private static final DateTimeFormatter RFC_1123_FORMATTER =
+  // Thread-safe parsers for flexible string parsing
+  private static final DateTimeFormatter ISO_UTC_PARSER =
+      new DateTimeFormatterBuilder()
+          .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+          .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+          .appendLiteral('Z')
+          .toFormatter()
+          .withZone(ZoneOffset.UTC);
+
+  private static final DateTimeFormatter RFC_1123_PARSER =
       DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz");
 
-  private static final DateTimeFormatter RFC_3339_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
+  private static final DateTimeFormatter RFC_3339_PARSER =
+      new DateTimeFormatterBuilder()
+          .appendPattern("yyyy-MM-dd HH:mm:ss")
+          .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+          .toFormatter()
+          .withZone(ZoneOffset.UTC);
 
   /** private Constructor */
   private DateUtils() {}
@@ -91,7 +106,7 @@ public class DateUtils {
       return null;
     }
     try {
-      return Date.from(ISO_UTC_FORMATTER.parse(isoFormattedDate, Instant::from));
+      return Date.from(ISO_UTC_PARSER.parse(isoFormattedDate, Instant::from));
     } catch (DateTimeParseException | IllegalArgumentException e) {
       throw new InvalidFormatException(null, "Error parsing as date", isoFormattedDate, Date.class);
     }
@@ -112,7 +127,11 @@ public class DateUtils {
       return null;
     }
     try {
-      return Date.from(ISO_8601_FORMATTER.parse(iso8601FormattedDate, Instant::from));
+      String dateStr = iso8601FormattedDate;
+      if (dateStr.length() > 19) {
+        dateStr = dateStr.substring(0, 19);
+      }
+      return Date.from(ISO_8601_FORMATTER.parse(dateStr, Instant::from));
     } catch (DateTimeParseException | IllegalArgumentException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", iso8601FormattedDate, Date.class);
@@ -134,7 +153,7 @@ public class DateUtils {
       return null;
     }
     try {
-      DateTimeFormatter formatter = RFC_1123_FORMATTER;
+      DateTimeFormatter formatter = RFC_1123_PARSER;
       if (locale != null) {
         formatter = formatter.withLocale(locale);
       }
@@ -160,7 +179,7 @@ public class DateUtils {
       return null;
     }
     try {
-      return Date.from(RFC_3339_FORMATTER.parse(rfc3339FormattedDate, Instant::from));
+      return Date.from(RFC_3339_PARSER.parse(rfc3339FormattedDate, Instant::from));
     } catch (DateTimeParseException | IllegalArgumentException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", rfc3339FormattedDate, Date.class);

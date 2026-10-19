@@ -95,7 +95,7 @@ public class BTCMarketsAdaptersTest extends BTCMarketsDtoTestSupport {
 
     final UserTrade userTrade = BTCMarketsAdapters.adaptTradeHistory(response);
     assertThat(userTrade.getId()).isEqualTo("36014819");
-    assertThat(userTrade.getTimestamp().getTime()).isEqualTo(1561479439000L);
+    assertThat(userTrade.getTimestamp().getTime()).isEqualTo(1561478462977L);
     assertThat(userTrade.getPrice()).isEqualTo("0.67");
     assertThat(userTrade.getOriginalAmount()).isEqualTo("1.50533262");
     assertThat(userTrade.getType()).isEqualTo(Order.OrderType.ASK);
