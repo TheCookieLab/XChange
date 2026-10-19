@@ -1,21 +1,41 @@
 package org.knowm.xchange.utils;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.TimeZone;
 
 /**
- * Utilities to provide the following to application:
+ * Utilities to provide standard date and time handling.
  *
- * <ul>
- *   <li>Provision of standard date and time handling
- * </ul>
+ * <p>Uses thread-safe, pre-compiled {@link DateTimeFormatter} constants to avoid allocation and
+ * thread synchronization overhead associated with {@code SimpleDateFormat}.
  */
 public class DateUtils {
+
+  // Thread-safe, pre-compiled DateTimeFormatters for zero-allocation date formatting/parsing
+  private static final DateTimeFormatter UTC_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z").withZone(ZoneId.of("GMT"));
+
+  private static final DateTimeFormatter ISO_UTC_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
+
+  private static final DateTimeFormatter ISO_8601_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss").withZone(ZoneOffset.UTC);
+
+  private static final DateTimeFormatter ISO_DEFAULT_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneId.systemDefault());
+
+  private static final DateTimeFormatter RFC_1123_FORMATTER =
+      DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz");
+
+  private static final DateTimeFormatter RFC_3339_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
 
   /** private Constructor */
   private DateUtils() {}
@@ -39,27 +59,22 @@ public class DateUtils {
    */
   public static String toUTCString(Date date) {
 
-    SimpleDateFormat sd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
-    sd.setTimeZone(TimeZone.getTimeZone("GMT"));
-    return sd.format(date);
+    return UTC_FORMATTER.format(date.toInstant());
   }
 
   public static String toUTCISODateString(Date date) {
-    SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-    isoDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
-    return isoDateFormat.format(date);
+
+    return ISO_UTC_FORMATTER.format(date.toInstant());
   }
 
   public static String toISO8601DateString(Date date) {
 
-    SimpleDateFormat iso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-    iso8601Format.setTimeZone(TimeZone.getTimeZone("GMT"));
-    return iso8601Format.format(date);
+    return ISO_8601_FORMATTER.format(date.toInstant());
   }
 
   public static String toISODateString(Date date) {
-    SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-    return isoDateFormat.format(date);
+
+    return ISO_DEFAULT_FORMATTER.format(date.toInstant());
   }
 
   /**
@@ -72,12 +87,12 @@ public class DateUtils {
   public static Date fromISODateString(String isoFormattedDate)
       throws com.fasterxml.jackson.databind.exc.InvalidFormatException {
 
-    SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-    // set UTC time zone - 'Z' indicates it
-    isoDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    if (isoFormattedDate == null) {
+      return null;
+    }
     try {
-      return isoDateFormat.parse(isoFormattedDate);
-    } catch (ParseException e) {
+      return Date.from(ISO_UTC_FORMATTER.parse(isoFormattedDate, Instant::from));
+    } catch (DateTimeParseException | IllegalArgumentException e) {
       throw new InvalidFormatException(null, "Error parsing as date", isoFormattedDate, Date.class);
     }
   }
@@ -93,12 +108,12 @@ public class DateUtils {
   public static Date fromISO8601DateString(String iso8601FormattedDate)
       throws com.fasterxml.jackson.databind.exc.InvalidFormatException {
 
-    SimpleDateFormat iso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-    // set UTC time zone
-    iso8601Format.setTimeZone(TimeZone.getTimeZone("UTC"));
+    if (iso8601FormattedDate == null) {
+      return null;
+    }
     try {
-      return iso8601Format.parse(iso8601FormattedDate);
-    } catch (ParseException e) {
+      return Date.from(ISO_8601_FORMATTER.parse(iso8601FormattedDate, Instant::from));
+    } catch (DateTimeParseException | IllegalArgumentException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", iso8601FormattedDate, Date.class);
     }
@@ -115,11 +130,16 @@ public class DateUtils {
   public static Date fromRfc1123DateString(String rfc1123FormattedDate, Locale locale)
       throws com.fasterxml.jackson.databind.exc.InvalidFormatException {
 
-    SimpleDateFormat rfc1123DateFormat =
-        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", locale);
+    if (rfc1123FormattedDate == null) {
+      return null;
+    }
     try {
-      return rfc1123DateFormat.parse(rfc1123FormattedDate);
-    } catch (ParseException e) {
+      DateTimeFormatter formatter = RFC_1123_FORMATTER;
+      if (locale != null) {
+        formatter = formatter.withLocale(locale);
+      }
+      return Date.from(formatter.parse(rfc1123FormattedDate, Instant::from));
+    } catch (DateTimeParseException | IllegalArgumentException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", rfc1123FormattedDate, Date.class);
     }
@@ -136,10 +156,12 @@ public class DateUtils {
   public static Date fromRfc3339DateString(String rfc3339FormattedDate)
       throws InvalidFormatException {
 
-    SimpleDateFormat rfc3339DateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    if (rfc3339FormattedDate == null) {
+      return null;
+    }
     try {
-      return rfc3339DateFormat.parse(rfc3339FormattedDate);
-    } catch (ParseException e) {
+      return Date.from(RFC_3339_FORMATTER.parse(rfc3339FormattedDate, Instant::from));
+    } catch (DateTimeParseException | IllegalArgumentException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", rfc3339FormattedDate, Date.class);
     }

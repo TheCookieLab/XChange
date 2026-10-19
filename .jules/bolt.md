@@ -1,0 +1,3 @@
+## 2026-10-19 - Replace SimpleDateFormat with Thread-Safe DateTimeFormatter Constants
+**Learning:** `DateUtils` in `xchange-core` was allocating new `SimpleDateFormat` instances on every date format/parse call (which occurs frequently during Jackson DTO deserialization of exchange API payloads). `DateTimeFormatter` constants are thread-safe and avoid allocation, but exception types must be mapped from `DateTimeParseException` to Jackson's `InvalidFormatException` to maintain API backward compatibility.
+**Action:** When replacing legacy `SimpleDateFormat` in Jackson-integrated utilities, wrap `DateTimeParseException` into `InvalidFormatException` to maintain expected exception handling contracts across exchange DTO deserializers.
