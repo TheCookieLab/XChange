@@ -7,6 +7,8 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.format.SignStyle;
+import java.time.format.TextStyle;
 import java.time.temporal.ChronoField;
 import java.util.Date;
 import java.util.Locale;
@@ -43,7 +45,32 @@ public class DateUtils {
           .withZone(ZoneOffset.UTC);
 
   private static final DateTimeFormatter RFC_1123_PARSER =
-      DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz");
+      new DateTimeFormatterBuilder()
+          .parseCaseInsensitive()
+          .optionalStart()
+          .appendPattern("EEE, ")
+          .optionalEnd()
+          .appendValue(ChronoField.DAY_OF_MONTH, 1, 2, SignStyle.NOT_NEGATIVE)
+          .appendLiteral(' ')
+          .appendPattern("MMM ")
+          .optionalStart()
+          .appendValue(ChronoField.YEAR, 4)
+          .optionalEnd()
+          .optionalStart()
+          .appendValueReduced(ChronoField.YEAR, 2, 2, 2000)
+          .optionalEnd()
+          .appendPattern(" HH:mm:ss ")
+          .optionalStart()
+          .appendZoneText(TextStyle.SHORT)
+          .optionalEnd()
+          .optionalStart()
+          .appendOffset("+HHMM", "GMT")
+          .optionalEnd()
+          .optionalStart()
+          .appendOffsetId()
+          .optionalEnd()
+          .toFormatter()
+          .withZone(ZoneOffset.UTC);
 
   private static final DateTimeFormatter RFC_3339_PARSER =
       new DateTimeFormatterBuilder()
@@ -153,11 +180,12 @@ public class DateUtils {
       return null;
     }
     try {
+      String normalized = rfc1123FormattedDate.trim().replaceAll("\\s+", " ");
       DateTimeFormatter formatter = RFC_1123_PARSER;
       if (locale != null) {
         formatter = formatter.withLocale(locale);
       }
-      return Date.from(formatter.parse(rfc1123FormattedDate, Instant::from));
+      return Date.from(formatter.parse(normalized, Instant::from));
     } catch (DateTimeParseException | IllegalArgumentException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", rfc1123FormattedDate, Date.class);
