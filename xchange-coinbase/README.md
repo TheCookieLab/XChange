@@ -10,7 +10,79 @@ WebSocket transports: the API key name is the exchange API key and the EC privat
 PEM is the secret key. Invalid or missing key material degrades to public-only usage
 with a sanitized warning, never a crash.
 
-## Product identity
+## US CDE public funding observations
+
+`CoinbaseCdeMarketData.create().getFundingHistory("BIPZ30", 2160, 0)` reads one
+public website MDA page without account credentials. This separate raw interface
+uses CDE website symbols, such as `BIPZ30`, `ETPZ30`, `SLPZ30` and `XPPZ30`;
+resolve them against the website catalog rather than guessing a mapping from an
+Advanced Trade product id. It belongs to US CDE, independently of the
+`xchange-coinbase-derivatives` international gateway module.
+
+The response retains `symbol`, `funding_rate`, `event_time` and the pagination echo.
+`fundingRateDecimal()` preserves delivered decimal precision: `0.000022` means
+`0.0022%`. No percent or annualized conversion is applied. Event timestamps are
+preserved without shifting them to an assumed funding boundary. Missing rows and
+missing metadata remain distinguishable from explicit zero observations.
+
+This is an observed public website interface, **not a documented Advanced Trade
+history endpoint or a verified settlement feed**. Source precision, finality,
+revision rules, retention and interval-boundary semantics are unverified. Do not
+feed it into an exact-settlement source without establishing those contracts.
+The chart CSV rounds percentages to four decimal places; this interface reads the
+JSON strings before that extra rounding. That does not establish upstream accuracy.
+Offset paging beyond 2160 rows was observed; no total count or stable snapshot is
+provided. Bound pagination, reconcile overlap by symbol/event time, and share
+fetched pages across strategies. A missing hour is not proof of a zero funding rate.
+
+Sources observed on 2026-10-20:
+
+- [Public dashboard](https://www.coinbase.com/market-data/derivatives?funding_venue=cde)
+  and its public `c_B4BC1ezr.js` module use
+  `https://www.coinbase.com/api/mda/v1/instruments/CDE/{symbol}/funding?result_limit=2160`.
+- The website catalog is `https://www.coinbase.com/api/mda/v1/assets/CDE`.
+- [CDE REST history](https://docs.cdp.coinbase.com/api-reference/derivatives-api/rest-api/funding-rate/get-historical-funding-rates)
+  is a separate `/rest/funding-rate` interface, queried by symbol and trading session date.
+  [DCC authentication](https://docs.cdp.coinbase.com/api-reference/derivatives-api/rest-api/authentication)
+  requires separate CDE credentials; it is not exposed by this public-only client.
+- [CDE funding help](https://help.coinbase.com/en/derivatives/perpetual-style-futures/funding-rate)
+  distinguishes hourly calculation from midday/end-of-day cash adjustments and
+  says fully closed hours have no published rate.
+
+For a `CoinbaseCdeRest` instance named `rest`,
+`rest.getHistoricalFundingRates(key, passphrase, signature, timestampSeconds,
+"BIPZ30", "2026-10-19")` describes the separate documented institutional
+history route. Obtain the instance from a caller-owned authenticated
+transport with credential-safe logging. No convenience factory is supplied:
+**stock Rescu TRACE logging exposes header values**, including DCC key, passphrase
+and signature. The binding itself does not install transport header redaction.
+Authentication headers are supplied explicitly by the caller; this binding
+performs no credential lookup or signing. Its response
+retains `symbol`, `funding_rate`, `future_mark_price`, `spot_mark_price`,
+`fair_value_price` and `event_time` as source strings. A null trading session date
+uses the provider's today. The schema defines no pagination or finality field;
+do not infer UTC session bounds from the date or copy UDP flags onto these rows.
+This route does not make DCC credentials a prerequisite for public MDA history.
+
+For CF integration, published history maps to the separate
+`CFPublishedFundingHistorySource` contract: preserve configured product id,
+explicit CDE symbol, source URI, decimal rate and unchanged event time. Public
+MDA rows, including the newest row, remain `PUBLISHED_UNCLASSIFIED`. Coalesce
+strategy ranges per product before bounded pagination and share the result;
+reject conflicting duplicates and pagination-budget exhaustion. No database is
+required, and missing hours remain absent. This raw adapter does not install CF
+runtime wiring or convert published rows into its exact `CFFundingRateSource`.
+
+[CDE timing](https://help.coinbase.com/en/coinbase/derivatives/us-perpetual-futures-overview)
+and the [position timing example](https://help.coinbase.com/en/derivatives/perpetual-style-futures/examples)
+establish that a verified funding event at T applies to exposure at T, without
+prior-hour proration or shifting it to T+1. Cash clearing occurs separately.
+[UDP funding fields](https://docs.cdp.coinbase.com/derivatives/udp/incrementals#funding-rate)
+distinguish projected and final rates with `IsFinal` and
+`FinalFundingRateTimestamp`. Those fields are absent from MDA and REST history;
+their equivalence to a final UDP event is not asserted by this client.
+
+## Advanced Trade product identity
 
 `CoinbaseProductIdentity` resolves provider product ids losslessly: spot → `CurrencyPair`,
 futures → `FuturesContract`, perpetuals → `PerpetualContract` (suffix `PERP`). Configure
