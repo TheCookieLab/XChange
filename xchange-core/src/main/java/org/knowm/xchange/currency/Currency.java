@@ -507,10 +507,17 @@ public class Currency implements Comparable<Currency>, Serializable {
   @JsonCreator
   public static Currency getInstance(String currencyCode) {
 
-    Currency currency = getInstanceNoCreate(currencyCode.toUpperCase());
+    // Fast path for the common already-uppercase code: skips the toUpperCase() scan.
+    Currency currency = currencies.get(currencyCode);
+    if (currency != null) {
+      return currency;
+    }
+
+    String upperCaseCode = currencyCode.toUpperCase();
+    currency = currencies.get(upperCaseCode);
 
     if (currency == null) {
-      return createCurrency(currencyCode.toUpperCase(), null, null);
+      return createCurrency(upperCaseCode, null, null);
     } else {
       return currency;
     }

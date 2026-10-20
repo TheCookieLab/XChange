@@ -26,6 +26,38 @@ public class CurrencyTest {
   }
 
   @Test
+  public void testGetInstanceIsCaseInsensitiveAndCached() {
+    assertThat(Currency.getInstance("BTC")).isSameAs(Currency.BTC);
+    assertThat(Currency.getInstance("btc")).isSameAs(Currency.BTC);
+    assertThat(Currency.getInstance("Btc")).isSameAs(Currency.BTC);
+    assertThat(Currency.getInstance("XBT")).isSameAs(Currency.XBT);
+    assertThat(Currency.getInstance("xbt")).isSameAs(Currency.XBT);
+  }
+
+  @Test
+  public void testGetInstanceCreatesUnknownCodeOnceUppercased() {
+    assertThat(Currency.getInstanceNoCreate("fastpathunknown")).isNull();
+
+    Currency created = Currency.getInstance("fastpathunknown");
+
+    assertEquals("FASTPATHUNKNOWN", created.getCurrencyCode());
+    assertThat(Currency.getInstance("FASTPATHUNKNOWN")).isSameAs(created);
+    assertThat(Currency.getInstance("FastPathUnknown")).isSameAs(created);
+    assertThat(Currency.getInstanceNoCreate("fastpathunknown")).isSameAs(created);
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void testGetInstanceRejectsNull() {
+    Currency.getInstance(null);
+  }
+
+  @Test
+  public void testGetInstanceNoCreateReturnsNullForUnknownCode() {
+    assertThat(Currency.getInstanceNoCreate("nosuchcurrencycode")).isNull();
+    assertThat(Currency.getInstanceNoCreate("NOSUCHCURRENCYCODE")).isNull();
+  }
+
+  @Test
   public void testGetInstanceNoCreate() {
     assertEquals(Currency.CNY, Currency.getInstanceNoCreate("CNY"));
     assertEquals(Currency.CNY, Currency.getInstanceNoCreate("cny"));
