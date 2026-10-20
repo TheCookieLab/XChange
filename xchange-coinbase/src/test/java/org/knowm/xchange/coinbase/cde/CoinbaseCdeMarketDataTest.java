@@ -22,6 +22,47 @@ public class CoinbaseCdeMarketDataTest {
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Test
+  public void institutionalHistoryUsesSeparateRouteAndRetainsDocumentedFields() throws Exception {
+    WireMockServer server = new WireMockServer(options().dynamicPort());
+    server.start();
+    try {
+      server.stubFor(get(urlPathEqualTo("/rest/funding-rate"))
+          .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody("""
+              [{"symbol":"BIPZ30","funding_rate":"0.000100",
+                "future_mark_price":"62850.25","spot_mark_price":"62840.10",
+                "fair_value_price":"62845.00","event_time":"2025-08-13T12:00:00Z"}]
+              """)));
+      CoinbaseCdeRest client = RestProxyFactory.createProxy(CoinbaseCdeRest.class, server.baseUrl());
+      // Synthetic headers only: no signature generation or live/signed account request.
+      var rows = client.getHistoricalFundingRates(
+          "synthetic-key", "synthetic-passphrase", "synthetic-signature", 1L,
+          "BIPZ30", "2025-08-01");
+      assertEquals(1, rows.size());
+      assertEquals("BIPZ30", rows.get(0).symbol());
+      assertEquals("0.000100", rows.get(0).fundingRate());
+      assertEquals("62850.25", rows.get(0).futureMarkPrice());
+      assertEquals("62840.10", rows.get(0).spotMarkPrice());
+      assertEquals("62845.00", rows.get(0).fairValuePrice());
+      assertEquals("2025-08-13T12:00:00Z", rows.get(0).eventTime());
+      var request = server.getAllServeEvents().get(0).getRequest();
+      assertEquals("BIPZ30", request.queryParameter("symbol").firstValue());
+      assertEquals("2025-08-01", request.queryParameter("trading_session_date").firstValue());
+      assertEquals("synthetic-key", request.getHeader("CB-ACCESS-KEY"));
+      assertEquals("synthetic-passphrase", request.getHeader("CB-ACCESS-PASSPHRASE"));
+      assertEquals("synthetic-signature", request.getHeader("CB-ACCESS-SIGN"));
+      assertEquals("1", request.getHeader("CB-ACCESS-TIMESTAMP"));
+      assertFalse(request.containsHeader("Authorization"));
+      client.getHistoricalFundingRates("synthetic-key", "synthetic-passphrase",
+          "synthetic-signature", 1L, "BIPZ30", null);
+      assertFalse(server.getAllServeEvents().get(0).getRequest()
+          .queryParameter("trading_session_date").isPresent());
+      assertNotNull(CoinbaseCdeRest.create());
+    } finally {
+      server.stop();
+    }
+  }
+
+  @Test
   public void publicPageUsesCdeSymbolOffsetAndNoAccountHeaders() throws Exception {
     WireMockServer server = new WireMockServer(options().dynamicPort());
     server.start();

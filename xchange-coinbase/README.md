@@ -49,6 +49,34 @@ Sources observed on 2026-10-20:
   distinguishes hourly calculation from midday/end-of-day cash adjustments and
   says fully closed hours have no published rate.
 
+`CoinbaseCdeRest.create().getHistoricalFundingRates(key, passphrase, signature,
+timestampSeconds, "BIPZ30", "2026-10-19")` exposes the separate documented
+institutional history route. Authentication headers are supplied explicitly by
+the caller; this binding performs no credential lookup or signing. Its response
+retains `symbol`, `funding_rate`, `future_mark_price`, `spot_mark_price`,
+`fair_value_price` and `event_time` as source strings. A null trading session date
+uses the provider's today. The schema defines no pagination or finality field;
+do not infer UTC session bounds from the date or copy UDP flags onto these rows.
+This route does not make DCC credentials a prerequisite for public MDA history.
+
+For CF integration, published history maps to the separate
+`CFPublishedFundingHistorySource` contract: preserve configured product id,
+explicit CDE symbol, source URI, decimal rate and unchanged event time. Public
+MDA rows, including the newest row, remain `PUBLISHED_UNCLASSIFIED`. Coalesce
+strategy ranges per product before bounded pagination and share the result;
+reject conflicting duplicates and pagination-budget exhaustion. No database is
+required, and missing hours remain absent. This raw adapter does not install CF
+runtime wiring or convert published rows into its exact `CFFundingRateSource`.
+
+[CDE timing](https://help.coinbase.com/en/coinbase/derivatives/us-perpetual-futures-overview)
+and the [position timing example](https://help.coinbase.com/en/derivatives/perpetual-style-futures/examples)
+establish that a verified funding event at T applies to exposure at T, without
+prior-hour proration or shifting it to T+1. Cash clearing occurs separately.
+[UDP funding fields](https://docs.cdp.coinbase.com/derivatives/udp/incrementals#funding-rate)
+distinguish projected and final rates with `IsFinal` and
+`FinalFundingRateTimestamp`. Those fields are absent from MDA and REST history;
+their equivalence to a final UDP event is not asserted by this client.
+
 ## Advanced Trade product identity
 
 `CoinbaseProductIdentity` resolves provider product ids losslessly: spot → `CurrencyPair`,
