@@ -32,7 +32,7 @@ public class BiboxDigest extends BaseParamsDigest {
     String cmds =
         (String) restInvocation.getParamValue(FormParam.class, BiboxAuthenticated.FORM_CMDS);
     try {
-      return DigestUtils.bytesToHex(getMac().doFinal(cmds.getBytes("UTF-8"))).toLowerCase();
+      return DigestUtils.bytesToHex(hmac(cmds.getBytes("UTF-8"))).toLowerCase();
     } catch (IllegalStateException | UnsupportedEncodingException e1) {
       throw new RuntimeException(e1.getMessage());
     }

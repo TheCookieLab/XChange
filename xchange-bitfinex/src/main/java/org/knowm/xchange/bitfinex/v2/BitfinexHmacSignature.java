@@ -50,7 +50,7 @@ public class BitfinexHmacSignature extends BaseParamsDigest {
     String toEncode = "/api/" + path + nonce + body;
 
     try {
-      byte[] sig = getMac().doFinal(toEncode.getBytes(UTF_8));
+      byte[] sig = hmac(toEncode.getBytes(UTF_8));
       String signature = DigestUtils.bytesToHex(sig);
       return signature;
 

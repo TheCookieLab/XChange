@@ -51,7 +51,7 @@ public class DeribitDigest extends BaseParamsDigest {
 
     String signature;
     try {
-      signature = DigestUtils.bytesToHex(getMac().doFinal(toSign.getBytes("UTF-8"))).toLowerCase();
+      signature = DigestUtils.bytesToHex(hmac(toSign.getBytes("UTF-8"))).toLowerCase();
     } catch (IllegalStateException | UnsupportedEncodingException e) {
       throw new ExchangeException("Could not sign request", e);
     }
