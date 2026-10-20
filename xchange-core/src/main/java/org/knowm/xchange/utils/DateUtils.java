@@ -3,6 +3,7 @@ package org.knowm.xchange.utils;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -22,20 +23,37 @@ import java.util.TimeZone;
 public class DateUtils {
 
   // Performance optimization: Thread-safe DateTimeFormatter constants for formatting and
-  // ThreadLocal SimpleDateFormat instances for parsing to avoid expensive per-call object allocations.
+  // ThreadLocal SimpleDateFormat instances for parsing to avoid expensive per-call object
+  // allocations. Fixed-zone (GMT/UTC) formatters are constants; paths that follow the JVM default
+  // time zone resolve it on every call so that later TimeZone.setDefault(...) calls are honored.
+  private static final String UTC_STRING_PATTERN = "yyyy-MM-dd HH:mm:ss z";
+  private static final String ISO_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+  private static final String ISO_8601_PATTERN = "yyyy-MM-dd'T'HH:mm:ss";
+
+  /**
+   * Instants in [1970-01-01, 9999-01-01) format identically through {@link DateTimeFormatter} and
+   * {@link SimpleDateFormat}. Outside it the two diverge (SimpleDateFormat uses the Julian calendar
+   * before 1582, local-mean-time offsets differ, years above 9999 gain a sign), so those instants
+   * keep using {@link SimpleDateFormat} to preserve the historical output.
+   */
+  private static final long MIN_FAST_FORMAT_MILLIS = 0L;
+
+  private static final long MAX_FAST_FORMAT_MILLIS = 253_370_764_800_000L;
+
+  private static final ZoneId GMT_ZONE = ZoneId.of("GMT");
+
   private static final DateTimeFormatter UTC_STRING_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z", Locale.US).withZone(ZoneId.of("GMT"));
+      DateTimeFormatter.ofPattern(UTC_STRING_PATTERN, Locale.US).withZone(GMT_ZONE);
 
   private static final DateTimeFormatter UTC_ISO_DATE_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-          .withZone(ZoneId.of("GMT"));
+      DateTimeFormatter.ofPattern(ISO_DATE_PATTERN, Locale.US).withZone(GMT_ZONE);
 
   private static final DateTimeFormatter ISO_8601_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss", Locale.US).withZone(ZoneId.of("GMT"));
+      DateTimeFormatter.ofPattern(ISO_8601_PATTERN, Locale.US).withZone(GMT_ZONE);
 
+  /** Zone-less: formats the local date-time resolved against the current default zone. */
   private static final DateTimeFormatter ISO_DATE_FORMATTER_LOCAL =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-          .withZone(ZoneId.systemDefault());
+      DateTimeFormatter.ofPattern(ISO_DATE_PATTERN, Locale.US);
 
   private static final ThreadLocal<SimpleDateFormat> FROM_ISO_DATE_FORMATTER_TL =
       ThreadLocal.withInitial(
@@ -81,20 +99,44 @@ public class DateUtils {
    */
   public static String toUTCString(Date date) {
 
+    if (!isFastFormatRange(date)) {
+      return formatLegacy(UTC_STRING_PATTERN, TimeZone.getTimeZone("GMT"), date);
+    }
     return UTC_STRING_FORMATTER.format(date.toInstant());
   }
 
   public static String toUTCISODateString(Date date) {
+    if (!isFastFormatRange(date)) {
+      return formatLegacy(ISO_DATE_PATTERN, TimeZone.getTimeZone("GMT"), date);
+    }
     return UTC_ISO_DATE_FORMATTER.format(date.toInstant());
   }
 
   public static String toISO8601DateString(Date date) {
 
+    if (!isFastFormatRange(date)) {
+      return formatLegacy(ISO_8601_PATTERN, TimeZone.getTimeZone("GMT"), date);
+    }
     return ISO_8601_FORMATTER.format(date.toInstant());
   }
 
   public static String toISODateString(Date date) {
-    return ISO_DATE_FORMATTER_LOCAL.format(date.toInstant());
+    if (!isFastFormatRange(date)) {
+      return formatLegacy(ISO_DATE_PATTERN, TimeZone.getDefault(), date);
+    }
+    return ISO_DATE_FORMATTER_LOCAL.format(
+        LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault()));
+  }
+
+  private static boolean isFastFormatRange(Date date) {
+    long millis = date.getTime();
+    return millis >= MIN_FAST_FORMAT_MILLIS && millis < MAX_FAST_FORMAT_MILLIS;
+  }
+
+  private static String formatLegacy(String pattern, TimeZone zone, Date date) {
+    SimpleDateFormat format = new SimpleDateFormat(pattern);
+    format.setTimeZone(zone);
+    return format.format(date);
   }
 
   /**
@@ -110,8 +152,7 @@ public class DateUtils {
     try {
       return FROM_ISO_DATE_FORMATTER_TL.get().parse(isoFormattedDate);
     } catch (ParseException e) {
-      throw new InvalidFormatException(
-          null, "Error parsing as date", isoFormattedDate, Date.class);
+      throw new InvalidFormatException(null, "Error parsing as date", isoFormattedDate, Date.class);
     }
   }
 
@@ -150,6 +191,8 @@ public class DateUtils {
             .get()
             .computeIfAbsent(
                 locale, loc -> new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", loc));
+    // A previous parse may have switched the formatter's zone to the one named in the input.
+    sdf.setTimeZone(TimeZone.getDefault());
     try {
       return sdf.parse(rfc1123FormattedDate);
     } catch (ParseException e) {
@@ -169,8 +212,10 @@ public class DateUtils {
   public static Date fromRfc3339DateString(String rfc3339FormattedDate)
       throws InvalidFormatException {
 
+    SimpleDateFormat sdf = FROM_RFC3339_FORMATTER_TL.get();
+    sdf.setTimeZone(TimeZone.getDefault());
     try {
-      return FROM_RFC3339_FORMATTER_TL.get().parse(rfc3339FormattedDate);
+      return sdf.parse(rfc3339FormattedDate);
     } catch (ParseException e) {
       throw new InvalidFormatException(
           null, "Error parsing as date", rfc3339FormattedDate, Date.class);
