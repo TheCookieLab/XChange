@@ -1,6 +1,7 @@
 package org.knowm.xchange.bitcoinde.service;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import javax.crypto.Mac;
@@ -56,24 +57,23 @@ public class BitcoindeDigest extends BaseParamsDigest {
 
     // Step 3: Create actual sha256-HMAC
     Mac mac256 = getMac();
-    mac256.update(hmac_data.getBytes());
+    mac256.update(hmac_data.getBytes(StandardCharsets.UTF_8));
 
     return String.format("%064x", new BigInteger(1, mac256.doFinal()));
   }
 
   private String getMD5(String original) {
-    MessageDigest md = null;
     try {
-      md = MessageDigest.getInstance("MD5");
+      MessageDigest md = MessageDigest.getInstance("MD5");
+      md.update(original.getBytes(StandardCharsets.UTF_8));
+      byte[] digest = md.digest();
+      StringBuilder sb = new StringBuilder();
+      for (byte b : digest) {
+        sb.append(String.format("%02x", b & 0xff));
+      }
+      return sb.toString();
     } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
+      throw new IllegalStateException("MD5 algorithm not found", e);
     }
-    md.update(original.getBytes());
-    byte[] digest = md.digest();
-    StringBuffer sb = new StringBuffer();
-    for (byte b : digest) {
-      sb.append(String.format("%02x", b & 0xff));
-    }
-    return sb.toString();
   }
 }
