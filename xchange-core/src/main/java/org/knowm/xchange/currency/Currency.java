@@ -507,7 +507,7 @@ public class Currency implements Comparable<Currency>, Serializable {
   @JsonCreator
   public static Currency getInstance(String currencyCode) {
 
-    Currency currency = getInstanceNoCreate(currencyCode.toUpperCase());
+    Currency currency = getInstanceNoCreate(currencyCode);
 
     if (currency == null) {
       return createCurrency(currencyCode.toUpperCase(), null, null);
@@ -519,6 +519,15 @@ public class Currency implements Comparable<Currency>, Serializable {
   /** Returns the Currency instance for the given currency code only if one already exists. */
   public static Currency getInstanceNoCreate(String currencyCode) {
 
+    if (currencyCode == null) {
+      return null;
+    }
+    // Fast path: direct Map lookup avoiding String allocation from toUpperCase() for uppercase codes
+    Currency currency = currencies.get(currencyCode);
+    if (currency != null) {
+      return currency;
+    }
+    // Fallback path for lowercase or mixed-case currency codes
     return currencies.get(currencyCode.toUpperCase());
   }
 
