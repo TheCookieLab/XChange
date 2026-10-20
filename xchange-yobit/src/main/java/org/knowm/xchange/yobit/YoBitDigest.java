@@ -3,7 +3,7 @@ package org.knowm.xchange.yobit;
 import jakarta.ws.rs.FormParam;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import javax.crypto.Mac;
 import org.knowm.xchange.service.BaseParamsDigest;
@@ -34,14 +34,18 @@ public class YoBitDigest extends BaseParamsDigest {
 
     Mac mac = getMac();
 
-    byte[] source = mac.doFinal(queryString.toString().getBytes());
+    byte[] source = mac.doFinal(queryString.toString().getBytes(StandardCharsets.UTF_8));
 
     return String.format("%0128x", new BigInteger(1, source));
   }
 
   private static String getRandomSecretKey() {
-    byte[] array = new byte[7];
+    byte[] array = new byte[16];
     new SecureRandom().nextBytes(array);
-    return new String(array, Charset.forName("UTF-8"));
+    StringBuilder sb = new StringBuilder();
+    for (byte b : array) {
+      sb.append(String.format("%02x", b));
+    }
+    return sb.toString();
   }
 }
