@@ -49,10 +49,15 @@ Sources observed on 2026-10-20:
   distinguishes hourly calculation from midday/end-of-day cash adjustments and
   says fully closed hours have no published rate.
 
-`CoinbaseCdeRest.create().getHistoricalFundingRates(key, passphrase, signature,
-timestampSeconds, "BIPZ30", "2026-10-19")` exposes the separate documented
-institutional history route. Authentication headers are supplied explicitly by
-the caller; this binding performs no credential lookup or signing. Its response
+For a `CoinbaseCdeRest` instance named `rest`,
+`rest.getHistoricalFundingRates(key, passphrase, signature, timestampSeconds,
+"BIPZ30", "2026-10-19")` describes the separate documented institutional
+history route. Obtain the instance from a caller-owned authenticated
+transport with credential-safe logging. No convenience factory is supplied:
+**stock Rescu TRACE logging exposes header values**, including DCC key, passphrase
+and signature. The binding itself does not install transport header redaction.
+Authentication headers are supplied explicitly by the caller; this binding
+performs no credential lookup or signing. Its response
 retains `symbol`, `funding_rate`, `future_mark_price`, `spot_mark_price`,
 `fair_value_price` and `event_time` as source strings. A null trading session date
 uses the provider's today. The schema defines no pagination or finality field;

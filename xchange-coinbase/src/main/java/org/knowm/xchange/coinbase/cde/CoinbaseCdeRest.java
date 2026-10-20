@@ -8,13 +8,17 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.List;
-import si.mazi.rescu.RestProxyFactory;
 
 /**
  * Documented institutional US CDE REST history, separate from Advanced Trade and website MDA.
  *
  * <p>Authentication uses separately provisioned CDE DCC credentials and caller-supplied request
  * headers. This binding does not discover credentials, sign requests, or substitute CDP JWTs.
+ *
+ * <p>No convenience transport factory is provided. Use a caller-owned authenticated transport with
+ * credential-safe diagnostic logging: stock Rescu TRACE logging exposes request header values,
+ * including the CDE key, passphrase and signature. The annotations here describe the wire contract;
+ * they do not install header redaction in a transport supplied by the caller.
  */
 @Path("/rest")
 @Produces(MediaType.APPLICATION_JSON)
@@ -22,11 +26,6 @@ public interface CoinbaseCdeRest {
 
   /** Official CDE REST origin, independent of the Advanced Trade brokerage API host. */
   String REST_ORIGIN = "https://api.exchange.fairx.net";
-
-  /** @return raw institutional client; construction performs no request or credential lookup */
-  static CoinbaseCdeRest create() {
-    return RestProxyFactory.createProxy(CoinbaseCdeRest.class, REST_ORIGIN);
-  }
 
   /**
    * Reads funding history for one CDE instrument and optional trading session date.

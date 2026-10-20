@@ -56,7 +56,8 @@ public class CoinbaseCdeMarketDataTest {
           "synthetic-signature", 1L, "BIPZ30", null);
       assertFalse(server.getAllServeEvents().get(0).getRequest()
           .queryParameter("trading_session_date").isPresent());
-      assertNotNull(CoinbaseCdeRest.create());
+      // There is no supplied credential-bearing default transport; stock Rescu TRACE logs headers.
+      assertThrows(NoSuchMethodException.class, () -> CoinbaseCdeRest.class.getMethod("create"));
     } finally {
       server.stop();
     }
