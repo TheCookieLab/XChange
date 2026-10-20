@@ -17,6 +17,7 @@ public abstract class BaseParamsDigest implements ParamsDigest {
   public static final String HMAC_SHA_1 = "HmacSHA1";
   public static final String HMAC_MD5 = "HmacMD5";
 
+  private final Mac macTemplate;
   private final ThreadLocal<Mac> threadLocalMac;
 
   /**
@@ -42,18 +43,8 @@ public abstract class BaseParamsDigest implements ParamsDigest {
       throws IllegalArgumentException {
 
     final SecretKey secretKey = new SecretKeySpec(secretKeyBase64, hmacString);
-    final Mac macTemplate = createMac(secretKey, hmacString);
-    // Optimization: Cache Mac per thread using ThreadLocal, cloning only once per thread.
-    // This avoids costly Mac.clone() allocation on every API digest operation.
-    this.threadLocalMac =
-        ThreadLocal.withInitial(
-            () -> {
-              try {
-                return (Mac) macTemplate.clone();
-              } catch (CloneNotSupportedException e) {
-                throw new IllegalStateException(e);
-              }
-            });
+    this.macTemplate = createMac(secretKey, hmacString);
+    this.threadLocalMac = ThreadLocal.withInitial(this::cloneTemplate);
   }
 
   private Mac createMac(SecretKey secretKey, String hmacString) {
@@ -74,12 +65,27 @@ public abstract class BaseParamsDigest implements ParamsDigest {
   }
 
   /**
-   * Returns a thread-local instance of {@link Mac} configured for this digest.
-   * Reuses the instance per thread after resetting its state, avoiding repeated object allocation.
+   * Returns a new, independent {@link Mac} configured for this digest. Every call returns a fresh
+   * instance, so callers may hold several results, interleave them, or hand them to other threads.
    */
   public Mac getMac() {
-    Mac mac = threadLocalMac.get();
-    mac.reset();
-    return mac;
+    return cloneTemplate();
+  }
+
+  private Mac cloneTemplate() {
+    try {
+      return (Mac) macTemplate.clone();
+    } catch (CloneNotSupportedException e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
+  /**
+   * Computes the HMAC of {@code message} in a single atomic step using a per-thread {@link Mac}
+   * that never leaves this class, avoiding a {@link Mac#clone()} per call. Prefer this over {@link
+   * #getMac()} when the whole message is available up front.
+   */
+  protected final byte[] hmac(byte[] message) {
+    return threadLocalMac.get().doFinal(message);
   }
 }
