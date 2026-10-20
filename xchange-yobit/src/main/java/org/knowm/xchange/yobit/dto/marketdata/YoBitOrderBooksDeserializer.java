@@ -13,6 +13,9 @@ import java.util.Map;
 
 public class YoBitOrderBooksDeserializer extends JsonDeserializer<YoBitOrderBooksReturn> {
 
+  private static final ObjectReader OBJECT_READER =
+      new ObjectMapper().readerFor(YoBitOrderBook.class);
+
   @Override
   public YoBitOrderBooksReturn deserialize(JsonParser p, DeserializationContext ctxt)
       throws IOException {
@@ -27,8 +30,7 @@ public class YoBitOrderBooksDeserializer extends JsonDeserializer<YoBitOrderBook
         Map.Entry<String, JsonNode> priceEntryNode = priceEntryIter.next();
 
         JsonNode jsonNode = priceEntryNode.getValue();
-        ObjectReader jsonObjectReader = new ObjectMapper().readerFor(YoBitOrderBook.class);
-        YoBitOrderBook orderBook = jsonObjectReader.readValue(jsonNode);
+        YoBitOrderBook orderBook = OBJECT_READER.readValue(jsonNode);
         String ccy = priceEntryNode.getKey();
 
         tickers.put(ccy, orderBook);
