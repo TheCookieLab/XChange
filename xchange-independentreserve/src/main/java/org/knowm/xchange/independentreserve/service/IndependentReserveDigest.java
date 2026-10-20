@@ -47,7 +47,8 @@ public class IndependentReserveDigest extends BaseParamsDigest {
     mac256.update(url.getBytes());
 
     String namedApiKey = "apiKey=" + apiKey + ",";
-    logger.debug("digestParamsToString: apiKey: {}", namedApiKey);
+    // Security: Do not log sensitive credentials (CWE-532)
+    logger.debug("digestParamsToString: apiKey: apiKey=[REDACTED],");
     mac256.update(namedApiKey.getBytes());
 
     String namedNonce = "nonce=" + nonce.toString();
