@@ -10,7 +10,46 @@ WebSocket transports: the API key name is the exchange API key and the EC privat
 PEM is the secret key. Invalid or missing key material degrades to public-only usage
 with a sanitized warning, never a crash.
 
-## Product identity
+## US CDE public funding observations
+
+`CoinbaseCdeMarketData.create().getFundingHistory("BIPZ30", 2160, 0)` reads one
+public website MDA page without account credentials. This separate raw interface
+uses CDE website symbols, such as `BIPZ30`, `ETPZ30`, `SLPZ30` and `XPPZ30`;
+resolve them against the website catalog rather than guessing a mapping from an
+Advanced Trade product id. It belongs to US CDE, independently of the
+`xchange-coinbase-derivatives` international gateway module.
+
+The response retains `symbol`, `funding_rate`, `event_time` and the pagination echo.
+`fundingRateDecimal()` preserves delivered decimal precision: `0.000022` means
+`0.0022%`. No percent or annualized conversion is applied. Event timestamps are
+preserved without shifting them to an assumed funding boundary. Missing rows and
+missing metadata remain distinguishable from explicit zero observations.
+
+This is an observed public website interface, **not a documented Advanced Trade
+history endpoint or a verified settlement feed**. Source precision, finality,
+revision rules, retention and interval-boundary semantics are unverified. Do not
+feed it into an exact-settlement source without establishing those contracts.
+The chart CSV rounds percentages to four decimal places; this interface reads the
+JSON strings before that extra rounding. That does not establish upstream accuracy.
+Offset paging beyond 2160 rows was observed; no total count or stable snapshot is
+provided. Bound pagination, reconcile overlap by symbol/event time, and share
+fetched pages across strategies. A missing hour is not proof of a zero funding rate.
+
+Sources observed on 2026-10-20:
+
+- [Public dashboard](https://www.coinbase.com/market-data/derivatives?funding_venue=cde)
+  and its public `c_B4BC1ezr.js` module use
+  `https://www.coinbase.com/api/mda/v1/instruments/CDE/{symbol}/funding?result_limit=2160`.
+- The website catalog is `https://www.coinbase.com/api/mda/v1/assets/CDE`.
+- [CDE REST history](https://docs.cdp.coinbase.com/api-reference/derivatives-api/rest-api/funding-rate/get-historical-funding-rates)
+  is a separate `/rest/funding-rate` interface, queried by symbol and trading session date.
+  [DCC authentication](https://docs.cdp.coinbase.com/api-reference/derivatives-api/rest-api/authentication)
+  requires separate CDE credentials; it is not exposed by this public-only client.
+- [CDE funding help](https://help.coinbase.com/en/derivatives/perpetual-style-futures/funding-rate)
+  distinguishes hourly calculation from midday/end-of-day cash adjustments and
+  says fully closed hours have no published rate.
+
+## Advanced Trade product identity
 
 `CoinbaseProductIdentity` resolves provider product ids losslessly: spot → `CurrencyPair`,
 futures → `FuturesContract`, perpetuals → `PerpetualContract` (suffix `PERP`). Configure
