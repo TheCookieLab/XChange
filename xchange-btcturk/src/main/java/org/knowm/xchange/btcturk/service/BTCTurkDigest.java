@@ -1,10 +1,8 @@
 package org.knowm.xchange.btcturk.service;
 
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import org.knowm.xchange.service.BaseParamsDigest;
 import si.mazi.rescu.RestInvocation;
 
@@ -13,42 +11,26 @@ import si.mazi.rescu.RestInvocation;
  */
 public class BTCTurkDigest extends BaseParamsDigest {
 
-  private byte[] SecretKey;
-
   private BTCTurkDigest(String secretKey) {
-    super(secretKey, HMAC_SHA_256);
-
-    SecretKey = Base64.getDecoder().decode(secretKey);
+    super(decodeBase64(secretKey), HMAC_SHA_256);
   }
 
   public static BTCTurkDigest createInstance(String secretKey, String apiKey) {
-
     return secretKey == null ? null : new BTCTurkDigest(secretKey);
   }
 
   @Override
   public String digestParams(RestInvocation restInvocation) {
-    String ApiKey = restInvocation.getHttpHeadersFromParams().get("X-PCK");
+    String apiKey = restInvocation.getHttpHeadersFromParams().get("X-PCK");
     String timestamp = restInvocation.getHttpHeadersFromParams().get("X-Stamp");
 
-    return generateHash(ApiKey, timestamp);
+    return generateHash(apiKey, timestamp);
   }
 
-  private String generateHash(String ApiKey, String timestamp) {
-    Mac sha256_HMAC = null;
-    String message = ApiKey + timestamp;
-
-    try {
-      sha256_HMAC = Mac.getInstance(HMAC_SHA_256);
-      SecretKeySpec keySpec = new SecretKeySpec(SecretKey, HMAC_SHA_256);
-      sha256_HMAC.init(keySpec);
-      return Base64.getEncoder().encodeToString(sha256_HMAC.doFinal(message.getBytes()));
-
-    } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
-    } catch (InvalidKeyException e) {
-      e.printStackTrace();
-    }
-    return "";
+  private String generateHash(String apiKey, String timestamp) {
+    String message = apiKey + timestamp;
+    Mac mac = getMac();
+    byte[] hmacBytes = mac.doFinal(message.getBytes(StandardCharsets.UTF_8));
+    return Base64.getEncoder().encodeToString(hmacBytes);
   }
 }
