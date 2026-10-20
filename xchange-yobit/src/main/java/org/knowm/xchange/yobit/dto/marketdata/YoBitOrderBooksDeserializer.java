@@ -13,7 +13,8 @@ import java.util.Map;
 
 public class YoBitOrderBooksDeserializer extends JsonDeserializer<YoBitOrderBooksReturn> {
 
-  private static final ObjectReader OBJECT_READER = new ObjectMapper().readerFor(YoBitOrderBook.class);
+  private static final ObjectReader OBJECT_READER =
+      new ObjectMapper().readerFor(YoBitOrderBook.class);
 
   @Override
   public YoBitOrderBooksReturn deserialize(JsonParser p, DeserializationContext ctxt)
