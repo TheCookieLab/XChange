@@ -305,10 +305,10 @@ public final class OrderBook implements Serializable {
       return false;
     }
 
-    Date timestamp = new Date();
-    OrderBook thisOb = new OrderBook(timestamp, this.getAsks(), this.getBids());
-    OrderBook thatOb = new OrderBook(timestamp, ob.getAsks(), ob.getBids());
-    return thisOb.equals(thatOb);
+    // Performance optimization: Compare order lists directly without allocating
+    // new Date and OrderBook wrapper instances.
+    return java.util.Objects.equals(this.bids, ob.getBids())
+        && java.util.Objects.equals(this.asks, ob.getAsks());
   }
 
   @Override
