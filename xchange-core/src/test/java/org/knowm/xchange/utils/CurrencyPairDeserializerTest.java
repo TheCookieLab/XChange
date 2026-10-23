@@ -36,5 +36,14 @@ public class CurrencyPairDeserializerTest {
     currencyPair = CurrencyPairDeserializer.getCurrencyPairFromString("USDEHQXYVBC");
     assertThat(currencyPair.getBase()).isEqualTo(Currency.USDE);
     assertThat(currencyPair.getCounter().getCurrencyCode()).isEqualTo("HQXYVBC");
+
+    // Additional tests for mixed-case and non-alphanumeric separators
+    currencyPair = CurrencyPairDeserializer.getCurrencyPairFromString("btc_USD");
+    assertThat(currencyPair.getBase()).isEqualTo(Currency.BTC);
+    assertThat(currencyPair.getCounter()).isEqualTo(Currency.USD);
+
+    currencyPair = CurrencyPairDeserializer.getCurrencyPairFromString("ETH-USDT");
+    assertThat(currencyPair.getBase()).isEqualTo(Currency.ETH);
+    assertThat(currencyPair.getCounter()).isEqualTo(Currency.USDT);
   }
 }
