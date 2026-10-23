@@ -70,8 +70,8 @@ public class ObjectMapperHelper {
     try {
       return objectMapper.writeValueAsString(valueType);
     } catch (JsonProcessingException e) {
-      e.printStackTrace();
-      return "Problem serializing " + valueType.getClass();
+      logger.error("Problem serializing {}", valueType != null ? valueType.getClass() : null, e);
+      return "Problem serializing " + (valueType != null ? valueType.getClass() : "null");
     }
   }
 
