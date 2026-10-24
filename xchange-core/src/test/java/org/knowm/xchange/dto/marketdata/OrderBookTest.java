@@ -50,6 +50,21 @@ public class OrderBookTest {
   }
 
   @Test
+  public void testOrdersEqual() {
+    Date now = new Date();
+    Date differentDate = new Date(now.getTime() + 10000);
+
+    OrderBook book1 = new OrderBook(now, orderBook.getAsks(), orderBook.getBids());
+    OrderBook book2 = new OrderBook(differentDate, orderBook.getAsks(), orderBook.getBids());
+
+    assertThat(book1.ordersEqual(book2)).isTrue();
+    assertThat(book1.ordersEqual(null)).isFalse();
+
+    OrderBook emptyBook = new OrderBook(now, new ArrayList<>(), new ArrayList<>());
+    assertThat(book1.ordersEqual(emptyBook)).isFalse();
+  }
+
+  @Test
   public void testUpdateAddOrder() {
 
     Date timeStamp = new Date(0);

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.locks.StampedLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -266,28 +267,10 @@ public final class OrderBook implements Serializable {
       return false;
     }
     final OrderBook other = (OrderBook) obj;
-    if (this.timeStamp == null
-        ? other.timeStamp != null
-        : !this.timeStamp.equals(other.timeStamp)) {
+    if (!Objects.equals(this.timeStamp, other.timeStamp)) {
       return false;
     }
-    if (this.bids.size() != other.bids.size()) {
-      return false;
-    }
-    for (int index = 0; index < this.bids.size(); index++) {
-      if (!this.bids.get(index).equals(other.bids.get(index))) {
-        return false;
-      }
-    }
-    if (this.asks.size() != other.asks.size()) {
-      return false;
-    }
-    for (int index = 0; index < this.asks.size(); index++) {
-      if (!this.asks.get(index).equals(other.asks.get(index))) {
-        return false;
-      }
-    }
-    return true;
+    return Objects.equals(this.bids, other.bids) && Objects.equals(this.asks, other.asks);
   }
 
   /**
@@ -305,10 +288,9 @@ public final class OrderBook implements Serializable {
       return false;
     }
 
-    Date timestamp = new Date();
-    OrderBook thisOb = new OrderBook(timestamp, this.getAsks(), this.getBids());
-    OrderBook thatOb = new OrderBook(timestamp, ob.getAsks(), ob.getBids());
-    return thisOb.equals(thatOb);
+    // Performance optimization: Avoid allocating new Date and OrderBook wrapper instances
+    // by comparing the bids and asks lists directly.
+    return Objects.equals(this.bids, ob.getBids()) && Objects.equals(this.asks, ob.getAsks());
   }
 
   @Override
