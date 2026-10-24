@@ -249,6 +249,10 @@ public class CertHelper {
    */
   @Deprecated
   public static void trustAllCerts() throws Exception {
+    if (!"true".equalsIgnoreCase(System.getProperty("xchange.allow.trust.all.certs"))) {
+      throw new SecurityException(
+          "trustAllCerts() is disabled by default for security. Set system property 'xchange.allow.trust.all.certs=true' to enable.");
+    }
 
     TrustManager[] trustAllCerts =
         new TrustManager[] {
