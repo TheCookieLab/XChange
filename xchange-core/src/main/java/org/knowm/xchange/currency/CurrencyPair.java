@@ -436,11 +436,9 @@ public class CurrencyPair extends Instrument implements Comparable<CurrencyPair>
   @JsonCreator
   public CurrencyPair(String currencyPair) {
 
-    int split;
-
-    if (currencyPair.contains("-")) {
-      split = currencyPair.indexOf('-');
-    } else {
+    // Performance optimization: Avoid scanning string twice via contains("-") before indexOf('-')
+    int split = currencyPair.indexOf('-');
+    if (split < 0) {
       split = currencyPair.indexOf('/');
     }
 
