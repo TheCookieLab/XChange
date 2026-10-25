@@ -215,4 +215,27 @@ public class OrderBookTest {
     // idx=-1, higher order
     assertThat(method.invoke(orderBook, orderBook.getBids(), higherBidOrder, -1)).isEqualTo(false);
   }
+
+  @Test
+  public void testOrdersEqual() {
+    assertThat(orderBook.ordersEqual(null)).isFalse();
+
+    // Same orders, different timestamp
+    OrderBook otherWithDifferentDate =
+        new OrderBook(new Date(1000000L), orderBook.getAsks(), orderBook.getBids());
+    assertThat(orderBook.ordersEqual(otherWithDifferentDate)).isTrue();
+
+    // Different orders
+    LimitOrder extraAsk =
+        new LimitOrder(
+            OrderType.ASK,
+            BigDecimal.TEN,
+            CurrencyPair.BTC_USD,
+            "",
+            null,
+            BigDecimal.valueOf(200));
+    OrderBook differentBook =
+        new OrderBook(new Date(), Arrays.asList(extraAsk), orderBook.getBids());
+    assertThat(orderBook.ordersEqual(differentBook)).isFalse();
+  }
 }
