@@ -259,6 +259,9 @@ public final class OrderBook implements Serializable {
   @Override
   public boolean equals(Object obj) {
 
+    if (this == obj) {
+      return true;
+    }
     if (obj == null) {
       return false;
     }
@@ -271,23 +274,7 @@ public final class OrderBook implements Serializable {
         : !this.timeStamp.equals(other.timeStamp)) {
       return false;
     }
-    if (this.bids.size() != other.bids.size()) {
-      return false;
-    }
-    for (int index = 0; index < this.bids.size(); index++) {
-      if (!this.bids.get(index).equals(other.bids.get(index))) {
-        return false;
-      }
-    }
-    if (this.asks.size() != other.asks.size()) {
-      return false;
-    }
-    for (int index = 0; index < this.asks.size(); index++) {
-      if (!this.asks.get(index).equals(other.asks.get(index))) {
-        return false;
-      }
-    }
-    return true;
+    return this.bids.equals(other.bids) && this.asks.equals(other.asks);
   }
 
   /**
@@ -305,10 +292,9 @@ public final class OrderBook implements Serializable {
       return false;
     }
 
-    Date timestamp = new Date();
-    OrderBook thisOb = new OrderBook(timestamp, this.getAsks(), this.getBids());
-    OrderBook thatOb = new OrderBook(timestamp, ob.getAsks(), ob.getBids());
-    return thisOb.equals(thatOb);
+    // Performance optimization: Direct list equality comparison avoids allocating temporary Date and
+    // wrapper OrderBook objects on every invocation.
+    return this.asks.equals(ob.asks) && this.bids.equals(ob.bids);
   }
 
   @Override
