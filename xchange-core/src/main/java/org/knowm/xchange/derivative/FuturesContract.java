@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.instrument.Instrument;
@@ -13,6 +14,9 @@ public class FuturesContract extends Instrument
     implements Derivative, Comparable<FuturesContract>, Serializable {
 
   private static final long serialVersionUID = 6876906648149216819L;
+
+  // Precompiled pattern to avoid repeated regex compilation on every isPerpetual call
+  private static final Pattern PERPETUAL_PATTERN = Pattern.compile("(?i)PERP|SWAP|PERPETUAL");
 
   private static final Comparator<FuturesContract> COMPARATOR =
       Comparator.comparing(FuturesContract::getCurrencyPair)
@@ -55,7 +59,7 @@ public class FuturesContract extends Instrument
   }
 
   public boolean isPerpetual() {
-    return this.prompt.matches("(?i)PERP|SWAP|PERPETUAL");
+    return this.prompt != null && PERPETUAL_PATTERN.matcher(this.prompt).matches();
   }
 
   @Override

@@ -1,0 +1,3 @@
+## 2026-10-25 - Jackson Deserializers and Regex Overhead in Hot Parsing Paths
+**Learning:** `String.matches()` and `String.split()` compile new `Pattern` instances on every invocation. In `CurrencyPairDeserializer` and other Jackson deserializers, this happens thousands of times per second on streaming market data, creating unnecessary GC pressure and CPU overhead.
+**Action:** Replace `String.matches()` checks for case with zero-allocation character scans, and replace inline `String.split(regex)` with precompiled `static final Pattern` constants.
