@@ -80,7 +80,7 @@ public class AuthUtils {
    */
   public static Properties  getSecretProperties(String prefix) {
 
-    if (prefix != null && (prefix.contains("..") || prefix.contains("/") || prefix.contains("\\"))) {
+    if (prefix != null && !prefix.matches("^[a-zA-Z0-9_-]+$")) {
       throw new IllegalArgumentException("Invalid prefix for secret keys: path traversal detected");
     }
 
