@@ -33,6 +33,16 @@ public class AuthUtilsTest {
     AuthUtils.getSecretProperties("sub\\dir");
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testPathTraversalSpaceRejected() {
+    AuthUtils.getSecretProperties("invalid prefix");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testPathTraversalNullByteRejected() {
+    AuthUtils.getSecretProperties("prefix\0suffix");
+  }
+
   @Test
   public void testSecretKeysFallbackWhenEnvMissing() {
     assumeSecretKeysAvailable(PREFIX);
