@@ -168,6 +168,9 @@ public class CexIOArchivedOrder {
 
   static class Deserializer extends JsonDeserializer<CexIOArchivedOrder> {
 
+    // Pre-compiled pattern to avoid compiling regex on every deserialized order payload.
+    private static final Pattern CDS_PATTERN = Pattern.compile("([af])\\:(.*?)\\:cds");
+
     @Override
     public CexIOArchivedOrder deserialize(JsonParser jsonParser, DeserializationContext context)
         throws IOException {
@@ -185,12 +188,11 @@ public class CexIOArchivedOrder {
 
         BigDecimal feeValue = null;
         String feeCcy = null;
-        Pattern pattern = Pattern.compile("([af])\\:(.*?)\\:cds");
 
         Map<String, BigDecimal> filled = new HashMap<>();
 
         for (String key : map.keySet()) {
-          Matcher matcher = pattern.matcher(key);
+          Matcher matcher = CDS_PATTERN.matcher(key);
           if (matcher.matches()) {
             String feeOrAmount = matcher.group(1);
 
