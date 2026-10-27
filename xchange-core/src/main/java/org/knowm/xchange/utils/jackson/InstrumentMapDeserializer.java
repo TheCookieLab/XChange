@@ -14,7 +14,8 @@ public class InstrumentMapDeserializer extends KeyDeserializer {
     // PredictionMarketContract (PRED/provider/[eventId/]marketId/outcomeId/quote) is prefix-tagged
     // and must be checked before slash-count conventions.
     if (PredictionMarketContract.isWireString(s)) return new PredictionMarketContract(s);
-    long count = s.chars().filter(ch -> ch == '/').count();
+    // Performance optimization: Zero-allocation loop avoids IntStream / lambda allocations
+    int count = countSlashes(s);
     // CurrencyPair (Base/Counter) i.e. BTC/USD
     if (count == 1) return new CurrencyPair(s);
     // Futures/Swaps (Base/Counter/Prompt) i.e. BTC/USD/200925
@@ -22,5 +23,15 @@ public class InstrumentMapDeserializer extends KeyDeserializer {
     // Options (Base/Counter/Prompt/StrikePrice/Put?Call) i.e. BTC/USD/200925/8956.67/P
     if (count == 4) return new OptionsContract(s);
     else return null;
+  }
+
+  private static int countSlashes(String s) {
+    int count = 0;
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == '/') {
+        count++;
+      }
+    }
+    return count;
   }
 }
