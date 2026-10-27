@@ -33,7 +33,8 @@ public class InstrumentDeserializer extends JsonDeserializer<Instrument> {
     // and must be checked before slash-count conventions.
     if (PredictionMarketContract.isWireString(instrumentString))
       return new PredictionMarketContract(instrumentString);
-    long count = instrumentString.chars().filter(ch -> ch == '/').count();
+    // Performance optimization: Zero-allocation loop avoids IntStream / lambda allocations
+    int count = countSlashes(instrumentString);
     // CurrencyPair (Base/Counter) i.e. BTC/USD
     if (count == 1) return new CurrencyPair(instrumentString);
     // Futures/Swaps (Base/Counter/Prompt) i.e. BTC/USD/200925
@@ -41,5 +42,15 @@ public class InstrumentDeserializer extends JsonDeserializer<Instrument> {
     // Options (Base/Counter/Prompt/StrikePrice/Put?Call) i.e. BTC/USD/200925/8956.67/P
     if (count == 4) return new OptionsContract(instrumentString);
     else return null;
+  }
+
+  private static int countSlashes(String s) {
+    int count = 0;
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == '/') {
+        count++;
+      }
+    }
+    return count;
   }
 }
