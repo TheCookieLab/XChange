@@ -78,6 +78,16 @@ class LocalKeystoreSignerTest {
   }
 
   @Test
+  void acceptsMixedCaseAddressMatch() throws Exception {
+    char[] password = "right password".toCharArray();
+    Path keystore = TestSignerFixtures.keystore(tempDir, password);
+    String lowercaseAddress = TestSignerFixtures.derivedAddress(keystore, password);
+    String mixedCaseAddress = "0x" + lowercaseAddress.substring(2).toUpperCase();
+    LocalKeystoreSigner signer = new LocalKeystoreSigner(keystore, () -> password, mixedCaseAddress);
+    assertThat(signer.address()).isEqualTo(lowercaseAddress);
+  }
+
+  @Test
   void keystoreFileIsOwnerOnly() throws Exception {
     // The owner-only guarantee is a POSIX permission: on a filesystem that cannot express it,
     // createKeystore falls back to the creating process's umask (see LocalKeystoreSigner).
