@@ -22,8 +22,12 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CertHelper {
+
+  private static final Logger LOG = LoggerFactory.getLogger(CertHelper.class);
 
   /**
    * Creates a custom {@link SSLSocketFactory} that accepts an expired certificate.
@@ -72,7 +76,7 @@ public class CertHelper {
             public void checkClientTrusted(X509Certificate[] certs, String authType)
                 throws CertificateException {
 
-              System.out.println("checking client trusted: " + Arrays.toString(certs));
+              LOG.debug("checking client trusted: {}", Arrays.toString(certs));
 
               getDefaultTrustManager().checkClientTrusted(certs, authType);
             }
