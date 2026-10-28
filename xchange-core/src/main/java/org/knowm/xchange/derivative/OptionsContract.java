@@ -61,16 +61,29 @@ public class OptionsContract extends Instrument implements Derivative, Comparabl
 
   @JsonCreator
   public OptionsContract(final String symbol) {
-    String[] parts = symbol.split("/");
-    if (parts.length != 5) {
+    if (symbol == null) {
+      throw new IllegalArgumentException("Could not parse options contract from 'null'");
+    }
+    int s1 = symbol.indexOf('/');
+    int s2 = s1 >= 0 ? symbol.indexOf('/', s1 + 1) : -1;
+    int s3 = s2 >= 0 ? symbol.indexOf('/', s2 + 1) : -1;
+    int s4 = s3 >= 0 ? symbol.indexOf('/', s3 + 1) : -1;
+    int s5 = s4 >= 0 ? symbol.indexOf('/', s4 + 1) : -1;
+
+    if (s1 <= 0
+        || s2 <= s1 + 1
+        || s3 <= s2 + 1
+        || s4 <= s3 + 1
+        || s4 == symbol.length() - 1
+        || s5 != -1) {
       throw new IllegalArgumentException("Could not parse options contract from '" + symbol + "'");
     }
 
-    String base = parts[0];
-    String counter = parts[1];
-    String expireDate = parts[2];
-    String strike = parts[3];
-    String type = parts[4];
+    String base = symbol.substring(0, s1);
+    String counter = symbol.substring(s1 + 1, s2);
+    String expireDate = symbol.substring(s2 + 1, s3);
+    String strike = symbol.substring(s3 + 1, s4);
+    String type = symbol.substring(s4 + 1);
 
     this.currencyPair = new CurrencyPair(base, counter);
     try {

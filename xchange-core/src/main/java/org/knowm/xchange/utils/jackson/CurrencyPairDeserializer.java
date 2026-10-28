@@ -6,14 +6,10 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
-import java.util.regex.Pattern;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 
 public class CurrencyPairDeserializer extends JsonDeserializer<CurrencyPair> {
-
-  // Pre-compiled pattern to avoid repeated compilation during deserialization
-  private static final Pattern NON_ALPHANUMERIC_PATTERN = Pattern.compile("[^a-zA-Z0-9]");
 
   public static CurrencyPair getCurrencyPairFromString(String currencyPairString) {
 
@@ -22,33 +18,37 @@ public class CurrencyPairDeserializer extends JsonDeserializer<CurrencyPair> {
     }
 
     /*
-     * Preserve case if exchange is sending mixed-case, otherwise toUpperCase()
-     * Performance optimization: Zero-allocation loop replaces regex matches(".*[a-z]+.*") & matches(".*[A-Z]+.*")
+     * Performance optimization: Single pass over the string determines case mix and counts
+     * non-alphanumeric separator characters, avoiding regex compilation, Matcher instantiation,
+     * ArrayList creation, and String[] allocations during high-frequency deserialization.
      */
     boolean hasLower = false;
     boolean hasUpper = false;
-    for (int i = 0; i < currencyPairString.length(); i++) {
+    int separatorIndex = -1;
+    int nonAlphaCount = 0;
+    final int len = currencyPairString.length();
+
+    for (int i = 0; i < len; i++) {
       char c = currencyPairString.charAt(i);
       if (c >= 'a' && c <= 'z') {
         hasLower = true;
       } else if (c >= 'A' && c <= 'Z') {
         hasUpper = true;
-      }
-      if (hasLower && hasUpper) {
-        break;
+      } else if (c < '0' || c > '9') {
+        nonAlphaCount++;
+        separatorIndex = i;
       }
     }
+
     final boolean isMixedCase = hasLower && hasUpper;
     if (!isMixedCase) {
       currencyPairString = currencyPairString.toUpperCase();
     }
 
-    /*
-     * Assume all symbols are alphanumeric; anything else is a separator
-     */
-    final String symbols[] = NON_ALPHANUMERIC_PATTERN.split(currencyPairString);
-    if (symbols.length == 2) {
-      return new CurrencyPair(symbols[0], symbols[1]);
+    if (nonAlphaCount == 1 && separatorIndex > 0 && separatorIndex < len - 1) {
+      return new CurrencyPair(
+          currencyPairString.substring(0, separatorIndex),
+          currencyPairString.substring(separatorIndex + 1));
     }
 
     /*
