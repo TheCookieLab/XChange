@@ -90,7 +90,7 @@ public final class LocalKeystoreSigner {
                 "cannot decrypt keystore " + keystorePath + " (wrong password?): " + e.getMessage(), e);
           }
           String derived = ("0x" + Keys.getAddress(keyPair)).toLowerCase();
-          if (!derived.equals(expectedAddress)) {
+          if (!derived.equalsIgnoreCase(expectedAddress)) {
             throw new IllegalStateException(
                 "keystore " + keystorePath + " belongs to " + derived + " but wallet address is " + expectedAddress);
           }
@@ -118,20 +118,20 @@ public final class LocalKeystoreSigner {
     ECKeyPair keyPair = Keys.createEcKeyPair();
     WalletFile walletFile = Wallet.createStandard(new String(password), keyPair);
     byte[] json = MAPPER.writeValueAsBytes(walletFile);
-    Files.write(
-        path,
-        json,
-        StandardOpenOption.CREATE_NEW,
-        StandardOpenOption.WRITE);
+    // Security: Create the file atomically with owner-only (0600) permissions to prevent
+    // window of vulnerability where the keystore is world-readable under default umask.
     try {
-      Files.setPosixFilePermissions(
+      Files.createFile(
           path,
-          java.util.Set.of(
-              java.nio.file.attribute.PosixFilePermission.OWNER_READ,
-              java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
+          java.nio.file.attribute.PosixFilePermissions.asFileAttribute(
+              java.util.Set.of(
+                  java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+                  java.nio.file.attribute.PosixFilePermission.OWNER_WRITE)));
     } catch (UnsupportedOperationException ignored) {
-      // non-POSIX filesystem: rely on the creating process's umask
+      // non-POSIX filesystem: fallback to default file creation
+      Files.createFile(path);
     }
+    Files.write(path, json, StandardOpenOption.WRITE);
     return Keys.getAddress(keyPair);
   }
 }
