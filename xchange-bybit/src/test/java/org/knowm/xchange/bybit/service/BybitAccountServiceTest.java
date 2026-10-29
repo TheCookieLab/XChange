@@ -6,7 +6,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Map;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
@@ -18,7 +17,6 @@ import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.instrument.Instrument;
 
-@Ignore
 public class BybitAccountServiceTest extends BaseWiremockTest {
 
   static BybitExchange bybitExchange;
@@ -68,6 +66,15 @@ public class BybitAccountServiceTest extends BaseWiremockTest {
 
     assertThat(feeRate.getTakerFee()).isEqualTo("0.0006");
     assertThat(feeRate.getMakerFee()).isEqualTo("0.0001");
+  }
+
+  @Test
+  public void testGetFeeRateLinearWithClearUp() throws IOException {
+    setUp();
+    initGetStub("/v5/account/fee-rate", "/getFeeRates.json5");
+    Map<Instrument, Fee> feeMap =
+        bybitAccountService.getDynamicTradingFeesByInstrument(BybitCategory.LINEAR.getValue());
+    assertThat(feeMap).isNotEmpty();
   }
 
   @Test
