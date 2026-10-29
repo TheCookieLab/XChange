@@ -22,8 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitBalances;
@@ -150,7 +148,6 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
   private void clearUp(ListIterator<BybitFeeRate> listIterator) {
     while (listIterator.hasNext()) {
       BybitFeeRate feeRate = listIterator.next();
-      Pattern p = Pattern.compile("\\d");
       if (feeRate.getSymbol().endsWith("USD")) {
         listIterator.remove();
       } else {
@@ -158,13 +155,27 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
             || feeRate.getSymbol().contains("USDM")
             || feeRate.getSymbol().contains("USDU")
             || feeRate.getSymbol().contains("USDZ")) {
-          Matcher m = p.matcher(feeRate.getSymbol());
-          if (m.find()) {
+          // Performance optimization: Replace regex Pattern/Matcher allocations inside loop
+          // with zero-allocation character scan
+          if (containsDigit(feeRate.getSymbol())) {
             listIterator.remove();
           }
         }
       }
     }
+  }
+
+  private static boolean containsDigit(CharSequence s) {
+    if (s == null) {
+      return false;
+    }
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      if (c >= '0' && c <= '9') {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Query the account information, like margin mode, account mode, etc. */
