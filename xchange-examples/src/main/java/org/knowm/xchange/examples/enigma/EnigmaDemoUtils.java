@@ -8,8 +8,12 @@ import org.knowm.xchange.enigma.service.EnigmaAccountService;
 
 public class EnigmaDemoUtils {
 
-  private static String username = "iSemyonova";
-  private static String password = "irinaEnigmaSecuritiesRestApi123!";
+  // SECURITY NOTICE: Do not hardcode credentials in source code.
+  // Retrieve username and password from environment variables or system properties instead.
+  private static String username =
+      System.getProperty("enigma.username", System.getenv().getOrDefault("ENIGMA_USERNAME", ""));
+  private static String password =
+      System.getProperty("enigma.password", System.getenv().getOrDefault("ENIGMA_PASSWORD", ""));
   private static String infra = "dev";
 
   public static Exchange createExchange() {
