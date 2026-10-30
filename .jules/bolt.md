@@ -9,3 +9,7 @@
 ## 2026-10-29 - Regex Compilation Inside Collection Traversal Loops
 **Learning:** Placing `Pattern.compile()` or regex operations inside collection filtering loops re-compiles regex patterns and allocates `Matcher` instances on every element iteration. Replacing loop-internal regex digit checks with zero-allocation character scans completely avoids object creation during payload cleanup.
 **Action:** Scan character arrays/strings directly for digit checks or static patterns inside collection traversal loops rather than compiling regex patterns per element.
+
+## 2026-10-30 - Avoiding AST Construction (`readTree`) in Custom Jackson Deserializers
+**Learning:** Calling `ObjectCodec.readTree(jsonParser)` in custom `JsonDeserializer` implementations allocates `JsonNode` AST node objects (`TextNode`, `ObjectNode`, etc.) for every parsed element. For scalar values, using direct `JsonParser.getText()` streams text without allocating intermediate AST objects, reducing GC overhead during high-throughput deserialization.
+**Action:** Prefer `jsonParser.getText()` over `oc.readTree(jsonParser).asText()` when deserializing string scalar values in Jackson deserializers.

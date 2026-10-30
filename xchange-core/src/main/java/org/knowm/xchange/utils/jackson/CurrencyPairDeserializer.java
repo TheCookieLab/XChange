@@ -1,10 +1,8 @@
 package org.knowm.xchange.utils.jackson;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -90,9 +88,8 @@ public class CurrencyPairDeserializer extends JsonDeserializer<CurrencyPair> {
   public CurrencyPair deserialize(JsonParser jsonParser, final DeserializationContext ctxt)
       throws IOException {
 
-    final ObjectCodec oc = jsonParser.getCodec();
-    final JsonNode node = oc.readTree(jsonParser);
-    final String currencyPairString = node.asText();
+    // Performance optimization: Avoid building Jackson JsonNode AST instances on high-frequency streaming paths
+    final String currencyPairString = jsonParser.getText();
 
     return getCurrencyPairFromString(currencyPairString);
   }
