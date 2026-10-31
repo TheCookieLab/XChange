@@ -120,8 +120,8 @@ public class PredictionMarketContract extends Instrument
     /*
      * Performance optimization: Scanning slash delimiters using indexOf() avoids intermediate
      * ArrayList buffer creation and String[] array allocation inherent to String.split(),
-     * eliminating ~58% of heap allocations and reducing latency during high-frequency Jackson
-     * deserialization and streaming market data processing.
+     * reducing heap allocation overhead and latency during high-frequency Jackson deserialization
+     * and streaming market data processing.
      */
     int s1 = symbol.indexOf('/');
     if (s1 != WIRE_PREFIX.length() || !symbol.startsWith(WIRE_PREFIX)) {
