@@ -113,26 +113,43 @@ public class PredictionMarketContract extends Instrument
    */
   @JsonCreator
   public PredictionMarketContract(final String symbol) {
-    // split("/", -1) keeps trailing empty segments so malformed wire strings such as
-    // "PRED/kalshi/m/YES/USD/" are rejected by requireSegment instead of being silently
-    // canonicalized into the valid 5-segment form.
-    String[] parts = symbol == null ? new String[0] : symbol.split("/", -1);
-    if ((parts.length != 5 && parts.length != 6) || !WIRE_PREFIX.equals(parts[0])) {
+    /*
+     * Performance optimization: Single-pass slash index scan avoids String.split regex compilation,
+     * Matcher/ArrayList creation, and String[] array allocation in high-frequency orderbook/ticker
+     * deserialization paths.
+     */
+    if (symbol == null || !symbol.startsWith(WIRE_PREFIX + "/")) {
       throw new IllegalArgumentException(
           "Could not parse prediction market contract from '" + symbol + "'");
     }
-    if (parts.length == 6) {
-      this.provider = requireSegment(parts[1], "provider");
-      this.eventId = requireSegment(parts[2], "eventId");
-      this.marketId = requireSegment(parts[3], "marketId");
-      this.outcomeId = requireSegment(parts[4], "outcomeId");
-      this.quoteCurrency = Currency.getInstance(requireSegment(parts[5], "quoteCurrency"));
+
+    final int s0 = WIRE_PREFIX.length(); // index of first '/' after WIRE_PREFIX
+    final int s1 = symbol.indexOf('/', s0 + 1);
+    final int s2 = s1 >= 0 ? symbol.indexOf('/', s1 + 1) : -1;
+    final int s3 = s2 >= 0 ? symbol.indexOf('/', s2 + 1) : -1;
+    final int s4 = s3 >= 0 ? symbol.indexOf('/', s3 + 1) : -1;
+    final int s5 = s4 >= 0 ? symbol.indexOf('/', s4 + 1) : -1;
+
+    // Reject too few slashes (< 4) or too many slashes (> 5)
+    if (s3 == -1 || s5 != -1) {
+      throw new IllegalArgumentException(
+          "Could not parse prediction market contract from '" + symbol + "'");
+    }
+
+    if (s4 != -1) {
+      // 5 slashes -> 6 segments: PRED / provider / eventId / marketId / outcomeId / quoteCurrency
+      this.provider = requireSegment(symbol.substring(s0 + 1, s1), "provider");
+      this.eventId = requireSegment(symbol.substring(s1 + 1, s2), "eventId");
+      this.marketId = requireSegment(symbol.substring(s2 + 1, s3), "marketId");
+      this.outcomeId = requireSegment(symbol.substring(s3 + 1, s4), "outcomeId");
+      this.quoteCurrency = Currency.getInstance(requireSegment(symbol.substring(s4 + 1), "quoteCurrency"));
     } else {
-      this.provider = requireSegment(parts[1], "provider");
+      // 4 slashes -> 5 segments: PRED / provider / marketId / outcomeId / quoteCurrency
+      this.provider = requireSegment(symbol.substring(s0 + 1, s1), "provider");
       this.eventId = null;
-      this.marketId = requireSegment(parts[2], "marketId");
-      this.outcomeId = requireSegment(parts[3], "outcomeId");
-      this.quoteCurrency = Currency.getInstance(requireSegment(parts[4], "quoteCurrency"));
+      this.marketId = requireSegment(symbol.substring(s1 + 1, s2), "marketId");
+      this.outcomeId = requireSegment(symbol.substring(s2 + 1, s3), "outcomeId");
+      this.quoteCurrency = Currency.getInstance(requireSegment(symbol.substring(s3 + 1), "quoteCurrency"));
     }
   }
 
