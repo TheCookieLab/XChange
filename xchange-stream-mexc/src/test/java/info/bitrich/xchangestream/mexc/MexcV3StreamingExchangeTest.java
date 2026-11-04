@@ -142,6 +142,7 @@ class MexcV3StreamingExchangeTest {
   void connectCreatesServicesAndReportsConnectionFailure() throws IOException {
     MexcV3StreamingExchange exchange = new MexcV3StreamingExchange();
     ExchangeSpecification spec = exchange.getDefaultExchangeSpecification();
+    spec.setShouldLoadRemoteMetaData(false);
     spec.setExchangeSpecificParametersItem(
         MexcV3StreamingExchange.PARAM_WEBSOCKET_URI, "ws://127.0.0.1:1/ws");
     exchange.applySpecification(spec);
