@@ -2,10 +2,15 @@ package org.knowm.xchange.uniswap.signing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
+import java.util.Set;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Hash;
@@ -46,7 +51,7 @@ public final class LocalKeystoreSigner {
   /**
    * @param keystorePath path of the encrypted V3 keystore
    * @param secretProvider password source
-   * @param expectedAddress normalized wallet address the keystore must match
+   * @param expectedAddress 0x-prefixed wallet address the keystore must match, case-insensitively
    */
   public LocalKeystoreSigner(Path keystorePath, SecretProvider secretProvider, String expectedAddress) {
     this.keystorePath = keystorePath;
@@ -83,18 +88,20 @@ public final class LocalKeystoreSigner {
           } catch (IOException e) {
             throw new IllegalStateException("cannot read keystore " + keystorePath + ": " + e.getMessage(), e);
           }
+          ECKeyPair decryptedKeyPair;
           try {
-            keyPair = Wallet.decrypt(new String(password), walletFile);
+            decryptedKeyPair = Wallet.decrypt(new String(password), walletFile);
           } catch (org.web3j.crypto.exception.CipherException e) {
             throw new IllegalStateException(
                 "cannot decrypt keystore " + keystorePath + " (wrong password?): " + e.getMessage(), e);
           }
-          String derived = ("0x" + Keys.getAddress(keyPair)).toLowerCase();
-          if (!derived.equals(expectedAddress)) {
+          String derived = ("0x" + Keys.getAddress(decryptedKeyPair)).toLowerCase();
+          if (!derived.equalsIgnoreCase(expectedAddress)) {
             throw new IllegalStateException(
                 "keystore " + keystorePath + " belongs to " + derived + " but wallet address is " + expectedAddress);
           }
           address = derived;
+          keyPair = decryptedKeyPair;
         } finally {
           if (password != null) {
             Arrays.fill(password, '\0');
@@ -106,10 +113,10 @@ public final class LocalKeystoreSigner {
   }
 
   /**
-   * Creates a new password-encrypted Web3 V3 keystore at {@code path} from a fresh random key and
-   * writes it with owner-only permissions.
+   * Creates a new password-encrypted Web3 V3 keystore at {@code path} from a fresh random key.
+   * Where supported, the file is created with owner-only permissions.
    *
-   * @return the created wallet address (checksummed)
+   * @return the created wallet address, without the {@code 0x} prefix
    */
   public static String createKeystore(Path path, char[] password) throws Exception {
     if (Files.exists(path)) {
@@ -118,20 +125,27 @@ public final class LocalKeystoreSigner {
     ECKeyPair keyPair = Keys.createEcKeyPair();
     WalletFile walletFile = Wallet.createStandard(new String(password), keyPair);
     byte[] json = MAPPER.writeValueAsBytes(walletFile);
-    Files.write(
-        path,
-        json,
-        StandardOpenOption.CREATE_NEW,
-        StandardOpenOption.WRITE);
-    try {
-      Files.setPosixFilePermissions(
-          path,
-          java.util.Set.of(
-              java.nio.file.attribute.PosixFilePermission.OWNER_READ,
-              java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
-    } catch (UnsupportedOperationException ignored) {
-      // non-POSIX filesystem: rely on the creating process's umask
+    try (SeekableByteChannel channel = createKeystoreChannel(path)) {
+      ByteBuffer buffer = ByteBuffer.wrap(json);
+      while (buffer.hasRemaining()) {
+        channel.write(buffer);
+      }
     }
     return Keys.getAddress(keyPair);
+  }
+
+  private static SeekableByteChannel createKeystoreChannel(Path path) throws IOException {
+    Set<StandardOpenOption> options =
+        Set.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+    try {
+      return Files.newByteChannel(
+          path,
+          options,
+          PosixFilePermissions.asFileAttribute(
+              Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)));
+    } catch (UnsupportedOperationException ignored) {
+      // Non-POSIX filesystems use the creating process's default permissions.
+      return Files.newByteChannel(path, options);
+    }
   }
 }
