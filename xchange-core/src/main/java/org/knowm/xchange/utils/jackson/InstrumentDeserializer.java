@@ -1,10 +1,8 @@
 package org.knowm.xchange.utils.jackson;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -26,9 +24,8 @@ public class InstrumentDeserializer extends JsonDeserializer<Instrument> {
   public Instrument deserialize(JsonParser jsonParser, final DeserializationContext ctxt)
       throws IOException {
 
-    final ObjectCodec oc = jsonParser.getCodec();
-    final JsonNode node = oc.readTree(jsonParser);
-    final String instrumentString = node.asText();
+    // Performance optimization: Avoid building Jackson JsonNode AST instances on high-frequency streaming paths
+    final String instrumentString = jsonParser.getText();
     // PredictionMarketContract (PRED/provider/[eventId/]marketId/outcomeId/quote) is prefix-tagged
     // and must be checked before slash-count conventions.
     if (PredictionMarketContract.isWireString(instrumentString))

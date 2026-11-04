@@ -35,17 +35,25 @@ public class FuturesContract extends Instrument
 
   @JsonCreator
   public FuturesContract(final String symbol) {
-    String[] parts = symbol.split("/");
-    if (parts.length < 3) {
+    if (symbol == null) {
+      throw new IllegalArgumentException("Could not parse futures contract from 'null'");
+    }
+    int firstSlash = symbol.indexOf('/');
+    int secondSlash = firstSlash >= 0 ? symbol.indexOf('/', firstSlash + 1) : -1;
+    if (firstSlash <= 0 || secondSlash <= firstSlash + 1 || secondSlash == symbol.length() - 1) {
       throw new IllegalArgumentException("Could not parse futures contract from '" + symbol + "'");
     }
 
-    String base = parts[0];
-    String counter = parts[1];
+    String base = symbol.substring(0, firstSlash);
+    String counter = symbol.substring(firstSlash + 1, secondSlash);
 
-    String prompt = parts[2];
+    int thirdSlash = symbol.indexOf('/', secondSlash + 1);
+    String prompt =
+        thirdSlash < 0
+            ? symbol.substring(secondSlash + 1)
+            : symbol.substring(secondSlash + 1, thirdSlash);
+
     this.currencyPair = new CurrencyPair(base, counter);
-
     this.prompt = prompt;
   }
 
