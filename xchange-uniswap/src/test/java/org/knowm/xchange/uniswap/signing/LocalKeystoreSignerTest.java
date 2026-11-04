@@ -2,16 +2,35 @@ package org.knowm.xchange.uniswap.signing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.AccessMode;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystem;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.spi.FileSystemProvider;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.knowm.xchange.uniswap.TestFixtures;
-import org.web3j.crypto.Credentials;
 import org.web3j.crypto.Hash;
+import org.web3j.crypto.Keys;
 import org.web3j.crypto.RawTransaction;
 
 /** V3 keystore round-trip and EIP-1559 signing (acceptance criterion AC3/AC4). */
@@ -71,8 +90,19 @@ class LocalKeystoreSignerTest {
   void rejectsKeystoreThatDoesNotMatchTheConfiguredWallet() throws Exception {
     char[] password = "right password".toCharArray();
     Path keystore = TestSignerFixtures.keystore(tempDir, password);
-    LocalKeystoreSigner signer = new LocalKeystoreSigner(keystore, () -> password, WALLET);
+    LocalKeystoreSigner signer =
+        new LocalKeystoreSigner(keystore, () -> "right password".toCharArray(), WALLET);
     assertThatThrownBy(() -> signer.address())
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("belongs to");
+    RawTransaction raw =
+        RawTransaction.createTransaction(
+            1L, BigInteger.TEN, BigInteger.valueOf(21000), WALLET, BigInteger.ZERO, "0x",
+            BigInteger.ONE, BigInteger.valueOf(21_000_000_000L));
+    assertThatThrownBy(() -> signer.sign(raw, 1L))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("belongs to");
+    assertThatThrownBy(signer::address)
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("belongs to");
   }
@@ -80,11 +110,12 @@ class LocalKeystoreSignerTest {
   @Test
   void acceptsMixedCaseAddressMatch() throws Exception {
     char[] password = "right password".toCharArray();
-    Path keystore = TestSignerFixtures.keystore(tempDir, password);
-    String lowercaseAddress = TestSignerFixtures.derivedAddress(keystore, password);
-    String mixedCaseAddress = "0x" + lowercaseAddress.substring(2).toUpperCase();
-    LocalKeystoreSigner signer = new LocalKeystoreSigner(keystore, () -> password, mixedCaseAddress);
-    assertThat(signer.address()).isEqualTo(lowercaseAddress);
+    Path keystore = TestFixtures.keystore(tempDir, password);
+    String checksummedAddress = Keys.toChecksumAddress(TestFixtures.WALLET);
+    assertThat(checksummedAddress).isNotEqualTo(TestFixtures.WALLET);
+    LocalKeystoreSigner signer =
+        new LocalKeystoreSigner(keystore, () -> password, checksummedAddress);
+    assertThat(signer.address()).isEqualTo(TestFixtures.WALLET);
   }
 
   @Test
@@ -101,6 +132,107 @@ class LocalKeystoreSignerTest {
         .doesNotContain(java.nio.file.attribute.PosixFilePermission.OTHERS_WRITE)
         .doesNotContain(java.nio.file.attribute.PosixFilePermission.GROUP_READ)
         .doesNotContain(java.nio.file.attribute.PosixFilePermission.OTHERS_READ);
+  }
+
+  @Test
+  void writesThroughCreatedHandleWhenPathIsReplacedWithSymlink() throws Exception {
+    TestFixtures.assumePosixPermissions(tempDir);
+    Path keystore = tempDir.resolve("wallet.json");
+    Path movedKeystore = tempDir.resolve("moved-wallet.json");
+    Path victim = tempDir.resolve("victim.txt");
+    Files.writeString(victim, "untouched");
+
+    FileSystemProvider provider = mock(FileSystemProvider.class);
+    Path intercepted = missingPath(provider);
+    when(provider.newByteChannel(eq(intercepted), anySet(), any(FileAttribute[].class)))
+        .thenAnswer(
+            invocation -> {
+              Set<OpenOption> options = invocation.getArgument(1);
+              FileAttribute<?>[] attributes =
+                  (FileAttribute<?>[]) invocation.getRawArguments()[2];
+              assertThat(options)
+                  .containsExactlyInAnyOrder(
+                      StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+              assertThat(attributes).hasSize(1);
+              assertThat(attributes[0].name()).isEqualTo("posix:permissions");
+              assertThat(attributes[0].value())
+                  .isEqualTo(Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
+              SeekableByteChannel channel = Files.newByteChannel(keystore, options, attributes);
+              try {
+                Files.move(keystore, movedKeystore);
+                Files.createSymbolicLink(keystore, victim);
+              } catch (Exception e) {
+                channel.close();
+                throw e;
+              }
+              return channel;
+            });
+    when(provider.newOutputStream(eq(intercepted), any(OpenOption[].class)))
+        .thenAnswer(
+            invocation ->
+                Files.newOutputStream(keystore, (OpenOption[]) invocation.getRawArguments()[1]));
+
+    char[] password = "right password".toCharArray();
+    String address = LocalKeystoreSigner.createKeystore(intercepted, password);
+
+    assertThat(Files.isSymbolicLink(keystore)).isTrue();
+    assertThat(Files.readString(victim)).isEqualTo("untouched");
+    assertThat(TestSignerFixtures.derivedAddress(movedKeystore, password))
+        .isEqualTo("0x" + address.toLowerCase());
+  }
+
+  @Test
+  void retriesExclusiveCreationWithoutAttributesOnNonPosixFilesystems() throws Exception {
+    Path keystore = tempDir.resolve("wallet.json");
+    FileSystemProvider provider = mock(FileSystemProvider.class);
+    Path intercepted = missingPath(provider);
+    AtomicInteger attempts = new AtomicInteger();
+    when(provider.newByteChannel(eq(intercepted), anySet(), any(FileAttribute[].class)))
+        .thenAnswer(
+            invocation -> {
+              Set<OpenOption> options = invocation.getArgument(1);
+              FileAttribute<?>[] attributes =
+                  (FileAttribute<?>[]) invocation.getRawArguments()[2];
+              assertThat(options)
+                  .containsExactlyInAnyOrder(
+                      StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+              if (attempts.incrementAndGet() == 1) {
+                assertThat(attributes).hasSize(1);
+                throw new UnsupportedOperationException("POSIX attributes unsupported");
+              }
+              assertThat(attributes).isEmpty();
+              return Files.newByteChannel(keystore, options);
+            });
+
+    char[] password = "right password".toCharArray();
+    String address = LocalKeystoreSigner.createKeystore(intercepted, password);
+
+    assertThat(attempts).hasValue(2);
+    assertThat(TestSignerFixtures.derivedAddress(keystore, password))
+        .isEqualTo("0x" + address.toLowerCase());
+  }
+
+  @Test
+  void refusesToCreateThroughDanglingSymlink() throws Exception {
+    TestFixtures.assumePosixPermissions(tempDir);
+    Path target = tempDir.resolve("missing.json");
+    Path symlink = tempDir.resolve("wallet.json");
+    Files.createSymbolicLink(symlink, target);
+
+    assertThatThrownBy(() -> LocalKeystoreSigner.createKeystore(symlink, "password".toCharArray()))
+        .isInstanceOf(FileAlreadyExistsException.class);
+    assertThat(Files.notExists(target)).isTrue();
+  }
+
+  private static Path missingPath(FileSystemProvider provider) throws IOException {
+    Path path = mock(Path.class);
+    FileSystem fileSystem = mock(FileSystem.class);
+    when(path.getFileSystem()).thenReturn(fileSystem);
+    when(fileSystem.provider()).thenReturn(provider);
+    doThrow(new NoSuchFileException("wallet.json"))
+        .when(provider)
+        .checkAccess(eq(path), any(AccessMode[].class));
+    return path;
   }
 
   /** Minimal RLP decoder for a signed EIP-1559 transaction (type byte 0x02 + 11-item list). */

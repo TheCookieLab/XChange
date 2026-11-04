@@ -45,7 +45,7 @@ forward, never an exposed node.
 |---|---|---|
 | `sslUri` / `uniswap.rpc-url` | yes | JSON-RPC endpoint (http/https) |
 | `uniswap.chain-id` | no | default `1` (Ethereum mainnet) |
-| `uniswap.wallet-address` | yes | wallet address owning the keystore |
+| `uniswap.wallet-address` | yes | wallet address owning the keystore (hex digits are case-insensitive; checksum is not validated) |
 | `uniswap.keystore-path` | yes | path of the encrypted V3 keystore (must not be group- or other-writable) |
 | `uniswap.password-provider-class` | no | `SecretProvider` class name; default reads `UNISWAP_KEYSTORE_PASSWORD` |
 | `uniswap.tokens` | yes | JSON array: `{symbol, address, decimals, native?}` |
@@ -142,11 +142,15 @@ String address = LocalKeystoreSigner.createKeystore(Path.of("wallet.json"), pass
 System.out.println(address);
 ```
 
-The keystore is written with owner-only permissions where the filesystem supports
-POSIX permissions, and a configured keystore that is group- or other-writable is
-rejected; on a filesystem that cannot express them (the Windows default) the file
-keeps the creating process's permissions and the check is skipped. Provide the
-password at runtime through `UNISWAP_KEYSTORE_PASSWORD` (or a custom
+The keystore is created exclusively with owner-only permissions where the
+filesystem supports POSIX permissions; its contents are written through the same
+open file, without reopening the pathname. Use a directory that untrusted users
+cannot modify, since directory access can still allow a file to be removed or
+replaced. A configured keystore that is group- or other-writable is rejected.
+On a filesystem without POSIX permissions (the Windows default), creation uses
+the process's default permissions and the permission check is skipped; configure
+appropriate access controls on the directory before creating the keystore.
+Provide the password at runtime through `UNISWAP_KEYSTORE_PASSWORD` (or a custom
 `SecretProvider`); never store it in configuration or source.
 
 ## Rollout and rollback
