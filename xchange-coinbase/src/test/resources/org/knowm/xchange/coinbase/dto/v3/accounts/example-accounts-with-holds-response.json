@@ -1,0 +1,91 @@
+{
+  "accounts": [
+    {
+      "uuid": "btc-account",
+      "name": "BTC Wallet",
+      "currency": "BTC",
+      "available_balance": {
+        "value": "2.00000000",
+        "currency": "BTC"
+      },
+      "default": true,
+      "active": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T12:00:00Z",
+      "deleted_at": null,
+      "type": "ACCOUNT_TYPE_CRYPTO",
+      "ready": true,
+      "hold": {
+        "value": "3.00000000",
+        "currency": "BTC"
+      },
+      "retail_portfolio_id": "portfolio-1",
+      "platform": "ACCOUNT_PLATFORM_CONSUMER"
+    },
+    {
+      "uuid": "usd-account",
+      "name": "USD Wallet",
+      "currency": "USD",
+      "available_balance": {
+        "value": "100.25",
+        "currency": "USD"
+      },
+      "default": false,
+      "active": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T12:00:00Z",
+      "deleted_at": null,
+      "type": "ACCOUNT_TYPE_FIAT",
+      "ready": true,
+      "hold": {
+        "value": "50.30",
+        "currency": "USD"
+      },
+      "retail_portfolio_id": "portfolio-1",
+      "platform": "ACCOUNT_PLATFORM_CONSUMER"
+    },
+    {
+      "uuid": "eth-account",
+      "name": "ETH Wallet",
+      "currency": "ETH",
+      "available_balance": {
+        "value": "1.25",
+        "currency": "ETH"
+      },
+      "default": false,
+      "active": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T12:00:00Z",
+      "deleted_at": null,
+      "type": "ACCOUNT_TYPE_CRYPTO",
+      "ready": true,
+      "hold": {
+        "value": "0",
+        "currency": "ETH"
+      },
+      "retail_portfolio_id": "portfolio-1",
+      "platform": "ACCOUNT_PLATFORM_CONSUMER"
+    },
+    {
+      "uuid": "sol-account",
+      "name": "SOL Wallet",
+      "currency": "SOL",
+      "available_balance": {
+        "value": "4",
+        "currency": "SOL"
+      },
+      "default": false,
+      "active": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T12:00:00Z",
+      "deleted_at": null,
+      "type": "ACCOUNT_TYPE_CRYPTO",
+      "ready": true,
+      "retail_portfolio_id": "portfolio-1",
+      "platform": "ACCOUNT_PLATFORM_CONSUMER"
+    }
+  ],
+  "has_next": false,
+  "cursor": "",
+  "size": 4
+}
