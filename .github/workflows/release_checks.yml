@@ -1,0 +1,58 @@
+name: Release Safeguards
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'scripts/ci/**'
+      - '.github/workflows/release_checks.yml'
+      - '.github/workflows/maven_release.yml'
+      - 'RELEASE_RUNBOOK.md'
+  push:
+    branches: [ main ]
+    paths:
+      - 'scripts/ci/**'
+      - '.github/workflows/release_checks.yml'
+      - '.github/workflows/maven_release.yml'
+      - 'RELEASE_RUNBOOK.md'
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Existing published release to verify (does not publish)
+        required: true
+      snapshot_version:
+        description: Existing published snapshot to verify (does not publish)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Test release safeguards and CI helpers offline
+      run: python3 -m unittest discover -s scripts/ci -p '*_test.py'
+
+  published:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: unit
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    - name: Set up JDK 25
+      uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: '25'
+    - name: Verify existing release and isolated consumer
+      env:
+        RELEASE_VERSION: ${{ inputs.release_version }}
+      run: python3 scripts/ci/release-check.py verify --version "$RELEASE_VERSION"
+    - name: Verify existing snapshot and isolated consumer
+      env:
+        SNAPSHOT_VERSION: ${{ inputs.snapshot_version }}
+      run: python3 scripts/ci/release-check.py verify --version "$SNAPSHOT_VERSION"
