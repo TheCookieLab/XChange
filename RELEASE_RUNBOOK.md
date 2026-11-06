@@ -46,14 +46,21 @@ mvn -B --no-transfer-progress release:clean
    - `enable_release`: `true`
    - `release_version`: target release version
    - `next_snapshot_version`: next snapshot version
+   - `release_notes`: notes following `/RELEASE_NOTES_TEMPLATE.md`, including **Upstream Credits**
 4. Run from `main`.
-5. Confirm workflow success and generated tag.
+5. Confirm workflow success. It waits for Central publication, creates the GitHub
+   release at `xchange-parent-<release_version>`, and publishes the next snapshot.
 
 ## Post-Release Validation
 
 1. Confirm artifacts are visible in Maven Central for group `com.github.thecookielab.xchange`.
-2. Confirm the next snapshot version is committed.
-3. Publish release notes using `/RELEASE_NOTES_TEMPLATE.md`.
+2. Confirm the GitHub release, tag, and Central artifacts use the same release version.
+3. Confirm the next snapshot version is committed and available in the snapshots repository.
+4. Keep the README's stable version, dependency example, and snapshot version aligned.
+
+Do not blindly rerun a failed release after `release:prepare`: that goal pushes the
+release tag and next-development commit before publication. Inspect the existing
+tag and Central deployment first; published versions and tags must not be replaced.
 
 ## Known Metadata Follow-up (Not Required To Publish)
 

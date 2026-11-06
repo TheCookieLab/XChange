@@ -13,6 +13,9 @@ on:
       next_snapshot_version:
         description: Next snapshot version (for example 0.2.0-SNAPSHOT)
         required: true
+      release_notes:
+        description: Release notes following RELEASE_NOTES_TEMPLATE.md, including Upstream Credits
+        required: true
 
 jobs:
   release:
@@ -22,14 +25,14 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
     - name: Set up JDK 25
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v6
       with:
         distribution: temurin
-        java-version: '25.0.4+1'
+        java-version: '25'
         cache: maven
     - name: Import GPG key
       uses: crazy-max/ghaction-import-gpg@v6
@@ -46,13 +49,15 @@ jobs:
         MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN_PASS }}
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         MAVEN_OPTS: -Xmx3g
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        NEXT_SNAPSHOT_VERSION: ${{ inputs.next_snapshot_version }}
       run: |
         mvn --batch-mode --no-transfer-progress \
           --settings etc/settings.xml \
           -Prelease-sign-artifacts,central-release-publish \
           -Dgpg.passphrase="$GPG_PASSPHRASE" \
-          -DreleaseVersion="${{ inputs.release_version }}" \
-          -DdevelopmentVersion="${{ inputs.next_snapshot_version }}" \
+          -DreleaseVersion="$RELEASE_VERSION" \
+          -DdevelopmentVersion="$NEXT_SNAPSHOT_VERSION" \
           -DlocalCheckout=true \
           -Dsurefire.fork.tuning.args=-Xmx1g \
           -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=\"$GPG_PASSPHRASE\" -DskipIntegrationTests=true -Dsurefire.fork.tuning.args=-Xmx1g" \
@@ -72,6 +77,18 @@ jobs:
           -Dsurefire.fork.tuning.args=-Xmx1g \
           -Darguments="--settings etc/settings.xml -Prelease-sign-artifacts,central-release-publish -Dgpg.passphrase=\"$GPG_PASSPHRASE\" -DskipIntegrationTests=true -Dsurefire.fork.tuning.args=-Xmx1g" \
           release:perform
+    - name: Create GitHub release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        RELEASE_NOTES: ${{ inputs.release_notes }}
+      run: |
+        gh release create "xchange-parent-$RELEASE_VERSION" \
+          --repo "$GITHUB_REPOSITORY" \
+          --verify-tag \
+          --title "XChange $RELEASE_VERSION" \
+          --notes "$RELEASE_NOTES" \
+          --latest
     - name: Publish next snapshot
       env:
         MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_TOKEN_USER }}
