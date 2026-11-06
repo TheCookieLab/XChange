@@ -58,10 +58,8 @@ public enum KrakenOrderType {
     public KrakenOrderType deserialize(JsonParser jsonParser, DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
 
-      ObjectCodec oc = jsonParser.getCodec();
-      JsonNode node = oc.readTree(jsonParser);
-      String orderTypeString = node.textValue();
-      return fromString(orderTypeString);
+      // Performance optimization: Avoid building Jackson JsonNode AST instances on high-frequency streaming paths
+      return fromString(jsonParser.getText());
     }
   }
 }
