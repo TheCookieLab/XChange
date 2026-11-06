@@ -42,7 +42,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void valid_market_buy_order() throws IOException {
+  void valid_market_buy_order() throws Exception {
     MarketOrder marketOrder =
         new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
             .userReference("t-valid-market-buy-order")
@@ -54,7 +54,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void valid_market_sell_order() throws IOException {
+  void valid_market_sell_order() throws Exception {
     MarketOrder marketOrder =
         new MarketOrder.Builder(OrderType.ASK, CurrencyPair.BTC_USDT)
             .userReference("t-valid-market-sell-order")
@@ -66,7 +66,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void valid_limit_sell_order() throws IOException {
+  void valid_limit_sell_order() throws Exception {
     LimitOrder limitOrder =
         new LimitOrder.Builder(OrderType.ASK, CurrencyPair.BTC_USDT)
             .userReference("t-valid-limit-sell-order")
@@ -79,7 +79,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void valid_cancel_order() throws IOException {
+  void valid_cancel_order() throws Exception {
     boolean actual =
         gateioTradeService.cancelOrder(
             new DefaultCancelOrderByInstrumentAndIdParams(CurrencyPair.BTC_USDT, "376835979523"));
@@ -87,7 +87,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void valid_limit_buy_order() throws IOException {
+  void valid_limit_buy_order() throws Exception {
     LimitOrder limitOrder =
         new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
             .userReference("t-valid-limit-buy-order")
@@ -100,7 +100,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void buy_order_details() throws IOException {
+  void buy_order_details() throws Exception {
     MarketOrder expected =
         new MarketOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
             .id("342251629898")
@@ -121,7 +121,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void sell_order_details() throws IOException {
+  void sell_order_details() throws Exception {
     MarketOrder expected =
         new MarketOrder.Builder(OrderType.ASK, new CurrencyPair("VAI/USDT"))
             .id("425539509181")
@@ -142,7 +142,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void sell_order_partially_filled_details() throws IOException {
+  void sell_order_partially_filled_details() throws Exception {
     MarketOrder expected =
         new MarketOrder.Builder(OrderType.ASK, new CurrencyPair("FREE/USDT"))
             .id("874190804193")
@@ -167,7 +167,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void open_limit_order_details() throws IOException {
+  void open_limit_order_details() throws Exception {
     LimitOrder expected =
         new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
             .id("745504484392")
@@ -188,7 +188,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void open_orders() throws IOException {
+  void open_orders() throws Exception {
     LimitOrder expected =
         new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USDT)
             .id("745504484392")
@@ -209,7 +209,7 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void trade_history() throws IOException {
+  void trade_history() throws Exception {
     UserTrades userTrades =
         gateioTradeService.getTradeHistory(
             GateioTradeHistoryParams.builder()

@@ -1,18 +1,18 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.List;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
@@ -34,7 +34,7 @@ public class MarketDataServiceIntegration {
   static CoinbaseExchange exchange;
   static CoinbaseMarketDataService marketDataService;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     ExchangeSpecification exchangeSpecification = ExchangeFactory.INSTANCE.createExchange(
         CoinbaseExchange.class).getDefaultExchangeSpecification();
@@ -45,7 +45,7 @@ public class MarketDataServiceIntegration {
 
   @Test
   public void getBestBidAskWithCurrencyPair() throws Exception {
-    Assume.assumeNotNull(marketDataService.authTokenCreator);
+    Assumptions.assumeTrue(marketDataService.authTokenCreator != null);
 
     List<CoinbasePriceBook> priceBooks = marketDataService.getBestBidAsk(CurrencyPair.ETH_USD);
     assertEquals(1, priceBooks.size());
@@ -53,7 +53,7 @@ public class MarketDataServiceIntegration {
 
   @Test
   public void getBestBidAskWithBaseAndCounterCurrency() throws Exception {
-    Assume.assumeNotNull(marketDataService.authTokenCreator);
+    Assumptions.assumeTrue(marketDataService.authTokenCreator != null);
 
     List<CoinbasePriceBook> priceBooks = marketDataService.getBestBidAsk(Currency.BTC,
         Currency.USD);
@@ -62,7 +62,7 @@ public class MarketDataServiceIntegration {
 
   @Test
   public void getMarketTradesWithLimit() throws Exception {
-    Assume.assumeNotNull(marketDataService.authTokenCreator);
+    Assumptions.assumeTrue(marketDataService.authTokenCreator != null);
 
     Instrument currencyPair = CurrencyPair.ETH_USD;
     Trades trades = marketDataService.getTrades(currencyPair, 1);
@@ -73,7 +73,7 @@ public class MarketDataServiceIntegration {
 
   @Test
   public void getETHUSDProductCandleSticksWithLimit() throws Exception {
-    Assume.assumeNotNull(marketDataService.authTokenCreator);
+    Assumptions.assumeTrue(marketDataService.authTokenCreator != null);
 
     CurrencyPair currencyPair = CurrencyPair.ETH_USD;
     int limit = 10;
@@ -89,7 +89,7 @@ public class MarketDataServiceIntegration {
 
   @Test
   public void getETHUSDProductCandleSticksWithStartDate() throws Exception {
-    Assume.assumeNotNull(marketDataService.authTokenCreator);
+    Assumptions.assumeTrue(marketDataService.authTokenCreator != null);
 
     CurrencyPair currencyPair = CurrencyPair.ETH_USD;
     int daysInPast = 100;
@@ -99,9 +99,7 @@ public class MarketDataServiceIntegration {
         new DefaultCandleStickParam(startDate, null, 86_400));
 
     int observedSize = candleStickData.getCandleSticks().size();
-    assertTrue(
-        "Candlestick count should be close to the requested day window",
-        observedSize >= daysInPast && observedSize <= daysInPast + 2);
+    assertTrue(observedSize >= daysInPast && observedSize <= daysInPast + 2, "Candlestick count should be close to the requested day window");
     assertEquals(currencyPair, candleStickData.getInstrument());
     assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().isAfter(
         candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1)
@@ -110,7 +108,7 @@ public class MarketDataServiceIntegration {
 
   @Test
   public void getETHUSDOrderBookWithLimitAndPriceAggregationIncrement() throws IOException {
-    Assume.assumeNotNull(marketDataService.authTokenCreator);
+    Assumptions.assumeTrue(marketDataService.authTokenCreator != null);
 
     Instrument instrument = CurrencyPair.ETH_USD;
     double priceAggregationIncrement = 1;
@@ -125,7 +123,7 @@ public class MarketDataServiceIntegration {
 
   @Test
   public void getETHUSDTicker() throws IOException {
-    Assume.assumeNotNull(marketDataService.authTokenCreator);
+    Assumptions.assumeTrue(marketDataService.authTokenCreator != null);
 
     Instrument instrument = CurrencyPair.ETH_USD;
 
@@ -149,7 +147,7 @@ public class MarketDataServiceIntegration {
 
   @Test
   public void listSpotProducts() throws Exception {
-    Assume.assumeNotNull(marketDataService.authTokenCreator);
+    Assumptions.assumeTrue(marketDataService.authTokenCreator != null);
 
     CoinbaseProductsResponse products = marketDataService.listProducts("SPOT");
 

@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.client.ratelimit.LocalHttpServer.Reply;
@@ -30,7 +30,7 @@ public class ExchangeRestProxyBuilderRateLimitTest {
   private ExchangeSpecification spec;
   private final List<RateLimitRequest> seen = new ArrayList<>();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fixture = RateLimitFixture.autoAdvance();
     server = new LocalHttpServer(request -> Reply.json(200, "\"ok\""));
@@ -45,7 +45,7 @@ public class ExchangeRestProxyBuilderRateLimitTest {
     resilience.setRateLimitUserScope(SCOPE);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     server.close();
     fixture.cleanup();

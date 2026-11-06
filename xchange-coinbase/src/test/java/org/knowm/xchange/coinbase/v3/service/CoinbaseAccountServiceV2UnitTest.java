@@ -1,14 +1,14 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collections;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v2.CoinbaseV2Authenticated;
 import org.knowm.xchange.coinbase.v2.dto.accounts.CoinbaseV2AccountsResponse;
@@ -25,7 +25,7 @@ public class CoinbaseAccountServiceV2UnitTest {
   private ParamsDigest digest;
   private Exchange exchange;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     exchange = Mockito.mock(Exchange.class);
     v3Api = Mockito.mock(CoinbaseAuthenticated.class);

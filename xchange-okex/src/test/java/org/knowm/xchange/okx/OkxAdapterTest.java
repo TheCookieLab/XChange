@@ -20,7 +20,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
@@ -33,6 +33,7 @@ import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.OrderHedgeMode;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.dto.trade.OkexAmendAlgoRequest;
 import org.knowm.xchange.okex.dto.trade.OkexAttachAlgoOrder;
@@ -50,6 +51,7 @@ import org.knowm.xchange.okx.dto.trade.OkxAlgoOrderRequest;
 import org.knowm.xchange.okx.dto.trade.OkxAmendAlgoRequest;
 import org.knowm.xchange.okx.dto.trade.OkxAttachAlgoOrder;
 import org.knowm.xchange.okx.dto.trade.OkxOrderDetails;
+import org.knowm.xchange.okx.dto.trade.OkxOrderFlags;
 import org.knowm.xchange.okx.dto.trade.OkxOrderRequest;
 import org.knowm.xchange.okx.service.OkxTradeServiceRaw;
 import si.mazi.rescu.ParamsDigest;
@@ -318,6 +320,69 @@ public class OkxAdapterTest {
     } finally {
       OkxAdapters.instrumentToInstrumentIdMap.clear();
       OkxAdapters.instrumentToInstrumentIdMap.putAll(original);
+    }
+  }
+
+  @Test
+  public void testHedgeModeOrderAdaptationForMarketAndLimitOrders() throws Exception {
+    FuturesContract contract = new FuturesContract("BTC/USDT/SWAP");
+    ExchangeMetaData metaData = metaDataWithContractValue(contract, BigDecimal.ONE);
+    Map<Instrument, Long> original = OkxAdapters.snapshotInstrumentToInstrumentIdMapForTesting();
+    OkxAdapters.replaceInstrumentToInstrumentIdMapForTesting(Map.of(contract, 1234567890L));
+    try {
+      Order.OrderType[] types = {
+        Order.OrderType.BID, Order.OrderType.ASK, Order.OrderType.EXIT_BID, Order.OrderType.EXIT_ASK
+      };
+      String[] sides = {"buy", "sell", "sell", "buy"};
+      String[] positionSides = {"long", "short", "long", "short"};
+      for (int i = 0; i < types.length; i++) {
+        LimitOrder hedgeLimit =
+            new LimitOrder.Builder(types[i], contract)
+                .originalAmount(BigDecimal.ONE)
+                .limitPrice(BigDecimal.TEN)
+                .flag(OrderHedgeMode.TWOWAY)
+                .build();
+        MarketOrder hedgeMarket =
+            new MarketOrder.Builder(types[i], contract)
+                .originalAmount(BigDecimal.ONE)
+                .flag(OrderHedgeMode.TWOWAY)
+                .build();
+        OkxOrderRequest limitRequest = OkxAdapters.adaptOrder(hedgeLimit, metaData, "1");
+        OkxOrderRequest marketRequest = OkxAdapters.adaptOrder(hedgeMarket, metaData, "1");
+        assertThat(limitRequest.getSide()).isEqualTo(sides[i]);
+        assertThat(marketRequest.getSide()).isEqualTo(sides[i]);
+        assertThat(limitRequest.getPosSide()).isEqualTo(positionSides[i]);
+        assertThat(marketRequest.getPosSide()).isEqualTo(positionSides[i]);
+        assertThat(limitRequest.isReducePosition()).isFalse();
+        assertThat(marketRequest.isReducePosition()).isFalse();
+        JsonNode serialized = new ObjectMapper().valueToTree(marketRequest);
+        assertThat(serialized.get("posSide").asText()).isEqualTo(positionSides[i]);
+        assertThat(serialized.has("reduceOnly")).isFalse();
+      }
+
+      MarketOrder netExit =
+          new MarketOrder.Builder(Order.OrderType.EXIT_BID, contract)
+              .originalAmount(BigDecimal.ONE)
+              .flag(OrderHedgeMode.ONEWAY)
+              .build();
+      OkxOrderRequest netRequest = OkxAdapters.adaptOrder(netExit, metaData, "1");
+      assertThat(netRequest.getSide()).isEqualTo("sell");
+      assertThat(netRequest.getPosSide()).isNull();
+      assertThat(netRequest.isReducePosition()).isTrue();
+      JsonNode serializedNet = new ObjectMapper().valueToTree(netRequest);
+      assertThat(serializedNet.get("reduceOnly").asBoolean()).isTrue();
+
+      LimitOrder netReduce =
+          new LimitOrder.Builder(Order.OrderType.ASK, contract)
+              .originalAmount(BigDecimal.ONE)
+              .limitPrice(BigDecimal.TEN)
+              .flag(OkxOrderFlags.REDUCE_ONLY)
+              .build();
+      OkxOrderRequest netLimitRequest = OkxAdapters.adaptOrder(netReduce, metaData, "1");
+      assertThat(netLimitRequest.getPosSide()).isNull();
+      assertThat(netLimitRequest.isReducePosition()).isTrue();
+    } finally {
+      OkxAdapters.replaceInstrumentToInstrumentIdMapForTesting(original);
     }
   }
 

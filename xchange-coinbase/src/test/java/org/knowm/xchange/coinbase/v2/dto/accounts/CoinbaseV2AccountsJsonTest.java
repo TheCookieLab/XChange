@@ -1,13 +1,13 @@
 package org.knowm.xchange.coinbase.v2.dto.accounts;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class CoinbaseV2AccountsJsonTest {
 
@@ -17,13 +17,13 @@ public class CoinbaseV2AccountsJsonTest {
   public void deserializeAccountsResponse() throws Exception {
     InputStream is = CoinbaseV2AccountsJsonTest.class.getResourceAsStream(
         "/org/knowm/xchange/coinbase/dto/account/example-accounts-data.json");
-    assertNotNull("Fixture should be present", is);
+    assertNotNull(is, "Fixture should be present");
 
     CoinbaseV2AccountsResponse response = mapper.readValue(is, CoinbaseV2AccountsResponse.class);
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Pagination should not be null", response.getPagination());
-    assertNotNull("Data list should not be null", response.getData());
-    assertFalse("Data should not be empty", response.getData().isEmpty());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getPagination(), "Pagination should not be null");
+    assertNotNull(response.getData(), "Data list should not be null");
+    assertFalse(response.getData().isEmpty(), "Data should not be empty");
 
     CoinbaseV2Account first = response.getData().get(0);
     assertNotNull(first.getId());

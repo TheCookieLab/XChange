@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import jakarta.ws.rs.QueryParam;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import si.mazi.rescu.Params;
 import si.mazi.rescu.RestInvocation;
 

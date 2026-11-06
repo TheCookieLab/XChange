@@ -1,6 +1,8 @@
 package org.knowm.xchange.kucoin.uta.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 
@@ -49,14 +51,19 @@ class UtaDigestTest {
   }
 
   @Test
-  void nullPassphraseOrSecretYieldsNullEncryption() {
-    assertEquals(null, UtaDigest.encryptPassphrase(null, SECRET));
-    assertEquals(null, UtaDigest.encryptPassphrase("pass", null));
+  void nullOrEmptyPassphraseOrSecretYieldsNullEncryption() {
+    assertNull(UtaDigest.encryptPassphrase(null, SECRET));
+    assertNull(UtaDigest.encryptPassphrase("", SECRET));
+    assertNull(UtaDigest.encryptPassphrase("pass", null));
+    assertNull(UtaDigest.encryptPassphrase("pass", ""));
+    assertNotNull(UtaDigest.encryptPassphrase(" ", SECRET));
+    assertNotNull(UtaDigest.encryptPassphrase("pass", " "));
   }
 
   @Test
-  void createInstanceReturnsNullForBlankSecret() {
-    assertEquals(null, UtaDigest.createInstance(null));
-    assertEquals(null, UtaDigest.createInstance(""));
+  void createInstanceReturnsNullOnlyForNullOrEmptySecret() {
+    assertNull(UtaDigest.createInstance(null));
+    assertNull(UtaDigest.createInstance(""));
+    assertNotNull(UtaDigest.createInstance(" "));
   }
 }

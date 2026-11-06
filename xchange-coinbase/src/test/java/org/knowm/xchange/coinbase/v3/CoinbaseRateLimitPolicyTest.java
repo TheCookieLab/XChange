@@ -1,11 +1,11 @@
 package org.knowm.xchange.coinbase.v3;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -17,7 +17,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
@@ -52,25 +52,18 @@ public class CoinbaseRateLimitPolicyTest {
         boolean authenticated = isAuthenticated(method);
         String key = operationKey(iface, method);
         RateLimitOperation operation = POLICY.classify(new RateLimitRequest(key, authenticated));
-        assertNotNull("unclassified " + iface.getSimpleName() + "." + method.getName() + ": " + key, operation);
-        assertEquals(
-            "replay only for reads: " + key,
-            "GET".equals(httpMethod(method)),
-            operation.isReplayOnRateLimit());
+        assertNotNull(operation, "unclassified " + iface.getSimpleName() + "." + method.getName() + ": " + key);
+        assertEquals("GET".equals(httpMethod(method)), operation.isReplayOnRateLimit(), "replay only for reads: " + key);
         if (authenticated) {
-          assertEquals(
-              key,
-              Map.of(
-                  CoinbaseRateLimitPolicy.USER_HOURLY, 1L, CoinbaseRateLimitPolicy.BROKERAGE_CLIENT, 1L),
-              operation.getRequirements());
+          assertEquals(Map.of(
+              CoinbaseRateLimitPolicy.USER_HOURLY, 1L, CoinbaseRateLimitPolicy.BROKERAGE_CLIENT, 1L), operation.getRequirements(), key);
         } else {
-          assertEquals(
-              key, Map.of(CoinbaseRateLimitPolicy.BROKERAGE_PUBLIC, 1L), operation.getRequirements());
+          assertEquals(Map.of(CoinbaseRateLimitPolicy.BROKERAGE_PUBLIC, 1L), operation.getRequirements(), key);
         }
         checked++;
       }
     }
-    assertTrue("reflection found the interface methods: " + checked, checked >= 60);
+    assertTrue(checked >= 60, "reflection found the interface methods: " + checked);
   }
 
   @Test
@@ -79,7 +72,7 @@ public class CoinbaseRateLimitPolicyTest {
       if (httpMethod(method) == null) {
         continue;
       }
-      assertFalse("Coinbase public methods carry no digest", isAuthenticated(method));
+      assertFalse(isAuthenticated(method), "Coinbase public methods carry no digest");
       RateLimitOperation operation =
           POLICY.classify(new RateLimitRequest(operationKey(Coinbase.class, method), false));
       assertEquals(RateLimitPriority.MARKET_DATA, operation.getPriority());
@@ -111,8 +104,8 @@ public class CoinbaseRateLimitPolicyTest {
     };
     for (String key : keys) {
       RateLimitOperation operation = POLICY.classify(new RateLimitRequest(key, true));
-      assertNotNull(key, operation);
-      assertEquals(key, RateLimitPriority.EXECUTION, operation.getPriority());
+      assertNotNull(operation, key);
+      assertEquals(RateLimitPriority.EXECUTION, operation.getPriority(), key);
     }
   }
 
@@ -134,9 +127,9 @@ public class CoinbaseRateLimitPolicyTest {
     for (String key : keys) {
       for (boolean authenticated : new boolean[] {true, false}) {
         RateLimitOperation operation = POLICY.classify(new RateLimitRequest(key, authenticated));
-        assertNotNull(key, operation);
-        assertEquals(key, RateLimitPriority.MARKET_DATA, operation.getPriority());
-        assertTrue(key, operation.isReplayOnRateLimit());
+        assertNotNull(operation, key);
+        assertEquals(RateLimitPriority.MARKET_DATA, operation.getPriority(), key);
+        assertTrue(operation.isReplayOnRateLimit(), key);
       }
     }
   }
@@ -146,7 +139,7 @@ public class CoinbaseRateLimitPolicyTest {
     RateLimitOperation order =
         POLICY.classify(new RateLimitRequest("POST api/v3/brokerage/orders/some_new_action", true));
     assertEquals(RateLimitPriority.EXECUTION, order.getPriority());
-    assertFalse("a new mutation is never replayed", order.isReplayOnRateLimit());
+    assertFalse(order.isReplayOnRateLimit(), "a new mutation is never replayed");
 
     RateLimitOperation read =
         POLICY.classify(
@@ -181,7 +174,7 @@ public class CoinbaseRateLimitPolicyTest {
       "GET api/v3/other/accounts"
     };
     for (String key : keys) {
-      assertNull(key, POLICY.classify(new RateLimitRequest(key, true)));
+      assertNull(POLICY.classify(new RateLimitRequest(key, true)), key);
     }
   }
 
@@ -225,7 +218,7 @@ public class CoinbaseRateLimitPolicyTest {
     exchange.applySpecification(specification);
     RateLimitContext context = specification.getResilience().getRateLimitContext();
     try {
-      assertNotNull("an enabled policy gets an owned context", context);
+      assertNotNull(context, "an enabled policy gets an owned context");
       assertEquals(
           CoinbaseRateLimitPolicy.VERSION,
           context.diagnostics().getPolicyVersions().get(CoinbaseRateLimitPolicy.NAMESPACE));
@@ -243,9 +236,7 @@ public class CoinbaseRateLimitPolicyTest {
     exchange.applySpecification(specification);
 
     assertFalse(specification.getResilience().isRateLimiterEnabled());
-    assertNull(
-        "a disabled policy creates no enforcing context",
-        specification.getResilience().getRateLimitContext());
+    assertNull(specification.getResilience().getRateLimitContext(), "a disabled policy creates no enforcing context");
   }
 
   @Test

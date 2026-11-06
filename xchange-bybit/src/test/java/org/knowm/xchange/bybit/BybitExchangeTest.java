@@ -1,20 +1,30 @@
 package org.knowm.xchange.bybit;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.github.tomakehurst.wiremock.matching.ContainsPattern;
-import java.io.IOException;
-import org.junit.Test;
+import java.time.Duration;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bybit.config.BybitEnvironment;
 import org.knowm.xchange.bybit.service.BaseWiremockTest;
+import org.knowm.xchange.bybit.service.BybitAccountService;
+import org.knowm.xchange.client.ratelimit.RateLimitBudget;
+import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
+import org.knowm.xchange.client.ratelimit.RateLimitContext;
+import org.knowm.xchange.client.ratelimit.RateLimitDeadline;
+import org.knowm.xchange.client.ratelimit.RateLimitPolicy;
+import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.exceptions.RateLimitTerminatedException;
 
-public class BybitExchangeTest extends BaseWiremockTest {
+class BybitExchangeTest extends BaseWiremockTest {
 
   @Test
-  public void testSymbolLoading() throws IOException {
+  void symbolLoading() throws Exception {
     Exchange bybitExchange = createExchange();
 
     initGetStub(
@@ -79,6 +89,38 @@ public class BybitExchangeTest extends BaseWiremockTest {
     BybitExchange exchange = new BybitExchange();
     exchange.applySpecification(spec);
     assertThat(exchange.getExchangeSpecification().getSslUri()).isEqualTo("http://localhost:8080");
+  }
+
+  @Test
+  void rateLimiterTest() throws Exception {
+    RateLimitPolicy policy =
+        BybitRateLimitPolicy.defaultPolicy()
+            .withBudget(
+                RateLimitBudget.rollingWindow(
+                    BybitRateLimitPolicy.POSITION_SET_LEVERAGE,
+                    ScopeKind.USER,
+                    1,
+                    Duration.ofHours(1)));
+    BybitExchange bybitExchange = createExchange(policy);
+    try (RateLimitContext context =
+        bybitExchange.getExchangeSpecification().getResilience().getRateLimitContext()) {
+      initPostStub("/v5/position/set-leverage", "/setLeverage.json5");
+      BybitAccountService accountService = (BybitAccountService) bybitExchange.getAccountService();
+      FuturesContract instrument = new FuturesContract("ETH/USDT/PERP");
+      assertThat(accountService.setLeverage(instrument, 1)).isTrue();
+
+      Throwable exception =
+          catchThrowable(
+              () ->
+                  RateLimitDeadline.call(
+                      Duration.ofMillis(100), () -> accountService.setLeverage(instrument, 1)));
+      assertThat(exception).isInstanceOf(RateLimitTerminatedException.class);
+      RateLimitTerminatedException terminated = (RateLimitTerminatedException) exception;
+      assertThat(terminated.getReason())
+          .isEqualTo(RateLimitTerminatedException.Reason.DEADLINE_EXCEEDED);
+      assertThat(terminated.getDispatch()).isEqualTo(RateLimitTerminatedException.Dispatch.NOT_SENT);
+      wireMockRule.verify(1, postRequestedFor(urlPathEqualTo("/v5/position/set-leverage")));
+    }
   }
 
   private ExchangeSpecification specWithRemoteMetaDataDisabled() {

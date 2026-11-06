@@ -20,9 +20,9 @@ The following list of authors was automatically generated from the XChange proje
 
     git log --format='%aN' | sort -u
 
+陈晔
 孟义人
 小田謙太郎
-陈晔
 =
 Aaron Jang
 AbstractBike
@@ -77,6 +77,7 @@ Artur M
 artvel
 b00lean
 Baffo32
+Baqirrizvidev
 Bartosz Milczarek
 Bashar Saleh
 belerweb
@@ -116,6 +117,7 @@ Chris Cannell
 Chris Rico
 Christiaan
 Christian Strässle
+claude
 Claus235
 coinlover75
 conspyrosy
@@ -226,6 +228,7 @@ HairyFotr
 Han Changsoo
 hardsky
 harvey.yue
+harveyyue
 hbwhyte
 henry
 Henry Wong
@@ -265,6 +268,7 @@ Jan X Marek
 Jan-Terje Sørensen
 Janosch Gräf
 Jaroslaw Wisniewski
+Jason
 jasonliu119
 JasonnnW3000
 jchoinski
@@ -338,6 +342,7 @@ Krzysiek
 Krzysztof Cieślak
 kubacech
 kubasienki
+kybercryst4l
 kyr7
 Lang Christian-Gabriel
 lapoor
@@ -378,6 +383,7 @@ Martin Kubliniak
 Martin Stachon
 Martin Zdarsky
 martinkyov
+MartinKyovsky
 Marvin W
 Massimiliano Gerardi
 Matej Spiller Muys
@@ -422,7 +428,9 @@ mikhail.petrov
 mikhw
 milczu
 Mindaugas Rolius
+MiroDoan
 Miron Balcerzak
+Miroslav Doan
 Miso Oprendek
 Mladen Markov
 mnapier
@@ -496,6 +504,7 @@ Raphael Vullriede
 rastooo
 renasse
 Richard Flint
+rizer
 rizer1980
 Robert Felker
 Robert Fiser
@@ -627,6 +636,7 @@ Youssef Jradeh
 Yuki INOUE
 Yuriy
 Zach Holmes
+zdary
 Zdenek Dolezal
 zholmes
 Zorge.R

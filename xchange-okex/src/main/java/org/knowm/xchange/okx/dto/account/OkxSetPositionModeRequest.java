@@ -1,5 +1,6 @@
 package org.knowm.xchange.okx.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.ToString;
@@ -14,6 +15,7 @@ public class OkxSetPositionModeRequest {
   private String positionMode;
 
   /** Account level; only required when the account level is 2 or 3. */
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty("acctLv")
   private String accountLevel;
 }

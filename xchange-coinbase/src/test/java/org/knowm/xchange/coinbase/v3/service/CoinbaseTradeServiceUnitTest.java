@@ -1,11 +1,11 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -19,8 +19,8 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
@@ -63,7 +63,7 @@ public class CoinbaseTradeServiceUnitTest {
   private ParamsDigest digest;
   private Exchange exchange;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     exchange = mock(Exchange.class);
     api = mock(CoinbaseAuthenticated.class);
@@ -352,7 +352,7 @@ public class CoinbaseTradeServiceUnitTest {
     Exchange exchange = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class);
     TradeService service = exchange.getTradeService();
 
-    assertNotNull("Trade service should not be null", service);
+    assertNotNull(service, "Trade service should not be null");
   }
 
   @Test
@@ -360,7 +360,7 @@ public class CoinbaseTradeServiceUnitTest {
     Exchange exchange = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class);
     TradeService service = exchange.getTradeService();
 
-    assertNotNull("Service should not be null", service);
+    assertNotNull(service, "Service should not be null");
     assert (service instanceof CoinbaseTradeService);
   }
 
@@ -371,7 +371,7 @@ public class CoinbaseTradeServiceUnitTest {
 
     TradeHistoryParams params = service.createTradeHistoryParams();
 
-    assertNotNull("Trade history params should not be null", params);
+    assertNotNull(params, "Trade history params should not be null");
     assert (params instanceof CoinbaseTradeHistoryParams);
   }
 
@@ -403,10 +403,10 @@ public class CoinbaseTradeServiceUnitTest {
     Collection<Order> orders = service.getOrder(params);
 
     // Then: Should return one order with correct ID
-    assertNotNull("Orders collection should not be null", orders);
-    assertEquals("Should return exactly one order", 1, orders.size());
+    assertNotNull(orders, "Orders collection should not be null");
+    assertEquals(1, orders.size(), "Should return exactly one order");
     Order order = orders.iterator().next();
-    assertEquals("Order ID should match", "order-123", order.getId());
+    assertEquals("order-123", order.getId(), "Order ID should match");
     verify(api, times(1)).getOrder(digest, "order-123");
   }
 
@@ -468,8 +468,8 @@ public class CoinbaseTradeServiceUnitTest {
     Collection<Order> orders = service.getOrder(param1, param2, param3);
 
     // Then: Should return three orders
-    assertNotNull("Orders collection should not be null", orders);
-    assertEquals("Should return exactly three orders", 3, orders.size());
+    assertNotNull(orders, "Orders collection should not be null");
+    assertEquals(3, orders.size(), "Should return exactly three orders");
     verify(api, times(1)).getOrder(digest, "order-1");
     verify(api, times(1)).getOrder(digest, "order-2");
     verify(api, times(1)).getOrder(digest, "order-3");
@@ -488,8 +488,8 @@ public class CoinbaseTradeServiceUnitTest {
     Collection<Order> orders = service.getOrder(params);
 
     // Then: Should return empty collection and not call API
-    assertNotNull("Orders collection should not be null", orders);
-    assertTrue("Orders collection should be empty", orders.isEmpty());
+    assertNotNull(orders, "Orders collection should not be null");
+    assertTrue(orders.isEmpty(), "Orders collection should be empty");
     verify(api, never()).getOrder(digest, null);
   }
 
@@ -537,8 +537,8 @@ public class CoinbaseTradeServiceUnitTest {
     Collection<Order> orders = service.getOrder(param1, param2, param3);
 
     // Then: Should return only the two valid orders
-    assertNotNull("Orders collection should not be null", orders);
-    assertEquals("Should return exactly two orders", 2, orders.size());
+    assertNotNull(orders, "Orders collection should not be null");
+    assertEquals(2, orders.size(), "Should return exactly two orders");
     verify(api, times(1)).getOrder(digest, "order-1");
     verify(api, times(1)).getOrder(digest, "order-3");
     verify(api, never()).getOrder(digest, null);
@@ -554,8 +554,8 @@ public class CoinbaseTradeServiceUnitTest {
     Collection<Order> orders = service.getOrder(new OrderQueryParams[0]);
 
     // Then: Should return empty collection
-    assertNotNull("Orders collection should not be null", orders);
-    assertTrue("Orders collection should be empty", orders.isEmpty());
+    assertNotNull(orders, "Orders collection should not be null");
+    assertTrue(orders.isEmpty(), "Orders collection should be empty");
   }
 
   /**
@@ -586,10 +586,10 @@ public class CoinbaseTradeServiceUnitTest {
     Collection<Order> orders = service.getOrder(param);
 
     // Then: Should work correctly
-    assertNotNull("Orders collection should not be null", orders);
-    assertEquals("Should return exactly one order", 1, orders.size());
+    assertNotNull(orders, "Orders collection should not be null");
+    assertEquals(1, orders.size(), "Should return exactly one order");
     Order order = orders.iterator().next();
-    assertEquals("Order ID should match", "order-xyz", order.getId());
+    assertEquals("order-xyz", order.getId(), "Order ID should match");
     verify(api, times(1)).getOrder(digest, "order-xyz");
   }
 }

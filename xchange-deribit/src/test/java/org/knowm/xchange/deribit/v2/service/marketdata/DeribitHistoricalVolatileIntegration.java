@@ -11,7 +11,7 @@ import org.knowm.xchange.deribit.DeribitIntegrationTestParent;
 import org.knowm.xchange.deribit.v2.DeribitExchange;
 import org.knowm.xchange.deribit.v2.service.DeribitMarketDataService;
 
-public class DeribitHistoricalVolatileIntegration {
+class DeribitHistoricalVolatileIntegration {
 
   private static DeribitExchange exchange;
   private static DeribitMarketDataService deribitMarketDataService;
@@ -28,7 +28,7 @@ public class DeribitHistoricalVolatileIntegration {
   }
 
   @Test
-  public void getHistoricalVol() throws Exception {
+  void getHistoricalVol() throws Exception {
     List<List<BigDecimal>> historyVolatile =
         deribitMarketDataService.getHistoricalVolatility("BTC");
 

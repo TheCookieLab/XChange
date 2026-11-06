@@ -9,7 +9,7 @@ import ch.qos.logback.core.read.ListAppender;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.independentreserve.util.ExchangeEndpoint;
 import org.slf4j.LoggerFactory;
 

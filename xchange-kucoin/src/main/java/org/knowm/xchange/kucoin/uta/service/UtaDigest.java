@@ -1,6 +1,5 @@
 package org.knowm.xchange.kucoin.uta.service;
 
-import com.google.common.base.Strings;
 import jakarta.ws.rs.HeaderParam;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -28,7 +27,7 @@ public class UtaDigest extends BaseParamsDigest {
   }
 
   public static UtaDigest createInstance(String secretKey) {
-    return Strings.isNullOrEmpty(secretKey)
+    return secretKey == null || secretKey.isEmpty()
         ? null
         : new UtaDigest(secretKey.getBytes(StandardCharsets.UTF_8));
   }
@@ -99,10 +98,10 @@ public class UtaDigest extends BaseParamsDigest {
    * @param passphrase the passphrase configured when the API key was created
    * @param secretKey the API secret
    * @return Base64-encoded HMAC-SHA256 of the passphrase keyed with the secret, or {@code null}
-   *     when the passphrase is blank
+   *     when the passphrase or secret is null or empty
    */
   public static String encryptPassphrase(String passphrase, String secretKey) {
-    if (Strings.isNullOrEmpty(passphrase) || Strings.isNullOrEmpty(secretKey)) {
+    if (passphrase == null || passphrase.isEmpty() || secretKey == null || secretKey.isEmpty()) {
       return null;
     }
     try {

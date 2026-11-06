@@ -4,8 +4,8 @@ import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptFundingR
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import info.bitrich.xchangestream.bybit.dto.BybitResponse;
 import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderBookGap;
 import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderbook;
@@ -20,14 +20,14 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicReference;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.dto.marketdata.candles.BybitCandleStick;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.*;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,15 +41,12 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   public static final String ORDERBOOK = "orderbook.";
   public static final String TICKER = "tickers.";
   public static final String CANDLE = "kline.";
+  private static final OrderBook NO_BOOK =
+      new OrderBook(null, Collections.emptyList(), Collections.emptyList(), false);
 
-  private final Map<String, OrderBook> orderBookMap = new HashMap<>();
-  /**
-   * Active subscriber counts per instrument and depth, registered on subscription and released on
-   * disposal. The deepest subscribed depth governs the shared book; reference counting keeps a
-   * depth registered while any of its duplicate subscribers remains active.
-   */
-  private final Map<String, Map<Integer, AtomicInteger>> orderBookDepthSubscribersByInstrument =
-      new ConcurrentHashMap<>();
+  /** Active order-book channels by symbol and depth, shared by duplicate subscribers. */
+  private final Map<String, NavigableMap<Integer, OrderBookChannel>> orderBookChannels =
+      new HashMap<>();
   private final Map<Instrument, PublishSubject<List<OrderBookUpdate>>>
       orderBookUpdatesSubscriptions;
 
@@ -69,149 +66,168 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
    * 200 data, push frequency: 100ms Level 500 data, push frequency: 100ms Spot: Level 1 data, push
    * frequency: 10ms Level 50 data, push frequency: 20ms Level 200 data, push frequency: 200ms
    *
-   * @param args - orderbook depth or several depths
+   * @param args order-book depth or comma-separated depths; the deepest active depth for the
+   *     symbol governs the shared book across subscriptions
    */
   @Override
   public Observable<OrderBook> getOrderBook(Instrument instrument, Object... args) {
     List<Integer> depths = new ArrayList<>();
-    List<AtomicLong> orderBookUpdateIdPrev = new ArrayList<>();
     if (args.length > 0 && args[0] != null) {
-      depths =
-          Arrays.stream(args[0].toString().split(","))
-              .map(String::trim) // Optional: remove leading/trailing whitespace
-              .map(Integer::parseInt)
-              .collect(Collectors.toList());
-      // highest first, to receive snapshot
-      depths.sort(Comparator.reverseOrder());
+      try {
+        for (String value : args[0].toString().split(",", -1)) {
+          depths.add(Integer.parseInt(value.trim()));
+        }
+      } catch (NumberFormatException e) {
+        throw new ExchangeException(
+            "Order book depth must be an integer or comma-separated integers");
+      }
     } else {
       depths.add(50);
     }
+    depths.sort(Comparator.reverseOrder());
+
     String bybitSymbol = convertToBybitSymbol(instrument);
-    String orderBookMapId = ORDERBOOK + bybitSymbol;
-    List<Observable<OrderBook>> observableList = new ArrayList<>();
+    List<Observable<OrderBook>> streams = new ArrayList<>(depths.size());
     for (int i = 0; i < depths.size(); i++) {
-      orderBookUpdateIdPrev.add(new AtomicLong());
       int depth = depths.get(i);
-      String channelUniqueId = ORDERBOOK + depth + "." + bybitSymbol;
-      int finalI = i;
-      observableList.add(
-          streamingService
-              .subscribeChannel(channelUniqueId)
-              .doOnSubscribe(disposable -> registerOrderBookDepth(bybitSymbol, depth))
-              .doOnDispose(() -> unregisterOrderBookDepth(bybitSymbol, depth, orderBookMapId))
-              .map(
-                  jsonNode -> {
-                    try {
-                      BybitOrderbook bybitOrderBooks =
-                          mapper.treeToValue(jsonNode, BybitOrderbook.class);
-                      String type = bybitOrderBooks.getDataType();
-                      if (type.equalsIgnoreCase("snapshot")) {
-                        orderBookUpdateIdPrev.get(finalI).set(bybitOrderBooks.getData().getU());
-                        if (isDeepestChannel(bybitSymbol, depth)) {
-                          // The deepest channel's snapshot is the authoritative full book;
-                          // rebuilding from a shallower snapshot would truncate it.
-                          OrderBook orderBook =
-                              BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
-                          orderBookMap.put(orderBookMapId, orderBook);
-                          return orderBook;
-                        }
-                        // Shallower channel: its snapshot only rebases its own sequence; the
-                        // deepest channel's book keeps governing the shared book.
-                        return orderBookMap.getOrDefault(
-                            orderBookMapId,
-                            new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false));
-                      } else if (type.equalsIgnoreCase("delta")) {
-                        // Only the governing (deepest) channel's deltas may mutate the shared
-                        // book. Its delta stream is a superset of every shallower channel's (all
-                        // level changes within the deeper range), so applying shallower deltas
-                        // too would be redundant AND could regress the book: the channels carry
-                        // independent u-sequences, so a delayed deeper-channel update could
-                        // overwrite a newer shallower-channel value for an overlapping price.
-                        if (!isDeepestChannel(bybitSymbol, depth)) {
-                          return new OrderBook(
-                              null, Lists.newArrayList(), Lists.newArrayList(), false);
-                        }
-                        return applyOrderBookDeltaSnapshot(
-                            orderBookMapId,
-                            instrument,
-                            channelUniqueId,
-                            bybitOrderBooks,
-                            orderBookUpdateIdPrev.get(finalI));
-                      }
-                      return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
-                    } catch (IllegalStateException e) {
-                      LOG.warn(
-                          "Resubscribing {} channel after order book recovery {}",
-                          channelUniqueId,
-                          e.getMessage());
-                      // Rebuild from a fresh snapshot: only a gap on the deepest channel drops the
-                      // shared book; a shallower channel resubscribes without truncating it.
-                      if (isDeepestChannel(bybitSymbol, depth)) {
-                        orderBookMap.remove(orderBookMapId);
-                      }
-                      if (streamingService.isSocketOpen()) {
-                        streamingService.sendMessage(
-                            streamingService.getUnsubscribeMessage(channelUniqueId, args));
-                        streamingService.sendMessage(
-                            streamingService.getSubscribeMessage(channelUniqueId, args));
-                      }
-                      return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
+      streams.add(subscribeOrderBookChannel(instrument, bybitSymbol, depth, args, i == 0));
+    }
+    return Observable.merge(streams);
+  }
+
+  private Observable<OrderBook> subscribeOrderBookChannel(
+      Instrument instrument, String bybitSymbol, int depth, Object[] args, boolean emitBook) {
+    return Observable.defer(
+        () -> {
+          OrderBookChannel channel;
+          synchronized (orderBookChannels) {
+            NavigableMap<Integer, OrderBookChannel> depths =
+                orderBookChannels.computeIfAbsent(bybitSymbol, key -> new TreeMap<>());
+            channel =
+                depths.computeIfAbsent(
+                    depth, key -> new OrderBookChannel(instrument, bybitSymbol, depth, args));
+            channel.subscribers++;
+            if (emitBook) {
+              channel.bookSubscribers++;
+            }
+          }
+          Observable<OrderBook> values =
+              emitBook ? channel.orderBooks : channel.orderBooks.ignoreElements().toObservable();
+          return values.doFinally(
+              () -> {
+                synchronized (orderBookChannels) {
+                  if (emitBook) {
+                    channel.bookSubscribers--;
+                  }
+                  if (--channel.subscribers == 0) {
+                    NavigableMap<Integer, OrderBookChannel> depths =
+                        orderBookChannels.get(bybitSymbol);
+                    depths.remove(depth);
+                    if (depths.isEmpty()) {
+                      orderBookChannels.remove(bybitSymbol);
                     }
+                  }
+                }
+              });
+        });
+  }
+
+  private OrderBook governingBook(String bybitSymbol) {
+    synchronized (orderBookChannels) {
+      NavigableMap<Integer, OrderBookChannel> depths = orderBookChannels.get(bybitSymbol);
+      return depths == null || depths.isEmpty() ? null : depths.lastEntry().getValue().book.get();
+    }
+  }
+
+  private final class OrderBookChannel {
+    private final Observable<JsonNode> messages;
+    private final Observable<OrderBook> orderBooks;
+    private final AtomicReference<OrderBook> book = new AtomicReference<>();
+    private int subscribers;
+    // Compound requests subscribe to shallower channels without emitting their books.
+    private int bookSubscribers;
+
+    private OrderBookChannel(
+        Instrument instrument, String bybitSymbol, int depth, Object[] args) {
+      String channelUniqueId = ORDERBOOK + depth + "." + bybitSymbol;
+      messages = streamingService.subscribeChannel(channelUniqueId).share();
+      orderBooks =
+          Observable.defer(
+                  () -> {
+                    AtomicLong previousUpdateId = new AtomicLong();
+                    return messages.map(
+                        jsonNode -> {
+                          boolean governing;
+                          boolean emitEvents;
+                          synchronized (orderBookChannels) {
+                            NavigableMap<Integer, OrderBookChannel> depths =
+                                orderBookChannels.get(bybitSymbol);
+                            governing =
+                                depths != null
+                                    && !depths.isEmpty()
+                                    && depths.lastEntry().getValue() == this;
+                            emitEvents = governing && bookSubscribers > 0;
+                          }
+                          try {
+                            BybitOrderbook update =
+                                mapper.treeToValue(jsonNode, BybitOrderbook.class);
+                            String type = update.getDataType();
+                            if (type.equalsIgnoreCase("snapshot")) {
+                              previousUpdateId.set(update.getData().getU());
+                              OrderBook snapshot =
+                                  BybitStreamAdapters.adaptOrderBook(update, instrument);
+                              book.set(snapshot);
+                              if (governing) {
+                                return snapshot;
+                              }
+                              OrderBook current = governingBook(bybitSymbol);
+                              return current != null ? current : NO_BOOK;
+                            } else if (type.equalsIgnoreCase("delta")) {
+                              if (!emitEvents) {
+                                return NO_BOOK;
+                              }
+                              return applyOrderBookDeltaSnapshot(
+                                  book, instrument, channelUniqueId, update, previousUpdateId);
+                            }
+                            return NO_BOOK;
+                          } catch (IllegalStateException e) {
+                            book.set(null);
+                            if (emitEvents) {
+                              LOG.warn(
+                                  "Resubscribing {} channel after order book recovery {}",
+                                  channelUniqueId,
+                                  e.getMessage());
+                              if (streamingService.isSocketOpen()) {
+                                streamingService.sendMessage(
+                                    streamingService.getUnsubscribeMessage(channelUniqueId, args));
+                                streamingService.sendMessage(
+                                    streamingService.getSubscribeMessage(channelUniqueId, args));
+                              }
+                            }
+                            return NO_BOOK;
+                          }
+                        });
                   })
+              .replay(1)
+              .refCount()
+              // A replayed book must still belong to the currently governing depth.
               .filter(
-                  orderBook -> !orderBook.getBids().isEmpty() && !orderBook.getAsks().isEmpty()));
-    }
-    return Observable.merge(observableList);
-  }
-
-  /** True when this channel carries the deepest subscribed snapshot for the instrument. */
-  private boolean isDeepestChannel(String bybitSymbol, int depth) {
-    Map<Integer, AtomicInteger> registeredDepths =
-        orderBookDepthSubscribersByInstrument.get(bybitSymbol);
-    if (registeredDepths == null || registeredDepths.isEmpty()) {
-      return true;
-    }
-    int maxSubscribedDepth = 0;
-    for (Integer subscribedDepth : registeredDepths.keySet()) {
-      maxSubscribedDepth = Math.max(maxSubscribedDepth, subscribedDepth);
-    }
-    return depth >= maxSubscribedDepth;
-  }
-
-  private void registerOrderBookDepth(String bybitSymbol, int depth) {
-    orderBookDepthSubscribersByInstrument
-        .computeIfAbsent(bybitSymbol, key -> new ConcurrentHashMap<>())
-        .computeIfAbsent(depth, key -> new AtomicInteger())
-        .incrementAndGet();
-  }
-
-  private void unregisterOrderBookDepth(String bybitSymbol, int depth, String orderBookMapId) {
-    Map<Integer, AtomicInteger> registeredDepths =
-        orderBookDepthSubscribersByInstrument.get(bybitSymbol);
-    if (registeredDepths == null) {
-      return;
-    }
-    AtomicInteger subscriberCount = registeredDepths.get(depth);
-    if (subscriberCount != null && subscriberCount.decrementAndGet() <= 0) {
-      registeredDepths.remove(depth);
-      if (registeredDepths.isEmpty()) {
-        orderBookDepthSubscribersByInstrument.remove(bybitSymbol);
-        orderBookMap.remove(orderBookMapId);
-      }
+                  orderBook ->
+                      orderBook == governingBook(bybitSymbol)
+                          && !orderBook.getBids().isEmpty()
+                          && !orderBook.getAsks().isEmpty());
     }
   }
 
   private OrderBook applyOrderBookDeltaSnapshot(
-      String orderBookMapId,
+      AtomicReference<OrderBook> book,
       Instrument instrument,
       String channelUniqueId,
       BybitOrderbook bybitOrderBookUpdate,
       AtomicLong orderBookUpdateIdPrev) {
-    OrderBook orderBook = orderBookMap.getOrDefault(orderBookMapId, null);
+    OrderBook orderBook = book.get();
     if (orderBook == null) {
-      // Delta without a provable snapshot base: continuity is unprovable, surface the gap and
-      // force a fresh snapshot rebuild instead of silently dropping the update.
-      LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
+      LOG.error("Failed to get order book snapshot, channel={}", channelUniqueId);
       orderBookGapSubject.onNext(
           new BybitOrderBookGap(
               channelUniqueId,
@@ -246,11 +262,14 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
     } else {
       long expected = orderBookUpdateIdPrev.get();
       long actual = bybitOrderBookUpdate.getData().getU();
+      // Invalidate the replay before gap observers can attach another subscriber.
+      book.set(null);
       LOG.error(
           "orderBookUpdate id sequence failed, expected {}, in fact {}",
           expected,
           actual);
-      orderBookGapSubject.onNext(new BybitOrderBookGap(channelUniqueId, expected, actual, "sequence"));
+      orderBookGapSubject.onNext(
+          new BybitOrderBookGap(channelUniqueId, expected, actual, "sequence"));
       throw new IllegalStateException("orderBookUpdate id sequence failed");
     }
   }

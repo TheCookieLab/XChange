@@ -1,5 +1,6 @@
 package org.knowm.xchange.okx.dto.trade;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -47,6 +48,7 @@ public class OkxOrderRequest {
   @JsonProperty("px")
   private String price;
 
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   @JsonProperty("reduceOnly")
   private boolean reducePosition;
 

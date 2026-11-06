@@ -6,9 +6,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import io.github.resilience4j.ratelimiter.RateLimiter;
@@ -16,8 +16,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.IOUtils;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.BybitResilience;
 import org.knowm.xchange.bybit.dto.BybitCategory;
@@ -43,7 +43,7 @@ public class BybitRateLimitServiceTest extends BaseWiremockTest {
 
   private BybitExchange exchange;
 
-  @After
+  @AfterEach
   public void closeRateLimitContext() {
     if (exchange == null) {
       return;
@@ -73,7 +73,7 @@ public class BybitRateLimitServiceTest extends BaseWiremockTest {
 
     assertEquals(1, result.getResult().getList().size());
     wireMockRule.verify(1, getRequestedFor(urlPathEqualTo(ORDER_REALTIME)));
-    assertEquals("one admission for one wire attempt", 1, context().diagnostics().getAdmissions());
+    assertEquals(1, context().diagnostics().getAdmissions(), "one admission for one wire attempt");
     assertEquals(0, context().diagnostics().getRetries());
   }
 
@@ -109,9 +109,9 @@ public class BybitRateLimitServiceTest extends BaseWiremockTest {
     assertEquals(1, result.getResult().getList().size());
     wireMockRule.verify(2, getRequestedFor(urlPathEqualTo(ORDER_REALTIME)));
     assertEquals(
-        "every wire attempt was admitted exactly once by the core",
         2,
-        context().diagnostics().getAdmissions());
+        context().diagnostics().getAdmissions(),
+        "every wire attempt was admitted exactly once by the core");
     assertEquals(1, context().diagnostics().getRetries());
     assertEquals(1, context().diagnostics().getRatePressureEvents());
   }
@@ -181,9 +181,9 @@ public class BybitRateLimitServiceTest extends BaseWiremockTest {
     assertEquals(1, result.getResult().getList().size());
     wireMockRule.verify(2, getRequestedFor(urlPathEqualTo(ORDER_REALTIME)));
     assertEquals(
-        "every wire attempt was admitted exactly once by the core",
         2,
-        context().diagnostics().getAdmissions());
+        context().diagnostics().getAdmissions(),
+        "every wire attempt was admitted exactly once by the core");
     assertEquals(1, context().diagnostics().getRetries());
     assertEquals(1, context().diagnostics().getRatePressureEvents());
   }
@@ -255,13 +255,13 @@ public class BybitRateLimitServiceTest extends BaseWiremockTest {
             .rateLimiters()
             .rateLimiter(BybitResilience.ORDER_CREATE_LINEAR_AND_INVERSE_RATE_LIMITER);
     assertEquals(
-        "the resilience4j create limiter was not consumed by the REST call",
         legacyCreate.getRateLimiterConfig().getLimitForPeriod(),
-        legacyCreate.getMetrics().getAvailablePermissions());
+        legacyCreate.getMetrics().getAvailablePermissions(),
+        "the resilience4j create limiter was not consumed by the REST call");
     assertTrue(
-        "legacy global limiter no longer registered",
         exchange.getResilienceRegistries().rateLimiters().getAllRateLimiters().stream()
-            .noneMatch(limiter -> "global".equals(limiter.getName())));
+            .noneMatch(limiter -> "global".equals(limiter.getName())),
+        "legacy global limiter no longer registered");
     assertEquals(2, context().diagnostics().getAdmissions());
   }
 }

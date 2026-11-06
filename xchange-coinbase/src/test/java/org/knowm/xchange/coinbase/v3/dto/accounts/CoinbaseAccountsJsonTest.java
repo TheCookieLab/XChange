@@ -1,18 +1,18 @@
 package org.knowm.xchange.coinbase.v3.dto.accounts;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for CoinbaseAccountsResponse JSON parsing.
@@ -29,33 +29,33 @@ public class CoinbaseAccountsJsonTest {
     
     CoinbaseAccountsResponse response = mapper.readValue(is, CoinbaseAccountsResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Accounts should not be null", response.getAccounts());
-    assertEquals("Should have 2 accounts", 2, response.getAccounts().size());
-    assertEquals("Size should match", Integer.valueOf(2), response.getSize());
-    assertFalse("Has next should be false", response.getHasNext());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getAccounts(), "Accounts should not be null");
+    assertEquals(2, response.getAccounts().size(), "Should have 2 accounts");
+    assertEquals(Integer.valueOf(2), response.getSize(), "Size should match");
+    assertFalse(response.getHasNext(), "Has next should be false");
     
     // Verify first account (BTC)
     CoinbaseAccount btcAccount = response.getAccounts().get(0);
-    assertEquals("BTC account UUID should match", "acc-123-456-789", btcAccount.getUuid());
-    assertEquals("BTC account name should match", "BTC Wallet", btcAccount.getName());
-    assertEquals("BTC account currency should match", "BTC", btcAccount.getCurrency());
+    assertEquals("acc-123-456-789", btcAccount.getUuid(), "BTC account UUID should match");
+    assertEquals("BTC Wallet", btcAccount.getName(), "BTC account name should match");
+    assertEquals("BTC", btcAccount.getCurrency(), "BTC account currency should match");
     
     CoinbaseAmount btcBalance = btcAccount.getBalance();
-    assertNotNull("BTC balance should not be null", btcBalance);
-    assertEquals("BTC balance value should match", new BigDecimal("1.5"), btcBalance.getValue());
-    assertEquals("BTC balance currency should match", "BTC", btcBalance.getCurrency());
+    assertNotNull(btcBalance, "BTC balance should not be null");
+    assertEquals(new BigDecimal("1.5"), btcBalance.getValue(), "BTC balance value should match");
+    assertEquals("BTC", btcBalance.getCurrency(), "BTC balance currency should match");
     
     // Verify second account (USD)
     CoinbaseAccount usdAccount = response.getAccounts().get(1);
-    assertEquals("USD account UUID should match", "acc-987-654-321", usdAccount.getUuid());
-    assertEquals("USD account name should match", "USD Wallet", usdAccount.getName());
-    assertEquals("USD account currency should match", "USD", usdAccount.getCurrency());
+    assertEquals("acc-987-654-321", usdAccount.getUuid(), "USD account UUID should match");
+    assertEquals("USD Wallet", usdAccount.getName(), "USD account name should match");
+    assertEquals("USD", usdAccount.getCurrency(), "USD account currency should match");
     
     CoinbaseAmount usdBalance = usdAccount.getBalance();
-    assertNotNull("USD balance should not be null", usdBalance);
-    assertEquals("USD balance value should match", new BigDecimal("10000.50"), usdBalance.getValue());
-    assertEquals("USD balance currency should match", "USD", usdBalance.getCurrency());
+    assertNotNull(usdBalance, "USD balance should not be null");
+    assertEquals(new BigDecimal("10000.50"), usdBalance.getValue(), "USD balance value should match");
+    assertEquals("USD", usdBalance.getCurrency(), "USD balance currency should match");
   }
 
   @Test
@@ -72,10 +72,10 @@ public class CoinbaseAccountsJsonTest {
 
     CoinbaseAccount account = mapper.readValue(json, CoinbaseAccount.class);
 
-    assertNotNull("Account should not be null", account);
-    assertEquals("UUID should match", "test-uuid", account.getUuid());
-    assertEquals("Name should match", "Test Account", account.getName());
-    assertEquals("Currency should match", "BTC", account.getCurrency());
+    assertNotNull(account, "Account should not be null");
+    assertEquals("test-uuid", account.getUuid(), "UUID should match");
+    assertEquals("Test Account", account.getName(), "Name should match");
+    assertEquals("BTC", account.getCurrency(), "Currency should match");
   }
 
   @Test
@@ -83,11 +83,8 @@ public class CoinbaseAccountsJsonTest {
     CoinbaseAmount hold =
         accountWithHold("{\"value\": \"0.123456789012345678\", \"currency\": \"BTC\"}").getHold();
 
-    assertEquals(
-        "Hold value should keep its precision",
-        new BigDecimal("0.123456789012345678"),
-        hold.getValue());
-    assertEquals("Hold currency should match", "BTC", hold.getCurrency());
+    assertEquals(new BigDecimal("0.123456789012345678"), hold.getValue(), "Hold value should keep its precision");
+    assertEquals("BTC", hold.getCurrency(), "Hold currency should match");
   }
 
   @Test
@@ -95,21 +92,19 @@ public class CoinbaseAccountsJsonTest {
     CoinbaseAmount hold =
         accountWithHold("{\"value\": \"0\", \"currency\": \"BTC\"}").getHold();
 
-    assertNotNull("A reported zero hold should be kept", hold);
-    assertEquals("Hold should be zero", 0, hold.getValue().signum());
+    assertNotNull(hold, "A reported zero hold should be kept");
+    assertEquals(0, hold.getValue().signum(), "Hold should be zero");
   }
 
   @Test
   public void testDeserializeAccountWithoutHoldLeavesItNull() throws Exception {
-    assertNull("An explicit null hold proves nothing", accountWithHold("null").getHold());
-    assertNull(
-        "An omitted hold proves nothing",
-        mapper
-            .readValue(
-                "{\"uuid\": \"test-uuid\", \"currency\": \"BTC\", "
-                    + "\"available_balance\": {\"value\": \"1\", \"currency\": \"BTC\"}}",
-                CoinbaseAccount.class)
-            .getHold());
+    assertNull(accountWithHold("null").getHold(), "An explicit null hold proves nothing");
+    assertNull(mapper
+        .readValue(
+            "{\"uuid\": \"test-uuid\", \"currency\": \"BTC\", "
+                + "\"available_balance\": {\"value\": \"1\", \"currency\": \"BTC\"}}",
+            CoinbaseAccount.class)
+        .getHold(), "An omitted hold proves nothing");
   }
 
   @Test
@@ -122,7 +117,7 @@ public class CoinbaseAccountsJsonTest {
           "{\"value\": \"not-a-number\", \"currency\": \"BTC\"}",
           "\"3\""
         }) {
-      assertThrows(malformed, JsonMappingException.class, () -> accountWithHold(malformed));
+      assertThrows(JsonMappingException.class, () -> accountWithHold(malformed), malformed);
     }
   }
 
@@ -143,9 +138,9 @@ public class CoinbaseAccountsJsonTest {
 
     CoinbaseAmount amount = mapper.readValue(json, CoinbaseAmount.class);
 
-    assertNotNull("Amount should not be null", amount);
-    assertEquals("Value should match", new BigDecimal("123456789.123456789"), amount.getValue());
-    assertEquals("Currency should match", "USD", amount.getCurrency());
+    assertNotNull(amount, "Amount should not be null");
+    assertEquals(new BigDecimal("123456789.123456789"), amount.getValue(), "Value should match");
+    assertEquals("USD", amount.getCurrency(), "Currency should match");
   }
 
   @Test
@@ -157,9 +152,9 @@ public class CoinbaseAccountsJsonTest {
 
     CoinbaseAmount amount = mapper.readValue(json, CoinbaseAmount.class);
 
-    assertNotNull("Amount should not be null", amount);
-    assertEquals("Value should be zero", BigDecimal.ZERO.compareTo(amount.getValue()), 0);
-    assertEquals("Currency should match", "BTC", amount.getCurrency());
+    assertNotNull(amount, "Amount should not be null");
+    assertEquals(BigDecimal.ZERO.compareTo(amount.getValue()), 0, "Value should be zero");
+    assertEquals("BTC", amount.getCurrency(), "Currency should match");
   }
 }
 

@@ -1,10 +1,11 @@
 package org.knowm.xchange.coinbase.v3.dto.pricebook;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for CoinbasePriceBook.
@@ -19,11 +20,11 @@ public class CoinbasePriceBookTest {
     String json = "{\"product_id\": \"BTC-USD\", \"time\": \"2024-01-01T00:00:00Z\"}";
     CoinbasePriceBook priceBook = mapper.readValue(json, CoinbasePriceBook.class);
 
-    assertNotNull("PriceBook should not be null", priceBook);
-    assertNotNull("Bids list should not be null", priceBook.getBids());
-    assertNotNull("Asks list should not be null", priceBook.getAsks());
-    assertTrue("Bids list should be empty", priceBook.getBids().isEmpty());
-    assertTrue("Asks list should be empty", priceBook.getAsks().isEmpty());
+    assertNotNull(priceBook, "PriceBook should not be null");
+    assertNotNull(priceBook.getBids(), "Bids list should not be null");
+    assertNotNull(priceBook.getAsks(), "Asks list should not be null");
+    assertTrue(priceBook.getBids().isEmpty(), "Bids list should be empty");
+    assertTrue(priceBook.getAsks().isEmpty(), "Asks list should be empty");
   }
 
   @Test
@@ -31,29 +32,27 @@ public class CoinbasePriceBookTest {
     String json = "{\"product_id\": \"BTC-USD\", \"bids\": [], \"asks\": [], \"time\": \"2024-01-01T00:00:00Z\"}";
     CoinbasePriceBook priceBook = mapper.readValue(json, CoinbasePriceBook.class);
 
-    assertNotNull("PriceBook should not be null", priceBook);
-    assertNotNull("Bids list should not be null", priceBook.getBids());
-    assertNotNull("Asks list should not be null", priceBook.getAsks());
-    assertTrue("Bids list should be empty", priceBook.getBids().isEmpty());
-    assertTrue("Asks list should be empty", priceBook.getAsks().isEmpty());
+    assertNotNull(priceBook, "PriceBook should not be null");
+    assertNotNull(priceBook.getBids(), "Bids list should not be null");
+    assertNotNull(priceBook.getAsks(), "Asks list should not be null");
+    assertTrue(priceBook.getBids().isEmpty(), "Bids list should be empty");
+    assertTrue(priceBook.getAsks().isEmpty(), "Asks list should be empty");
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testBidsReturnsImmutableList() throws Exception {
     String json = "{\"product_id\": \"BTC-USD\", \"bids\": [], \"asks\": [], \"time\": \"2024-01-01T00:00:00Z\"}";
     CoinbasePriceBook priceBook = mapper.readValue(json, CoinbasePriceBook.class);
 
-    // Should throw UnsupportedOperationException
-    priceBook.getBids().add(null);
+    assertThrows(UnsupportedOperationException.class, () -> priceBook.getBids().add(null));
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testAsksReturnsImmutableList() throws Exception {
     String json = "{\"product_id\": \"BTC-USD\", \"bids\": [], \"asks\": [], \"time\": \"2024-01-01T00:00:00Z\"}";
     CoinbasePriceBook priceBook = mapper.readValue(json, CoinbasePriceBook.class);
 
-    // Should throw UnsupportedOperationException
-    priceBook.getAsks().add(null);
+    assertThrows(UnsupportedOperationException.class, () -> priceBook.getAsks().add(null));
   }
 }
 

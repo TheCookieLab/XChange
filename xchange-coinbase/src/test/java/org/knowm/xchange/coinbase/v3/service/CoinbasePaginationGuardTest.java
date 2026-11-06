@@ -1,9 +1,9 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -18,7 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
@@ -500,7 +500,7 @@ public class CoinbasePaginationGuardTest {
     assertEquals(1, service.listOrdersBounded(openStatuses, null).size());
     assertEquals(openStatuses.size(), requestedStatuses.size());
     for (List<String> statuses : requestedStatuses) {
-      assertEquals("each request must carry exactly one order_status value", 1, statuses.size());
+      assertEquals(1, statuses.size(), "each request must carry exactly one order_status value");
     }
     assertEquals(
         openStatuses,

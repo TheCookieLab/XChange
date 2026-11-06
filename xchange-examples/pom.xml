@@ -35,12 +35,7 @@
             <artifactId>xchange-binance</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- XChange BitcoinAverage support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-bitcoinaverage</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <!-- XChange Bitcoinde support -->
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -163,12 +158,6 @@
             <artifactId>xchange-independentreserve</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- XChange ItBit exchange support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-itbit</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <!-- XChange Kraken support -->
         <dependency>
@@ -218,18 +207,7 @@
             <artifactId>xchange-paymium</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- XChange Poloniex exchange support -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-poloniex</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>xchange-ripple</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>xchange-stream-coinbase</artifactId>
@@ -275,11 +253,6 @@
                     <artifactId>junit-jupiter</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
         </dependency>
 
     </dependencies>

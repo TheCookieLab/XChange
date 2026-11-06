@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.mexc.v3.BaseMexcV3WiremockTest;
 import org.knowm.xchange.mexc.v3.dto.account.MexcV3ListenKey;

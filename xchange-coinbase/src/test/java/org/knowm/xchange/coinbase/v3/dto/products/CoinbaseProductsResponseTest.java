@@ -1,11 +1,12 @@
 package org.knowm.xchange.coinbase.v3.dto.products;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** Unit tests for preserving the required Coinbase products member. */
 public class CoinbaseProductsResponseTest {
@@ -17,8 +18,8 @@ public class CoinbaseProductsResponseTest {
     String json = "{}";
     CoinbaseProductsResponse response = mapper.readValue(json, CoinbaseProductsResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNull("Missing products must remain distinguishable from an empty catalog", response.getProducts());
+    assertNotNull(response, "Response should not be null");
+    assertNull(response.getProducts(), "Missing products must remain distinguishable from an empty catalog");
   }
 
   @Test
@@ -26,18 +27,17 @@ public class CoinbaseProductsResponseTest {
     String json = "{\"products\": []}";
     CoinbaseProductsResponse response = mapper.readValue(json, CoinbaseProductsResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Products list should not be null", response.getProducts());
-    assertTrue("Products list should be empty", response.getProducts().isEmpty());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getProducts(), "Products list should not be null");
+    assertTrue(response.getProducts().isEmpty(), "Products list should be empty");
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testReturnsImmutableList() throws Exception {
     String json = "{\"products\": []}";
     CoinbaseProductsResponse response = mapper.readValue(json, CoinbaseProductsResponse.class);
 
-    // Should throw UnsupportedOperationException
-    response.getProducts().add(null);
+    assertThrows(UnsupportedOperationException.class, () -> response.getProducts().add(null));
   }
 }
 

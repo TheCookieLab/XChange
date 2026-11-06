@@ -1,16 +1,16 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.List;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
@@ -58,7 +58,7 @@ public class MarketDataServiceSandboxIntegration {
   static CoinbaseExchange exchange;
   static CoinbaseMarketDataService marketDataService;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     ExchangeSpecification spec = CoinbaseTestUtils.createSandboxSpecificationWithCredentials();
     exchange = (CoinbaseExchange) ExchangeFactory.INSTANCE.createExchange(spec);
@@ -70,13 +70,13 @@ public class MarketDataServiceSandboxIntegration {
     try {
       List<CoinbasePriceBook> priceBooks = marketDataService.getBestBidAsk(CurrencyPair.ETH_USD);
       
-      assertNotNull("Price books should not be null", priceBooks);
-      assertEquals("Should return one price book", 1, priceBooks.size());
+      assertNotNull(priceBooks, "Price books should not be null");
+      assertEquals(1, priceBooks.size(), "Should return one price book");
       
       CoinbasePriceBook priceBook = priceBooks.get(0);
-      assertNotNull("Product ID should not be null", priceBook.getProductId());
-      assertNotNull("Bids should not be null", priceBook.getBids());
-      assertNotNull("Asks should not be null", priceBook.getAsks());
+      assertNotNull(priceBook.getProductId(), "Product ID should not be null");
+      assertNotNull(priceBook.getBids(), "Bids should not be null");
+      assertNotNull(priceBook.getAsks(), "Asks should not be null");
     } catch (Exception e) {
       System.out.println("Best bid/ask not fully supported in sandbox (expected)");
     }
@@ -88,8 +88,8 @@ public class MarketDataServiceSandboxIntegration {
       List<CoinbasePriceBook> priceBooks = marketDataService.getBestBidAsk(Currency.BTC,
           Currency.USD);
       
-      assertNotNull("Price books should not be null", priceBooks);
-      assertEquals("Should return one price book", 1, priceBooks.size());
+      assertNotNull(priceBooks, "Price books should not be null");
+      assertEquals(1, priceBooks.size(), "Should return one price book");
     } catch (Exception e) {
       System.out.println("Best bid/ask not fully supported in sandbox (expected)");
     }
@@ -101,12 +101,12 @@ public class MarketDataServiceSandboxIntegration {
       Instrument currencyPair = CurrencyPair.ETH_USD;
       Trades trades = marketDataService.getTrades(currencyPair, 1);
 
-      assertNotNull("Trades should not be null", trades);
-      assertNotNull("Trades list should not be null", trades.getTrades());
+      assertNotNull(trades, "Trades should not be null");
+      assertNotNull(trades.getTrades(), "Trades list should not be null");
       
       if (!trades.getTrades().isEmpty()) {
-        assertEquals("Should respect limit", 1, trades.getTrades().size());
-        assertEquals("Instrument should match", currencyPair, trades.getTrades().get(0).getInstrument());
+        assertEquals(1, trades.getTrades().size(), "Should respect limit");
+        assertEquals(currencyPair, trades.getTrades().get(0).getInstrument(), "Instrument should match");
       }
     } catch (Exception e) {
       System.out.println("Market trades not fully supported in sandbox (expected)");
@@ -121,15 +121,14 @@ public class MarketDataServiceSandboxIntegration {
       CandleStickData candleStickData = marketDataService.getCandleStickData(currencyPair,
           new DefaultCandleStickParamWithLimit(null, null, 86_400, limit));
 
-      assertNotNull("CandleStickData should not be null", candleStickData);
-      assertEquals("Instrument should match", currencyPair, candleStickData.getInstrument());
+      assertNotNull(candleStickData, "CandleStickData should not be null");
+      assertEquals(currencyPair, candleStickData.getInstrument(), "Instrument should match");
       
       if (!candleStickData.getCandleSticks().isEmpty()) {
-        assertTrue("Should respect limit", candleStickData.getCandleSticks().size() <= limit);
-        assertTrue("Candles should be sorted desc by time",
-            candleStickData.getCandleSticks().get(0).getTimestamp().isAfter(
-                candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1)
-                    .getTimestamp()));
+        assertTrue(candleStickData.getCandleSticks().size() <= limit, "Should respect limit");
+        assertTrue(candleStickData.getCandleSticks().get(0).getTimestamp().isAfter(
+            candleStickData.getCandleSticks().get(candleStickData.getCandleSticks().size() - 1)
+                .getTimestamp()), "Candles should be sorted desc by time");
       }
     } catch (Exception e) {
       System.out.println("Candlestick data not fully supported in sandbox (expected)");
@@ -146,8 +145,8 @@ public class MarketDataServiceSandboxIntegration {
       CandleStickData candleStickData = marketDataService.getCandleStickData(currencyPair,
           new DefaultCandleStickParam(startDate, null, 86_400));
 
-      assertNotNull("CandleStickData should not be null", candleStickData);
-      assertEquals("Instrument should match", currencyPair, candleStickData.getInstrument());
+      assertNotNull(candleStickData, "CandleStickData should not be null");
+      assertEquals(currencyPair, candleStickData.getInstrument(), "Instrument should match");
     } catch (Exception e) {
       System.out.println("Candlestick data with date not fully supported in sandbox (expected)");
     }
@@ -163,9 +162,9 @@ public class MarketDataServiceSandboxIntegration {
       OrderBook orderBook = marketDataService.getOrderBook(instrument, limit,
           priceAggregationIncrement);
 
-      assertNotNull("Order book should not be null", orderBook);
-      assertFalse("Asks should not be empty", orderBook.getAsks().isEmpty());
-      assertFalse("Bids should not be empty", orderBook.getBids().isEmpty());
+      assertNotNull(orderBook, "Order book should not be null");
+      assertFalse(orderBook.getAsks().isEmpty(), "Asks should not be empty");
+      assertFalse(orderBook.getBids().isEmpty(), "Bids should not be empty");
     } catch (Exception e) {
       System.out.println("Order book not fully supported in sandbox (expected)");
     }
@@ -177,11 +176,11 @@ public class MarketDataServiceSandboxIntegration {
       Instrument instrument = CurrencyPair.ETH_USD;
       Ticker ticker = marketDataService.getTicker(instrument);
 
-      assertNotNull("Ticker should not be null", ticker);
-      assertEquals("Instrument should match", instrument, ticker.getInstrument());
-      assertNotNull("Ask should not be null", ticker.getAsk());
-      assertNotNull("Bid should not be null", ticker.getBid());
-      assertNotNull("Last should not be null", ticker.getLast());
+      assertNotNull(ticker, "Ticker should not be null");
+      assertEquals(instrument, ticker.getInstrument(), "Instrument should match");
+      assertNotNull(ticker.getAsk(), "Ask should not be null");
+      assertNotNull(ticker.getBid(), "Bid should not be null");
+      assertNotNull(ticker.getLast(), "Last should not be null");
     } catch (Exception e) {
       System.out.println("Ticker not fully supported in sandbox (expected)");
     }
@@ -192,9 +191,9 @@ public class MarketDataServiceSandboxIntegration {
     try {
       CoinbaseProductsResponse products = marketDataService.listProducts("SPOT");
       
-      assertNotNull("Products should not be null", products);
-      assertNotNull("Products list should not be null", products.getProducts());
-      assertFalse("Products should not be empty", products.getProducts().isEmpty());
+      assertNotNull(products, "Products should not be null");
+      assertNotNull(products.getProducts(), "Products list should not be null");
+      assertFalse(products.getProducts().isEmpty(), "Products should not be empty");
     } catch (Exception e) {
       System.out.println("List products not fully supported in sandbox (expected)");
     }

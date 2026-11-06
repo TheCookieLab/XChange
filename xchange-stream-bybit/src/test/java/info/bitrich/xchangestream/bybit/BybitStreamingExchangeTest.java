@@ -5,7 +5,8 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.knowm.xchange.Exchange.USE_SANDBOX;
 import static org.knowm.xchange.bybit.BybitExchange.SPECIFIC_PARAM_TESTNET;
 
-import org.junit.Test;import org.knowm.xchange.ExchangeSpecification;
+import org.junit.jupiter.api.Test;
+import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bybit.config.BybitConfiguration;
 import org.knowm.xchange.bybit.config.BybitEnvironment;
 import org.knowm.xchange.bybit.dto.BybitCategory;

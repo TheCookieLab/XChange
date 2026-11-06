@@ -1,11 +1,11 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
@@ -21,7 +21,7 @@ public class TradeServiceIntegration {
   static CoinbaseExchange exchange;
   static CoinbaseTradeService tradeService;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     ExchangeSpecification exchangeSpecification = ExchangeFactory.INSTANCE.createExchange(
         CoinbaseExchange.class).getDefaultExchangeSpecification();
@@ -32,7 +32,7 @@ public class TradeServiceIntegration {
 
   @Test
   public void testGetTradeHistory() throws Exception {
-    Assume.assumeNotNull(tradeService.authTokenCreator);
+    Assumptions.assumeTrue(tradeService.authTokenCreator != null);
 
     CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
 
@@ -44,7 +44,7 @@ public class TradeServiceIntegration {
 
   @Test
   public void testGetTradeHistoryForMultipleCurrencyPairs() throws Exception {
-    Assume.assumeNotNull(tradeService.authTokenCreator);
+    Assumptions.assumeTrue(tradeService.authTokenCreator != null);
 
     CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
     // Allow only one product_id for now to avoid repeated param encoding
@@ -59,7 +59,7 @@ public class TradeServiceIntegration {
 
   @Test
   public void testGetOpenOrders() throws Exception {
-    Assume.assumeNotNull(tradeService.authTokenCreator);
+    Assumptions.assumeTrue(tradeService.authTokenCreator != null);
 
     OpenOrders oo = tradeService.getOpenOrders();
     assertNotNull(oo);
@@ -67,7 +67,7 @@ public class TradeServiceIntegration {
 
   @Test
   public void testGetOrderByIdIntegration() throws Exception {
-    Assume.assumeNotNull(tradeService.authTokenCreator);
+    Assumptions.assumeTrue(tradeService.authTokenCreator != null);
 
     // Smoke: call getOrder with a dummy id; only assert no exceptions and non-null structure when available
     // In real runs, replace with a known recent order id if available via env config

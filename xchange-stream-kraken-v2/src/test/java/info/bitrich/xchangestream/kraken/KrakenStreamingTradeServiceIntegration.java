@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.knowm.xchange.dto.trade.UserTrade;
 
 @Slf4j
-public class KrakenStreamingTradeServiceIntegration extends KrakenStreamingExchangeIT {
+class KrakenStreamingTradeServiceIntegration extends KrakenStreamingExchangeIT {
 
   @BeforeAll
   public static void credentialsPresent() {

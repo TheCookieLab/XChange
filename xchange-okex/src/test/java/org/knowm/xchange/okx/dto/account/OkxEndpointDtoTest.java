@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.List;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.okx.dto.OkxResponse;
 
 /**
@@ -127,6 +127,15 @@ public class OkxEndpointDtoTest {
     String json = mapper.writeValueAsString(request);
 
     assertThat(json).contains("\"posMode\":\"net_mode\"").contains("\"acctLv\":\"1\"");
+  }
+
+  @Test
+  public void testSetPositionModeRequestOmitsAbsentAccountLevel() throws Exception {
+    OkxSetPositionModeRequest request =
+        OkxSetPositionModeRequest.builder().positionMode("long_short_mode").build();
+
+    assertThat(mapper.writeValueAsString(request))
+        .isEqualTo("{\"posMode\":\"long_short_mode\"}");
   }
 
   @Test

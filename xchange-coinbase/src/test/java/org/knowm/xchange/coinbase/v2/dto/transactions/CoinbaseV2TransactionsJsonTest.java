@@ -1,12 +1,12 @@
 package org.knowm.xchange.coinbase.v2.dto.transactions;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class CoinbaseV2TransactionsJsonTest {
 
@@ -16,12 +16,12 @@ public class CoinbaseV2TransactionsJsonTest {
   public void deserializeTransactionsResponse() throws Exception {
     InputStream is = CoinbaseV2TransactionsJsonTest.class.getResourceAsStream(
         "/org/knowm/xchange/coinbase/dto/v2/transactions/example-transactions-response.json");
-    assertNotNull("Fixture should be present", is);
+    assertNotNull(is, "Fixture should be present");
 
     CoinbaseV2TransactionsResponse response = mapper.readValue(is, CoinbaseV2TransactionsResponse.class);
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Pagination should not be null", response.getPagination());
-    assertNotNull("Data list should not be null", response.getData());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getPagination(), "Pagination should not be null");
+    assertNotNull(response.getData(), "Data list should not be null");
     assertEquals(2, response.getData().size());
 
     CoinbaseV2Transaction deposit = response.getData().get(0);

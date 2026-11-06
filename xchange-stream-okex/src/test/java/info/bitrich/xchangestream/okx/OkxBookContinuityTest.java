@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import java.nio.charset.StandardCharsets;
 import java.util.zip.CRC32;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** Offline unit tests for the OKX "books" channel continuity guard. */
 public class OkxBookContinuityTest {

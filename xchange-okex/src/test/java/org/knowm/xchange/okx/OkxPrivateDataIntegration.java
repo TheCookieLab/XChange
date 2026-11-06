@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
@@ -36,15 +36,15 @@ import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstr
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore
+@Disabled
 public class OkxPrivateDataIntegration {
 
   private final Logger LOG = LoggerFactory.getLogger(OkxPrivateDataIntegration.class);
   Instrument instrument = new FuturesContract("BTC/USDT/SWAP");
   Exchange exchange;
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  void setUp() {
     Properties properties = new Properties();
 
     try {
@@ -65,7 +65,7 @@ public class OkxPrivateDataIntegration {
   }
 
   @Test
-  public void placeLimitOrderGetOpenOrderAndCancelOrder() throws IOException {
+  void placeLimitOrderGetOpenOrderAndCancelOrder() throws Exception {
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
     InstrumentMetaData instrumentMetaData =
         exchange.getExchangeMetaData().getInstruments().get(instrument);
@@ -123,7 +123,7 @@ public class OkxPrivateDataIntegration {
   }
 
   @Test
-  public void placeOrderAndGetTradeHistory() throws IOException, InterruptedException {
+  void placeOrderAndGetTradeHistory() throws Exception {
     BigDecimal size = BigDecimal.valueOf(0.01);
     String bidOrderId =
         exchange
@@ -163,7 +163,7 @@ public class OkxPrivateDataIntegration {
   }
 
   @Test
-  public void checkOpenPositions() throws IOException {
+  void checkOpenPositions() throws Exception {
     List<OpenPosition> openPositions =
         exchange.getTradeService().getOpenPositions().getOpenPositions();
     LOG.info(openPositions.toString());
@@ -172,7 +172,7 @@ public class OkxPrivateDataIntegration {
   }
 
   @Test
-  public void checkWallet() throws IOException {
+  void checkWallet() throws Exception {
     AccountInfo accountInfo = exchange.getAccountService().getAccountInfo();
     LOG.info(accountInfo.toString());
     assertThat(accountInfo.getWallet(Wallet.WalletFeature.TRADING)).isNotNull();
@@ -198,5 +198,13 @@ public class OkxPrivateDataIntegration {
             + instrument
             + ", result: "
             + okxAccountService.setLeverage(instrument, 1));
+  }
+
+  @Test
+  void setPositionMode() throws Exception {
+    OkxAccountService okxAccountService = (OkxAccountService) exchange.getAccountService();
+    System.out.println(
+        "Set position mode long_short_mode, result: "
+            + okxAccountService.setPositionDualModeRaw(true));
   }
 }

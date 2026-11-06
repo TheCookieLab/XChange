@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.trade.OkxPageParams;
 

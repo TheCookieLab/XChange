@@ -1,9 +1,9 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.List;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
@@ -92,7 +92,7 @@ public class CoinbaseAccountHoldsTest {
 
     ExchangeException refused = assertThrows(ExchangeException.class, service::getAccountInfo);
 
-    assertTrue(refused.getMessage(), refused.getMessage().contains("btc-account"));
+    assertTrue(refused.getMessage().contains("btc-account"), refused.getMessage());
   }
 
   @Test
@@ -101,7 +101,7 @@ public class CoinbaseAccountHoldsTest {
 
     ExchangeException refused = assertThrows(ExchangeException.class, service::getAccountInfo);
 
-    assertTrue(refused.getMessage(), refused.getMessage().contains("btc-account"));
+    assertTrue(refused.getMessage().contains("btc-account"), refused.getMessage());
   }
 
   private static AccountInfo fixtureAccounts() throws IOException {
@@ -136,6 +136,6 @@ public class CoinbaseAccountHoldsTest {
   }
 
   private static void assertAmount(String expected, BigDecimal actual) {
-    assertEquals("was " + actual, 0, new BigDecimal(expected).compareTo(actual));
+    assertEquals(0, new BigDecimal(expected).compareTo(actual), "was " + actual);
   }
 }

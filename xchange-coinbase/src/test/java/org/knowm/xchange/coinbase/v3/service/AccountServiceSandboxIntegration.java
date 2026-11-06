@@ -1,15 +1,15 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
@@ -65,7 +65,7 @@ public class AccountServiceSandboxIntegration {
   static CoinbaseExchange exchange;
   static CoinbaseAccountService accountService;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     ExchangeSpecification spec = CoinbaseTestUtils.createSandboxSpecificationWithCredentials();
     exchange = (CoinbaseExchange) ExchangeFactory.INSTANCE.createExchange(spec);
@@ -74,47 +74,47 @@ public class AccountServiceSandboxIntegration {
 
   @Test
   public void testListAccounts() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
     
     List<CoinbaseAccount> accounts = accountService.getCoinbaseAccounts();
     
-    assertNotNull("Accounts should not be null", accounts);
-    assertFalse("Accounts should not be empty", accounts.isEmpty());
+    assertNotNull(accounts, "Accounts should not be null");
+    assertFalse(accounts.isEmpty(), "Accounts should not be empty");
     
     // Verify account structure
     CoinbaseAccount account = accounts.get(0);
-    assertNotNull("UUID should not be null", account.getUuid());
-    assertNotNull("Name should not be null", account.getName());
-    assertNotNull("Currency should not be null", account.getCurrency());
-    assertNotNull("Balance should not be null", account.getBalance());
-    assertNotNull("Balance value should not be null", account.getBalance().getValue());
-    assertNotNull("Balance currency should not be null", account.getBalance().getCurrency());
+    assertNotNull(account.getUuid(), "UUID should not be null");
+    assertNotNull(account.getName(), "Name should not be null");
+    assertNotNull(account.getCurrency(), "Currency should not be null");
+    assertNotNull(account.getBalance(), "Balance should not be null");
+    assertNotNull(account.getBalance().getValue(), "Balance value should not be null");
+    assertNotNull(account.getBalance().getCurrency(), "Balance currency should not be null");
   }
 
   @Test
   public void testGetAccountById() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
     
     // First get all accounts to get a valid ID
     List<CoinbaseAccount> accounts = accountService.getCoinbaseAccounts();
-    assertFalse("Need at least one account", accounts.isEmpty());
+    assertFalse(accounts.isEmpty(), "Need at least one account");
     
     String accountId = accounts.get(0).getUuid();
     
     // Get specific account
     CoinbaseAccount account = accountService.getCoinbaseAccount(accountId);
-    assertNotNull("Account should not be null", account);
-    assertEquals("Account ID should match", accountId, account.getUuid());
-    assertNotNull("Balance should not be null", account.getBalance());
+    assertNotNull(account, "Account should not be null");
+    assertEquals(accountId, account.getUuid(), "Account ID should match");
+    assertNotNull(account.getBalance(), "Balance should not be null");
   }
 
   @Test
   public void testListPaymentMethods() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
     
     try {
       List<CoinbasePaymentMethod> methods = accountService.getCoinbasePaymentMethods();
-      assertNotNull("Payment methods should not be null", methods);
+      assertNotNull(methods, "Payment methods should not be null");
       // Sandbox may return empty list - this is acceptable
     } catch (Exception e) {
       // Payment methods endpoint may not be fully supported in sandbox
@@ -124,23 +124,21 @@ public class AccountServiceSandboxIntegration {
 
   @Test
   public void testGetTransactionSummary() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
     
     try {
       CoinbaseTransactionSummaryResponse summary = accountService.getTransactionSummary();
       
-      assertNotNull("Transaction summary should not be null", summary);
-      assertNotNull("Fee tier should not be null", summary.getFeeTier());
+      assertNotNull(summary, "Transaction summary should not be null");
+      assertNotNull(summary.getFeeTier(), "Fee tier should not be null");
       
       CoinbaseFeeTier feeTier = summary.getFeeTier();
-      assertNotNull("Maker fee rate should not be null", feeTier.getMakerFeeRate());
-      assertNotNull("Taker fee rate should not be null", feeTier.getTakerFeeRate());
+      assertNotNull(feeTier.getMakerFeeRate(), "Maker fee rate should not be null");
+      assertNotNull(feeTier.getTakerFeeRate(), "Taker fee rate should not be null");
       
       // Verify fees are non-negative
-      assertTrue("Maker fee should be >= 0",
-          feeTier.getMakerFeeRate().compareTo(BigDecimal.ZERO) >= 0);
-      assertTrue("Taker fee should be >= 0",
-          feeTier.getTakerFeeRate().compareTo(BigDecimal.ZERO) >= 0);
+      assertTrue(feeTier.getMakerFeeRate().compareTo(BigDecimal.ZERO) >= 0, "Maker fee should be >= 0");
+      assertTrue(feeTier.getTakerFeeRate().compareTo(BigDecimal.ZERO) >= 0, "Taker fee should be >= 0");
     } catch (Exception e) {
       // Transaction summary may not be fully supported in sandbox
       System.out.println("Transaction summary not fully supported in sandbox (expected)");
@@ -149,17 +147,17 @@ public class AccountServiceSandboxIntegration {
 
   @Test
   public void testGetDynamicTradingFees() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
     
     try {
       Map<Instrument, Fee> fees = accountService.getDynamicTradingFeesByInstrument();
       
-      assertNotNull("Fees map should not be null", fees);
+      assertNotNull(fees, "Fees map should not be null");
       
       Fee btcUsdFee = fees.get(CurrencyPair.BTC_USD);
       if (btcUsdFee != null) {
-        assertNotNull("Maker fee should not be null", btcUsdFee.getMakerFee());
-        assertNotNull("Taker fee should not be null", btcUsdFee.getTakerFee());
+        assertNotNull(btcUsdFee.getMakerFee(), "Maker fee should not be null");
+        assertNotNull(btcUsdFee.getTakerFee(), "Taker fee should not be null");
       }
     } catch (Exception e) {
       // Dynamic fees may not be fully supported in sandbox
@@ -169,7 +167,7 @@ public class AccountServiceSandboxIntegration {
 
   @Test
   public void testAccountBalanceConsistency() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
     
     List<CoinbaseAccount> accounts = accountService.getCoinbaseAccounts();
     
@@ -177,22 +175,20 @@ public class AccountServiceSandboxIntegration {
       // Verify currency consistency
       String accountCurrency = account.getCurrency();
       String balanceCurrency = account.getBalance().getCurrency();
-      assertEquals("Currency should match for " + account.getName(),
-          accountCurrency, balanceCurrency);
+      assertEquals(accountCurrency, balanceCurrency, "Currency should match for " + account.getName());
       
       // Verify balance is non-negative
-      assertTrue("Balance should be non-negative for " + account.getName(),
-          account.getBalance().getValue().compareTo(BigDecimal.ZERO) >= 0);
+      assertTrue(account.getBalance().getValue().compareTo(BigDecimal.ZERO) >= 0, "Balance should be non-negative for " + account.getName());
     }
   }
 
   @Test
   public void testGetFuturesBalanceSummary() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     try {
       CoinbaseFuturesBalanceSummaryResponse response = accountService.getFuturesBalanceSummary();
-      assertNotNull("Futures balance summary response should not be null", response);
+      assertNotNull(response, "Futures balance summary response should not be null");
     } catch (Exception e) {
       System.out.println("Futures balance summary not supported in sandbox (expected)");
     }
@@ -200,12 +196,12 @@ public class AccountServiceSandboxIntegration {
 
   @Test
   public void testListFuturesSweeps() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     try {
       CoinbaseFuturesSweepsResponse response = accountService.listFuturesSweeps();
-      assertNotNull("Futures sweeps response should not be null", response);
-      assertNotNull("Sweeps list should not be null", response.getSweeps());
+      assertNotNull(response, "Futures sweeps response should not be null");
+      assertNotNull(response.getSweeps(), "Sweeps list should not be null");
     } catch (Exception e) {
       System.out.println("Futures sweeps not supported in sandbox (expected)");
     }
@@ -213,11 +209,11 @@ public class AccountServiceSandboxIntegration {
 
   @Test
   public void testGetIntradayMarginSetting() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     try {
       CoinbaseIntradayMarginSettingResponse response = accountService.getIntradayMarginSetting();
-      assertNotNull("Intraday margin setting response should not be null", response);
+      assertNotNull(response, "Intraday margin setting response should not be null");
     } catch (Exception e) {
       System.out.println("Intraday margin setting not supported in sandbox (expected)");
     }
@@ -225,11 +221,11 @@ public class AccountServiceSandboxIntegration {
 
   @Test
   public void testGetCurrentMarginWindow() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     try {
       CoinbaseCurrentMarginWindowResponse response = accountService.getCurrentMarginWindow();
-      assertNotNull("Current margin window response should not be null", response);
+      assertNotNull(response, "Current margin window response should not be null");
     } catch (Exception e) {
       System.out.println("Current margin window not supported in sandbox (expected)");
     }
@@ -237,22 +233,22 @@ public class AccountServiceSandboxIntegration {
 
   @Test
   public void testGetPerpetualsPortfolioBalances() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     String portfolioUuid = findPerpetualsPortfolioUuid();
-    org.junit.Assume.assumeNotNull(portfolioUuid);
+    org.junit.jupiter.api.Assumptions.assumeTrue(portfolioUuid != null);
 
     try {
       CoinbasePerpetualsBalancesResponse response =
           accountService.getPerpetualsPortfolioBalances(portfolioUuid);
-      assertNotNull("Perpetuals balances response should not be null", response);
+      assertNotNull(response, "Perpetuals balances response should not be null");
       if (response.getBalances() == null) {
         // Sandbox shape may drift for perpetuals balances; null payload is tolerated for connectivity checks.
         System.out.println("Perpetuals balances payload missing in sandbox response");
         return;
       }
-      assertEquals("Portfolio UUID should match", portfolioUuid, response.getBalances().getPortfolioUuid());
-      assertNotNull("Collateral currency should not be null", response.getBalances().getCollateralCurrency());
+      assertEquals(portfolioUuid, response.getBalances().getPortfolioUuid(), "Portfolio UUID should match");
+      assertNotNull(response.getBalances().getCollateralCurrency(), "Collateral currency should not be null");
     } catch (Exception e) {
       System.out.println("Perpetuals balances not fully supported in sandbox (expected)");
     }
@@ -260,20 +256,18 @@ public class AccountServiceSandboxIntegration {
 
   @Test
   public void testGetPerpetualsPortfolioSummary() throws Exception {
-    org.junit.Assume.assumeNotNull(accountService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     String portfolioUuid = findPerpetualsPortfolioUuid();
-    org.junit.Assume.assumeNotNull(portfolioUuid);
+    org.junit.jupiter.api.Assumptions.assumeTrue(portfolioUuid != null);
 
     try {
       CoinbasePerpetualsPortfolioSummaryResponse response =
           accountService.getPerpetualsPortfolioSummary(portfolioUuid);
-      assertNotNull("Perpetuals summary response should not be null", response);
-      assertTrue("Summary or portfolios should be present",
-          response.getSummary() != null || response.getPortfolios() != null);
+      assertNotNull(response, "Perpetuals summary response should not be null");
+      assertTrue(response.getSummary() != null || response.getPortfolios() != null, "Summary or portfolios should be present");
       if (response.getSummary() != null) {
-        assertNotNull("Collateral currency should not be null",
-            response.getSummary().getCollateralCurrency());
+        assertNotNull(response.getSummary().getCollateralCurrency(), "Collateral currency should not be null");
       }
     } catch (Exception e) {
       System.out.println("Perpetuals summary not fully supported in sandbox (expected)");

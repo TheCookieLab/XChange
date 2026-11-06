@@ -2,13 +2,18 @@ package org.knowm.xchange.kucoin.uta;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.kucoin.uta.dto.UtaInstrument;
 import org.knowm.xchange.kucoin.uta.dto.UtaOrderBook;
 import org.knowm.xchange.kucoin.uta.dto.UtaTicker;
@@ -89,6 +94,52 @@ class UtaMarketDataServiceTest extends AbstractUtaResilienceTest {
     assertEquals(27275344291L, book.getSequence());
     assertEquals(new BigDecimal("92671"), book.getBids().get(0).get(0));
     assertTrue(book.getAsks().get(0).get(1).compareTo(BigDecimal.ZERO) > 0);
+  }
+
+  @Test
+  void orderBookSortsBothSidesAndPreservesEqualPriceOrder() {
+    UtaOrderBook raw = new UtaOrderBook();
+    raw.setAsks(List.of(level("12", "1"), level("10", "2"), level("10.0", "3")));
+    raw.setBids(List.of(level("8", "4"), level("10", "5"), level("10.0", "6")));
+
+    OrderBook book = UtaAdapters.adaptOrderBook(CurrencyPair.BTC_USDT, raw);
+
+    assertEquals(
+        List.of(new BigDecimal("10"), new BigDecimal("10.0"), new BigDecimal("12")),
+        book.getAsks().stream().map(LimitOrder::getLimitPrice).toList());
+    assertEquals(
+        List.of(new BigDecimal("2"), new BigDecimal("3"), new BigDecimal("1")),
+        book.getAsks().stream().map(LimitOrder::getOriginalAmount).toList());
+    assertEquals(
+        List.of(new BigDecimal("10"), new BigDecimal("10.0"), new BigDecimal("8")),
+        book.getBids().stream().map(LimitOrder::getLimitPrice).toList());
+    assertEquals(
+        List.of(new BigDecimal("5"), new BigDecimal("6"), new BigDecimal("4")),
+        book.getBids().stream().map(LimitOrder::getOriginalAmount).toList());
+  }
+
+  @Test
+  void orderBookAllowsEmptySidesAndRejectsNullPricesDuringSorting() {
+    UtaOrderBook raw = new UtaOrderBook();
+    raw.setAsks(List.of());
+    raw.setBids(List.of());
+    OrderBook empty = UtaAdapters.adaptOrderBook(CurrencyPair.BTC_USDT, raw);
+    assertTrue(empty.getAsks().isEmpty());
+    assertTrue(empty.getBids().isEmpty());
+
+    List<List<BigDecimal>> nullPrice =
+        List.of(Arrays.asList(null, BigDecimal.ONE), level("1", "2"));
+    raw.setAsks(nullPrice);
+    assertThrows(
+        NullPointerException.class, () -> UtaAdapters.adaptOrderBook(CurrencyPair.BTC_USDT, raw));
+    raw.setAsks(List.of());
+    raw.setBids(nullPrice);
+    assertThrows(
+        NullPointerException.class, () -> UtaAdapters.adaptOrderBook(CurrencyPair.BTC_USDT, raw));
+  }
+
+  private static List<BigDecimal> level(String price, String size) {
+    return List.of(new BigDecimal(price), new BigDecimal(size));
   }
 
   @Test

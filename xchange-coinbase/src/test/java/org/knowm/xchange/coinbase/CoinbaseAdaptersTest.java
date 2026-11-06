@@ -1,10 +1,10 @@
 package org.knowm.xchange.coinbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.Path;
@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -127,19 +127,17 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(product, candlesResponse, priceBook);
 
     // Then: All fields should be present
-    assertNotNull("Ticker should not be null", ticker);
-    assertNotNull("Percentage change should not be null", ticker.getPercentageChange());
-    assertEquals("Percentage change should be rounded to 2 sig figs", 
-        new BigDecimal("5.2"), ticker.getPercentageChange());
-    assertEquals("Volume should match", new BigDecimal("1000.50"), ticker.getVolume());
-    assertEquals("Quote volume should match", 
-        new BigDecimal("50025000.00"), ticker.getQuoteVolume());
-    assertEquals("Ask should match", new BigDecimal("50001.00"), ticker.getAsk());
-    assertEquals("Bid should match", new BigDecimal("49999.00"), ticker.getBid());
-    assertEquals("Low should match", new BigDecimal("49000.00"), ticker.getLow());
-    assertEquals("High should match", new BigDecimal("51000.00"), ticker.getHigh());
-    assertEquals("Open should match", new BigDecimal("50000.00"), ticker.getOpen());
-    assertEquals("Last should match", new BigDecimal("50500.00"), ticker.getLast());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNotNull(ticker.getPercentageChange(), "Percentage change should not be null");
+    assertEquals(new BigDecimal("5.2"), ticker.getPercentageChange(), "Percentage change should be rounded to 2 sig figs");
+    assertEquals(new BigDecimal("1000.50"), ticker.getVolume(), "Volume should match");
+    assertEquals(new BigDecimal("50025000.00"), ticker.getQuoteVolume(), "Quote volume should match");
+    assertEquals(new BigDecimal("50001.00"), ticker.getAsk(), "Ask should match");
+    assertEquals(new BigDecimal("49999.00"), ticker.getBid(), "Bid should match");
+    assertEquals(new BigDecimal("49000.00"), ticker.getLow(), "Low should match");
+    assertEquals(new BigDecimal("51000.00"), ticker.getHigh(), "High should match");
+    assertEquals(new BigDecimal("50000.00"), ticker.getOpen(), "Open should match");
+    assertEquals(new BigDecimal("50500.00"), ticker.getLast(), "Last should match");
   }
 
   @Test
@@ -170,14 +168,14 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(null, candlesResponse, priceBook);
 
     // Then: Ticker should be created without product fields
-    assertNotNull("Ticker should not be null", ticker);
-    assertNull("Percentage change should be null", ticker.getPercentageChange());
-    assertNull("Volume should be null", ticker.getVolume());
-    assertNull("Quote volume should be null", ticker.getQuoteVolume());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNull(ticker.getPercentageChange(), "Percentage change should be null");
+    assertNull(ticker.getVolume(), "Volume should be null");
+    assertNull(ticker.getQuoteVolume(), "Quote volume should be null");
     // But candle and priceBook fields should be present
-    assertEquals("Ask should match", new BigDecimal("50001.00"), ticker.getAsk());
-    assertEquals("Bid should match", new BigDecimal("49999.00"), ticker.getBid());
-    assertEquals("Low should match", new BigDecimal("49000.00"), ticker.getLow());
+    assertEquals(new BigDecimal("50001.00"), ticker.getAsk(), "Ask should match");
+    assertEquals(new BigDecimal("49999.00"), ticker.getBid(), "Bid should match");
+    assertEquals(new BigDecimal("49000.00"), ticker.getLow(), "Low should match");
   }
 
   @Test
@@ -196,11 +194,10 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(product, null, null);
 
     // Then: Should not throw NPE and percentage change should be null
-    assertNotNull("Ticker should not be null", ticker);
-    assertNull("Percentage change should be null", ticker.getPercentageChange());
-    assertEquals("Volume should match", new BigDecimal("1000.50"), ticker.getVolume());
-    assertEquals("Quote volume should match", 
-        new BigDecimal("50025000.00"), ticker.getQuoteVolume());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNull(ticker.getPercentageChange(), "Percentage change should be null");
+    assertEquals(new BigDecimal("1000.50"), ticker.getVolume(), "Volume should match");
+    assertEquals(new BigDecimal("50025000.00"), ticker.getQuoteVolume(), "Quote volume should match");
   }
 
   @Test
@@ -219,11 +216,10 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(product, null, null);
 
     // Then: Should not throw NPE and volume should be null
-    assertNotNull("Ticker should not be null", ticker);
-    assertNotNull("Percentage change should not be null", ticker.getPercentageChange());
-    assertNull("Volume should be null", ticker.getVolume());
-    assertEquals("Quote volume should match", 
-        new BigDecimal("50025000.00"), ticker.getQuoteVolume());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNotNull(ticker.getPercentageChange(), "Percentage change should not be null");
+    assertNull(ticker.getVolume(), "Volume should be null");
+    assertEquals(new BigDecimal("50025000.00"), ticker.getQuoteVolume(), "Quote volume should match");
   }
 
   @Test
@@ -242,17 +238,17 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(product, null, null);
 
     // Then: Should not throw NPE and quote volume should be null
-    assertNotNull("Ticker should not be null", ticker);
-    assertNotNull("Percentage change should not be null", ticker.getPercentageChange());
-    assertEquals("Volume should match", new BigDecimal("1000.50"), ticker.getVolume());
-    assertNull("Quote volume should be null", ticker.getQuoteVolume());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNotNull(ticker.getPercentageChange(), "Percentage change should not be null");
+    assertEquals(new BigDecimal("1000.50"), ticker.getVolume(), "Volume should match");
+    assertNull(ticker.getQuoteVolume(), "Quote volume should be null");
   }
 
   @Test
   public void testAdaptInstrumentForFuturesContract() {
     Instrument instrument = CoinbaseAdapters.adaptInstrument("BTC-USD-PERP");
-    assertNotNull("Instrument should not be null", instrument);
-    assertEquals("Instrument should be FuturesContract", FuturesContract.class, instrument.getClass());
+    assertNotNull(instrument, "Instrument should not be null");
+    assertEquals(FuturesContract.class, instrument.getClass(), "Instrument should be FuturesContract");
     assertEquals("BTC/USD/PERP", instrument.toString());
   }
 
@@ -272,7 +268,7 @@ public class CoinbaseAdaptersTest {
     OpenPositions positions =
         CoinbaseAdapters.adaptFuturesOpenPositions(Collections.singletonList(position));
 
-    assertNotNull("Open positions should not be null", positions);
+    assertNotNull(positions, "Open positions should not be null");
     assertEquals(1, positions.getOpenPositions().size());
     OpenPosition open = positions.getOpenPositions().get(0);
     assertEquals("BTC-USD-240628", open.getId());
@@ -327,7 +323,7 @@ public class CoinbaseAdaptersTest {
     OpenPositions positions =
         CoinbaseAdapters.adaptPerpetualsOpenPositions(Collections.singletonList(position));
 
-    assertNotNull("Open positions should not be null", positions);
+    assertNotNull(positions, "Open positions should not be null");
     assertEquals(1, positions.getOpenPositions().size());
     OpenPosition open = positions.getOpenPositions().get(0);
     assertEquals("BTC-USD-PERP", open.getId());
@@ -376,9 +372,9 @@ public class CoinbaseAdaptersTest {
                 null, null, null, null, null, null, null));
 
     Wallet wallet = CoinbaseAdapters.adaptFuturesWallet(response);
-    assertNotNull("Wallet should not be null", wallet);
+    assertNotNull(wallet, "Wallet should not be null");
     assertEquals("futures", wallet.getId());
-    assertNotNull("Wallet features should not be null", wallet.getFeatures());
+    assertNotNull(wallet.getFeatures(), "Wallet features should not be null");
     assertEquals(1, wallet.getFeatures().size());
     assertEquals(Wallet.WalletFeature.FUTURES_TRADING, wallet.getFeatures().iterator().next());
     assertEquals(new BigDecimal("8000"), wallet.getBalance(Currency.USD).getTotal());
@@ -400,7 +396,7 @@ public class CoinbaseAdaptersTest {
         new CoinbasePerpetualsBalancesResponse(balances);
 
     Wallet wallet = CoinbaseAdapters.adaptPerpetualsWallet(response);
-    assertNotNull("Wallet should not be null", wallet);
+    assertNotNull(wallet, "Wallet should not be null");
     assertEquals("portfolio-uuid", wallet.getId());
     assertEquals(new BigDecimal("1500"), wallet.getBalance(Currency.USD).getTotal());
     assertEquals(new BigDecimal("1200"), wallet.getBalance(Currency.USD).getAvailable());
@@ -422,10 +418,10 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(product, null, null);
 
     // Then: Should not throw NPE and all product-derived fields should be null
-    assertNotNull("Ticker should not be null", ticker);
-    assertNull("Percentage change should be null", ticker.getPercentageChange());
-    assertNull("Volume should be null", ticker.getVolume());
-    assertNull("Quote volume should be null", ticker.getQuoteVolume());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNull(ticker.getPercentageChange(), "Percentage change should be null");
+    assertNull(ticker.getVolume(), "Volume should be null");
+    assertNull(ticker.getQuoteVolume(), "Quote volume should be null");
   }
 
   @Test
@@ -437,11 +433,11 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(null, candlesResponse, null);
 
     // Then: Should not throw exception, candle fields should be null
-    assertNotNull("Ticker should not be null", ticker);
-    assertNull("Low should be null", ticker.getLow());
-    assertNull("High should be null", ticker.getHigh());
-    assertNull("Open should be null", ticker.getOpen());
-    assertNull("Last should be null", ticker.getLast());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNull(ticker.getLow(), "Low should be null");
+    assertNull(ticker.getHigh(), "High should be null");
+    assertNull(ticker.getOpen(), "Open should be null");
+    assertNull(ticker.getLast(), "Last should be null");
   }
 
   @Test
@@ -451,9 +447,9 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(null, null, null);
 
     // Then: Should not throw NPE
-    assertNotNull("Ticker should not be null", ticker);
-    assertNull("Low should be null", ticker.getLow());
-    assertNull("High should be null", ticker.getHigh());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNull(ticker.getLow(), "Low should be null");
+    assertNull(ticker.getHigh(), "High should be null");
   }
 
   @Test
@@ -470,9 +466,9 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(null, null, priceBook);
 
     // Then: Should not throw exception, priceBook fields should be null
-    assertNotNull("Ticker should not be null", ticker);
-    assertNull("Ask should be null", ticker.getAsk());
-    assertNull("Bid should be null", ticker.getBid());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNull(ticker.getAsk(), "Ask should be null");
+    assertNull(ticker.getBid(), "Bid should be null");
   }
 
   @Test
@@ -482,9 +478,9 @@ public class CoinbaseAdaptersTest {
     Ticker ticker = CoinbaseAdapters.adaptTicker(null, null, null);
 
     // Then: Should not throw NPE
-    assertNotNull("Ticker should not be null", ticker);
-    assertNull("Ask should be null", ticker.getAsk());
-    assertNull("Bid should be null", ticker.getBid());
+    assertNotNull(ticker, "Ticker should not be null");
+    assertNull(ticker.getAsk(), "Ask should be null");
+    assertNull(ticker.getBid(), "Bid should be null");
   }
 
   @Test
@@ -504,12 +500,9 @@ public class CoinbaseAdaptersTest {
     Ticker ticker3 = CoinbaseAdapters.adaptTicker(product3, null, null);
 
     // Then: Should round to 2 significant figures using HALF_EVEN
-    assertEquals("5.24 should round to 5.2", 
-        new BigDecimal("5.2"), ticker1.getPercentageChange());
-    assertEquals("5.25 should round to 5.2 (HALF_EVEN - rounds to even)", 
-        new BigDecimal("5.2"), ticker2.getPercentageChange());
-    assertEquals("5.26 should round to 5.3", 
-        new BigDecimal("5.3"), ticker3.getPercentageChange());
+    assertEquals(new BigDecimal("5.2"), ticker1.getPercentageChange(), "5.24 should round to 5.2");
+    assertEquals(new BigDecimal("5.2"), ticker2.getPercentageChange(), "5.25 should round to 5.2 (HALF_EVEN - rounds to even)");
+    assertEquals(new BigDecimal("5.3"), ticker3.getPercentageChange(), "5.26 should round to 5.3");
   }
   @Test
   public void testAdaptOrderReadsNestedMarketConfiguration() {

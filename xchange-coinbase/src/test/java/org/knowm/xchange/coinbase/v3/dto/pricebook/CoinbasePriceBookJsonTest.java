@@ -1,13 +1,13 @@
 package org.knowm.xchange.coinbase.v3.dto.pricebook;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for CoinbaseBestBidAsksResponse and CoinbasePriceBook JSON parsing.
@@ -25,44 +25,36 @@ public class CoinbasePriceBookJsonTest {
     CoinbaseBestBidAsksResponse response = mapper.readValue(is, 
         CoinbaseBestBidAsksResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Price books should not be null", response.getPriceBooks());
-    assertEquals("Should have 1 price book", 1, response.getPriceBooks().size());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getPriceBooks(), "Price books should not be null");
+    assertEquals(1, response.getPriceBooks().size(), "Should have 1 price book");
     
     CoinbasePriceBook priceBook = response.getPriceBooks().get(0);
-    assertEquals("Product ID should match", "BTC-USD", priceBook.getProductId());
-    assertNotNull("Bids should not be null", priceBook.getBids());
-    assertNotNull("Asks should not be null", priceBook.getAsks());
-    assertEquals("Should have 2 bids", 2, priceBook.getBids().size());
-    assertEquals("Should have 2 asks", 2, priceBook.getAsks().size());
+    assertEquals("BTC-USD", priceBook.getProductId(), "Product ID should match");
+    assertNotNull(priceBook.getBids(), "Bids should not be null");
+    assertNotNull(priceBook.getAsks(), "Asks should not be null");
+    assertEquals(2, priceBook.getBids().size(), "Should have 2 bids");
+    assertEquals(2, priceBook.getAsks().size(), "Should have 2 asks");
     
     // Verify best bid
     CoinbasePriceBookEntry bestBid = priceBook.getBids().get(0);
-    assertEquals("Best bid price should match", new BigDecimal("50000.00"), 
-        bestBid.getPrice());
-    assertEquals("Best bid size should match", new BigDecimal("1.5"), 
-        bestBid.getSize());
+    assertEquals(new BigDecimal("50000.00"), bestBid.getPrice(), "Best bid price should match");
+    assertEquals(new BigDecimal("1.5"), bestBid.getSize(), "Best bid size should match");
     
     // Verify second bid
     CoinbasePriceBookEntry secondBid = priceBook.getBids().get(1);
-    assertEquals("Second bid price should match", new BigDecimal("49999.00"), 
-        secondBid.getPrice());
-    assertEquals("Second bid size should match", new BigDecimal("2.0"), 
-        secondBid.getSize());
+    assertEquals(new BigDecimal("49999.00"), secondBid.getPrice(), "Second bid price should match");
+    assertEquals(new BigDecimal("2.0"), secondBid.getSize(), "Second bid size should match");
     
     // Verify best ask
     CoinbasePriceBookEntry bestAsk = priceBook.getAsks().get(0);
-    assertEquals("Best ask price should match", new BigDecimal("50001.00"), 
-        bestAsk.getPrice());
-    assertEquals("Best ask size should match", new BigDecimal("1.0"), 
-        bestAsk.getSize());
+    assertEquals(new BigDecimal("50001.00"), bestAsk.getPrice(), "Best ask price should match");
+    assertEquals(new BigDecimal("1.0"), bestAsk.getSize(), "Best ask size should match");
     
     // Verify second ask
     CoinbasePriceBookEntry secondAsk = priceBook.getAsks().get(1);
-    assertEquals("Second ask price should match", new BigDecimal("50002.00"), 
-        secondAsk.getPrice());
-    assertEquals("Second ask size should match", new BigDecimal("1.5"), 
-        secondAsk.getSize());
+    assertEquals(new BigDecimal("50002.00"), secondAsk.getPrice(), "Second ask price should match");
+    assertEquals(new BigDecimal("1.5"), secondAsk.getSize(), "Second ask size should match");
   }
 
   @Test
@@ -74,9 +66,9 @@ public class CoinbasePriceBookJsonTest {
 
     CoinbasePriceBookEntry entry = mapper.readValue(json, CoinbasePriceBookEntry.class);
 
-    assertNotNull("Entry should not be null", entry);
-    assertEquals("Price should match", new BigDecimal("50000.123"), entry.getPrice());
-    assertEquals("Size should match", new BigDecimal("1.5"), entry.getSize());
+    assertNotNull(entry, "Entry should not be null");
+    assertEquals(new BigDecimal("50000.123"), entry.getPrice(), "Price should match");
+    assertEquals(new BigDecimal("1.5"), entry.getSize(), "Size should match");
   }
 
   @Test
@@ -101,13 +93,13 @@ public class CoinbasePriceBookJsonTest {
     CoinbaseProductPriceBookResponse response = mapper.readValue(json, 
         CoinbaseProductPriceBookResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Price book should not be null", response.getPriceBook());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getPriceBook(), "Price book should not be null");
     
     CoinbasePriceBook book = response.getPriceBook();
-    assertEquals("Product ID should match", "BTC-USD", book.getProductId());
-    assertEquals("Should have 1 bid", 1, book.getBids().size());
-    assertEquals("Should have 1 ask", 1, book.getAsks().size());
+    assertEquals("BTC-USD", book.getProductId(), "Product ID should match");
+    assertEquals(1, book.getBids().size(), "Should have 1 bid");
+    assertEquals(1, book.getAsks().size(), "Should have 1 ask");
   }
 
   @Test
@@ -121,12 +113,12 @@ public class CoinbasePriceBookJsonTest {
 
     CoinbasePriceBook priceBook = mapper.readValue(json, CoinbasePriceBook.class);
 
-    assertNotNull("Price book should not be null", priceBook);
-    assertEquals("Product ID should match", "ETH-USD", priceBook.getProductId());
-    assertNotNull("Bids should not be null", priceBook.getBids());
-    assertNotNull("Asks should not be null", priceBook.getAsks());
-    assertEquals("Bids should be empty", 0, priceBook.getBids().size());
-    assertEquals("Asks should be empty", 0, priceBook.getAsks().size());
+    assertNotNull(priceBook, "Price book should not be null");
+    assertEquals("ETH-USD", priceBook.getProductId(), "Product ID should match");
+    assertNotNull(priceBook.getBids(), "Bids should not be null");
+    assertNotNull(priceBook.getAsks(), "Asks should not be null");
+    assertEquals(0, priceBook.getBids().size(), "Bids should be empty");
+    assertEquals(0, priceBook.getAsks().size(), "Asks should be empty");
   }
 
   @Test
@@ -138,11 +130,9 @@ public class CoinbasePriceBookJsonTest {
 
     CoinbasePriceBookEntry entry = mapper.readValue(json, CoinbasePriceBookEntry.class);
 
-    assertNotNull("Entry should not be null", entry);
-    assertEquals("Price precision should be preserved", 
-        new BigDecimal("0.000000123456"), entry.getPrice());
-    assertEquals("Size precision should be preserved", 
-        new BigDecimal("1000000.123456789"), entry.getSize());
+    assertNotNull(entry, "Entry should not be null");
+    assertEquals(new BigDecimal("0.000000123456"), entry.getPrice(), "Price precision should be preserved");
+    assertEquals(new BigDecimal("1000000.123456789"), entry.getSize(), "Size precision should be preserved");
   }
 }
 

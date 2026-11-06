@@ -1,10 +1,12 @@
 package org.knowm.xchange.utils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import java.text.DateFormat;
@@ -14,9 +16,9 @@ import java.util.Locale;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Pins {@link DateUtils} to the behavior of the original per-call {@link SimpleDateFormat}
@@ -56,31 +58,34 @@ public class DateUtilsTest {
     "Africa/Monrovia"
   };
 
-  private final DateFormat isoDateFormat;
-  private final DateFormat rfc3339DateFormat;
+  private DateFormat isoDateFormat;
+  private DateFormat rfc3339DateFormat;
 
   private TimeZone originalZone;
   private Locale originalLocale;
+  private Locale originalDisplayLocale;
+  private Locale originalFormatLocale;
 
-  public DateUtilsTest() {
-    TimeZone tz = TimeZone.getTimeZone("UTC");
-    isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-    isoDateFormat.setTimeZone(tz);
-
-    rfc3339DateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-  }
-
-  @Before
+  @BeforeEach
   public void rememberDefaults() {
     originalZone = TimeZone.getDefault();
     originalLocale = Locale.getDefault();
+    originalDisplayLocale = Locale.getDefault(Locale.Category.DISPLAY);
+    originalFormatLocale = Locale.getDefault(Locale.Category.FORMAT);
     Locale.setDefault(Locale.US);
+
+    TimeZone tz = TimeZone.getTimeZone("UTC");
+    isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+    isoDateFormat.setTimeZone(tz);
+    rfc3339DateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
   }
 
-  @After
+  @AfterEach
   public void restoreDefaults() {
     TimeZone.setDefault(originalZone);
     Locale.setDefault(originalLocale);
+    Locale.setDefault(Locale.Category.DISPLAY, originalDisplayLocale);
+    Locale.setDefault(Locale.Category.FORMAT, originalFormatLocale);
   }
 
   private static void useZone(String zoneId) {
@@ -94,28 +99,27 @@ public class DateUtilsTest {
   }
 
   @Test
-  public void testFromISODateString() throws Exception {
+  void fromISODateString() throws Exception {
     String input = "2016-06-10T12:16:11.717Z";
     Date expectedOutput = isoDateFormat.parse("2016-06-10T12:16:11.717");
 
-    assertEquals(expectedOutput, DateUtils.fromISODateString(input));
-  }
-
-  @Test(expected = InvalidFormatException.class)
-  public void testFromISODateStringWrongTimezone() throws Exception {
-
-    String input = "2016-06-10T12:16:11.717";
-    Date expectedOutput = isoDateFormat.parse("2016-06-10T12:16:11.717");
-
-    assertEquals(expectedOutput, DateUtils.fromISODateString(input));
+    assertThat(DateUtils.fromISODateString(input)).isEqualTo(expectedOutput);
   }
 
   @Test
-  public void testFromRFC3339DateString() throws Exception {
+  void fromISODateStringWrongTimezone() throws Exception {
+    String input = "2016-06-10T12:16:11.717";
+
+    assertThatExceptionOfType(InvalidFormatException.class)
+        .isThrownBy(() -> DateUtils.fromISODateString(input));
+  }
+
+  @Test
+  void fromRFC3339DateString() throws Exception {
     String input = "2018-01-15 12:16:11";
     Date expectedOutput = rfc3339DateFormat.parse("2018-01-15 12:16:11");
 
-    assertEquals(expectedOutput, DateUtils.fromRfc3339DateString(input));
+    assertThat(DateUtils.fromRfc3339DateString(input)).isEqualTo(expectedOutput);
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -127,9 +131,9 @@ public class DateUtilsTest {
     Date date = new Date(FIXED_MILLIS);
     for (String zone : ZONES) {
       useZone(zone);
-      assertEquals(zone, "2019-06-08 13:20:00 GMT", DateUtils.toUTCString(date));
-      assertEquals(zone, "2019-06-08T13:20:00.123Z", DateUtils.toUTCISODateString(date));
-      assertEquals(zone, "2019-06-08T13:20:00", DateUtils.toISO8601DateString(date));
+      assertEquals("2019-06-08 13:20:00 GMT", DateUtils.toUTCString(date), zone);
+      assertEquals("2019-06-08T13:20:00.123Z", DateUtils.toUTCISODateString(date), zone);
+      assertEquals("2019-06-08T13:20:00", DateUtils.toISO8601DateString(date), zone);
     }
   }
 
@@ -216,15 +220,15 @@ public class DateUtilsTest {
         Date date = new Date(millis);
         String label = zoneId + " @" + millis;
         assertEquals(
-            label, legacyFormat(UTC_STRING_PATTERN, gmt, millis), DateUtils.toUTCString(date));
+            legacyFormat(UTC_STRING_PATTERN, gmt, millis), DateUtils.toUTCString(date), label);
         assertEquals(
-            label, legacyFormat(ISO_PATTERN, gmt, millis), DateUtils.toUTCISODateString(date));
+            legacyFormat(ISO_PATTERN, gmt, millis), DateUtils.toUTCISODateString(date), label);
         assertEquals(
-            label,
             legacyFormat(ISO_8601_PATTERN, gmt, millis),
-            DateUtils.toISO8601DateString(date));
+            DateUtils.toISO8601DateString(date),
+            label);
         assertEquals(
-            label, legacyFormat(ISO_PATTERN, zone, millis), DateUtils.toISODateString(date));
+            legacyFormat(ISO_PATTERN, zone, millis), DateUtils.toISODateString(date), label);
       }
     }
   }
@@ -409,17 +413,17 @@ public class DateUtilsTest {
         for (String input : rfc3339Inputs) {
           SimpleDateFormat legacy = new SimpleDateFormat(RFC3339_PATTERN);
           assertEquals(
-              zoneId + " " + input,
               legacy.parse(input).getTime(),
-              DateUtils.fromRfc3339DateString(input).getTime());
+              DateUtils.fromRfc3339DateString(input).getTime(),
+              zoneId + " " + input);
         }
         for (String input : rfc1123Inputs) {
           SimpleDateFormat legacy =
               new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
           assertEquals(
-              zoneId + " " + input,
               legacy.parse(input).getTime(),
-              DateUtils.fromRfc1123DateString(input, Locale.US).getTime());
+              DateUtils.fromRfc1123DateString(input, Locale.US).getTime(),
+              zoneId + " " + input);
         }
       }
     }
@@ -430,13 +434,13 @@ public class DateUtilsTest {
     for (String zone : ZONES) {
       useZone(zone);
       assertEquals(
-          zone,
           1_465_560_971_717L,
-          DateUtils.fromISODateString("2016-06-10T12:16:11.717Z").getTime());
+          DateUtils.fromISODateString("2016-06-10T12:16:11.717Z").getTime(),
+          zone);
       assertEquals(
-          zone,
           1_465_560_971_000L,
-          DateUtils.fromISO8601DateString("2016-06-10T12:16:11").getTime());
+          DateUtils.fromISO8601DateString("2016-06-10T12:16:11").getTime(),
+          zone);
     }
   }
 
@@ -540,11 +544,11 @@ public class DateUtilsTest {
     for (String zone : new String[] {"UTC", "America/New_York", "Asia/Kolkata"}) {
       useZone(zone);
       // EST is always -05:00 and EDT always -04:00, whatever the date's own DST status is.
-      assertEquals(zone, 1_391_853_876_000L, rfc1123("Sat, 08 Feb 2014 05:04:36 EST"));
-      assertEquals(zone, 1_404_813_876_000L, rfc1123("Sat, 08 Jul 2014 05:04:36 EST"));
-      assertEquals(zone, 1_404_810_276_000L, rfc1123("Sat, 08 Jul 2014 05:04:36 EDT"));
-      assertEquals(zone, 1_391_850_276_000L, rfc1123("Sat, 08 Feb 2014 05:04:36 EDT"));
-      assertEquals(zone, 1_391_864_676_000L, rfc1123("Sat, 08 Feb 2014 05:04:36 PST"));
+      assertEquals(1_391_853_876_000L, rfc1123("Sat, 08 Feb 2014 05:04:36 EST"), zone);
+      assertEquals(1_404_813_876_000L, rfc1123("Sat, 08 Jul 2014 05:04:36 EST"), zone);
+      assertEquals(1_404_810_276_000L, rfc1123("Sat, 08 Jul 2014 05:04:36 EDT"), zone);
+      assertEquals(1_391_850_276_000L, rfc1123("Sat, 08 Feb 2014 05:04:36 EDT"), zone);
+      assertEquals(1_391_864_676_000L, rfc1123("Sat, 08 Feb 2014 05:04:36 PST"), zone);
     }
   }
 

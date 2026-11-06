@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.io.IOException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.binance.AbstractResilienceTest;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -17,10 +17,10 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 
-public class MarketDataServiceResilienceTest extends AbstractResilienceTest {
+class MarketDataServiceResilienceTest extends AbstractResilienceTest {
 
   @Test
-  public void shouldSucceedIfFirstCallTimeoutedAndRetryIsEnabled() throws Exception {
+  void shouldSucceedIfFirstCallTimeoutedAndRetryIsEnabled() throws Exception {
     BinanceAdapters.putSymbolMapping("BNBBTC", new CurrencyPair("BNB/BTC"));
     // given
     MarketDataService service = createExchangeWithRetryEnabled().getMarketDataService();
@@ -34,7 +34,7 @@ public class MarketDataServiceResilienceTest extends AbstractResilienceTest {
   }
 
   @Test
-  public void shouldFailIfFirstCallTimeoutedAndRetryIsDisabled() throws Exception {
+  void shouldFailIfFirstCallTimeoutedAndRetryIsDisabled() throws Exception {
     // given
     MarketDataService service = createExchangeWithRetryDisabled().getMarketDataService();
     stubForTicker24WithFirstCallTimetoutAndSecondSuccessful();
@@ -64,13 +64,4 @@ public class MarketDataServiceResilienceTest extends AbstractResilienceTest {
                     .withBodyFile("single-24hr-ticker.json")));
   }
 
-  private void stubForDepth() {
-    stubFor(
-        get(urlPathEqualTo("/api/v3/depth"))
-            .willReturn(
-                aResponse()
-                    .withStatus(200)
-                    .withHeader("Content-Type", "application/json")
-                    .withBodyFile("depth.json")));
-  }
 }

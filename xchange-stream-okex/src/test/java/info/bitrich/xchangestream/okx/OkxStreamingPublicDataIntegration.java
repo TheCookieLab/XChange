@@ -10,8 +10,8 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -25,7 +25,7 @@ public class OkxStreamingPublicDataIntegration {
   private final Instrument instrumentETH = new FuturesContract("ETH/USDT/SWAP");
   private final Instrument instrumentSHIB = new FuturesContract("SHIB/USDT/SWAP");
 
-  @Before
+  @BeforeEach
   public void setUp() {
     ExchangeSpecification spec = new OkxStreamingExchange().getDefaultExchangeSpecification();
     spec.setExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT, Duration.ofSeconds(5));
@@ -36,7 +36,7 @@ public class OkxStreamingPublicDataIntegration {
   }
 
   @Test
-  public void testCandles() throws InterruptedException {
+  void candles() throws Exception {
     Disposable dis =
         exchange
             .getStreamingMarketDataService()
@@ -51,7 +51,7 @@ public class OkxStreamingPublicDataIntegration {
   }
 
   @Test
-  public void testTrades() throws InterruptedException {
+  void trades() throws Exception {
     Disposable dis =
         exchange
             .getStreamingMarketDataService()
@@ -76,7 +76,7 @@ public class OkxStreamingPublicDataIntegration {
   }
 
   @Test
-  public void testTicker() throws InterruptedException {
+  void ticker() throws Exception {
     Disposable dis =
         exchange
             .getStreamingMarketDataService()
@@ -93,7 +93,7 @@ public class OkxStreamingPublicDataIntegration {
   }
 
   @Test
-  public void testFundingRateStream() throws InterruptedException {
+  void fundingRateStream() throws Exception {
     Disposable dis =
         exchange
             .getStreamingMarketDataService()
@@ -104,7 +104,7 @@ public class OkxStreamingPublicDataIntegration {
   }
 
   @Test
-  public void testOrderBook() throws InterruptedException {
+  void orderBook() throws Exception {
     Disposable dis =
         exchange
             .getStreamingMarketDataService()

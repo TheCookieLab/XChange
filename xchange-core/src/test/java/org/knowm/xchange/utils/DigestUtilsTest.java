@@ -1,9 +1,10 @@
 package org.knowm.xchange.utils;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class DigestUtilsTest {
 
@@ -28,13 +29,13 @@ public class DigestUtilsTest {
     assertArrayEquals(expected, DigestUtils.hexToBytes(hex));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testHexToBytesOddLength() {
-    DigestUtils.hexToBytes("000f10ff807");
+    assertThrows(IllegalArgumentException.class, () -> DigestUtils.hexToBytes("000f10ff807"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testHexToBytesInvalidChar() {
-    DigestUtils.hexToBytes("000f10ff80zz");
+    assertThrows(IllegalArgumentException.class, () -> DigestUtils.hexToBytes("000f10ff80zz"));
   }
 }

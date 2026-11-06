@@ -4,18 +4,18 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
@@ -41,7 +41,7 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
   private CoinbaseAuthenticated api;
   private ParamsDigest digest;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     server = new WireMockServer(options().dynamicPort());
     server.start();
@@ -75,7 +75,7 @@ public class CoinbaseAuthenticatedFillsWireMockTest {
                             + "\"end_time\":\"2026-08-31T20:00:00Z\"}}")));
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     server.stop();
   }

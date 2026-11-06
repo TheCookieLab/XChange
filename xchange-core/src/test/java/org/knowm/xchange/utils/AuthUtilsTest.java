@@ -1,16 +1,18 @@
 package org.knowm.xchange.utils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.util.Locale;
 import java.util.Map;
-import java.io.File;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
+import org.opentest4j.TestAbortedException;
 
 public class AuthUtilsTest {
 
@@ -18,37 +20,44 @@ public class AuthUtilsTest {
   private static final String FILE_API_KEY = "file-api-key";
   private static final String FILE_SECRET_KEY = "file-secret-key";
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testPathTraversalDotDotRejected() {
-    AuthUtils.getSecretProperties("../secret");
+    assertThrows(IllegalArgumentException.class, () -> AuthUtils.getSecretProperties("../secret"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testPathTraversalSlashRejected() {
-    AuthUtils.getSecretProperties("sub/dir");
+    assertThrows(IllegalArgumentException.class, () -> AuthUtils.getSecretProperties("sub/dir"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testPathTraversalBackslashRejected() {
-    AuthUtils.getSecretProperties("sub\\dir");
+    assertThrows(IllegalArgumentException.class, () -> AuthUtils.getSecretProperties("sub\\dir"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testPathTraversalSpaceRejected() {
-    AuthUtils.getSecretProperties("invalid prefix");
+    assertThrows(
+        IllegalArgumentException.class, () -> AuthUtils.getSecretProperties("invalid prefix"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testPathTraversalNullByteRejected() {
-    AuthUtils.getSecretProperties("prefix\0suffix");
+    assertThrows(
+        IllegalArgumentException.class, () -> AuthUtils.getSecretProperties("prefix\0suffix"));
   }
 
   @Test
   public void testSecretKeysFallbackWhenEnvMissing() {
     assumeSecretKeysAvailable(PREFIX);
 
+    String host = "authutils-test-host";
+    while (System.getenv(sanitizeHost(host) + "_API_KEY") != null
+        || System.getenv(sanitizeHost(host) + "_API_SECRET_KEY") != null) {
+      host += "-x";
+    }
     ExchangeSpecification spec = new ExchangeSpecification(Exchange.class);
-    spec.setHost("authutils-test-host");
+    spec.setHost(host);
 
     AuthUtils.setApiAndSecretKey(spec, PREFIX);
 
@@ -85,14 +94,13 @@ public class AuthUtilsTest {
             && !effectiveSecretKey.isEmpty();
     boolean usingTestValues =
         "env-api-key".equals(effectiveApiKey) && "env-secret-key".equals(effectiveSecretKey);
-    if (!hasEnvValues) {
-      if (envMutationFailure != null) {
-        Assume.assumeNoException("Unable to set environment variables", envMutationFailure);
-      }
-      Assume.assumeTrue("Environment variables not available for test", false);
-    }
-
     try {
+      if (!hasEnvValues) {
+        if (envMutationFailure != null) {
+          throw new TestAbortedException("Unable to set environment variables", envMutationFailure);
+        }
+        assumeTrue(false, "Environment variables not available for test");
+      }
       ExchangeSpecification spec = new ExchangeSpecification(Exchange.class);
       spec.setHost(host);
 
@@ -145,14 +153,13 @@ public class AuthUtilsTest {
     boolean usingTestValues =
         "env-api-key-ssl".equals(effectiveApiKey)
             && "env-secret-key-ssl".equals(effectiveSecretKey);
-    if (!hasEnvValues) {
-      if (envMutationFailure != null) {
-        Assume.assumeNoException("Unable to set environment variables", envMutationFailure);
-      }
-      Assume.assumeTrue("Environment variables not available for test", false);
-    }
-
     try {
+      if (!hasEnvValues) {
+        if (envMutationFailure != null) {
+          throw new TestAbortedException("Unable to set environment variables", envMutationFailure);
+        }
+        assumeTrue(false, "Environment variables not available for test");
+      }
       ExchangeSpecification spec = new ExchangeSpecification(Exchange.class);
       spec.setSslUri("https://api-sandbox.coinbase.com");
       spec.setHost(null);
@@ -186,7 +193,7 @@ public class AuthUtilsTest {
     boolean onClasspath = AuthUtils.class.getResource("/" + resource) != null;
     File keyfile = new File(new File(System.getProperty("user.home"), ".ssh"), resource);
     boolean onDisk = keyfile.isFile();
-    Assume.assumeTrue("Missing secret keys file: " + resource, onClasspath || onDisk);
+    assumeTrue(onClasspath || onDisk, "Missing secret keys file: " + resource);
   }
 
   @SuppressWarnings("unchecked")

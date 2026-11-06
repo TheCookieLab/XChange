@@ -49,10 +49,9 @@
             <version>${version.protobuf}</version>
             <exclusions>
                 <!--
-                  Annotation-only artifacts with no runtime use: protobuf-java-util's declared
-                  guava transitively requires older versions while the repo-managed guava
-                  33.6.0-jre requires newer ones, which breaks the enforcer
-                  dependency-convergence check. guava 33.6.0-jre still supplies its own copies.
+                  Annotation-only artifacts are not needed at runtime. Exclude them from
+                  protobuf-java-util's dependency tree to avoid convergence conflicts between
+                  its declared versions and those required by the parent-managed Guava.
                 -->
                 <exclusion>
                     <groupId>com.google.j2objc</groupId>

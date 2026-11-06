@@ -1,6 +1,7 @@
 package info.bitrich.xchangestream.bybit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -17,29 +18,31 @@ import io.reactivex.rxjava3.observers.TestObserver;
 import io.reactivex.rxjava3.subjects.PublishSubject;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.Before;
-import org.junit.Test;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.CandleStickInterval;
 import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
 
-public class BybitStreamingMarketDataServiceTest {
+class BybitStreamingMarketDataServiceTest {
 
   private BybitStreamingMarketDataService marketDataService;
   private BybitStreamingService streamingService;
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  void setUp() {
     streamingService = mock(BybitStreamingService.class);
     marketDataService = new BybitStreamingMarketDataService(streamingService);
   }
 
   @Test
-  public void testGetCandleStick() throws Exception {
+  void getCandleStick() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(
             ClassLoader.getSystemClassLoader().getResourceAsStream("getCandleStickResponse.json"));
@@ -269,5 +272,214 @@ public class BybitStreamingMarketDataServiceTest {
     OrderBook finalBook = secondSubscriber.values().get(secondSubscriber.values().size() - 1);
     assertThat(finalBook.getAsks())
         .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("16612.00")) == 0);
+  }
+
+  @Test
+  void separateDepthSubscriptionsUseDeepestBookAndSuppressShallowEvents() throws Exception {
+    PublishSubject<JsonNode> shallow = PublishSubject.create();
+    PublishSubject<JsonNode> deep = PublishSubject.create();
+    when(streamingService.subscribeChannel("orderbook.50.BTCUSDT")).thenReturn(shallow);
+    when(streamingService.subscribeChannel("orderbook.200.BTCUSDT")).thenReturn(deep);
+    TestObserver<BybitOrderBookGap> gaps = marketDataService.getOrderBookGapEvents().test();
+    TestObserver<List<OrderBookUpdate>> updates =
+        marketDataService.getOrderBookUpdates((Instrument) CurrencyPair.BTC_USDT).test();
+    TestObserver<OrderBook> shallowBooks =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, 50).test();
+    shallow.onNext(orderBook("snapshot", 100, "100", "101"));
+
+    TestObserver<OrderBook> deepBooks =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, 200).test();
+    deep.onNext(orderBook("snapshot", 1000, "200", "201"));
+    shallow.onNext(orderBook("snapshot", 200, "300", "301"));
+    shallow.onNext(orderBook("delta", 250, "302", "303"));
+    deep.onNext(orderBook("delta", 1001, "202", "203"));
+
+    shallowBooks.assertValueCount(2).assertNoErrors();
+    deepBooks.assertValueCount(2).assertNoErrors();
+    updates.assertValueCount(1).assertNoErrors();
+    assertThat(gaps.values()).isEmpty();
+    OrderBook governing = deepBooks.values().get(1);
+    assertThat(shallowBooks.values().get(1)).isSameAs(governing);
+    assertThat(governing.getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("203")) == 0)
+        .noneMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("303")) == 0);
+    assertThat(shallowBooks.values().get(0).getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("101")) == 0)
+        .noneMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("303")) == 0);
+  }
+
+  @Test
+  void disposingDeepestPromotesShallowDepthAndRecoversSkippedUpdates() throws Exception {
+    PublishSubject<JsonNode> shallow = PublishSubject.create();
+    PublishSubject<JsonNode> deep = PublishSubject.create();
+    when(streamingService.subscribeChannel("orderbook.50.BTCUSDT")).thenReturn(shallow);
+    when(streamingService.subscribeChannel("orderbook.200.BTCUSDT")).thenReturn(deep);
+    when(streamingService.isSocketOpen()).thenReturn(true);
+    when(streamingService.getUnsubscribeMessage(anyString(), any(Object[].class)))
+        .thenReturn("{\"op\":\"unsubscribe\"}");
+    when(streamingService.getSubscribeMessage(anyString(), any(Object[].class)))
+        .thenReturn("{\"op\":\"subscribe\"}");
+    TestObserver<BybitOrderBookGap> gaps = marketDataService.getOrderBookGapEvents().test();
+    TestObserver<OrderBook> shallowBooks =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, 50).test();
+    shallow.onNext(orderBook("snapshot", 100, "100", "101"));
+    TestObserver<OrderBook> deepBooks =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, 200).test();
+    deep.onNext(orderBook("snapshot", 1000, "200", "201"));
+    shallow.onNext(orderBook("delta", 101, "102", "103"));
+    deepBooks.dispose();
+
+    shallow.onNext(orderBook("delta", 102, "104", "105"));
+    shallowBooks.assertValueCount(1).assertNoErrors();
+    assertThat(gaps.values()).hasSize(1);
+    verify(streamingService).sendMessage("{\"op\":\"unsubscribe\"}");
+    verify(streamingService).sendMessage("{\"op\":\"subscribe\"}");
+    shallow.onNext(orderBook("snapshot", 102, "104", "105"));
+    shallow.onNext(orderBook("delta", 103, "106", "107"));
+
+    shallowBooks.assertValueCount(3).assertNoErrors();
+    assertThat(shallowBooks.values().get(2).getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("107")) == 0);
+  }
+
+  @Test
+  void disposingDeepestPromotesContiguousShallowBookWithoutGap() throws Exception {
+    PublishSubject<JsonNode> shallow = PublishSubject.create();
+    PublishSubject<JsonNode> deep = PublishSubject.create();
+    when(streamingService.subscribeChannel("orderbook.50.BTCUSDT")).thenReturn(shallow);
+    when(streamingService.subscribeChannel("orderbook.200.BTCUSDT")).thenReturn(deep);
+    TestObserver<BybitOrderBookGap> gaps = marketDataService.getOrderBookGapEvents().test();
+    TestObserver<OrderBook> shallowBooks =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, 50).test();
+    shallow.onNext(orderBook("snapshot", 100, "100", "101"));
+    TestObserver<OrderBook> deepBooks =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, 200).test();
+    deep.onNext(orderBook("snapshot", 1000, "200", "201"));
+    deepBooks.dispose();
+    shallow.onNext(orderBook("delta", 101, "102", "103"));
+
+    shallowBooks.assertValueCount(2).assertNoErrors();
+    assertThat(shallowBooks.values().get(1).getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("103")) == 0);
+    assertThat(gaps.values()).isEmpty();
+  }
+
+  @Test
+  void sameDepthSubscribersShareChannelAndLateSubscriberReceivesCurrentBook() throws Exception {
+    PublishSubject<JsonNode> channel = PublishSubject.create();
+    when(streamingService.subscribeChannel("orderbook.50.BTCUSDT")).thenReturn(channel);
+    TestObserver<BybitOrderBookGap> gaps = marketDataService.getOrderBookGapEvents().test();
+    TestObserver<OrderBook> first =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT).test();
+
+    channel.onNext(orderBook("snapshot", 100, "100", "101"));
+    TestObserver<OrderBook> second =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT).test();
+    second.assertValueCount(1).assertNoErrors();
+    channel.onNext(orderBook("delta", 101, "102", "103"));
+    first.assertValueCount(2).assertNoErrors();
+    second.assertValueCount(2).assertNoErrors();
+    first.dispose();
+    channel.onNext(orderBook("delta", 102, "104", "105"));
+
+    second.assertValueCount(3).assertNoErrors();
+    assertThat(second.values().get(2).getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("105")) == 0);
+    assertThat(gaps.values()).isEmpty();
+    channel.onNext(orderBook("delta", 150, "106", "107"));
+    second.assertValueCount(3).assertNoErrors();
+    assertThat(gaps.values()).hasSize(1);
+    channel.onNext(orderBook("snapshot", 150, "106", "107"));
+    second.assertValueCount(4).assertNoErrors();
+    verify(streamingService, times(1)).subscribeChannel("orderbook.50.BTCUSDT");
+  }
+
+  @Test
+  void lateSubscriberDoesNotReceiveStaleBookDuringGapRecovery() throws Exception {
+    PublishSubject<JsonNode> channel = PublishSubject.create();
+    when(streamingService.subscribeChannel("orderbook.50.BTCUSDT")).thenReturn(channel);
+    TestObserver<BybitOrderBookGap> gaps = marketDataService.getOrderBookGapEvents().test();
+    TestObserver<OrderBook> first =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT).test();
+    AtomicReference<TestObserver<OrderBook>> duringGap = new AtomicReference<>();
+    marketDataService
+        .getOrderBookGapEvents()
+        .subscribe(
+            ignored ->
+                duringGap.set(
+                    marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT).test()));
+    channel.onNext(orderBook("snapshot", 100, "100", "101"));
+    channel.onNext(orderBook("delta", 150, "102", "103"));
+
+    TestObserver<OrderBook> second =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT).test();
+    second.assertNoValues().assertNoErrors();
+    assertThat(gaps.values()).hasSize(1);
+    assertThat(duringGap.get()).isNotNull();
+    duringGap.get().assertNoValues().assertNoErrors();
+    channel.onNext(orderBook("snapshot", 150, "102", "103"));
+    first.assertValueCount(2).assertNoErrors();
+    second.assertValueCount(1).assertNoErrors();
+    duringGap.get().assertValueCount(1).assertNoErrors();
+    assertThat(second.values().get(0).getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("103")) == 0);
+  }
+
+  @Test
+  void resubscribingAfterLastDisposalWaitsForFreshSnapshot() throws Exception {
+    PublishSubject<JsonNode> channel = PublishSubject.create();
+    when(streamingService.subscribeChannel("orderbook.50.BTCUSDT")).thenReturn(channel);
+    Observable<OrderBook> books = marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT);
+    TestObserver<OrderBook> first = books.test();
+    channel.onNext(orderBook("snapshot", 100, "100", "101"));
+    first.assertValueCount(1);
+    first.dispose();
+
+    TestObserver<OrderBook> second = books.test();
+    second.assertNoValues().assertNoErrors();
+    channel.onNext(orderBook("snapshot", 200, "200", "201"));
+    second.assertValueCount(1).assertNoErrors();
+    assertThat(second.values().get(0).getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("201")) == 0);
+    verify(streamingService, times(2)).subscribeChannel("orderbook.50.BTCUSDT");
+  }
+
+  @Test
+  void malformedDepthIsRejected() {
+    assertThatThrownBy(
+            () -> marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, "50,bad"))
+        .isInstanceOf(ExchangeException.class)
+        .hasMessageContaining("depth");
+  }
+
+  @Test
+  void separateShallowSubscriptionSharesCompoundChannelWithoutChangingDeepBook()
+      throws Exception {
+    PublishSubject<JsonNode> shallow = PublishSubject.create();
+    PublishSubject<JsonNode> deep = PublishSubject.create();
+    when(streamingService.subscribeChannel("orderbook.50.BTCUSDT")).thenReturn(shallow);
+    when(streamingService.subscribeChannel("orderbook.200.BTCUSDT")).thenReturn(deep);
+    TestObserver<OrderBook> compound =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, "50,200").test();
+    TestObserver<BybitOrderBookGap> gaps = marketDataService.getOrderBookGapEvents().test();
+
+    deep.onNext(orderBook("snapshot", 1000, "200", "201"));
+    shallow.onNext(orderBook("snapshot", 100, "100", "101"));
+    shallow.onNext(orderBook("delta", 101, "102", "103"));
+    TestObserver<OrderBook> single =
+        marketDataService.getOrderBook((Instrument) CurrencyPair.BTC_USDT, 50).test();
+    single.assertNoValues().assertNoErrors();
+    shallow.onNext(orderBook("snapshot", 102, "104", "105"));
+    single.assertValueCount(1).assertNoErrors();
+    shallow.onNext(orderBook("delta", 103, "106", "107"));
+
+    compound.assertValueCount(1).assertNoErrors();
+    single.assertValueCount(1).assertNoErrors();
+    assertThat(single.values().get(0)).isSameAs(compound.values().get(0));
+    assertThat(compound.values().get(0).getAsks())
+        .anyMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("201")) == 0)
+        .noneMatch(level -> level.getLimitPrice().compareTo(new BigDecimal("107")) == 0);
+    assertThat(gaps.values()).isEmpty();
+    verify(streamingService, times(1)).subscribeChannel("orderbook.50.BTCUSDT");
   }
 }

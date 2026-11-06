@@ -3,7 +3,7 @@ package org.knowm.xchange.okx.dto.subaccount;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** Offline Jackson wire-binding tests for {@link OkxSubAccountDetails}. */
 public class OkxSubAccountDetailsTest {

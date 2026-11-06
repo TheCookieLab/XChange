@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -241,5 +242,14 @@ public class OkexAdapters {
 
   public static String instrumentToInstrumentCode(Instrument instrument) {
     return OkxAdapters.instrumentToInstrumentCode(instrument);
+  }
+
+  public static String getPositionSide(Order order) {
+    return OkxAdapters.getPositionSide(order);
+  }
+
+  public static <T extends Order.IOrderFlags> Optional<T> getOrderFlag(
+      Order order, Class<T> clazz) {
+    return OkxAdapters.getOrderFlag(order, clazz);
   }
 }

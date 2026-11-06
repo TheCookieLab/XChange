@@ -13,8 +13,8 @@ import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.CandleStickInterval;
@@ -27,7 +27,7 @@ public class OkxStreamingExchangeLifecycleTest {
   private OkxPrivateStreamingService privateStreamingService;
   private OkxBusinessStreamingService businessStreamingService;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     exchange = new OkxStreamingExchange();
     streamingService = mock(OkxStreamingService.class);

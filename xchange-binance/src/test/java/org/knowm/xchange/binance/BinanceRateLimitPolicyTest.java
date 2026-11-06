@@ -1,11 +1,11 @@
 package org.knowm.xchange.binance;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.coinm.BinanceCoinmAuthApi;
 import org.knowm.xchange.binance.portfoliomargin.BinancePortfolioMarginApi;
@@ -72,21 +72,21 @@ public class BinanceRateLimitPolicyTest {
         keys.put(operationKey(iface, method), isAuthenticated(method));
       }
     }
-    assertTrue("reflection found the interface methods: " + keys.size(), keys.size() >= 70);
+    assertTrue(keys.size() >= 70, "reflection found the interface methods: " + keys.size());
     for (Map.Entry<String, Boolean> entry : keys.entrySet()) {
       RateLimitOperation operation =
           POLICY.classify(new RateLimitRequest(entry.getKey(), entry.getValue()));
-      assertNotNull("unclassified: " + entry.getKey(), operation);
-      assertFalse("no free operation: " + entry.getKey(), operation.getRequirements().isEmpty());
+      assertNotNull(operation, "unclassified: " + entry.getKey());
+      assertFalse(operation.getRequirements().isEmpty(), "no free operation: " + entry.getKey());
       assertTrue(
-          "every cost refers to a declared budget: " + entry.getKey(),
           operation.getRequirements().keySet().stream()
-              .allMatch(id -> POLICY.getBudget(id) != null));
+              .allMatch(id -> POLICY.getBudget(id) != null),
+          "every cost refers to a declared budget: " + entry.getKey());
       boolean mutation = isPlacementOrModification(entry.getKey());
       assertEquals(
-          "replay only for idempotent operations: " + entry.getKey(),
           !mutation,
-          operation.isReplayOnRateLimit());
+          operation.isReplayOnRateLimit(),
+          "replay only for idempotent operations: " + entry.getKey());
     }
   }
 
@@ -103,8 +103,8 @@ public class BinanceRateLimitPolicyTest {
         parameters.put("limit", "5000");
         parameters.put("orderId", "1");
         assertNotNull(
-            key, POLICY.classify(new RateLimitRequest(key, isAuthenticated(method), parameters)));
-        assertNotNull(key, POLICY.classify(new RateLimitRequest(key, isAuthenticated(method))));
+            POLICY.classify(new RateLimitRequest(key, isAuthenticated(method), parameters)), key);
+        assertNotNull(POLICY.classify(new RateLimitRequest(key, isAuthenticated(method))), key);
       }
     }
   }
@@ -122,9 +122,9 @@ public class BinanceRateLimitPolicyTest {
     };
     for (String key : keys) {
       RateLimitOperation operation = POLICY.classify(new RateLimitRequest(key, true));
-      assertNotNull(key, operation);
-      assertEquals(key, RateLimitPriority.EXECUTION, operation.getPriority());
-      assertFalse("never blind-replayed: " + key, operation.isReplayOnRateLimit());
+      assertNotNull(operation, key);
+      assertEquals(RateLimitPriority.EXECUTION, operation.getPriority(), key);
+      assertFalse(operation.isReplayOnRateLimit(), "never blind-replayed: " + key);
     }
   }
 
@@ -143,8 +143,8 @@ public class BinanceRateLimitPolicyTest {
     };
     for (String key : keys) {
       RateLimitOperation operation = POLICY.classify(new RateLimitRequest(key, true));
-      assertNotNull(key, operation);
-      assertTrue(key, operation.isReplayOnRateLimit());
+      assertNotNull(operation, key);
+      assertTrue(operation.isReplayOnRateLimit(), key);
     }
   }
 
@@ -256,9 +256,9 @@ public class BinanceRateLimitPolicyTest {
     for (String key :
         new String[] {"GET api/v3/depth", "GET api/v3/ticker/24hr", "GET fapi/v1/depth"}) {
       RateLimitOperation operation = POLICY.classify(new RateLimitRequest(key, false));
-      assertEquals(key, RateLimitPriority.MARKET_DATA, operation.getPriority());
+      assertEquals(RateLimitPriority.MARKET_DATA, operation.getPriority(), key);
       for (String budgetId : operation.getRequirements().keySet()) {
-        assertEquals(key, ScopeKind.EGRESS, POLICY.getBudget(budgetId).getScopeKind());
+        assertEquals(ScopeKind.EGRESS, POLICY.getBudget(budgetId).getScopeKind(), key);
       }
     }
   }
@@ -270,9 +270,9 @@ public class BinanceRateLimitPolicyTest {
           "GET api/v3/account", "POST api/v3/order", "GET api/v3/openOrders", "GET fapi/v2/account"
         }) {
       assertEquals(
-          key,
           RateLimitPriority.EXECUTION,
-          POLICY.classify(new RateLimitRequest(key, true)).getPriority());
+          POLICY.classify(new RateLimitRequest(key, true)).getPriority(),
+          key);
     }
   }
 
@@ -300,7 +300,7 @@ public class BinanceRateLimitPolicyTest {
           "POST api/v3/depth",
           "GET fapi/v1/x"
         }) {
-      assertNull(key, POLICY.classify(new RateLimitRequest(key, true)));
+      assertNull(POLICY.classify(new RateLimitRequest(key, true)), key);
     }
   }
 
@@ -432,31 +432,31 @@ public class BinanceRateLimitPolicyTest {
     RateLimitOperation operation =
         BinanceRateLimitPolicy.usPolicy()
             .classify(new RateLimitRequest(key, authenticated, parameters));
-    assertNotNull(key, operation);
+    assertNotNull(operation, key);
     return operation.getRequirements().get("binanceus.spot.weight");
   }
 
   private static void assertBudget(
       RateLimitPolicy policy, String id, ScopeKind scope, long limit, Duration period) {
     RateLimitBudget budget = policy.getBudget(id);
-    assertNotNull(id, budget);
-    assertEquals(id, scope, budget.getScopeKind());
-    assertEquals(id, limit, budget.getCapacity());
-    assertEquals(id, period, budget.getPeriod());
+    assertNotNull(budget, id);
+    assertEquals(scope, budget.getScopeKind(), id);
+    assertEquals(limit, budget.getCapacity(), id);
+    assertEquals(period, budget.getPeriod(), id);
   }
 
   private static long spotWeight(
       String key, boolean authenticated, Map<String, String> parameters) {
     RateLimitOperation operation =
         POLICY.classify(new RateLimitRequest(key, authenticated, parameters));
-    assertNotNull(key, operation);
-    assertEquals(key, 1L, (long) operation.getRequirements().get(SPOT_RAW));
+    assertNotNull(operation, key);
+    assertEquals(1L, (long) operation.getRequirements().get(SPOT_RAW), key);
     return operation.getRequirements().get(SPOT_WEIGHT);
   }
 
   private static long usdmWeight(String key, Map<String, String> parameters) {
     RateLimitOperation operation = POLICY.classify(new RateLimitRequest(key, false, parameters));
-    assertNotNull(key, operation);
+    assertNotNull(operation, key);
     return operation.getRequirements().get(USDM_WEIGHT);
   }
 

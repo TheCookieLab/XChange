@@ -1,14 +1,14 @@
 package org.knowm.xchange.bybit.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.ws.rs.Path;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bybit.BybitAuthenticated;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
@@ -97,8 +97,8 @@ public class BybitOptionDeliveryExtTest extends BaseWiremockTest {
     for (Method method : BybitAuthenticated.class.getDeclaredMethods()) {
       Path path = method.getAnnotation(Path.class);
       assertFalse(
-          "BybitAuthenticated must not expose V5 OTC RFQ trading (deprecated): " + method,
-          path != null && path.value().toLowerCase().contains("rfq"));
+          path != null && path.value().toLowerCase().contains("rfq"),
+          "BybitAuthenticated must not expose V5 OTC RFQ trading (deprecated): " + method);
     }
   }
 }

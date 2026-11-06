@@ -1,15 +1,17 @@
 package org.knowm.xchange.coinbase.v3.dto.orders;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 
 public class CoinbaseOrderDetailJsonTest {
 
@@ -103,7 +105,7 @@ public class CoinbaseOrderDetailJsonTest {
     assertEquals(new BigDecimal("30000"), ((LimitOrder) adapted).getLimitPrice());
   }
 
-  @Test(expected = org.knowm.xchange.exceptions.NotAvailableFromExchangeException.class)
+  @Test
   public void testDeserializeCdeLimitFokOrderDetailWithoutFabricatingInstrument() throws Exception {
     String json =
         "{\"order\":{\"order_id\":\"fok-1\",\"client_order_id\":\"c-fok\","
@@ -122,10 +124,11 @@ public class CoinbaseOrderDetailJsonTest {
 
     assertNull(response.getOrder().getInstrument());
 
-    CoinbaseAdapters.adaptOrder(response.getOrder());
+    assertThrows(NotAvailableFromExchangeException.class,
+        () -> CoinbaseAdapters.adaptOrder(response.getOrder()));
   }
 
-  @Test(expected = org.knowm.xchange.exceptions.NotAvailableFromExchangeException.class)
+  @Test
   public void testRejectQuoteSizedOrderWithoutBaseQuantityConversion() throws Exception {
     String json =
         "{\"order\":{\"order_id\":\"quote-1\",\"side\":\"BUY\",\"product_id\":\"BTC-USD\","
@@ -137,7 +140,8 @@ public class CoinbaseOrderDetailJsonTest {
     CoinbaseOrderDetailResponse response =
         new ObjectMapper().readValue(json, CoinbaseOrderDetailResponse.class);
 
-    CoinbaseAdapters.adaptOrder(response.getOrder());
+    assertThrows(NotAvailableFromExchangeException.class,
+        () -> CoinbaseAdapters.adaptOrder(response.getOrder()));
   }
 }
 

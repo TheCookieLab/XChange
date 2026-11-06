@@ -22,13 +22,13 @@ import org.knowm.xchange.gateio.GateioAdapters;
 import org.knowm.xchange.gateio.GateioExchangeWiremock;
 import org.knowm.xchange.gateio.dto.marketdata.GateioTrade;
 
-public class GateioMarketDataServiceTest extends GateioExchangeWiremock {
+class GateioMarketDataServiceTest extends GateioExchangeWiremock {
 
   GateioMarketDataService gateioMarketDataService =
       (GateioMarketDataService) exchange.getMarketDataService();
 
   @Test
-  void getOrderBook_valid() throws IOException {
+  void getOrderBook_valid() throws Exception {
     OrderBook actual = gateioMarketDataService.getOrderBook(CurrencyPair.BTC_USDT);
 
     List<LimitOrder> expectedAsks = new ArrayList<>();
@@ -65,7 +65,7 @@ public class GateioMarketDataServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void getTicker_valid() throws IOException {
+  void getTicker_valid() throws Exception {
     Ticker actual = gateioMarketDataService.getTicker(CurrencyPair.BTC_USDT);
 
     Ticker expected =
@@ -87,21 +87,21 @@ public class GateioMarketDataServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void getTickers_valid() throws IOException {
+  void getTickers_valid() throws Exception {
     List<Ticker> actual = gateioMarketDataService.getTickers(null);
 
     assertThat(actual).hasSize(2);
   }
 
   @Test
-  void getCurrencies_valid() throws IOException {
+  void getCurrencies_valid() throws Exception {
     List<Currency> actual = gateioMarketDataService.getCurrencies();
 
     assertThat(actual).containsOnly(Currency.BTC, Currency.ETH);
   }
 
   @Test
-  void getCurrencyPairs_valid() throws IOException {
+  void getCurrencyPairs_valid() throws Exception {
     List<CurrencyPair> actual = gateioMarketDataService.getCurrencyPairs();
 
     assertThat(actual)

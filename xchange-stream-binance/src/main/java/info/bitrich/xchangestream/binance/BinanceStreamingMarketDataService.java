@@ -1,17 +1,21 @@
 package info.bitrich.xchangestream.binance;
 
+import static info.bitrich.xchangestream.binance.BinanceSubscriptionType.KLINE;
+import static info.bitrich.xchangestream.binance.BinanceSubscriptionType.TICKER_WINDOW;
+import static info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper.getObjectMapper;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.RateLimiter;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import info.bitrich.xchangestream.binance.dto.BinanceWebsocketTransaction;
 import info.bitrich.xchangestream.binance.dto.market.*;
 import info.bitrich.xchangestream.binance.exceptions.UpFrontSubscriptionRequiredException;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.core.Single;
@@ -20,6 +24,17 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.functions.Consumer;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.BehaviorSubject;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceErrorAdapter;
 import org.knowm.xchange.binance.dto.BinanceException;
@@ -34,21 +49,6 @@ import org.knowm.xchange.exceptions.RateLimitExceededException;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static info.bitrich.xchangestream.binance.BinanceSubscriptionType.KLINE;
-import static info.bitrich.xchangestream.binance.BinanceSubscriptionType.TICKER_WINDOW;
-import static info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper.getObjectMapper;
 
 public class BinanceStreamingMarketDataService implements StreamingMarketDataService {
 
@@ -79,7 +79,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   private final Map<Instrument, Observable<DepthBinanceWebSocketTransaction>>
       orderBookRawUpdatesSubscriptions;
   private Observable<List<BinanceTicker24h>> allRollingWindowTickerSubscriptions;
-  private Map<Instrument, Integer> fundingRateInfoMap;
+  private volatile Map<String, Integer> fundingRateInfoMap;
   private Disposable fundingRateInfoUpdate;
   private final Map<Instrument, Observable<FundingRate>> fundingRateInfoSubscriptions;
 
@@ -90,10 +90,11 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   private static final Scheduler bookSnapshotsScheduler =
       Schedulers.from(
           Executors.newSingleThreadExecutor(
-              new ThreadFactoryBuilder()
-                  .setDaemon(true)
-                  .setNameFormat("binancefuture-book-snapshots-%d")
-                  .build()));
+              runnable -> {
+                Thread thread = new Thread(runnable, "binancefuture-book-snapshots-0");
+                thread.setDaemon(true);
+                return thread;
+              }));
 
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
   private final BinanceMarketDataService marketDataService;
@@ -139,9 +140,9 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   @Override
   public Observable<Ticker> getTicker(CurrencyPair currencyPair, Object... args) {
     if (realtimeOrderBookTicker) {
-      return getRawBookTicker(currencyPair).map(raw -> raw.toTicker(false));
+      return getRawBookTicker(currencyPair).map(raw -> raw.toTicker(currencyPair));
     }
-    return getRawTicker(currencyPair).map(raw -> BinanceAdapters.toTicker(raw, false));
+    return getRawTicker(currencyPair).map(raw -> BinanceAdapters.toTicker(raw, currencyPair));
   }
 
   @Override
@@ -162,11 +163,9 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   @Override
   public Observable<Ticker> getTicker(Instrument instrument, Object... args) {
     if (realtimeOrderBookTicker) {
-      return getRawBookTicker(instrument)
-          .map(raw -> raw.toTicker(instrument instanceof FuturesContract));
+      return getRawBookTicker(instrument).map(raw -> raw.toTicker(instrument));
     }
-    return getRawTicker(instrument)
-        .map(raw -> BinanceAdapters.toTicker(raw, instrument instanceof FuturesContract));
+    return getRawTicker(instrument).map(raw -> BinanceAdapters.toTicker(raw, instrument));
   }
 
   @Override
@@ -186,7 +185,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
           marketDataService.getBinanceFundingRateInfo().stream()
               .collect(
                   Collectors.toMap(
-                      BinanceFundingRateInfo::getInstrument,
+                      BinanceFundingRateInfo::getSymbol,
                       BinanceFundingRateInfo::getFundingIntervalHours));
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -292,12 +291,12 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         .map(
             it ->
                 this.<KlineBinanceWebSocketTransaction>readTransaction(it, KLINE_TYPE, "kline")
-                    .getData()
-                    .toBinanceKline(instrument instanceof FuturesContract))
+                    .getData())
         .filter(
-            binanceKline ->
-                binanceKline.getInstrument().equals(instrument)
-                    && binanceKline.getInterval().equals(interval));
+            data ->
+                matchesInstrument(data.getSymbol(), instrument)
+                    && data.getKlineInterval().equals(interval))
+        .map(data -> data.toBinanceKline(instrument));
   }
 
   /**
@@ -351,6 +350,22 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     return (instrument instanceof FuturesContract)
         ? ((FuturesContract) instrument).getCurrencyPair().toString().replace("/", "").toLowerCase()
         : instrument.toString().replace("/", "").toLowerCase();
+  }
+
+  /**
+   * Compares raw symbols instead of mapping the symbol back to an instrument, so pairs missing from
+   * the symbol mapping (e.g., listed after the exchange was initialized) are still matched.
+   * COIN-M perpetual messages may carry the inverse symbol's {@code _PERP} suffix.
+   * Futures other than PERP are not matched, since their channel omits the prompt.
+   */
+  private static boolean matchesInstrument(String symbol, Instrument instrument) {
+    if (instrument instanceof FuturesContract
+        && !"PERP".equals(((FuturesContract) instrument).getPrompt())) {
+      return false;
+    }
+    return BinanceAdapters.toSymbol(instrument).equalsIgnoreCase(symbol)
+        || (BinanceAdapters.isInverse(instrument)
+            && BinanceAdapters.toInverseSymbol(instrument).equalsIgnoreCase(symbol));
   }
 
   /**
@@ -495,7 +510,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
 
   private void initFundingRateSubscription(Instrument instrument) {
     fundingRateInfoSubscriptions.put(
-       instrument, triggerObservableBody(rawFundingRate(instrument)).share());
+        instrument, triggerObservableBody(rawFundingRateStream(instrument)).share());
   }
 
   private Observable<FundingRate> rawFundingRate(Instrument instrument) {
@@ -519,8 +534,14 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
           // run every hour, 1 second after new hour, and 5 seconds after new hour for backup
           fundingRateInfoUpdate =
               Observable.interval(delayToNextHour + 1000, millisInHour, TimeUnit.MILLISECONDS)
-                  .flatMap(tick -> Observable.just(tick, tick).delay(i -> Objects.equals(i, tick) ?
-                      Observable.timer(0, TimeUnit.MILLISECONDS) : Observable.timer(4000, TimeUnit.MILLISECONDS)))
+                  .flatMap(
+                      tick ->
+                          Observable.just(tick, tick)
+                              .delay(
+                                  i ->
+                                      Objects.equals(i, tick)
+                                          ? Observable.timer(0, TimeUnit.MILLISECONDS)
+                                          : Observable.timer(4000, TimeUnit.MILLISECONDS)))
                   .subscribe(x -> updateFundingRateInfo());
           updateFundingRateInfo();
         }
@@ -537,10 +558,12 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                   this.<FundingRateWebsocketTransaction>readTransaction(
                       it, FUNDING_RATE_TYPE, "funding rate"))
           .map(BinanceWebsocketTransaction::getData)
-          .filter(data -> BinanceAdapters.adaptSymbol(data.getSymbol(), true).equals(instrument))
+          .filter(data -> matchesInstrument(data.getSymbol(), instrument))
           .map(
               transaction ->
-                  transaction.toFundingRate(fundingRateInfoMap.getOrDefault(instrument, 8)));
+                  transaction.toFundingRate(
+                      fundingRateInfoMap.getOrDefault(transaction.getSymbol(), 8),
+                      instrument));
     } catch (Exception e) {
       return Observable.error(e);
     }
@@ -552,11 +575,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         .map(
             it ->
                 this.<TickerBinanceWebsocketTransaction>readTransaction(it, TICKER_TYPE, "ticker"))
-        .filter(
-            transaction ->
-                BinanceAdapters.adaptSymbol(
-                        transaction.getData().getSymbol(), instrument instanceof FuturesContract)
-                    .equals(instrument))
+        .filter(transaction -> matchesInstrument(transaction.getData().getSymbol(), instrument))
         .map(transaction -> transaction.getData().getTicker());
   }
 
@@ -572,11 +591,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         .map(
             (it) ->
                 this.<TickerBinanceWebsocketTransaction>readTransaction(it, TICKER_TYPE, "ticker"))
-        .filter(
-            transaction ->
-                BinanceAdapters.adaptSymbol(
-                        transaction.getData().getSymbol(), instrument instanceof FuturesContract)
-                    .equals(instrument))
+        .filter(transaction -> matchesInstrument(transaction.getData().getSymbol(), instrument))
         .map(transaction -> transaction.getData().getTicker());
   }
 
@@ -606,10 +621,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                     it, BOOK_TICKER_TYPE, "book ticker"))
         .filter(
             transaction ->
-                BinanceAdapters.adaptSymbol(
-                        transaction.getData().getTicker().getSymbol(),
-                        instrument instanceof FuturesContract)
-                    .equals(instrument))
+                matchesInstrument(transaction.getData().getTicker().getSymbol(), instrument))
         .map(transaction -> transaction.getData().getTicker());
   }
 
@@ -657,10 +669,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                 this.<DepthBinanceWebSocketTransaction>readTransaction(
                     it, DEPTH_TYPE, "order book"))
         .map(BinanceWebsocketTransaction::getData)
-        .filter(
-            data ->
-                BinanceAdapters.adaptSymbol(data.getSymbol(), instrument instanceof FuturesContract)
-                    .equals(instrument));
+        .filter(data -> matchesInstrument(data.getSymbol(), instrument));
   }
 
   private Observable<OrderBook> createOrderBookObservable(Instrument instrument) {
@@ -736,11 +745,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     return service
         .subscribeChannel(channelFromCurrency(instrument, BinanceSubscriptionType.TRADE.getType()))
         .map(it -> this.<TradeBinanceWebsocketTransaction>readTransaction(it, TRADE_TYPE, "trade"))
-        .filter(
-            transaction ->
-                BinanceAdapters.adaptSymbol(
-                        transaction.getData().getSymbol(), instrument instanceof FuturesContract)
-                    .equals(instrument))
+        .filter(transaction -> matchesInstrument(transaction.getData().getSymbol(), instrument))
         .map(transaction -> transaction.getData().getRawTrade());
   }
 
@@ -1088,17 +1093,24 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         if (fallenBack.compareAndSet(false, true)) {
           LOG.error(
               "API Rate limit was hit when fetching Binance order book snapshot. Provide a \n"
-                  + "rate limiter. Apache Commons and Google Guava provide the TimedSemaphore\n"
-                  + "and RateLimiter classes which are effective for this purpose. Example:\n"
+                  + "rate limiter. Resilience4j (already on the classpath) provides a RateLimiter\n"
+                  + "class which is effective for this purpose. Example:\n"
                   + "\n"
                   + "  exchangeSpecification.setExchangeSpecificParametersItem(\n"
                   + "      info.bitrich.xchangestream.util.Events.BEFORE_API_CALL_HANDLER,\n"
-                  + "      () -> rateLimiter.acquire())\n"
+                  + "      () -> RateLimiter.waitForPermission(rateLimiter))\n"
                   + "\n"
                   + "Pausing for 15sec and falling back to one call per three seconds, but you\n"
                   + "will get more optimal performance by handling your own rate limiting.");
-          RateLimiter rateLimiter = RateLimiter.create(0.333);
-          fallbackOnApiCall.set(rateLimiter::acquire);
+          RateLimiter rateLimiter =
+              RateLimiter.of(
+                  "binance-book-snapshot-fallback",
+                  RateLimiterConfig.custom()
+                      .limitForPeriod(1)
+                      .limitRefreshPeriod(Duration.ofSeconds(3))
+                      .timeoutDuration(Duration.ofMinutes(1))
+                      .build());
+          fallbackOnApiCall.set(() -> RateLimiter.waitForPermission(rateLimiter));
           Thread.sleep(15000);
         }
       }

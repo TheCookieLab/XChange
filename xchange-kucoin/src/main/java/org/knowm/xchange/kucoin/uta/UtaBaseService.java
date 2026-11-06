@@ -1,6 +1,5 @@
 package org.knowm.xchange.kucoin.uta;
 
-import com.google.common.base.Strings;
 import java.io.IOException;
 import java.util.Objects;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
@@ -56,13 +55,13 @@ public abstract class UtaBaseService extends BaseResilientExchangeService<Kucoin
   }
 
   protected void checkAuthenticated() {
-    if (Strings.isNullOrEmpty(this.apiKey)) {
+    if (this.apiKey == null || this.apiKey.isEmpty()) {
       throw unauthorized("Missing API key");
     }
     if (this.digest == null) {
       throw unauthorized("Missing secret key");
     }
-    if (Strings.isNullOrEmpty(this.encryptedPassphrase)) {
+    if (this.encryptedPassphrase == null || this.encryptedPassphrase.isEmpty()) {
       throw unauthorized("Missing passphrase");
     }
   }

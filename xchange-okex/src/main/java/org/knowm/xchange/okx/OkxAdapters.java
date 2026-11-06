@@ -308,15 +308,14 @@ public class OkxAdapters {
 
   public static OkxOrderRequest adaptOrder(
       MarketOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+    String positionSide = getPositionSide(order);
     return OkxOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
         .instIdCode(instrumentCode(order.getInstrument()).toString())
         .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
         .side(getSide(order))
-        .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
-        // support Futures/Swap capabilities of Okx, till then it should be null to
-        // perform "net" orders
-        .reducePosition(order.hasFlag(OkxOrderFlags.REDUCE_ONLY))
+        .posSide(positionSide)
+        .reducePosition(positionSide == null && order.hasFlag(OkxOrderFlags.REDUCE_ONLY))
         .clientOrderId(order.getUserReference())
         .orderType(OkxOrderType.market.name())
         .amount(convertVolumeToContractSize(order, exchangeMetaData))
@@ -396,16 +395,15 @@ public class OkxAdapters {
 
   public static OkxOrderRequest adaptOrder(
       LimitOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+    String positionSide = getPositionSide(order);
     return OkxOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
         .instIdCode(instrumentCode(order.getInstrument()).toString())
         .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
         .side(getSide(order))
-        .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
-        // support Futures/Swap capabilities of Okx, till then it should be null to
-        // perform "net" orders
+        .posSide(positionSide)
         .clientOrderId(order.getUserReference())
-        .reducePosition(order.hasFlag(OkxOrderFlags.REDUCE_ONLY))
+        .reducePosition(positionSide == null && order.hasFlag(OkxOrderFlags.REDUCE_ONLY))
         .orderType(
             (order.hasFlag(OkxOrderFlags.POST_ONLY))
                 ? OkxOrderType.post_only.name()
@@ -438,6 +436,28 @@ public class OkxAdapters {
         break;
     }
     return side;
+  }
+
+  /** Returns the long or short position for a two-way order; net orders omit posSide. */
+  public static String getPositionSide(Order order) {
+    if (!order.hasFlag(OrderHedgeMode.TWOWAY)) {
+      return null;
+    }
+    switch (order.getType()) {
+      case ASK:
+      case EXIT_ASK:
+        return "short";
+      case BID:
+      case EXIT_BID:
+        return "long";
+      default:
+        throw new IllegalArgumentException("Unsupported order type: " + order.getType());
+    }
+  }
+
+  public static <T extends Order.IOrderFlags> Optional<T> getOrderFlag(
+      Order order, Class<T> clazz) {
+    return order.getOrderFlags().stream().filter(clazz::isInstance).map(clazz::cast).findFirst();
   }
 
   public static LimitOrder adaptLimitOrder(

@@ -10,8 +10,8 @@ import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -69,7 +69,7 @@ public class BybitPrivateStreamingLifecycleTest {
     channelField.set(service, channel);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     ExchangeSpecification base = new BybitStreamingExchange().getDefaultExchangeSpecification();
     base.setShouldLoadRemoteMetaData(false);

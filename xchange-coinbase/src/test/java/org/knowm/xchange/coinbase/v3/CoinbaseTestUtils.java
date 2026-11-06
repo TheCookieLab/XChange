@@ -6,7 +6,7 @@ import java.security.KeyPairGenerator;
 import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
 import java.util.UUID;
-import org.junit.Assume;
+import org.junit.jupiter.api.Assumptions;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.utils.AuthUtils;
@@ -162,8 +162,7 @@ public class CoinbaseTestUtils {
    * Use with @Test methods that should only run against sandbox.
    */
   public static void assumeSandboxMode() {
-    Assume.assumeTrue("Sandbox mode only (set -Dcoinbase.sandbox=true)", 
-        "true".equalsIgnoreCase(System.getProperty(PROPERTY_SANDBOX)));
+    Assumptions.assumeTrue("true".equalsIgnoreCase(System.getProperty(PROPERTY_SANDBOX)), "Sandbox mode only (set -Dcoinbase.sandbox=true)");
   }
 
   /**
@@ -171,8 +170,7 @@ public class CoinbaseTestUtils {
    * Use with @Test methods that require real API access.
    */
   public static void assumeProductionMode() {
-    Assume.assumeTrue("Production mode only (auth required)", 
-        !"true".equalsIgnoreCase(System.getProperty(PROPERTY_SANDBOX)));
+    Assumptions.assumeTrue(!"true".equalsIgnoreCase(System.getProperty(PROPERTY_SANDBOX)), "Production mode only (auth required)");
   }
 
   /**
@@ -182,8 +180,7 @@ public class CoinbaseTestUtils {
    * @param spec exchange specification to check
    */
   public static void assumeAuthConfigured(ExchangeSpecification spec) {
-    Assume.assumeTrue("Authentication required (API key and secret must be configured)", 
-        isAuthConfigured(spec));
+    Assumptions.assumeTrue(isAuthConfigured(spec), "Authentication required (API key and secret must be configured)");
   }
 
   /**

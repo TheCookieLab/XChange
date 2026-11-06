@@ -38,6 +38,15 @@ The environment is resolved from the exchange specification at
 | `BybitStreamingTradeService.getComplexOrderChanges` | `order` | `BybitComplexOrderChanges` |
 | Order-entry (prod/testnet only) | `order.create` / `order.create-batch` / `order.amend` / `order.amend-batch` / `order.cancel` / `order.cancel-batch` | `BybitStreamOrderResponse` |
 
+`getOrderBook` defaults to depth 50 and accepts one depth or a comma-separated
+list. Subscribers at the same depth share a channel. Across all subscriptions
+for a symbol, the deepest active depth governs the book; shallower updates do
+not change it or emit continuity-gap events. When the governing depth is
+removed, the next deepest depth takes over. If its next update reveals a gap,
+`getOrderBookGapEvents()` reports the failure and an open WebSocket is
+resubscribed to obtain a fresh snapshot. Governing-channel continuity failures
+are reported in the same way.
+
 Order and position changes flow through the authenticated private user-data
 stream (`wss://…/v5/private`); order-entry operations flow through the separate
 order-entry (trade) transport.

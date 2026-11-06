@@ -218,6 +218,11 @@ public class OkxAccountServiceRaw extends OkxBaseService {
     }
   }
 
+  public OkxResponse<List<OkxSetPositionModeResponse>> setPositionDualModeRaw(boolean dualMode)
+      throws OkxException, IOException {
+    return setPositionMode(dualMode ? "long_short_mode" : "net_mode", null);
+  }
+
   public OkxResponse<List<OkxDepositAddress>> getDepositAddress(String currency)
       throws OkxException, IOException {
     try {

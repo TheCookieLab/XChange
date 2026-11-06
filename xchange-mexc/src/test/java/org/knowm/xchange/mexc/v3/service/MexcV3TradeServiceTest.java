@@ -18,7 +18,7 @@ import com.github.tomakehurst.wiremock.http.Fault;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Collection;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;

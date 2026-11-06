@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import si.mazi.rescu.RestInvocation;
 
 public class BaseParamsDigestTest {

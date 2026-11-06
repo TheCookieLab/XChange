@@ -9,7 +9,7 @@ import ch.qos.logback.core.read.ListAppender;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import java.lang.reflect.Field;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 public class NettyStreamingServiceLoggingTest {

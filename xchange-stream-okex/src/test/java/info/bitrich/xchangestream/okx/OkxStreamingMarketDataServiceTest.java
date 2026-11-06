@@ -12,8 +12,8 @@ import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
 import java.math.BigDecimal;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.CandleStickInterval;
@@ -27,7 +27,7 @@ public class OkxStreamingMarketDataServiceTest {
   private OkxBusinessStreamingService businessStreamingService;
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp() {
     streamingService = mock(OkxStreamingService.class);
     businessStreamingService = mock(OkxBusinessStreamingService.class);
@@ -38,7 +38,7 @@ public class OkxStreamingMarketDataServiceTest {
   }
 
   @Test
-  public void testGetCandleStick() throws Exception {
+  void getCandleStick() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(this.getClass().getResourceAsStream("/getCandleStickResponse.json"));
 

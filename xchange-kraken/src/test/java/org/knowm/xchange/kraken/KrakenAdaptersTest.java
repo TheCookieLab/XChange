@@ -2,8 +2,6 @@ package org.knowm.xchange.kraken;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,7 +11,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
@@ -56,10 +53,10 @@ import org.knowm.xchange.kraken.dto.trade.results.KrakenQueryOrderResult;
 import org.knowm.xchange.kraken.dto.trade.results.KrakenTradeHistoryResult;
 import org.knowm.xchange.kraken.dto.trade.results.KrakenTradeHistoryResult.KrakenTradeHistory;
 
-public class KrakenAdaptersTest {
+class KrakenAdaptersTest {
 
   @BeforeAll
-  public static void before() throws IOException {
+  static void before() throws IOException {
 
     KrakenUtils.clearAssets();
     // Read in the JSON from the example resources
@@ -82,7 +79,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptTicker() throws IOException {
+  void adaptTicker() throws Exception {
 
     // Read in the JSON from the example resources
     InputStream is =
@@ -111,7 +108,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptCurrencyPairs() throws IOException {
+  void adaptCurrencyPairs() throws Exception {
 
     // Read in the JSON from the example resources
     InputStream is =
@@ -129,7 +126,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptTrades() throws IOException {
+  void adaptTrades() throws Exception {
 
     // Read in the JSON from the example resources
     InputStream is =
@@ -146,7 +143,7 @@ public class KrakenAdaptersTest {
             CurrencyPair.BTC_USD,
             krakenTrades.getResult().getLast());
 
-    Assertions.assertEquals(14, trades.getTrades().size());
+    assertThat(trades.getTrades().size()).isEqualTo(14);
     assertThat(trades.getTrades().get(0).getPrice()).isEqualTo("1023.82219");
     assertThat(trades.getTrades().get(0).getType()).isEqualTo(OrderType.ASK);
     assertThat(trades.getTrades().get(0).getTimestamp()).isEqualTo(new Date(1385579841777L));
@@ -155,7 +152,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptOrderBook() throws JsonParseException, JsonMappingException, IOException {
+  void adaptOrderBook() throws Exception {
 
     // Read in the JSON from the example resources
     InputStream is =
@@ -181,7 +178,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptOpenOrders() throws IOException {
+  void adaptOpenOrders() throws Exception {
 
     // Read in the JSON from the example resources
     InputStream is =
@@ -206,7 +203,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptOpenOrdersInTransactionCurrency() throws IOException {
+  void adaptOpenOrdersInTransactionCurrency() throws Exception {
 
     // Read in the JSON from the example resources
     InputStream is =
@@ -231,7 +228,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptTradeHistory() throws JsonParseException, JsonMappingException, IOException {
+  void adaptTradeHistory() throws Exception {
     List<UserTrade> tradeList =
         loadUserTrades("/org/knowm/xchange/kraken/dto/trading/example-tradehistory-data.json");
 
@@ -250,7 +247,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testIcnTradeHistory() throws JsonParseException, JsonMappingException, IOException {
+  void icnTradeHistory() throws Exception {
     List<UserTrade> tradeList =
         loadUserTrades("/org/knowm/xchange/kraken/dto/trading/example-tradehistory-icn.json");
 
@@ -283,8 +280,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptFundingHistory()
-      throws JsonParseException, JsonMappingException, IOException {
+  void adaptFundingHistory() throws Exception {
 
     // Read in the JSON from the example resources
     InputStream is =
@@ -311,7 +307,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptMarketOrder() throws IOException {
+  void adaptMarketOrder() throws Exception {
 
     // Read in the JSON from the example resources
     InputStream is =
@@ -337,7 +333,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptFees() throws IOException {
+  void adaptFees() throws Exception {
     // Read in the JSON from the example resources
     InputStream is =
         KrakenAdaptersTest.class.getResourceAsStream(
@@ -354,7 +350,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptFeeTiers1() {
+  void adaptFeeTiers1() {
     List<KrakenFee> krakenMakerFees = new ArrayList<>();
     List<KrakenFee> krakenTakerFees = new ArrayList<>();
 
@@ -546,7 +542,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptFundingHistory_WithSpendLedgerType() {
+  void adaptFundingHistoryWithSpendLedgerType() {
     // Test that adaptFundingHistory handles SPEND ledger type
     Map<String, KrakenLedger> ledgerMap = new java.util.HashMap<>();
     KrakenLedger ledger =
@@ -571,7 +567,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testAdaptFundingHistory_WithRewardLedgerType() {
+  void adaptFundingHistoryWithRewardLedgerType() {
     // Test that adaptFundingHistory handles REWARD ledger type
     Map<String, KrakenLedger> ledgerMap = new java.util.HashMap<>();
     KrakenLedger ledger =
@@ -596,7 +592,7 @@ public class KrakenAdaptersTest {
   }
 
   @Test
-  public void testLedgerType_FromString() {
+  void ledgerTypeFromString() {
     // Test that all new ledger types can be deserialized from strings
     assertThat(LedgerType.fromString("receive")).isEqualTo(LedgerType.RECEIVE);
     assertThat(LedgerType.fromString("spend")).isEqualTo(LedgerType.SPEND);

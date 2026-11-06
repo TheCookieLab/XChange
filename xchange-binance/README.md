@@ -153,6 +153,10 @@ The library never blindly resubmits a placement; recovery is a bounded reconcili
 client order ID (`Order.userReference` maps to `newClientOrderId`). Reads and cancellations may
 retry under the resilience configuration because their request identity makes replay safe.
 
+Order responses expose cumulative filled quantity. When both cumulative quote quantity and
+executed quantity are nonzero, the adapted average price is their quotient; otherwise a nonzero
+exchange-provided `avgPrice` is used.
+
 ## Sandbox
 
 | Family | Sandbox URL |

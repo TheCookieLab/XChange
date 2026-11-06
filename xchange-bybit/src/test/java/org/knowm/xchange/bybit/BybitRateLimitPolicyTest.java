@@ -1,11 +1,11 @@
 package org.knowm.xchange.bybit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.DELETE;
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bybit.dto.trade.batch.BybitBatchResult;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget;
@@ -57,36 +57,37 @@ public class BybitRateLimitPolicyTest {
         boolean authenticated = isAuthenticated(method);
         String key = operationKey(iface, method);
         RateLimitOperation operation = POLICY.classify(new RateLimitRequest(key, authenticated));
-        assertNotNull("unclassified " + iface.getSimpleName() + "." + method.getName() + ": " + key, operation);
+        assertNotNull(
+            operation, "unclassified " + iface.getSimpleName() + "." + method.getName() + ": " + key);
         assertEquals(key, operation.getName());
         assertTrue(
-            "every request consumes the IP budget: " + key,
-            operation.getRequirements().containsKey(BybitRateLimitPolicy.IP));
+            operation.getRequirements().containsKey(BybitRateLimitPolicy.IP),
+            "every request consumes the IP budget: " + key);
         assertEquals(
-            "IP cost is one unit: " + key,
             Long.valueOf(1L),
-            operation.getRequirements().get(BybitRateLimitPolicy.IP));
+            operation.getRequirements().get(BybitRateLimitPolicy.IP),
+            "IP cost is one unit: " + key);
         if (authenticated) {
-          assertEquals(key, RateLimitPriority.EXECUTION, operation.getPriority());
+          assertEquals(RateLimitPriority.EXECUTION, operation.getPriority(), key);
           assertEquals(
-              "one IP unit plus one endpoint unit: " + key, 2, operation.getRequirements().size());
+              2, operation.getRequirements().size(), "one IP unit plus one endpoint unit: " + key);
         } else {
-          assertEquals(key, RateLimitPriority.MARKET_DATA, operation.getPriority());
+          assertEquals(RateLimitPriority.MARKET_DATA, operation.getPriority(), key);
           assertEquals(
-              "public requests only consume the IP budget: " + key,
               Map.of(BybitRateLimitPolicy.IP, 1L),
-              operation.getRequirements());
-          assertTrue("public reads are replay-safe: " + key, operation.isReplayOnRateLimit());
+              operation.getRequirements(),
+              "public requests only consume the IP budget: " + key);
+          assertTrue(operation.isReplayOnRateLimit(), "public reads are replay-safe: " + key);
         }
         for (String budgetId : operation.getRequirements().keySet()) {
-          assertNotNull("budget declared for " + key + ": " + budgetId, POLICY.getBudget(budgetId));
+          assertNotNull(POLICY.getBudget(budgetId), "budget declared for " + key + ": " + budgetId);
         }
         keys.add(key);
         checked++;
       }
     }
-    assertTrue("reflection found the rescu methods: " + checked, checked >= 40);
-    assertEquals("distinct operation keys classified", 40, keys.size());
+    assertTrue(checked >= 40, "reflection found the rescu methods: " + checked);
+    assertEquals(40, keys.size(), "distinct operation keys classified");
   }
 
   /** Reads replay on a confirmed rate rejection; economic mutations never do. */
@@ -101,7 +102,7 @@ public class BybitRateLimitPolicyTest {
         RateLimitOperation operation =
             POLICY.classify(new RateLimitRequest(key, isAuthenticated(method)));
         if ("GET".equals(httpMethod(method))) {
-          assertTrue("read replays: " + key, operation.isReplayOnRateLimit());
+          assertTrue(operation.isReplayOnRateLimit(), "read replays: " + key);
         }
       }
     }
@@ -121,14 +122,14 @@ public class BybitRateLimitPolicyTest {
     };
     for (String key : neverReplayed) {
       RateLimitOperation operation = POLICY.classify(new RateLimitRequest(key, true));
-      assertNotNull(key, operation);
-      assertFalse("mutation must not replay: " + key, operation.isReplayOnRateLimit());
+      assertNotNull(operation, key);
+      assertFalse(operation.isReplayOnRateLimit(), "mutation must not replay: " + key);
     }
     String[] idempotent = {
       "POST v5/order/pre-check", "POST v5/position/set-leverage", "POST v5/position/switch-mode"
     };
     for (String key : idempotent) {
-      assertTrue(key, POLICY.classify(new RateLimitRequest(key, true)).isReplayOnRateLimit());
+      assertTrue(POLICY.classify(new RateLimitRequest(key, true)).isReplayOnRateLimit(), key);
     }
   }
 
@@ -193,7 +194,7 @@ public class BybitRateLimitPolicyTest {
       "GET /v5/market/time"
     };
     for (String key : keys) {
-      assertNull(key, POLICY.classify(new RateLimitRequest(key, true)));
+      assertNull(POLICY.classify(new RateLimitRequest(key, true)), key);
     }
   }
 
@@ -278,7 +279,7 @@ public class BybitRateLimitPolicyTest {
     exchange.applySpecification(specification);
     RateLimitContext context = specification.getResilience().getRateLimitContext();
     try {
-      assertNotNull("an enabled policy gets an owned context", context);
+      assertNotNull(context, "an enabled policy gets an owned context");
       assertEquals(
           BybitRateLimitPolicy.VERSION,
           context.diagnostics().getPolicyVersions().get(BybitRateLimitPolicy.NAMESPACE));
@@ -298,8 +299,8 @@ public class BybitRateLimitPolicyTest {
 
     assertFalse(specification.getResilience().isRateLimiterEnabled());
     assertNull(
-        "a disabled policy creates no enforcing context",
-        specification.getResilience().getRateLimitContext());
+        specification.getResilience().getRateLimitContext(),
+        "a disabled policy creates no enforcing context");
   }
 
   // ---- reflection helpers --------------------------------------------------------------------

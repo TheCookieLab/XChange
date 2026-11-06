@@ -41,7 +41,7 @@ Legend: ✅ implemented.
 | Area | Endpoints |
 |---|---|
 | Account | balance, trade-fee, config, bills, bills-archive ✅ |
-| Positions | positions, positions-history, account-position-risk, set-leverage, position margin-balance ✅ |
+| Positions | positions, positions-history, account-position-risk, set-leverage, set-position-mode, position margin-balance ✅ |
 | Assets | currencies, balances, withdrawal, deposit-address, transfer, piggy-balance ✅ |
 | Orders | place, place-batch, cancel, cancel-batch, amend, amend-batch, order, orders-pending, orders-history ✅ |
 | Fills | fills, fills-history ✅ |
@@ -104,6 +104,12 @@ Order placement is **non-replayable** after an ambiguous transport result (timeo
 query by client order id (`clOrdId`), and a placed order found by that id is returned instead
 of a duplicate placement. Reads and cancellations may retry because their request identity
 makes replay safe. Batch placement reconciles per-order the same way.
+
+For swap and futures hedge-mode orders, call
+`OkxAccountService.setPositionDualMode(true)` and add `OrderHedgeMode.TWOWAY` to each order.
+`BID`/`EXIT_BID` address the long position and `ASK`/`EXIT_ASK` the short position; exits
+send the opposite side. Without that flag, orders use net mode. `setPositionDualMode(false)`
+switches the account back to net mode.
 
 ## Typed pagination
 

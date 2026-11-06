@@ -1,5 +1,14 @@
 package org.knowm.xchange.binance.service;
 
+import static org.knowm.xchange.binance.BinanceAdapters.adaptSymbol;
+import static org.knowm.xchange.binance.BinanceAdapters.toSymbol;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceErrorAdapter;
@@ -20,16 +29,6 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.account.params.RequestDepositAddressParams;
 import org.knowm.xchange.service.trade.params.*;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static org.knowm.xchange.binance.BinanceAdapters.adaptSymbol;
-import static org.knowm.xchange.binance.BinanceAdapters.toSymbol;
-import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 
 public class BinanceAccountService extends BinanceAccountServiceRaw implements AccountService {
 
@@ -523,7 +522,8 @@ public class BinanceAccountService extends BinanceAccountServiceRaw implements A
   }
 
   @Override
-  public boolean setLeverage(Instrument instrument, int leverage, Object... args) throws IOException {
+  public boolean setLeverage(Instrument instrument, int leverage, Object... args)
+      throws IOException {
     if (instrument instanceof FuturesContract) {
       return setLeverageRaw(instrument, leverage).leverage == leverage;
     } else return false;

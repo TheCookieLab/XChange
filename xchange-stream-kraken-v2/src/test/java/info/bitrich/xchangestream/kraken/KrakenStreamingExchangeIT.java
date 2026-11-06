@@ -15,7 +15,7 @@ public class KrakenStreamingExchangeIT {
   private static Throwable connectionFailure;
 
   @BeforeAll
-  public static void setup() {
+  static void setup() {
     ExchangeSpecification spec =
         StreamingExchangeFactory.INSTANCE
             .createExchangeWithoutSpecification(KrakenStreamingExchange.class)

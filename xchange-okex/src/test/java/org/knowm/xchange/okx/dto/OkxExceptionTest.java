@@ -2,7 +2,7 @@ package org.knowm.xchange.okx.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.okx.dto.OkxException.RetryClassification;
 import org.knowm.xchange.okx.dto.OkxException.TransportState;
 

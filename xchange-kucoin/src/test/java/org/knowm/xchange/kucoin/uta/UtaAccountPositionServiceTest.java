@@ -1,13 +1,19 @@
 package org.knowm.xchange.kucoin.uta;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.kucoin.KucoinExchange;
 import org.knowm.xchange.kucoin.uta.dto.UtaBatchCancelRequest;
 import org.knowm.xchange.kucoin.uta.dto.UtaBatchCancelResult;
 import org.knowm.xchange.kucoin.uta.dto.UtaLedgerEntry;
@@ -15,6 +21,7 @@ import org.knowm.xchange.kucoin.uta.dto.UtaMarginMode;
 import org.knowm.xchange.kucoin.uta.dto.UtaModifyLeverageRequest;
 import org.knowm.xchange.kucoin.uta.dto.UtaModifyLeverageResult;
 import org.knowm.xchange.kucoin.uta.dto.UtaPositionHistory;
+import org.knowm.xchange.kucoin.uta.service.UtaApiException;
 
 /** Deterministic fixtures for the Phase 4 endpoint additions (margin, leverage, history, batch). */
 class UtaAccountPositionServiceTest extends AbstractUtaResilienceTest {
@@ -27,6 +34,42 @@ class UtaAccountPositionServiceTest extends AbstractUtaResilienceTest {
                     .withStatus(200)
                     .withHeader("Content-Type", "application/json")
                     .withBody(body)));
+  }
+
+  @Test
+  void privateAuthenticationRejectsNullOrEmptyCredentialsButNotWhitespace() {
+    for (String empty : new String[] {null, ""}) {
+      assertEquals(
+          "Missing API key",
+          assertThrows(
+                  UtaApiException.class,
+                  () -> serviceWithCredentials(empty, "secret", "pass").checkAuthenticated())
+              .getMessage());
+      assertEquals(
+          "Missing secret key",
+          assertThrows(
+                  UtaApiException.class,
+                  () -> serviceWithCredentials("key", empty, "pass").checkAuthenticated())
+              .getMessage());
+      assertEquals(
+          "Missing passphrase",
+          assertThrows(
+                  UtaApiException.class,
+                  () -> serviceWithCredentials("key", "secret", empty).checkAuthenticated())
+              .getMessage());
+    }
+    assertDoesNotThrow(() -> serviceWithCredentials(" ", " ", " ").checkAuthenticated());
+  }
+
+  private static UtaBaseService serviceWithCredentials(
+      String apiKey, String secret, String passphrase) {
+    KucoinExchange exchange = mock(KucoinExchange.class);
+    ExchangeSpecification specification = new ExchangeSpecification(KucoinExchange.class);
+    specification.setApiKey(apiKey);
+    specification.setSecretKey(secret);
+    specification.setExchangeSpecificParametersItem("passphrase", passphrase);
+    when(exchange.getExchangeSpecification()).thenReturn(specification);
+    return new UtaBaseService(exchange, null) {};
   }
 
   @Test

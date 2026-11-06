@@ -1,9 +1,9 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.isNull;
@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Collections;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
@@ -54,7 +54,7 @@ public class CoinbaseMarketDataServiceUnitTest {
     Exchange exchange = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class);
     MarketDataService service = exchange.getMarketDataService();
     
-    assertNotNull("Market data service should not be null", service);
+    assertNotNull(service, "Market data service should not be null");
   }
 
   @Test
@@ -62,7 +62,7 @@ public class CoinbaseMarketDataServiceUnitTest {
     Exchange exchange = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class);
     MarketDataService service = exchange.getMarketDataService();
     
-    assertNotNull("Service should not be null", service);
+    assertNotNull(service, "Service should not be null");
     assert(service instanceof CoinbaseMarketDataService);
   }
 
@@ -112,7 +112,7 @@ public class CoinbaseMarketDataServiceUnitTest {
     Ticker ticker = service.getTicker((Instrument) currencyPair);
     
     // Verify that a ticker is returned (even without price book data, adaptTicker should handle null)
-    assertNotNull("Ticker should not be null even with empty priceBooks", ticker);
+    assertNotNull(ticker, "Ticker should not be null even with empty priceBooks");
   }
 
   @Test
@@ -306,7 +306,7 @@ public class CoinbaseMarketDataServiceUnitTest {
 
     CoinbaseBestBidAsksResponse actual = service.getBestBidAsk(productId);
 
-    assertSame("The raw response instance must be returned unchanged", response, actual);
+    assertSame(response, actual, "The raw response instance must be returned unchanged");
     verify(api).getBestBidAsks(same(digest), eq(Collections.singletonList(productId)));
     verify(api, never()).getBestBidAsk(same(digest), eq(productId));
   }
@@ -323,7 +323,7 @@ public class CoinbaseMarketDataServiceUnitTest {
 
     CoinbaseBestBidAsksResponse actual = service.getBestBidAsk(null);
 
-    assertSame("The raw response instance must be returned unchanged", response, actual);
+    assertSame(response, actual, "The raw response instance must be returned unchanged");
     verify(api).getBestBidAsks(same(digest), isNull());
     verify(api, never()).getBestBidAsk(same(digest), isNull());
   }

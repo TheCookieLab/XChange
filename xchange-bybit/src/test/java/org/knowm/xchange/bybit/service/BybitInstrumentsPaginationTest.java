@@ -4,7 +4,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -14,8 +13,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
@@ -26,7 +25,7 @@ public class BybitInstrumentsPaginationTest extends BaseWiremockTest {
 
   private BybitMarketDataServiceRaw marketDataServiceRaw;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Exchange bybitExchange = createExchange();
     marketDataServiceRaw = (BybitMarketDataServiceRaw) bybitExchange.getMarketDataService();
@@ -34,7 +33,7 @@ public class BybitInstrumentsPaginationTest extends BaseWiremockTest {
 
   private void stubLinearPage(StringValuePattern cursorMatcher, String responseBody)
       throws IOException {
-    stubFor(
+    wireMockRule.stubFor(
         get(urlPathEqualTo("/v5/market/instruments-info"))
             .withQueryParam("category", equalTo("linear"))
             .withQueryParam("cursor", cursorMatcher)
@@ -46,7 +45,7 @@ public class BybitInstrumentsPaginationTest extends BaseWiremockTest {
   }
 
   private void stubLinearPageWithoutCursorConstraint(String responseBody) throws IOException {
-    stubFor(
+    wireMockRule.stubFor(
         get(urlPathEqualTo("/v5/market/instruments-info"))
             .withQueryParam("category", equalTo("linear"))
             .willReturn(
@@ -95,7 +94,7 @@ public class BybitInstrumentsPaginationTest extends BaseWiremockTest {
 
   @Test
   public void emptyPageWithCursorAbortsInsteadOfLooping() throws Exception {
-    stubFor(
+    wireMockRule.stubFor(
         get(urlPathEqualTo("/v5/market/instruments-info"))
             .withQueryParam("category", equalTo("linear"))
             .willReturn(

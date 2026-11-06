@@ -61,4 +61,8 @@ public class OkexAccountService extends OkexAccountServiceRaw implements Account
       throw new OkexException(e);
     }
   }
+
+  public boolean setPositionDualMode(boolean dualMode) throws IOException {
+    return super.setPositionDualModeRaw(dualMode).isSuccess();
+  }
 }

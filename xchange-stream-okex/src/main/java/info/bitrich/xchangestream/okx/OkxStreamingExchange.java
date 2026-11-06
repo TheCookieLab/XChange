@@ -26,17 +26,17 @@ public class OkxStreamingExchange extends OkxExchange implements StreamingExchan
   private static final Logger LOG = LoggerFactory.getLogger(OkxStreamingExchange.class);
 
   // Production URIs
-  public static final String WS_PUBLIC_CHANNEL_URI = "wss://ws.okx.com:8443/ws/v5/public";
-  public static final String WS_PRIVATE_CHANNEL_URI = "wss://ws.okx.com:8443/ws/v5/private";
-  public static final String WS_BUSINESS_CHANNEL_URI = "wss://ws.okx.com:8443/ws/v5/business";
+  public static final String WS_PUBLIC_CHANNEL_URI = "wss://ws.okx.com:443/ws/v5/public";
+  public static final String WS_PRIVATE_CHANNEL_URI = "wss://ws.okx.com:443/ws/v5/private";
+  public static final String WS_BUSINESS_CHANNEL_URI = "wss://ws.okx.com:443/ws/v5/business";
 
   // Demo(Sandbox) URIs
   public static final String SANDBOX_WS_PUBLIC_CHANNEL_URI =
-      "wss://wspap.okx.com:8443/ws/v5/public?brokerId=9999";
+      "wss://wspap.okx.com:443/ws/v5/public?brokerId=9999";
   public static final String SANDBOX_WS_PRIVATE_CHANNEL_URI =
-      "wss://wspap.okx.com:8443/ws/v5/private?brokerId=9999";
+      "wss://wspap.okx.com:443/ws/v5/private?brokerId=9999";
   public static final String SANDBOX_WS_BUSINESS_CHANNEL_URI =
-      "wss://wspap.okx.com:8443/ws/v5/business?brokerId=9999";
+      "wss://wspap.okx.com:443/ws/v5/business?brokerId=9999";
 
   private OkxStreamingService streamingService;
 

@@ -23,13 +23,13 @@ import org.knowm.xchange.gateio.dto.marketdata.GateioOrderBook.PriceSizeEntry;
 import org.knowm.xchange.gateio.dto.marketdata.GateioCandleStick;
 import org.knowm.xchange.gateio.dto.marketdata.GateioTrade;
 
-public class GateioMarketDataServiceRawTest extends GateioExchangeWiremock {
+class GateioMarketDataServiceRawTest extends GateioExchangeWiremock {
 
   GateioMarketDataServiceRaw gateioMarketDataServiceRaw =
       (GateioMarketDataServiceRaw) exchange.getMarketDataService();
 
   @Test
-  public void getCurrencies_valid() throws IOException {
+  void getCurrencies_valid() throws Exception {
     List<GateioCurrencyInfo> actual = gateioMarketDataServiceRaw.getGateioCurrencyInfos();
 
     assertThat(actual).hasSize(2);
@@ -68,7 +68,7 @@ public class GateioMarketDataServiceRawTest extends GateioExchangeWiremock {
   }
 
   @Test
-  public void getGateioOrderBook_valid() throws IOException {
+  void getGateioOrderBook_valid() throws Exception {
     List<PriceSizeEntry> expectedAsks = new ArrayList<>();
     expectedAsks.add(
         PriceSizeEntry.builder().price(new BigDecimal("200")).size(BigDecimal.ONE).build());
@@ -95,7 +95,7 @@ public class GateioMarketDataServiceRawTest extends GateioExchangeWiremock {
   }
 
   @Test
-  public void getCurrencyChains_valid_result() throws IOException {
+  void getCurrencyChains_valid_result() throws Exception {
     List<GateioCurrencyChain> expected =
         Arrays.asList(
             GateioCurrencyChain.builder()
@@ -123,7 +123,7 @@ public class GateioMarketDataServiceRawTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void valid_currencypairs_details() throws IOException {
+  void valid_currencypairs_details() throws Exception {
     List<GateioCurrencyPairDetails> details = gateioMarketDataServiceRaw.getCurrencyPairDetails();
     assertThat(details).hasSize(3);
     GateioCurrencyPairDetails expectedChz =
@@ -146,7 +146,7 @@ public class GateioMarketDataServiceRawTest extends GateioExchangeWiremock {
   }
 
   @Test
-  void valid_single_currencypair_details() throws IOException {
+  void valid_single_currencypair_details() throws Exception {
     GateioCurrencyPairDetails actualChz =
         gateioMarketDataServiceRaw.getCurrencyPairDetails(new CurrencyPair("CHZ/USDT"));
     GateioCurrencyPairDetails expectedChz =

@@ -6,8 +6,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
 
 /** AC1 (atomic weighted admission) and AC2 (rate-law semantics) against independent oracles. */
@@ -18,7 +18,7 @@ public class RateLimitAdmissionTest {
 
   private RateLimitFixture fixture;
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (fixture != null) {
       fixture.cleanup();

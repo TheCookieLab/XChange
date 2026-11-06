@@ -1,7 +1,7 @@
 package org.knowm.xchange.cexio.dto.trade;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;

@@ -11,9 +11,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.client.ratelimit.LocalHttpServer.Reply;
 import org.knowm.xchange.client.ratelimit.LocalHttpServer.Seen;
 import org.knowm.xchange.client.ratelimit.RateLimitedProxyFixture.Api;
@@ -37,7 +37,7 @@ public class RateLimitedRestProxyTest {
   private final AtomicInteger served = new AtomicInteger();
   private final List<RateLimitRequest> seen = new ArrayList<>();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fixture = RateLimitFixture.autoAdvance();
     script = Collections.synchronizedList(new ArrayList<>());
@@ -49,7 +49,7 @@ public class RateLimitedRestProxyTest {
             });
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     server.close();
     fixture.cleanup();

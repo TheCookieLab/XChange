@@ -28,20 +28,20 @@ public class DeribitExceptionIntegration {
   }
 
   @Test
-  public void getTickerThrowsExceptionTest() throws Exception {
+  void getTickerThrowsExceptionTest() throws Exception {
     Instrument pair = new CurrencyPair("?", "?");
     assertThatExceptionOfType(CurrencyPairNotValidException.class)
         .isThrownBy(() -> deribitMarketDataService.getTicker(pair));
   }
 
   @Test
-  public void getDeribitTickerThrowsExceptionTest() throws Exception {
+  void getDeribitTickerThrowsExceptionTest() throws Exception {
     assertThatExceptionOfType(DeribitException.class)
         .isThrownBy(() -> deribitMarketDataService.getDeribitTicker("?"));
   }
 
   @Test
-  public void getDeribitInstrumentsThrowsIllegalArgumentExceptionTest() throws Exception {
+  void getDeribitInstrumentsThrowsIllegalArgumentExceptionTest() throws Exception {
     assertThatExceptionOfType(DeribitException.class)
         .isThrownBy(
             () -> deribitMarketDataService.getDeribitInstruments("BTC-PERPETUAAAAL", null, null));

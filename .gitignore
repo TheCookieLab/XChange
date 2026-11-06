@@ -62,3 +62,6 @@ GTAGS
 GRTAGS
 GPATH
 GSYMS
+
+# Claude Code
+.claude/

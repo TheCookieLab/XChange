@@ -1,32 +1,31 @@
 package org.knowm.xchange;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import java.io.IOException;
+import java.util.Set;
 import org.apache.commons.lang3.SerializationUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.utils.ObjectMapperHelper;
 
-public class CurrencyTest {
+class CurrencyTest {
 
   @Test
-  public void testCurrencyCode() {
-    assertEquals(Currency.CNY.getCodeCurrency("CNY"), Currency.CNY);
-    assertEquals(Currency.CNY.getCodeCurrency("cny"), Currency.CNY);
+  void currencyCode() {
+    assertThat(Currency.CNY.getCodeCurrency("CNY")).isEqualTo(Currency.CNY);
+    assertThat(Currency.CNY.getCodeCurrency("cny")).isEqualTo(Currency.CNY);
   }
 
   @Test
-  public void testGetInstance() {
-    assertEquals(Currency.BTC, Currency.getInstance("BTC"));
-    assertEquals(Currency.BTC, Currency.getInstance("btc"));
-    assertEquals(new Currency("btc"), Currency.getInstance("BTC"));
+  void getInstance() {
+    assertThat(Currency.getInstance("BTC")).isEqualTo(Currency.BTC);
+    assertThat(Currency.getInstance("btc")).isEqualTo(Currency.BTC);
+    assertThat(Currency.getInstance("BTC")).isEqualTo(new Currency("btc"));
   }
 
   @Test
-  public void testGetInstanceIsCaseInsensitiveAndCached() {
+  void testGetInstanceIsCaseInsensitiveAndCached() {
     assertThat(Currency.getInstance("BTC")).isSameAs(Currency.BTC);
     assertThat(Currency.getInstance("btc")).isSameAs(Currency.BTC);
     assertThat(Currency.getInstance("Btc")).isSameAs(Currency.BTC);
@@ -35,54 +34,68 @@ public class CurrencyTest {
   }
 
   @Test
-  public void testGetInstanceCreatesUnknownCodeOnceUppercased() {
-    assertThat(Currency.getInstanceNoCreate("fastpathunknown")).isNull();
+  void testGetInstanceCreatesUnknownCodeOnceUppercased() {
+    Set<String> existingCodes = Currency.getAvailableCurrencyCodes();
+    int suffix = 0;
+    while (existingCodes.contains("FASTPATHUNKNOWN" + suffix)) {
+      suffix++;
+    }
+    String lower = "fastpathunknown" + suffix;
+    String upper = "FASTPATHUNKNOWN" + suffix;
+    String mixed = "FastPathUnknown" + suffix;
+    assertThat(Currency.getInstanceNoCreate(lower)).isNull();
 
-    Currency created = Currency.getInstance("fastpathunknown");
+    Currency created = Currency.getInstance(lower);
 
-    assertEquals("FASTPATHUNKNOWN", created.getCurrencyCode());
-    assertThat(Currency.getInstance("FASTPATHUNKNOWN")).isSameAs(created);
-    assertThat(Currency.getInstance("FastPathUnknown")).isSameAs(created);
-    assertThat(Currency.getInstanceNoCreate("fastpathunknown")).isSameAs(created);
-  }
-
-  @Test(expected = NullPointerException.class)
-  public void testGetInstanceRejectsNull() {
-    Currency.getInstance(null);
-  }
-
-  @Test
-  public void testGetInstanceNoCreateReturnsNullForUnknownCode() {
-    assertThat(Currency.getInstanceNoCreate("nosuchcurrencycode")).isNull();
-    assertThat(Currency.getInstanceNoCreate("NOSUCHCURRENCYCODE")).isNull();
+    assertThat(created.getCurrencyCode()).isEqualTo(upper);
+    assertThat(Currency.getInstance(upper)).isSameAs(created);
+    assertThat(Currency.getInstance(mixed)).isSameAs(created);
+    assertThat(Currency.getInstanceNoCreate(lower)).isSameAs(created);
   }
 
   @Test
-  public void testGetInstanceNoCreate() {
-    assertEquals(Currency.CNY, Currency.getInstanceNoCreate("CNY"));
-    assertEquals(Currency.CNY, Currency.getInstanceNoCreate("cny"));
-    assertEquals(new Currency("cny"), Currency.getInstanceNoCreate("CNY"));
+  void testGetInstanceRejectsNull() {
+    assertThatExceptionOfType(NullPointerException.class)
+        .isThrownBy(() -> Currency.getInstance(null));
   }
 
   @Test
-  public void testEquals() {
-    assertEquals(Currency.BTC, Currency.XBT);
-    assertNotEquals(Currency.LTC, Currency.XBT);
+  void testGetInstanceNoCreateReturnsNullForUnknownCode() {
+    Set<String> existingCodes = Currency.getAvailableCurrencyCodes();
+    int suffix = 0;
+    while (existingCodes.contains("NOSUCHCURRENCYCODE" + suffix)) {
+      suffix++;
+    }
+    assertThat(Currency.getInstanceNoCreate("nosuchcurrencycode" + suffix)).isNull();
+    assertThat(Currency.getInstanceNoCreate("NOSUCHCURRENCYCODE" + suffix)).isNull();
+  }
+
+  @Test
+  void getInstanceNoCreate() {
+    assertThat(Currency.getInstanceNoCreate("CNY")).isEqualTo(Currency.CNY);
+    assertThat(Currency.getInstanceNoCreate("cny")).isEqualTo(Currency.CNY);
+    assertThat(Currency.getInstanceNoCreate("CNY")).isEqualTo(new Currency("cny"));
+  }
+
+  @Test
+  void equals() {
+    assertThat(Currency.XBT).isEqualTo(Currency.BTC);
+    assertThat(Currency.XBT).isNotEqualTo(Currency.LTC);
 
     Currency btc = SerializationUtils.deserialize(SerializationUtils.serialize(Currency.BTC));
-    assertEquals(Currency.BTC, btc);
-    assertEquals(Currency.XBT, btc);
-    assertNotEquals(Currency.LTC, btc);
+    assertThat(btc).isEqualTo(Currency.BTC);
+    assertThat(btc).isEqualTo(Currency.XBT);
+    assertThat(btc).isNotEqualTo(Currency.LTC);
   }
 
   @Test
-  public void testToString() {
-    assertEquals("XBT", Currency.XBT.toString());
-    assertEquals("BTC", Currency.BTC.toString());
+  void testToString() {
+    assertThat(Currency.XBT.toString()).isEqualTo("XBT");
+    assertThat(Currency.BTC.toString()).isEqualTo("BTC");
   }
 
   @Test
-  public void testSerializeDeserialize() throws IOException {
+  void serializeDeserialize() throws Exception {
     Currency jsonCopy = ObjectMapperHelper.viaJSON(Currency.XBT);
     assertThat(jsonCopy).isEqualTo(Currency.XBT);
   }

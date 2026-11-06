@@ -1,8 +1,6 @@
 package info.bitrich.xchangestream.okx;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -12,9 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -30,7 +28,7 @@ import org.knowm.xchange.okx.dto.trade.OkxOrderFlags;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore
+@Disabled
 public class OkxStreamingPrivateDataIntegration {
 
   private static final Logger LOG =
@@ -38,8 +36,8 @@ public class OkxStreamingPrivateDataIntegration {
   StreamingExchange exchange;
   private final Instrument instrument = new FuturesContract("BTC/USDT/SWAP");
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  void setUp() {
     Properties properties = new Properties();
 
     try {
@@ -85,7 +83,7 @@ public class OkxStreamingPrivateDataIntegration {
 
   // User trades, order changes, position changes
   @Test
-  public void checkStreamMarketOrder() throws InterruptedException, IOException {
+  void checkStreamMarketOrder() throws Exception {
     List<Disposable> disposables = new ArrayList<>();
     InstrumentMetaData instrumentMetaData =
         exchange.getExchangeMetaData().getInstruments().get(instrument);
@@ -101,7 +99,9 @@ public class OkxStreamingPrivateDataIntegration {
                   assertThat(orderChange.getType()).isEqualTo(Order.OrderType.BID);
                   if (orderChange.getCumulativeAmount().compareTo(BigDecimal.ZERO) > 0) {
                     assertThat(orderChange.getStatus()).isEqualTo(Order.OrderStatus.FILLED);
-                    assertEquals(0, orderChange.getCumulativeAmount().compareTo(size));
+                    org.assertj.core.api.Assertions.assertThat(
+                            orderChange.getCumulativeAmount().compareTo(size))
+                        .isEqualTo(0);
                   }
                 }));
     disposables.add(
@@ -113,7 +113,9 @@ public class OkxStreamingPrivateDataIntegration {
                   LOG.info("Position change: {}", positionChange);
                   assertThat(positionChange.getInstrument()).isEqualTo(instrument);
                   assertThat(positionChange.getType()).isEqualTo(Type.LONG);
-                  assertTrue(positionChange.getSize().compareTo(size) >= 0);
+                  org.assertj.core.api.Assertions.assertThat(
+                          positionChange.getSize().compareTo(size) >= 0)
+                      .isTrue();
                 }));
 
     TimeUnit.SECONDS.sleep(3);
@@ -129,7 +131,7 @@ public class OkxStreamingPrivateDataIntegration {
   }
 
   @Test
-  public void checkStreamLimitOrder() throws InterruptedException, IOException {
+  void checkStreamLimitOrder() throws Exception {
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
     BigDecimal price = ticker.getLast();
     InstrumentMetaData instrumentMetaData =

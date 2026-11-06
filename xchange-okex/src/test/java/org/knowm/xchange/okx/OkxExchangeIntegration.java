@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
@@ -70,7 +70,7 @@ public class OkxExchangeIntegration {
   }
 
   @Test
-  public void testOpenPosition() throws Exception {
+  void openPosition() throws Exception {
     Properties properties = new Properties();
     try {
       properties.load(this.getClass().getResourceAsStream("/secret.keys"));
@@ -88,7 +88,7 @@ public class OkxExchangeIntegration {
   }
 
   @Test
-  public void testOrderActions() throws Exception {
+  void orderActions() throws Exception {
     Properties properties = new Properties();
     try {
       properties.load(this.getClass().getResourceAsStream("/secret.keys"));

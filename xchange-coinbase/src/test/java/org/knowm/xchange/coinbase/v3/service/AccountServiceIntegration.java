@@ -1,16 +1,16 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
@@ -28,7 +28,7 @@ public class AccountServiceIntegration {
   static CoinbaseExchange exchange;
   static CoinbaseAccountService accountService;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     ExchangeSpecification exchangeSpecification = ExchangeFactory.INSTANCE.createExchange(
         CoinbaseExchange.class).getDefaultExchangeSpecification();
@@ -39,10 +39,10 @@ public class AccountServiceIntegration {
 
   @Test
   public void listAccounts() throws Exception {
-    Assume.assumeNotNull(accountService.authTokenCreator);
+    Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     List<CoinbaseAccount> accounts = accountService.getCoinbaseAccounts();
-    Assert.assertFalse(accounts.isEmpty());
+    Assertions.assertFalse(accounts.isEmpty());
 
     CoinbaseAccount btcAccount = accounts.stream().filter(t -> t.getName().equals("BTC Wallet"))
         .collect(Collectors.toList()).get(0);
@@ -52,7 +52,7 @@ public class AccountServiceIntegration {
 
   @Test
   public void getAccountById() throws Exception {
-    Assume.assumeNotNull(accountService.authTokenCreator);
+    Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     CoinbaseAccount btcAccount = accountService.getCoinbaseAccount(
         "49c5ceb8-a14f-575b-a6c6-6bab51a73c46");
@@ -62,15 +62,15 @@ public class AccountServiceIntegration {
 
   @Test
   public void listPaymentMethods() throws Exception {
-    Assume.assumeNotNull(accountService.authTokenCreator);
+    Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     List<CoinbasePaymentMethod> methods = accountService.getCoinbasePaymentMethods();
-    Assert.assertFalse(methods.isEmpty());
+    Assertions.assertFalse(methods.isEmpty());
   }
 
   @Test
   public void testGetTransactionSummaryReturnsFeeRates() throws Exception {
-    Assume.assumeNotNull(accountService.authTokenCreator);
+    Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     CoinbaseTransactionSummaryResponse transactionSummary = accountService.getTransactionSummary();
     CoinbaseFeeTier feeTier = transactionSummary.getFeeTier();
@@ -81,7 +81,7 @@ public class AccountServiceIntegration {
 
   @Test
   public void testGetDynamicTradingFeesByInstrumentReturnsGlobalFees() throws Exception {
-    Assume.assumeNotNull(accountService.authTokenCreator);
+    Assumptions.assumeTrue(accountService.authTokenCreator != null);
 
     Map<Instrument, Fee> fees = accountService.getDynamicTradingFeesByInstrument();
 

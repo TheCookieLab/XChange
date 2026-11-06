@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okx.dto.OkxResponse;
 

@@ -19,9 +19,10 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ratelimit.RateLimitContext;
 import org.knowm.xchange.exceptions.RateLimitTerminatedException;
@@ -38,11 +39,11 @@ import org.knowm.xchange.okx.dto.trade.OkxOrderResponse;
  * rejected read with fresh admission, no blind replay of order placement, and no resilience4j rate
  * limiter on the REST path. Nothing leaves the machine.
  */
+@Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
 public class OkxRateLimitQuotaTest {
 
   private static final String TICKER = "/api/v5/market/ticker";
   private static final String ORDER = "/api/v5/trade/order";
-  private static final int TIMEOUT_MILLIS = 60_000;
 
   private static final String RATE_LIMITED_BODY =
       "{\"code\":\"50011\",\"msg\":\"Requests too frequent\",\"data\":[]}";
@@ -57,7 +58,7 @@ public class OkxRateLimitQuotaTest {
   private ExchangeSpecification specification;
   private OkxExchange exchange;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     stub = new Stub();
     exchange = new OkxExchange();
@@ -71,7 +72,7 @@ public class OkxRateLimitQuotaTest {
     exchange.applySpecification(specification);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     RateLimitContext context = specification.getResilience().getRateLimitContext();
     if (context != null) {
@@ -80,7 +81,7 @@ public class OkxRateLimitQuotaTest {
     stub.close();
   }
 
-  @Test(timeout = TIMEOUT_MILLIS)
+  @Test
   public void eachWireAttemptIsAdmittedExactlyOnce() throws Exception {
     OkxMarketDataServiceRaw market =
         new OkxMarketDataServiceRaw(exchange, exchange.getResilienceRegistries());
@@ -92,7 +93,7 @@ public class OkxRateLimitQuotaTest {
     assertThat(admissions()).as("one admission per wire attempt").isEqualTo(2);
   }
 
-  @Test(timeout = TIMEOUT_MILLIS)
+  @Test
   public void rejectedReadIsReplayedAfterCooldownWithFreshAdmission() throws Exception {
     stub.forceRejections("GET " + TICKER, 1, "1");
     OkxMarketDataServiceRaw market =
@@ -110,7 +111,7 @@ public class OkxRateLimitQuotaTest {
         .isGreaterThanOrEqualTo(Duration.ofMillis(900));
   }
 
-  @Test(timeout = TIMEOUT_MILLIS)
+  @Test
   public void rejectedOrderPlacementIsSentOnceAndSurfaced() {
     stub.forceRejections("POST " + ORDER, 1, "1");
     OkxTradeServiceRaw trade = new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
@@ -126,7 +127,7 @@ public class OkxRateLimitQuotaTest {
     assertThat(admissions()).isEqualTo(1);
   }
 
-  @Test(timeout = TIMEOUT_MILLIS)
+  @Test
   public void placementRejectedInAnHttp200BodyIsSentOnceAndSurfaced() {
     stub.forceBodyRejections("POST " + ORDER, 1, SUBACCOUNT_LIMITED_ORDER_BODY);
     OkxTradeServiceRaw trade = new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
@@ -150,7 +151,7 @@ public class OkxRateLimitQuotaTest {
         .isEqualTo(1);
   }
 
-  @Test(timeout = TIMEOUT_MILLIS)
+  @Test
   public void readRejectedInAnHttp200BodyIsReplayedWithFreshAdmission() throws Exception {
     stub.forceBodyRejections("GET " + TICKER, 1, SUBACCOUNT_LIMITED_BODY);
     OkxMarketDataServiceRaw market =
@@ -163,7 +164,7 @@ public class OkxRateLimitQuotaTest {
     assertThat(admissions()).as("the replay was admitted afresh").isEqualTo(2);
   }
 
-  @Test(timeout = TIMEOUT_MILLIS)
+  @Test
   public void placementWithReconciliationAdmitsLookupAndPlacementOnce() throws Exception {
     OkxTradeServiceRaw trade = new OkxTradeServiceRaw(exchange, exchange.getResilienceRegistries());
 
@@ -175,7 +176,7 @@ public class OkxRateLimitQuotaTest {
     assertThat(admissions()).as("one admission per wire attempt").isEqualTo(2);
   }
 
-  @Test(timeout = TIMEOUT_MILLIS)
+  @Test
   public void noResilience4jRateLimiterGuardsTheRestPath() throws Exception {
     OkxMarketDataServiceRaw market =
         new OkxMarketDataServiceRaw(exchange, exchange.getResilienceRegistries());

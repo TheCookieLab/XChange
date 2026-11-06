@@ -16,9 +16,10 @@ import static org.knowm.xchange.blockchain.service.utils.BlockchainConstants.URL
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import java.math.BigDecimal;
 import java.time.Duration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.knowm.xchange.blockchain.BlockchainExchange;
 import org.knowm.xchange.client.ratelimit.RateLimitContext;
 import org.knowm.xchange.client.ratelimit.RateLimitDiagnostics;
@@ -41,7 +42,7 @@ public class BlockchainRateLimitServiceTest extends BlockchainBaseTest {
   private TradeService service;
   private RateLimitContext context;
 
-  @Before
+  @BeforeEach
   public void init() {
     wireMockRule.resetAll();
     exchange =
@@ -51,12 +52,13 @@ public class BlockchainRateLimitServiceTest extends BlockchainBaseTest {
     context = exchange.getExchangeSpecification().getResilience().getRateLimitContext();
   }
 
-  @After
+  @AfterEach
   public void close() {
     context.close();
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
   public void everyWireAttemptIsAdmittedExactlyOnce() throws Exception {
     wireMockRule.stubFor(
         get(urlPathEqualTo(URL_ORDERS))
@@ -78,7 +80,8 @@ public class BlockchainRateLimitServiceTest extends BlockchainBaseTest {
     assertThat(exchange.getResilienceRegistries().rateLimiters().getAllRateLimiters()).isEmpty();
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
   public void rejectedReadIsReplayedWithFreshAdmission() throws Exception {
     wireMockRule.stubFor(
         get(urlPathEqualTo(URL_ORDERS))
@@ -106,7 +109,8 @@ public class BlockchainRateLimitServiceTest extends BlockchainBaseTest {
     assertThat(exchange.getResilienceRegistries().rateLimiters().getAllRateLimiters()).isEmpty();
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
   public void rejectedOrderPlacementIsSentOnceAndSurfaced() {
     wireMockRule.stubFor(post(urlPathEqualTo(URL_ORDERS)).willReturn(aResponse().withStatus(429)));
 

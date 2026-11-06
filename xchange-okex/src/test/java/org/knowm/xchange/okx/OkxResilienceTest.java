@@ -6,7 +6,7 @@ import io.github.resilience4j.ratelimiter.RateLimiter;
 import java.time.Duration;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.client.ResilienceRegistries;
 
 /**

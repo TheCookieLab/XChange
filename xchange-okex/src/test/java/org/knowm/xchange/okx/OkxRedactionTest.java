@@ -2,7 +2,7 @@ package org.knowm.xchange.okx;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** Offline tests for {@link OkxRedaction}. */
 public class OkxRedactionTest {

@@ -7,8 +7,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
 
 /** AC3 (shared and isolated scopes) and AC4 (no construction reset, conflicts rejected). */
@@ -18,7 +18,7 @@ public class RateLimitScopeTest {
 
   private RateLimitFixture fixture;
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (fixture != null) {
       fixture.cleanup();

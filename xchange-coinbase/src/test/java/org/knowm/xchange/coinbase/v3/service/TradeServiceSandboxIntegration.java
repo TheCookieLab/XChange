@@ -1,10 +1,10 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.coinbase.v3.CoinbaseExchange;
@@ -52,7 +52,7 @@ public class TradeServiceSandboxIntegration {
   static CoinbaseTradeService tradeService;
   static CoinbaseAccountService accountService;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     ExchangeSpecification spec = CoinbaseTestUtils.createSandboxSpecificationWithCredentials();
     exchange = (CoinbaseExchange) ExchangeFactory.INSTANCE.createExchange(spec);
@@ -62,40 +62,39 @@ public class TradeServiceSandboxIntegration {
 
   @Test
   public void testGetTradeHistory() throws Exception {
-    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(tradeService.authTokenCreator != null);
     
     CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
     
     UserTrades tradeHistory = tradeService.getTradeHistory(params);
     
-    assertNotNull("Trade history should not be null", tradeHistory);
-    assertNotNull("Trades list should not be null", tradeHistory.getTrades());
+    assertNotNull(tradeHistory, "Trade history should not be null");
+    assertNotNull(tradeHistory.getTrades(), "Trades list should not be null");
     
     // Sandbox may return empty or static data
     if (!tradeHistory.getTrades().isEmpty()) {
-      assertNotNull("Trade ID should not be null", tradeHistory.getTrades().get(0).getId());
-      assertNotNull("Trade price should not be null", tradeHistory.getTrades().get(0).getPrice());
-      assertNotNull("Trade amount should not be null", 
-          tradeHistory.getTrades().get(0).getOriginalAmount());
+      assertNotNull(tradeHistory.getTrades().get(0).getId(), "Trade ID should not be null");
+      assertNotNull(tradeHistory.getTrades().get(0).getPrice(), "Trade price should not be null");
+      assertNotNull(tradeHistory.getTrades().get(0).getOriginalAmount(), "Trade amount should not be null");
     }
   }
 
   @Test
   public void testGetTradeHistoryWithCurrencyPair() throws Exception {
-    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(tradeService.authTokenCreator != null);
     
     CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
     params.addCurrencyPair(CurrencyPair.BTC_USD);
     
     UserTrades tradeHistory = tradeService.getTradeHistory(params);
     
-    assertNotNull("Trade history should not be null", tradeHistory);
-    assertNotNull("Trades list should not be null", tradeHistory.getTrades());
+    assertNotNull(tradeHistory, "Trade history should not be null");
+    assertNotNull(tradeHistory.getTrades(), "Trades list should not be null");
   }
 
   @Test
   public void testGetTradeHistoryWithMultipleCurrencyPairs() throws Exception {
-    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(tradeService.authTokenCreator != null);
     
     CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
     params.addCurrencyPair(CurrencyPair.BTC_USD);
@@ -103,44 +102,43 @@ public class TradeServiceSandboxIntegration {
     
     UserTrades tradeHistory = tradeService.getTradeHistory(params);
     
-    assertNotNull("Trade history should not be null", tradeHistory);
-    assertNotNull("Trades list should not be null", tradeHistory.getTrades());
+    assertNotNull(tradeHistory, "Trade history should not be null");
+    assertNotNull(tradeHistory.getTrades(), "Trades list should not be null");
   }
 
   @Test
   public void testGetTradeHistoryWithLimit() throws Exception {
-    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(tradeService.authTokenCreator != null);
     
     CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
     params.setLimit(10);
     
     UserTrades tradeHistory = tradeService.getTradeHistory(params);
     
-    assertNotNull("Trade history should not be null", tradeHistory);
-    assertNotNull("Trades list should not be null", tradeHistory.getTrades());
+    assertNotNull(tradeHistory, "Trade history should not be null");
+    assertNotNull(tradeHistory.getTrades(), "Trades list should not be null");
     // Sandbox may return fixed data, but should respect general structure
   }
 
   @Test
   public void testGetOpenOrders() throws Exception {
-    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(tradeService.authTokenCreator != null);
     
     OpenOrders openOrders = tradeService.getOpenOrders();
     
-    assertNotNull("OpenOrders should not be null", openOrders);
-    assertNotNull("Open orders list should not be null", openOrders.getOpenOrders());
+    assertNotNull(openOrders, "OpenOrders should not be null");
+    assertNotNull(openOrders.getOpenOrders(), "Open orders list should not be null");
     
     // Sandbox may return static orders
     if (!openOrders.getOpenOrders().isEmpty()) {
-      assertNotNull("Order ID should not be null", openOrders.getOpenOrders().get(0).getId());
-      assertNotNull("Order status should not be null", 
-          openOrders.getOpenOrders().get(0).getStatus());
+      assertNotNull(openOrders.getOpenOrders().get(0).getId(), "Order ID should not be null");
+      assertNotNull(openOrders.getOpenOrders().get(0).getStatus(), "Order status should not be null");
     }
   }
 
   @Test
   public void testGetOrder() throws Exception {
-    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(tradeService.authTokenCreator != null);
     
     // First get open orders to find a valid order ID
     OpenOrders openOrders = tradeService.getOpenOrders();
@@ -151,8 +149,8 @@ public class TradeServiceSandboxIntegration {
       try {
         java.util.Collection<org.knowm.xchange.dto.Order> orders = tradeService.getOrder(
             new org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam(orderId));
-        assertNotNull("Orders collection should not be null", orders);
-        assertFalse("Orders should not be empty", orders.isEmpty());
+        assertNotNull(orders, "Orders collection should not be null");
+        assertFalse(orders.isEmpty(), "Orders should not be empty");
       } catch (Exception e) {
         // Some sandbox implementations may not fully support this
         System.out.println("Get order by ID not fully supported in sandbox: " + e.getMessage());
@@ -162,7 +160,7 @@ public class TradeServiceSandboxIntegration {
 
   @Test
   public void testTradeHistoryTimestampOrdering() throws Exception {
-    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(tradeService.authTokenCreator != null);
     
     CoinbaseTradeHistoryParams params = new CoinbaseTradeHistoryParams();
     UserTrades trades = tradeService.getTradeHistory(params);
@@ -170,24 +168,23 @@ public class TradeServiceSandboxIntegration {
     // If sandbox returns multiple trades, verify they're in order
     if (trades.getTrades().size() > 1) {
       for (int i = 0; i < trades.getTrades().size() - 1; i++) {
-        assertNotNull("Trade timestamp should not be null", 
-            trades.getTrades().get(i).getTimestamp());
+        assertNotNull(trades.getTrades().get(i).getTimestamp(), "Trade timestamp should not be null");
       }
     }
   }
 
   @Test
   public void testListPerpetualsPositions() throws Exception {
-    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(tradeService.authTokenCreator != null);
 
     String portfolioUuid = findPerpetualsPortfolioUuid();
-    org.junit.Assume.assumeNotNull(portfolioUuid);
+    org.junit.jupiter.api.Assumptions.assumeTrue(portfolioUuid != null);
 
     try {
       CoinbasePerpetualsPositionsResponse response =
           tradeService.listPerpetualsPositions(portfolioUuid);
-      assertNotNull("Perpetuals positions response should not be null", response);
-      assertNotNull("Positions list should not be null", response.getPositions());
+      assertNotNull(response, "Perpetuals positions response should not be null");
+      assertNotNull(response.getPositions(), "Positions list should not be null");
     } catch (Exception e) {
       System.out.println("Perpetuals positions not fully supported in sandbox: " + e.getMessage());
     }
@@ -195,10 +192,10 @@ public class TradeServiceSandboxIntegration {
 
   @Test
   public void testGetPerpetualsPosition() throws Exception {
-    org.junit.Assume.assumeNotNull(tradeService.authTokenCreator);
+    org.junit.jupiter.api.Assumptions.assumeTrue(tradeService.authTokenCreator != null);
 
     String portfolioUuid = findPerpetualsPortfolioUuid();
-    org.junit.Assume.assumeNotNull(portfolioUuid);
+    org.junit.jupiter.api.Assumptions.assumeTrue(portfolioUuid != null);
 
     try {
       CoinbasePerpetualsPositionsResponse response =
@@ -213,8 +210,8 @@ public class TradeServiceSandboxIntegration {
       }
       CoinbasePerpetualsPositionResponse detail =
           tradeService.getPerpetualsPosition(portfolioUuid, symbol);
-      assertNotNull("Perpetuals position response should not be null", detail);
-      assertNotNull("Position should not be null", detail.getPosition());
+      assertNotNull(detail, "Perpetuals position response should not be null");
+      assertNotNull(detail.getPosition(), "Position should not be null");
     } catch (Exception e) {
       System.out.println("Perpetuals position not fully supported in sandbox: " + e.getMessage());
     }

@@ -1,12 +1,13 @@
 package org.knowm.xchange.coinbase.v3.dto.products;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for CoinbaseProductMarketTradesResponse.
@@ -22,11 +23,11 @@ public class CoinbaseProductMarketTradesResponseTest {
     CoinbaseProductMarketTradesResponse response = 
         mapper.readValue(json, CoinbaseProductMarketTradesResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Market trades list should not be null", response.getMarketTrades());
-    assertTrue("Market trades list should be empty", response.getMarketTrades().isEmpty());
-    assertEquals("Best bid should match", new BigDecimal("50000"), response.getBestBid());
-    assertEquals("Best ask should match", new BigDecimal("50001"), response.getBestAsk());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getMarketTrades(), "Market trades list should not be null");
+    assertTrue(response.getMarketTrades().isEmpty(), "Market trades list should be empty");
+    assertEquals(new BigDecimal("50000"), response.getBestBid(), "Best bid should match");
+    assertEquals(new BigDecimal("50001"), response.getBestAsk(), "Best ask should match");
   }
 
   @Test
@@ -35,19 +36,18 @@ public class CoinbaseProductMarketTradesResponseTest {
     CoinbaseProductMarketTradesResponse response = 
         mapper.readValue(json, CoinbaseProductMarketTradesResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Market trades list should not be null", response.getMarketTrades());
-    assertTrue("Market trades list should be empty", response.getMarketTrades().isEmpty());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getMarketTrades(), "Market trades list should not be null");
+    assertTrue(response.getMarketTrades().isEmpty(), "Market trades list should be empty");
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testReturnsImmutableList() throws Exception {
     String json = "{\"trades\": []}";
     CoinbaseProductMarketTradesResponse response = 
         mapper.readValue(json, CoinbaseProductMarketTradesResponse.class);
 
-    // Should throw UnsupportedOperationException
-    response.getMarketTrades().add(null);
+    assertThrows(UnsupportedOperationException.class, () -> response.getMarketTrades().add(null));
   }
 }
 

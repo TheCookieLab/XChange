@@ -3,7 +3,7 @@ package org.knowm.xchange.binance.time;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.binance.BinanceTimestampFactory;
 import org.knowm.xchange.binance.config.BinanceTimestampUnit;
 

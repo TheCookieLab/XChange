@@ -1,6 +1,6 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
 import java.net.ConnectException;
@@ -16,8 +16,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import javax.net.ssl.SSLException;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
@@ -86,11 +86,11 @@ public class CoinbaseSandboxEndpointMatrixIntegration {
   private static CoinbaseTradeService tradeService;
   private static ParamsDigest authDigest;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     ExchangeSpecification spec = CoinbaseTestUtils.createSandboxSpecificationWithCredentials();
     authDigest = CoinbaseV3Digest.createInstance(spec.getApiKey(), spec.getSecretKey());
-    assertNotNull("Sandbox auth digest must be available", authDigest);
+    assertNotNull(authDigest, "Sandbox auth digest must be available");
 
     publicClient = ExchangeRestProxyBuilder.forInterface(Coinbase.class, spec).build();
     authenticatedClient =

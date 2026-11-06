@@ -2,8 +2,8 @@ package org.knowm.xchange.kucoin.uta;
 
 import static java.util.stream.Collectors.toCollection;
 
-import com.google.common.collect.Ordering;
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -132,13 +132,13 @@ public final class UtaAdapters {
     List<LimitOrder> asks =
         book.getAsks().stream()
             .map(UtaAdapters::priceAndSize)
-            .sorted(Ordering.natural().onResultOf(s -> s.price))
+            .sorted(Comparator.comparing((PriceAndSize s) -> s.price))
             .map(s -> limitOrder(instrument, OrderType.ASK, s))
             .collect(toCollection(LinkedList::new));
     List<LimitOrder> bids =
         book.getBids().stream()
             .map(UtaAdapters::priceAndSize)
-            .sorted(Ordering.natural().onResultOf((PriceAndSize s) -> s.price).reversed())
+            .sorted(Comparator.comparing((PriceAndSize s) -> s.price).reversed())
             .map(s -> limitOrder(instrument, OrderType.BID, s))
             .collect(toCollection(LinkedList::new));
     return new OrderBook(timestamp, asks, bids, true);

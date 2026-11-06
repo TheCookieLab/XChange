@@ -149,6 +149,15 @@ public class OkexAccountServiceRaw extends OkexBaseService {
     }
   }
 
+  public OkexResponse<List<OkexSetPositionModeResponse>> setPositionDualModeRaw(boolean dualMode)
+      throws OkexException, IOException {
+    try {
+      return wrap(delegate.setPositionDualModeRaw(dualMode), OkexSetPositionModeResponse::new);
+    } catch (OkxException e) {
+      throw new OkexException(e);
+    }
+  }
+
   public OkexResponse<List<OkexDepositAddress>> getDepositAddress(String currency)
       throws OkexException, IOException {
     try {

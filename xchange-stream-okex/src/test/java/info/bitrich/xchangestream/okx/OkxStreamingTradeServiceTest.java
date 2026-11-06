@@ -21,8 +21,8 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -50,7 +50,7 @@ public class OkxStreamingTradeServiceTest {
   private OkxStreamingTradeService tradeService;
   private OkxPrivateStreamingService privateStreamingService;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     privateStreamingService = mock(OkxPrivateStreamingService.class);
     when(privateStreamingService.isLoginDone()).thenReturn(true);

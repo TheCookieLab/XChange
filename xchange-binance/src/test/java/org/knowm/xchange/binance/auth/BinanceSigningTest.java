@@ -11,7 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.binance.config.BinanceKeyAlgorithm;
 import org.knowm.xchange.binance.service.BinanceED25519Digest;
 import org.knowm.xchange.binance.service.BinanceHmacDigest;

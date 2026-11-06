@@ -1,12 +1,12 @@
 package org.knowm.xchange.coinbase.v3.dto;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for CoinbaseTimeResponse JSON parsing.
@@ -23,8 +23,8 @@ public class CoinbaseTimeResponseJsonTest {
     
     CoinbaseTimeResponse response = mapper.readValue(is, CoinbaseTimeResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertEquals("ISO timestamp should match", "2024-01-01T12:00:00.000Z", response.getIso());
+    assertNotNull(response, "Response should not be null");
+    assertEquals("2024-01-01T12:00:00.000Z", response.getIso(), "ISO timestamp should match");
   }
 
   @Test
@@ -35,8 +35,8 @@ public class CoinbaseTimeResponseJsonTest {
 
     CoinbaseTimeResponse response = mapper.readValue(json, CoinbaseTimeResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertEquals("ISO timestamp should match", "2024-12-31T23:59:59.999Z", response.getIso());
+    assertNotNull(response, "Response should not be null");
+    assertEquals("2024-12-31T23:59:59.999Z", response.getIso(), "ISO timestamp should match");
   }
 }
 

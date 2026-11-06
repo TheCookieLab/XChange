@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,33 +14,29 @@ import io.reactivex.rxjava3.observers.TestObserver;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.Map;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.binance.service.BinanceMarketDataService;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.marketdata.FundingRate;
 import org.knowm.xchange.instrument.Instrument;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
 /**
  * Unit tests for funding rate subscription initialization, ensuring consistency with ticker and
  * trade subscription patterns and guarding against the regression where initFundingRateSubscription
  * used rawFundingRate (computeIfAbsent + put overwrite) and double-wrapped the observable.
  */
-@RunWith(MockitoJUnitRunner.class)
 public class BinanceStreamingMarketDataServiceFundingRateTest {
 
   private static final Instrument INSTRUMENT = new FuturesContract("ETH/USDT/PERP");
 
-  @Mock private BinanceStreamingService streamingService;
-  @Mock private BinanceMarketDataService marketDataService;
+  private final BinanceStreamingService streamingService = mock(BinanceStreamingService.class);
+  private final BinanceMarketDataService marketDataService = mock(BinanceMarketDataService.class);
 
   private BinanceStreamingMarketDataService marketDataServiceUnderTest;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     when(streamingService.isLiveSubscriptionEnabled()).thenReturn(false);
     when(streamingService.getProductSubscription())

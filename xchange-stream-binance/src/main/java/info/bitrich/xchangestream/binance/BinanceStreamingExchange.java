@@ -1,7 +1,5 @@
 package info.bitrich.xchangestream.binance;
 
-import static java.util.Collections.emptyMap;
-
 import info.bitrich.xchangestream.binance.BinanceUserDataChannel.NoActiveChannelException;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
@@ -11,13 +9,6 @@ import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import info.bitrich.xchangestream.util.Events;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.knowm.xchange.binance.BinanceExchange;
 import org.knowm.xchange.binance.service.BinanceMarketDataService;
@@ -28,6 +19,16 @@ import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyMap;
 
 public class BinanceStreamingExchange extends BinanceExchange implements StreamingExchange {
 
@@ -144,13 +145,11 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
           throw new IllegalStateException("Failed to establish user data channel", e);
         }
       } else {
-        if (exchangeSpecification.getExchangeSpecificParametersItem("ed25519") != null
-            && exchangeSpecification.getExchangeSpecificParametersItem("ed25519").equals(true)) {
+        if (isEd25519Enable()) {
           completables.add(createAndConnectUserDataSpotService());
         }
       }
-      if (exchangeSpecification.getExchangeSpecificParametersItem("ed25519") != null
-          && exchangeSpecification.getExchangeSpecificParametersItem("ed25519").equals(true)) {
+      if (isEd25519Enable()) {
         completables.add(createAndConnectUserTradeService());
       }
     }
@@ -179,6 +178,11 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
             () -> streamingMarketDataService.openSubscriptions(subscriptions, klineSubscription))
         .doOnComplete(() -> streamingAccountService.openSubscriptions())
         .doOnComplete(() -> streamingTradeService.openSubscriptions());
+  }
+
+  private boolean isEd25519Enable() {
+    return exchangeSpecification.getExchangeSpecificParametersItem("ed25519") != null
+        && exchangeSpecification.getExchangeSpecificParametersItem("ed25519").equals(true);
   }
 
   private Completable createAndConnectUserDataFutureService(String listenKey) {
@@ -246,6 +250,14 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
       userDataChannel.close();
       userDataChannel = null;
     }
+    if(userDataSpotStreamingService!= null) {
+      completables.add(userDataSpotStreamingService.disconnect());
+      userDataSpotStreamingService = null;
+    }
+    if(userTradeStreamingService!=null) {
+      completables.add(userTradeStreamingService.disconnect());
+      userTradeStreamingService = null;
+    }
     streamingMarketDataService = null;
     return Completable.concat(completables);
   }
@@ -275,6 +287,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
   private static boolean isServiceAlive(NettyStreamingService<?> service) {
     return service == null || service.isSocketOpen();
   }
+
 
   @Override
   public Observable<Throwable> reconnectFailure() {

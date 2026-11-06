@@ -13,8 +13,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
@@ -32,6 +32,7 @@ import org.knowm.xchange.okx.dto.OkxException;
 import org.knowm.xchange.okx.dto.OkxResponse;
 import org.knowm.xchange.okx.dto.account.OkxAccountPositionRisk;
 import org.knowm.xchange.okx.dto.account.OkxAssetBalance;
+import org.knowm.xchange.okx.dto.account.OkxSetPositionModeResponse;
 import org.knowm.xchange.okx.dto.account.OkxTradeFee;
 import org.knowm.xchange.okx.dto.account.OkxWalletBalance;
 
@@ -46,7 +47,7 @@ public class OkxAccountServiceTest {
 
   private StubAccountService service;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     OkxExchange exchange = new OkxExchange();
@@ -111,13 +112,37 @@ public class OkxAccountServiceTest {
     assertThat(fees.keySet()).containsExactly(new OptionsContract("BTC/USD/260828/110000/C"));
   }
 
-  /** Subclass that stubs the trade-fee HTTP seam so the map assembly runs offline. */
+  @Test
+  public void testSetPositionDualModeSelectsWireModeAndReturnsResponseStatus() throws Exception {
+    service.modeResponse = new OkxResponse<>(null, "0", "", List.of());
+    assertThat(service.setPositionDualMode(true)).isTrue();
+    assertThat(service.positionMode).isEqualTo("long_short_mode");
+    assertThat(service.accountLevel).isNull();
+
+    service.modeResponse = new OkxResponse<>(null, "51000", "invalid request", List.of());
+    assertThat(service.setPositionDualMode(false)).isFalse();
+    assertThat(service.positionMode).isEqualTo("net_mode");
+    assertThat(service.accountLevel).isNull();
+  }
+
+  /** Subclass that stubs account HTTP seams so operations run offline. */
   private class StubAccountService extends OkxAccountService {
 
     final List<String> requested = new ArrayList<>();
+    String positionMode;
+    String accountLevel;
+    OkxResponse<List<OkxSetPositionModeResponse>> modeResponse;
 
     StubAccountService(OkxExchange exchange) {
       super(exchange, new ResilienceRegistries());
+    }
+
+    @Override
+    public OkxResponse<List<OkxSetPositionModeResponse>> setPositionMode(
+        String positionMode, String accountLevel) {
+      this.positionMode = positionMode;
+      this.accountLevel = accountLevel;
+      return modeResponse;
     }
 
     @Override

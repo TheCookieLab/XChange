@@ -2,7 +2,7 @@ package org.knowm.xchange.binance.error;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.binance.dto.BinanceException;
 
 public class BinanceErrorClassifierTest {

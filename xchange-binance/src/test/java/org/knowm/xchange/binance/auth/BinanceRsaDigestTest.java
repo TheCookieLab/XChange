@@ -11,7 +11,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.exceptions.ExchangeException;
 import si.mazi.rescu.Params;
 import si.mazi.rescu.RestInvocation;

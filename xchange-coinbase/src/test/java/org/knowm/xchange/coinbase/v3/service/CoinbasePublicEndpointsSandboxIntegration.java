@@ -1,10 +1,10 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.coinbase.v3.Coinbase;
@@ -29,7 +29,7 @@ public class CoinbasePublicEndpointsSandboxIntegration {
 
   static Coinbase coinbase;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     ExchangeSpecification spec = CoinbaseTestUtils.createSandboxSpecificationWithCredentials();
     coinbase = ExchangeRestProxyBuilder.forInterface(Coinbase.class, spec).build();
@@ -40,8 +40,8 @@ public class CoinbasePublicEndpointsSandboxIntegration {
     try {
       CoinbaseTimeResponse response = coinbase.getTime();
       
-      assertNotNull("Time response should not be null", response);
-      assertNotNull("ISO timestamp should not be null", response.getIso());
+      assertNotNull(response, "Time response should not be null");
+      assertNotNull(response.getIso(), "ISO timestamp should not be null");
     } catch (Exception e) {
       System.out.println("Time endpoint may not be fully supported in sandbox (expected)");
       // Sandbox may not support all endpoints, so we just log and continue

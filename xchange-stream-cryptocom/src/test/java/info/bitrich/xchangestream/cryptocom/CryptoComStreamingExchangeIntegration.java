@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Disabled("Integration tests are disabled by default. Enable for manual execution against sandbox.")
-public class CryptoComStreamingExchangeIntegration {
+class CryptoComStreamingExchangeIntegration {
 
   private static final Logger logger =
       LoggerFactory.getLogger(CryptoComStreamingExchangeIntegration.class);
@@ -50,7 +50,7 @@ public class CryptoComStreamingExchangeIntegration {
   private StreamingAccountService streamingAccountService;
 
   @BeforeAll
-  public void setUp() {
+  void setUp() {
     ExchangeSpecification exSpec = new ExchangeSpecification(CryptoComStreamingExchange.class);
     exSpec.setApiKey(API_KEY);
     exSpec.setSecretKey(SECRET_KEY);
@@ -76,14 +76,14 @@ public class CryptoComStreamingExchangeIntegration {
   }
 
   @AfterAll
-  public void tearDown() {
+  void tearDown() {
     if (exchange != null && exchange.isAlive()) {
       exchange.disconnect().blockingAwait();
     }
   }
 
   @Test
-  void getTicker_shouldReceiveUpdates() throws InterruptedException {
+  void getTicker_shouldReceiveUpdates() throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     AtomicReference<Ticker> received = new AtomicReference<>();
     Disposable disposable =
@@ -105,7 +105,7 @@ public class CryptoComStreamingExchangeIntegration {
   }
 
   @Test
-  void getOrderBook_shouldReceiveUpdates() throws InterruptedException {
+  void getOrderBook_shouldReceiveUpdates() throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     AtomicReference<OrderBook> received = new AtomicReference<>();
     Disposable disposable =
@@ -130,7 +130,7 @@ public class CryptoComStreamingExchangeIntegration {
   }
 
   @Test
-  void getTrades_shouldReceiveUpdates() throws InterruptedException {
+  void getTrades_shouldReceiveUpdates() throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     AtomicReference<Trade> received = new AtomicReference<>();
     Disposable disposable =
@@ -152,7 +152,7 @@ public class CryptoComStreamingExchangeIntegration {
   }
 
   @Test
-  void getBalanceChanges_shouldReceiveUpdates() throws InterruptedException {
+  void getBalanceChanges_shouldReceiveUpdates() throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     AtomicReference<Balance> received = new AtomicReference<>();
     Disposable disposable =
@@ -173,7 +173,7 @@ public class CryptoComStreamingExchangeIntegration {
   }
 
   @Test
-  void getOrderChangesAndUserTrades_shouldReceiveUpdates() throws InterruptedException {
+  void getOrderChangesAndUserTrades_shouldReceiveUpdates() throws Exception {
     CountDownLatch orderLatch = new CountDownLatch(1);
     CountDownLatch tradeLatch = new CountDownLatch(1);
     AtomicReference<Order> receivedOrder = new AtomicReference<>();

@@ -1,9 +1,9 @@
 package org.knowm.xchange.coinbase.v3.dto.products;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for CoinbaseProductResponse JSON parsing. Verifies correct deserialization of
@@ -29,15 +29,13 @@ public class CoinbaseProductJsonTest {
 
     CoinbaseProductResponse product = mapper.readValue(is, CoinbaseProductResponse.class);
 
-    assertNotNull("Product should not be null", product);
-    assertEquals("Product ID should match", "BTC-USD", product.getProductId());
-    assertEquals("Product type should match", "SPOT", product.getProductType());
-    assertEquals("Product venue should match", "CBE", product.getProductVenue());
-    assertEquals("Base currency id should match", "BTC", product.getBaseCurrencyId());
-    assertEquals("Quote currency id should match", "USD", product.getQuoteCurrencyId());
-    assertTrue(
-        "Spot products should not include futures details",
-        product.getFutureProductDetails() == null);
+    assertNotNull(product, "Product should not be null");
+    assertEquals("BTC-USD", product.getProductId(), "Product ID should match");
+    assertEquals("SPOT", product.getProductType(), "Product type should match");
+    assertEquals("CBE", product.getProductVenue(), "Product venue should match");
+    assertEquals("BTC", product.getBaseCurrencyId(), "Base currency id should match");
+    assertEquals("USD", product.getQuoteCurrencyId(), "Quote currency id should match");
+    assertTrue(product.getFutureProductDetails() == null, "Spot products should not include futures details");
   }
 
   @Test
@@ -46,10 +44,10 @@ public class CoinbaseProductJsonTest {
 
     CoinbaseProductResponse product = mapper.readValue(json, CoinbaseProductResponse.class);
 
-    assertNotNull("Product should not be null", product);
-    assertEquals("Product ID should match", "ETH-USD", product.getProductId());
-    assertTrue("Minimal payload should not have product type", product.getProductType() == null);
-    assertTrue("Minimal payload should not have product venue", product.getProductVenue() == null);
+    assertNotNull(product, "Product should not be null");
+    assertEquals("ETH-USD", product.getProductId(), "Product ID should match");
+    assertTrue(product.getProductType() == null, "Minimal payload should not have product type");
+    assertTrue(product.getProductVenue() == null, "Minimal payload should not have product venue");
   }
 
   @Test
@@ -82,7 +80,7 @@ public class CoinbaseProductJsonTest {
     CoinbaseProductResponse product = mapper.readValue(json, CoinbaseProductResponse.class);
 
     assertEquals(Boolean.FALSE, product.getTradingDisabled());
-    assertNull("Omitted status should be null", product.getStatus());
+    assertNull(product.getStatus(), "Omitted status should be null");
   }
 
   @Test
@@ -90,8 +88,8 @@ public class CoinbaseProductJsonTest {
     CoinbaseProductResponse product =
         mapper.readValue("{\"product_id\": \"ETH-USD\"}", CoinbaseProductResponse.class);
 
-    assertNull("Omitted trading_disabled should be null", product.getTradingDisabled());
-    assertNull("Omitted status should be null", product.getStatus());
+    assertNull(product.getTradingDisabled(), "Omitted trading_disabled should be null");
+    assertNull(product.getStatus(), "Omitted status should be null");
   }
 
   @Test
@@ -132,8 +130,8 @@ public class CoinbaseProductJsonTest {
             + "}";
     CoinbaseProductResponse product = mapper.readValue(json, CoinbaseProductResponse.class);
 
-    assertNotNull("Product should not be null", product);
-    assertEquals("Product ID should match", "BIP-20DEC30-CDE", product.getProductId());
+    assertNotNull(product, "Product should not be null");
+    assertEquals("BIP-20DEC30-CDE", product.getProductId(), "Product ID should match");
     assertEquals("FUTURE", product.getProductType());
     assertEquals("USD", product.getQuoteCurrencyId());
     assertEquals("FCM", product.getProductVenue());
@@ -144,7 +142,7 @@ public class CoinbaseProductJsonTest {
     assertEquals(new BigDecimal("1"), product.getQuoteMinSize());
 
     CoinbaseFutureProductDetails details = product.getFutureProductDetails();
-    assertNotNull("Future product details should not be null", details);
+    assertNotNull(details, "Future product details should not be null");
     assertEquals("BIP-20DEC30-CDE", details.getContractCode());
     assertEquals("CDE", details.getVenue());
     assertEquals("0.1", details.getContractSize());
@@ -185,24 +183,24 @@ public class CoinbaseProductJsonTest {
     CoinbaseProductCandlesResponse response =
         mapper.readValue(is, CoinbaseProductCandlesResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Candles should not be null", response.getCandles());
-    assertEquals("Should have 2 candles", 2, response.getCandles().size());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getCandles(), "Candles should not be null");
+    assertEquals(2, response.getCandles().size(), "Should have 2 candles");
 
     // Verify first candle
     CoinbaseProductCandle candle1 = response.getCandles().get(0);
-    assertEquals("Start time should match", "1609459200", candle1.getStart());
-    assertEquals("Low should match", new BigDecimal("49000.00"), candle1.getLow());
-    assertEquals("High should match", new BigDecimal("51000.00"), candle1.getHigh());
-    assertEquals("Open should match", new BigDecimal("50000.00"), candle1.getOpen());
-    assertEquals("Close should match", new BigDecimal("50500.00"), candle1.getClose());
-    assertEquals("Volume should match", new BigDecimal("100.5"), candle1.getVolume());
+    assertEquals("1609459200", candle1.getStart(), "Start time should match");
+    assertEquals(new BigDecimal("49000.00"), candle1.getLow(), "Low should match");
+    assertEquals(new BigDecimal("51000.00"), candle1.getHigh(), "High should match");
+    assertEquals(new BigDecimal("50000.00"), candle1.getOpen(), "Open should match");
+    assertEquals(new BigDecimal("50500.00"), candle1.getClose(), "Close should match");
+    assertEquals(new BigDecimal("100.5"), candle1.getVolume(), "Volume should match");
 
     // Verify second candle
     CoinbaseProductCandle candle2 = response.getCandles().get(1);
-    assertEquals("Start time should match", "1609462800", candle2.getStart());
-    assertEquals("Close should match", new BigDecimal("51500.00"), candle2.getClose());
-    assertEquals("Volume should match", new BigDecimal("150.75"), candle2.getVolume());
+    assertEquals("1609462800", candle2.getStart(), "Start time should match");
+    assertEquals(new BigDecimal("51500.00"), candle2.getClose(), "Close should match");
+    assertEquals(new BigDecimal("150.75"), candle2.getVolume(), "Volume should match");
   }
 
   @Test
@@ -227,17 +225,17 @@ public class CoinbaseProductJsonTest {
     CoinbaseProductMarketTradesResponse response =
         mapper.readValue(json, CoinbaseProductMarketTradesResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Trades should not be null", response.getMarketTrades());
-    assertEquals("Should have 1 trade", 1, response.getMarketTrades().size());
-    assertEquals("Best bid should match", new BigDecimal("49999"), response.getBestBid());
-    assertEquals("Best ask should match", new BigDecimal("50001"), response.getBestAsk());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getMarketTrades(), "Trades should not be null");
+    assertEquals(1, response.getMarketTrades().size(), "Should have 1 trade");
+    assertEquals(new BigDecimal("49999"), response.getBestBid(), "Best bid should match");
+    assertEquals(new BigDecimal("50001"), response.getBestAsk(), "Best ask should match");
 
     CoinbaseMarketTrade trade = response.getMarketTrades().get(0);
-    assertEquals("Trade ID should match", "t1", trade.getTradeId());
-    assertEquals("Product ID should match", "BTC-USD", trade.getProductId());
-    assertEquals("Price should match", new BigDecimal("50000"), trade.getPrice());
-    assertEquals("Size should match", new BigDecimal("0.1"), trade.getSize());
-    assertEquals("Side should match", "BUY", trade.getSide());
+    assertEquals("t1", trade.getTradeId(), "Trade ID should match");
+    assertEquals("BTC-USD", trade.getProductId(), "Product ID should match");
+    assertEquals(new BigDecimal("50000"), trade.getPrice(), "Price should match");
+    assertEquals(new BigDecimal("0.1"), trade.getSize(), "Size should match");
+    assertEquals("BUY", trade.getSide(), "Side should match");
   }
 }

@@ -3,7 +3,7 @@ package org.knowm.xchange.mexc.v3;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 
 /** Symbol conversion between MEXC wire symbols and XChange instruments. */

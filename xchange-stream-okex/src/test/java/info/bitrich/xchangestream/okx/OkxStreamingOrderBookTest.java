@@ -21,8 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.CRC32;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
@@ -45,7 +45,7 @@ public class OkxStreamingOrderBookTest {
   private OkxStreamingMarketDataService marketDataService;
   private OkxStreamingService streamingService;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     streamingService = mock(OkxStreamingService.class);
     OkxBusinessStreamingService businessStreamingService = mock(OkxBusinessStreamingService.class);

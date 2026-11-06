@@ -1,10 +1,11 @@
 package org.knowm.xchange.coinbase.v3.dto.pricebook;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for CoinbaseBestBidAsksResponse.
@@ -20,9 +21,9 @@ public class CoinbaseBestBidAsksResponseTest {
     CoinbaseBestBidAsksResponse response = 
         mapper.readValue(json, CoinbaseBestBidAsksResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Price books list should not be null", response.getPriceBooks());
-    assertTrue("Price books list should be empty", response.getPriceBooks().isEmpty());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getPriceBooks(), "Price books list should not be null");
+    assertTrue(response.getPriceBooks().isEmpty(), "Price books list should be empty");
   }
 
   @Test
@@ -31,19 +32,18 @@ public class CoinbaseBestBidAsksResponseTest {
     CoinbaseBestBidAsksResponse response = 
         mapper.readValue(json, CoinbaseBestBidAsksResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Price books list should not be null", response.getPriceBooks());
-    assertTrue("Price books list should be empty", response.getPriceBooks().isEmpty());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getPriceBooks(), "Price books list should not be null");
+    assertTrue(response.getPriceBooks().isEmpty(), "Price books list should be empty");
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testReturnsImmutableList() throws Exception {
     String json = "{\"pricebooks\": []}";
     CoinbaseBestBidAsksResponse response = 
         mapper.readValue(json, CoinbaseBestBidAsksResponse.class);
 
-    // Should throw UnsupportedOperationException
-    response.getPriceBooks().add(null);
+    assertThrows(UnsupportedOperationException.class, () -> response.getPriceBooks().add(null));
   }
 }
 

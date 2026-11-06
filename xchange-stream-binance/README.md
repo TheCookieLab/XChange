@@ -10,6 +10,19 @@ Channels are fixed at connection time: pass a `ProductSubscription` (and optiona
 `KlineSubscription`) to `connect(...)`. Binance limits live subscription messages to 5/second,
 so live subscribe/unsubscribe is opt-in via `enableLiveSubscription()` and defaults to disabled.
 
+Market-data messages without a symbol or for another instrument are skipped rather than
+terminating the subscription. Raw symbols are matched without relying on the exchange's initial
+symbol mapping, so newly listed instruments can be observed without refreshing that mapping.
+
+## WebSocket order payloads
+
+The decimal fields in `BinanceWebsocketPlaceOrderPayload`,
+`BinanceWebsocketOrderAmendPayload`, and `BinanceWebsocketOrderCancelAndReplacePayload` are
+`String` values. Code constructing these payloads directly must pass decimal strings instead of
+`BigDecimal` values (use `toPlainString()` to avoid scientific notation). Standard XChange order
+adapters perform this conversion. Execution reports expose cumulative filled quantity rather
+than only the latest fill quantity.
+
 ## Lifecycle and reconnect
 
 * Public market streams are connected with a single URL that encodes every subscribed channel;

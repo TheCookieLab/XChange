@@ -1,7 +1,7 @@
 package org.knowm.xchange.coinbase.v3.dto.orders;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -9,7 +9,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.knowm.xchange.currency.Currency;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for CoinbaseOrdersResponse (fills) JSON parsing.
@@ -26,36 +26,35 @@ public class CoinbaseFillsJsonTest {
     
     CoinbaseOrdersResponse response = mapper.readValue(is, CoinbaseOrdersResponse.class);
 
-    assertNotNull("Response should not be null", response);
-    assertNotNull("Fills should not be null", response.getFills());
-    assertEquals("Should have 2 fills", 2, response.getFills().size());
-    assertEquals("Cursor should match", "next-cursor-abc", response.getCursor());
+    assertNotNull(response, "Response should not be null");
+    assertNotNull(response.getFills(), "Fills should not be null");
+    assertEquals(2, response.getFills().size(), "Should have 2 fills");
+    assertEquals("next-cursor-abc", response.getCursor(), "Cursor should match");
     
     // Verify first fill (BTC buy)
     CoinbaseFill btcFill = response.getFills().get(0);
-    assertEquals("Entry ID should match", "fill-entry-123", btcFill.getEntryId());
-    assertEquals("Trade ID should match", "trade-456", btcFill.getTradeId());
-    assertEquals("Order ID should match", "order-789", btcFill.getOrderId());
-    assertEquals("Product ID should match", "BTC-USD", btcFill.getProductId());
-    assertEquals("Price should match", new BigDecimal("50000.00"), btcFill.getPrice());
-    assertEquals("Size should match", new BigDecimal("0.1"), btcFill.getSize());
-    assertEquals("Commission should match", new BigDecimal("2.5"), btcFill.getCommission());
-    assertEquals("Side should match", "BUY", btcFill.getSide());
-    assertEquals("Sequence timestamp should match", Instant.parse("2025-10-13T00:00:00Z"),
-        btcFill.getSequenceTimestamp().toInstant());
-    assertEquals("Liquidity indicator should match", "TAKER", btcFill.getLiquidityIndicator());
+    assertEquals("fill-entry-123", btcFill.getEntryId(), "Entry ID should match");
+    assertEquals("trade-456", btcFill.getTradeId(), "Trade ID should match");
+    assertEquals("order-789", btcFill.getOrderId(), "Order ID should match");
+    assertEquals("BTC-USD", btcFill.getProductId(), "Product ID should match");
+    assertEquals(new BigDecimal("50000.00"), btcFill.getPrice(), "Price should match");
+    assertEquals(new BigDecimal("0.1"), btcFill.getSize(), "Size should match");
+    assertEquals(new BigDecimal("2.5"), btcFill.getCommission(), "Commission should match");
+    assertEquals("BUY", btcFill.getSide(), "Side should match");
+    assertEquals(Instant.parse("2025-10-13T00:00:00Z"), btcFill.getSequenceTimestamp().toInstant(), "Sequence timestamp should match");
+    assertEquals("TAKER", btcFill.getLiquidityIndicator(), "Liquidity indicator should match");
     
     // Verify second fill (ETH sell)
     CoinbaseFill ethFill = response.getFills().get(1);
-    assertEquals("Entry ID should match", "fill-entry-124", ethFill.getEntryId());
-    assertEquals("Trade ID should match", "trade-457", ethFill.getTradeId());
-    assertEquals("Order ID should match", "order-790", ethFill.getOrderId());
-    assertEquals("Product ID should match", "ETH-USD", ethFill.getProductId());
-    assertEquals("Price should match", new BigDecimal("3000.00"), ethFill.getPrice());
-    assertEquals("Size should match", new BigDecimal("1.0"), ethFill.getSize());
-    assertEquals("Commission should match", new BigDecimal("1.5"), ethFill.getCommission());
-    assertEquals("Side should match", "SELL", ethFill.getSide());
-    assertEquals("Liquidity indicator should match", "MAKER", ethFill.getLiquidityIndicator());
+    assertEquals("fill-entry-124", ethFill.getEntryId(), "Entry ID should match");
+    assertEquals("trade-457", ethFill.getTradeId(), "Trade ID should match");
+    assertEquals("order-790", ethFill.getOrderId(), "Order ID should match");
+    assertEquals("ETH-USD", ethFill.getProductId(), "Product ID should match");
+    assertEquals(new BigDecimal("3000.00"), ethFill.getPrice(), "Price should match");
+    assertEquals(new BigDecimal("1.0"), ethFill.getSize(), "Size should match");
+    assertEquals(new BigDecimal("1.5"), ethFill.getCommission(), "Commission should match");
+    assertEquals("SELL", ethFill.getSide(), "Side should match");
+    assertEquals("MAKER", ethFill.getLiquidityIndicator(), "Liquidity indicator should match");
   }
 
   @Test
@@ -75,12 +74,12 @@ public class CoinbaseFillsJsonTest {
 
     CoinbaseFill fill = mapper.readValue(json, CoinbaseFill.class);
 
-    assertNotNull("Fill should not be null", fill);
-    assertEquals("Entry ID should match", "test-entry", fill.getEntryId());
-    assertEquals("Trade ID should match", "test-trade", fill.getTradeId());
-    assertEquals("Order ID should match", "test-order", fill.getOrderId());
-    assertEquals("Product ID should match", "BTC-USD", fill.getProductId());
-    assertEquals("Side should match", "BUY", fill.getSide());
+    assertNotNull(fill, "Fill should not be null");
+    assertEquals("test-entry", fill.getEntryId(), "Entry ID should match");
+    assertEquals("test-trade", fill.getTradeId(), "Trade ID should match");
+    assertEquals("test-order", fill.getOrderId(), "Order ID should match");
+    assertEquals("BTC-USD", fill.getProductId(), "Product ID should match");
+    assertEquals("BUY", fill.getSide(), "Side should match");
   }
 
   @Test
@@ -99,13 +98,10 @@ public class CoinbaseFillsJsonTest {
 
     CoinbaseFill fill = mapper.readValue(json, CoinbaseFill.class);
 
-    assertNotNull("Fill should not be null", fill);
-    assertEquals("Price precision should be preserved", 
-        new BigDecimal("50000.123456789"), fill.getPrice());
-    assertEquals("Size precision should be preserved", 
-        new BigDecimal("0.000000001"), fill.getSize());
-    assertEquals("Commission precision should be preserved", 
-        new BigDecimal("0.00000025"), fill.getCommission());
+    assertNotNull(fill, "Fill should not be null");
+    assertEquals(new BigDecimal("50000.123456789"), fill.getPrice(), "Price precision should be preserved");
+    assertEquals(new BigDecimal("0.000000001"), fill.getSize(), "Size precision should be preserved");
+    assertEquals(new BigDecimal("0.00000025"), fill.getCommission(), "Commission precision should be preserved");
   }
 
   @Test
@@ -128,10 +124,7 @@ public class CoinbaseFillsJsonTest {
             null,
             null);
 
-    assertEquals(
-        "CFMF futures fees settle in USD rather than the expiry token",
-        Currency.USD,
-        fill.getFeeCurrency());
+    assertEquals(Currency.USD, fill.getFeeCurrency(), "CFMF futures fees settle in USD rather than the expiry token");
   }
 
 }

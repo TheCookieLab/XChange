@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -264,8 +264,8 @@ public class MexcV3MarketDataServiceTest extends BaseMexcV3WiremockTest {
             ExchangeFactory.INSTANCE.createExchangeWithoutSpecification(MexcV3Exchange.class);
     ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
     specification.setHost("localhost");
-    specification.setSslUri("http://localhost:" + wireMockRule.port());
-    specification.setPort(wireMockRule.port());
+    specification.setSslUri("http://localhost:" + wireMockRule.getPort());
+    specification.setPort(wireMockRule.getPort());
     specification.setShouldLoadRemoteMetaData(true);
     exchange.applySpecification(specification);
 

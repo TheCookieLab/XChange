@@ -41,6 +41,10 @@ public class OkxAccountService extends OkxAccountServiceRaw implements AccountSe
     super(exchange, resilienceRegistries);
   }
 
+  public boolean setPositionDualMode(boolean dualMode) throws IOException {
+    return setPositionDualModeRaw(dualMode).isSuccess();
+  }
+
   public AccountInfo getAccountInfo() throws IOException {
     // null to get assets (with non-zero balance), remaining balance, and available amount in the
     // account.

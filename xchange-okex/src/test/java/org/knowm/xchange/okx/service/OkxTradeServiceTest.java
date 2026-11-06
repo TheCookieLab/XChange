@@ -10,9 +10,9 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -45,12 +45,12 @@ public class OkxTradeServiceTest {
   private final ObjectMapper mapper = new ObjectMapper();
   private OkxInstrumentCodeFixture instrumentCodes;
 
-  @Before
+  @BeforeEach
   public void setUpInstrumentCodes() {
     instrumentCodes = new OkxInstrumentCodeFixture();
   }
 
-  @After
+  @AfterEach
   public void restoreInstrumentCodes() {
     instrumentCodes.close();
   }

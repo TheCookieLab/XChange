@@ -1,9 +1,9 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -21,9 +21,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.client.ExchangeRestProxyBuilder;
 import org.knowm.xchange.client.ratelimit.RateLimitContext;
@@ -57,7 +58,7 @@ public class CoinbaseRateLimitQuotaTest {
   private CoinbaseExchange exchange;
   private ParamsDigest digest;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     stub = new QuotaStub();
     callers = Executors.newFixedThreadPool(BURST + 8);
@@ -69,7 +70,7 @@ public class CoinbaseRateLimitQuotaTest {
     digest = invocation -> "Bearer deterministic-test-token";
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     callers.shutdownNow();
     RateLimitContext context = specification.getResilience().getRateLimitContext();
@@ -84,7 +85,8 @@ public class CoinbaseRateLimitQuotaTest {
    * quota far below the burst, and an execution request issued mid-burst overtakes queued market
    * data.
    */
-  @Test(timeout = TIMEOUT_SECONDS * 1000L)
+  @Test
+  @Timeout(value = TIMEOUT_SECONDS, unit = TimeUnit.SECONDS)
   public void startupBurstStaysWithinQuotaAndExecutionOvertakesMarketData() throws Exception {
     stub.configureBucket(20, 10.0);
     CoinbaseMarketDataServiceRaw market =
@@ -99,7 +101,7 @@ public class CoinbaseRateLimitQuotaTest {
     Future<CoinbaseProductIdentity> discovery =
         callers.submit(() -> CoinbaseProductIdentity.discover(market));
 
-    assertTrue("first burst reached the server", stub.awaitArrivals(10, TIMEOUT_SECONDS));
+    assertTrue(stub.awaitArrivals(10, TIMEOUT_SECONDS), "first burst reached the server");
     Future<?> execution = callers.submit(account::getCoinbaseAccounts);
 
     assertNotNull(discovery.get(TIMEOUT_SECONDS, TimeUnit.SECONDS));
@@ -108,15 +110,11 @@ public class CoinbaseRateLimitQuotaTest {
     }
     execution.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-    assertEquals("the server quota was never exceeded", 0, stub.rejections());
+    assertEquals(0, stub.rejections(), "the server quota was never exceeded");
     int executionArrival = stub.firstArrivalIndex("GET " + ACCOUNTS);
-    assertTrue("execution request reached the server", executionArrival >= 0);
-    assertTrue(
-        "execution was admitted ahead of the queued market data, arrival #" + executionArrival,
-        executionArrival < 25);
-    assertTrue(
-        "all market data calls and the discovery pages were sent",
-        stub.arrivalsWithPrefix("GET " + PRODUCTS) >= BURST + 2);
+    assertTrue(executionArrival >= 0, "execution request reached the server");
+    assertTrue(executionArrival < 25, "execution was admitted ahead of the queued market data, arrival #" + executionArrival);
+    assertTrue(stub.arrivalsWithPrefix("GET " + PRODUCTS) >= BURST + 2, "all market data calls and the discovery pages were sent");
   }
 
   /**
@@ -124,7 +122,8 @@ public class CoinbaseRateLimitQuotaTest {
    * read is replayed after the cooldown and succeeds; the mutation is sent exactly once and the
    * rejection is surfaced, never replayed.
    */
-  @Test(timeout = TIMEOUT_SECONDS * 1000L)
+  @Test
+  @Timeout(value = TIMEOUT_SECONDS, unit = TimeUnit.SECONDS)
   public void externalConsumptionRecoversReadsAndNeverDuplicatesMutations() throws Exception {
     stub.configureBucket(1_000, 1_000.0);
     stub.forceRejections("GET " + ACCOUNTS, 1, "1");
@@ -138,9 +137,9 @@ public class CoinbaseRateLimitQuotaTest {
     assertEquals(0, account.getCoinbaseAccounts().size());
     Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
 
-    assertEquals("the rejected read was replayed once", 2, stub.arrivals("GET " + ACCOUNTS));
-    assertTrue("Retry-After 1s was honoured: " + elapsed, elapsed.compareTo(Duration.ofMillis(900)) >= 0);
-    assertTrue("recovered within the execution deadline: " + elapsed, elapsed.compareTo(Duration.ofSeconds(5)) < 0);
+    assertEquals(2, stub.arrivals("GET " + ACCOUNTS), "the rejected read was replayed once");
+    assertTrue(elapsed.compareTo(Duration.ofMillis(900)) >= 0, "Retry-After 1s was honoured: " + elapsed);
+    assertTrue(elapsed.compareTo(Duration.ofSeconds(5)) < 0, "recovered within the execution deadline: " + elapsed);
 
     CoinbaseOrderRequest order =
         new CoinbaseOrderRequest(
@@ -153,7 +152,7 @@ public class CoinbaseRateLimitQuotaTest {
       assertEquals(
           RateLimitTerminatedException.Reason.REMOTE_PRESSURE_EXHAUSTED, terminated.getReason());
     }
-    assertEquals("the mutation was sent exactly once", 1, stub.arrivals("POST " + ORDERS));
+    assertEquals(1, stub.arrivals("POST " + ORDERS), "the mutation was sent exactly once");
   }
 
   private CoinbaseAuthenticated authenticatedProxy() {

@@ -1,7 +1,7 @@
 package org.knowm.xchange.coinbase.v3.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
@@ -63,7 +63,7 @@ public class CoinbaseAccountServiceUnitTest {
     when(api.listAccounts(any(), any(Integer.class), any())).thenReturn(mockResponse);
     
     // Note: This test verifies the structure, actual integration tests verify behavior
-    assertNotNull("Service should not be null", service);
+    assertNotNull(service, "Service should not be null");
   }
 
   @Test
@@ -84,7 +84,7 @@ public class CoinbaseAccountServiceUnitTest {
     when(api.getTransactionSummary(any(), any(), any(), any())).thenReturn(mockResponse);
     
     // Verify the service method structure
-    assertNotNull("Service should not be null", service);
+    assertNotNull(service, "Service should not be null");
   }
 
   @Test
@@ -92,7 +92,7 @@ public class CoinbaseAccountServiceUnitTest {
     Exchange exchange = ExchangeFactory.INSTANCE.createExchange(CoinbaseExchange.class);
     CoinbaseAccountService service = (CoinbaseAccountService) exchange.getAccountService();
     
-    assertNotNull("Account service should not be null", service);
+    assertNotNull(service, "Account service should not be null");
   }
 }
 

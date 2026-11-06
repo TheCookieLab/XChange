@@ -62,8 +62,7 @@ public final class BitcoindeAdapters {
   private BitcoindeAdapters() {}
 
   /**
-   * Adapt a org.knowm.xchange.bitcoinde.dto.marketdata.BitcoindeOrderBook object to an OrderBook
-   * object.
+   * Adapt a BitcoindeCompactOrderbookWrapper object to an OrderBook object.
    *
    * @param bitcoindeOrderbookWrapper the exchange specific OrderBook object
    * @param currencyPair (e.g. BTC/USD)
@@ -174,7 +173,7 @@ public final class BitcoindeAdapters {
   }
 
   /**
-   * Adapt a org.knowm.xchange.bitcoinde.dto.marketdata.BitcoindeTrade[] object to a Trades object.
+   * Adapt a BitcoindeTradesWrapper object to a Trades object.
    *
    * @param bitcoindeTradesWrapper Exchange specific trades
    * @param currencyPair (e.g. BTC/USD)
@@ -205,8 +204,7 @@ public final class BitcoindeAdapters {
   }
 
   /**
-   * Adapt a org.knowm.xchange.bitcoinde.dto.marketdata.BitcoindeAccount object to an AccountInfo
-   * object.
+   * Adapt a BitcoindeAccountWrapper object to an AccountInfo object.
    *
    * @param bitcoindeAccount
    * @return AccountInfo

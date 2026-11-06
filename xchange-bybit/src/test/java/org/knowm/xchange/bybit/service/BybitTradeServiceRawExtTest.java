@@ -4,20 +4,16 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.verify;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import jakarta.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderStatus;
@@ -266,7 +262,7 @@ public class BybitTradeServiceRawExtTest extends BaseWiremockTest {
   @Test
   public void ambiguousPlacementReconcilesByLinkIdWithoutBlindReplay() throws IOException {
     // placement outcome is ambiguous: HTTP 500 without an order id
-    stubFor(
+    wireMockRule.stubFor(
         post(urlPathEqualTo("/v5/order/create"))
             .willReturn(
                 aResponse()
@@ -308,6 +304,6 @@ public class BybitTradeServiceRawExtTest extends BaseWiremockTest {
         BybitOrderStatus.NEW, reconciled.getResult().getList().get(0).getOrderStatus());
 
     // exactly one create attempt: no blind replay
-    verify(1, postRequestedFor(urlPathEqualTo("/v5/order/create")));
+    wireMockRule.verify(1, postRequestedFor(urlPathEqualTo("/v5/order/create")));
   }
 }

@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.client.ratelimit.RateLimitBudget.ScopeKind;
 import org.knowm.xchange.exceptions.RateLimitTerminatedException;
 import org.knowm.xchange.exceptions.RateLimitTerminatedException.Dispatch;
@@ -24,7 +24,7 @@ public class RateLimitPriorityTest {
 
   private RateLimitFixture fixture;
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (fixture != null) {
       fixture.cleanup();

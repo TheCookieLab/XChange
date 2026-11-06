@@ -18,9 +18,9 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -53,7 +53,7 @@ public class OkxInstrumentMetadataTest {
   private OkxInstrument btcUsdCallOption;
   private OkxInstrument ethUsdPutOption;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     List<OkxInstrument> spot = loadInstruments("instrumentsSpot.json5");
     List<OkxInstrument> margin = loadInstruments("instrumentsMargin.json5");
@@ -73,7 +73,7 @@ public class OkxInstrumentMetadataTest {
     OkxAdapters.instrumentToInstrumentIdMap.clear();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     OkxAdapters.instrumentToInstrumentIdMap.clear();
   }

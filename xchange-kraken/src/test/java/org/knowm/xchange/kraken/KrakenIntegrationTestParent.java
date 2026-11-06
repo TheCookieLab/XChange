@@ -13,7 +13,7 @@ public class KrakenIntegrationTestParent {
   protected static KrakenExchange exchange;
 
   @BeforeAll
-  public static void init() {
+  static void init() {
     if (exchange == null) {
       exchange = ExchangeFactory.INSTANCE.createExchange(KrakenExchange.class);
     }

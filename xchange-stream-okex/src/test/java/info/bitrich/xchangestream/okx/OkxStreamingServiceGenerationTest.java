@@ -18,8 +18,8 @@ import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.List;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.okx.OkxExchange;
 import org.mockito.ArgumentCaptor;
@@ -32,7 +32,7 @@ public class OkxStreamingServiceGenerationTest {
 
   private ExchangeSpecification spec;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     spec = mock(ExchangeSpecification.class);
   }
