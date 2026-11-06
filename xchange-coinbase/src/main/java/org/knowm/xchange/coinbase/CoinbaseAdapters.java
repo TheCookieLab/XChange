@@ -14,6 +14,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
 import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummary;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
@@ -38,6 +39,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPositions;
@@ -59,6 +61,43 @@ import org.knowm.xchange.instrument.Instrument;
 public final class CoinbaseAdapters {
 
   private CoinbaseAdapters() {}
+
+  /**
+   * Adapts Coinbase accounts to wallets, one per account. Coinbase reports {@code available_balance}
+   * and {@code hold} separately, so a balance's total is their sum and its hold is frozen.
+   *
+   * <p>A response that omits {@code hold} keeps its available-only balance, with nothing frozen. A
+   * caller that needs proof of a zero hold must check {@link CoinbaseAccount#getHold()}.
+   *
+   * @param accounts Coinbase accounts
+   * @return account info with one wallet per account, keyed by account uuid
+   * @throws ExchangeException when a hold is negative or in a different currency from its balance
+   */
+  public static AccountInfo adaptAccountInfo(List<CoinbaseAccount> accounts) {
+    List<Wallet> wallets = new ArrayList<>();
+    for (CoinbaseAccount account : accounts) {
+      wallets.add(
+          Wallet.Builder.from(Collections.singletonList(adaptAccountBalance(account)))
+              .id(account.getUuid())
+              .build());
+    }
+    return new AccountInfo(wallets);
+  }
+
+  private static Balance adaptAccountBalance(CoinbaseAccount account) {
+    CoinbaseAmount available = account.getBalance();
+    Currency currency = Currency.getInstance(available.getCurrency());
+    CoinbaseAmount hold = account.getHold();
+    if (hold == null) {
+      return new Balance(currency, available.getValue());
+    }
+    if (hold.getValue().signum() < 0 || !hold.getCurrency().equals(available.getCurrency())) {
+      throw new ExchangeException(
+          "Coinbase account " + account.getUuid() + " reports an invalid hold: " + hold);
+    }
+    return new Balance(
+        currency, available.getValue().add(hold.getValue()), available.getValue(), hold.getValue());
+  }
 
   /** Extract newly created order id from Coinbase createOrder response. */
   public static String adaptCreatedOrderId(CoinbaseCreateOrderResponse response) {

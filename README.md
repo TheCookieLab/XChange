@@ -16,13 +16,13 @@ fast exchange support updates, and a modern Maven release pipeline.
 Release artifacts are published under
 [`com.github.thecookielab.xchange`](https://central.sonatype.com/search?q=g:com.github.thecookielab.xchange).
 Set `xchange.version` to the latest release (`1.0.2`) from Central, or use
-`1.0.3-SNAPSHOT` with the snapshots repository below.
+`1.0.4-SNAPSHOT` with the snapshots repository below.
 
 Add `xchange-core` plus the exchange modules you use:
 
 ```xml
 <properties>
-  <xchange.version>1.0.3-SNAPSHOT</xchange.version>
+  <xchange.version>1.0.4-SNAPSHOT</xchange.version>
 </properties>
 
 <dependencies>

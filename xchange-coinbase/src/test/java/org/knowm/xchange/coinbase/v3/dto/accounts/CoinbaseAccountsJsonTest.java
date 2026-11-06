@@ -3,8 +3,11 @@ package org.knowm.xchange.coinbase.v3.dto.accounts;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,6 +76,62 @@ public class CoinbaseAccountsJsonTest {
     assertEquals("UUID should match", "test-uuid", account.getUuid());
     assertEquals("Name should match", "Test Account", account.getName());
     assertEquals("Currency should match", "BTC", account.getCurrency());
+  }
+
+  @Test
+  public void testDeserializeHoldKeepsItsCurrencyAndPrecision() throws Exception {
+    CoinbaseAmount hold =
+        accountWithHold("{\"value\": \"0.123456789012345678\", \"currency\": \"BTC\"}").getHold();
+
+    assertEquals(
+        "Hold value should keep its precision",
+        new BigDecimal("0.123456789012345678"),
+        hold.getValue());
+    assertEquals("Hold currency should match", "BTC", hold.getCurrency());
+  }
+
+  @Test
+  public void testDeserializeZeroHoldIsNotAMissingHold() throws Exception {
+    CoinbaseAmount hold =
+        accountWithHold("{\"value\": \"0\", \"currency\": \"BTC\"}").getHold();
+
+    assertNotNull("A reported zero hold should be kept", hold);
+    assertEquals("Hold should be zero", 0, hold.getValue().signum());
+  }
+
+  @Test
+  public void testDeserializeAccountWithoutHoldLeavesItNull() throws Exception {
+    assertNull("An explicit null hold proves nothing", accountWithHold("null").getHold());
+    assertNull(
+        "An omitted hold proves nothing",
+        mapper
+            .readValue(
+                "{\"uuid\": \"test-uuid\", \"currency\": \"BTC\", "
+                    + "\"available_balance\": {\"value\": \"1\", \"currency\": \"BTC\"}}",
+                CoinbaseAccount.class)
+            .getHold());
+  }
+
+  @Test
+  public void testDeserializeMalformedHoldFails() {
+    for (String malformed :
+        new String[] {
+          "{\"currency\": \"BTC\"}",
+          "{\"value\": \"1\"}",
+          "{\"value\": \"\", \"currency\": \"BTC\"}",
+          "{\"value\": \"not-a-number\", \"currency\": \"BTC\"}",
+          "\"3\""
+        }) {
+      assertThrows(malformed, JsonMappingException.class, () -> accountWithHold(malformed));
+    }
+  }
+
+  private CoinbaseAccount accountWithHold(String hold) throws Exception {
+    return mapper.readValue(
+        "{\"uuid\": \"test-uuid\", \"currency\": \"BTC\", "
+            + "\"available_balance\": {\"value\": \"1\", \"currency\": \"BTC\"}, "
+            + "\"hold\": " + hold + "}",
+        CoinbaseAccount.class);
   }
 
   @Test

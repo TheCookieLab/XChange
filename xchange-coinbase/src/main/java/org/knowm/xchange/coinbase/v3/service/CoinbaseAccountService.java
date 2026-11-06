@@ -1,22 +1,18 @@
 package org.knowm.xchange.coinbase.v3.service;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.AbstractMap;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.coinbase.CoinbaseAdapters;
-import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAccount;
-import org.knowm.xchange.coinbase.v3.dto.accounts.CoinbaseAmount;
+import org.knowm.xchange.coinbase.v3.CoinbaseAuthenticated;
 import org.knowm.xchange.coinbase.v3.dto.futures.CoinbaseFuturesBalanceSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.perpetuals.CoinbasePerpetualsBalancesResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseTransactionSummaryResponse;
 import org.knowm.xchange.coinbase.v3.dto.transactions.CoinbaseFeeTier;
-import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
@@ -30,6 +26,7 @@ import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.DefaultWithdrawFundsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+import si.mazi.rescu.ParamsDigest;
 
 /**
  * Account service implementation for Coinbase Advanced Trade (v3) API.
@@ -56,12 +53,19 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
     super(exchange);
   }
 
+  /** Test seam: uses the given REST proxy and signer in place of the exchange's own. */
+  CoinbaseAccountService(
+      Exchange exchange, CoinbaseAuthenticated coinbaseAdvancedTrade, ParamsDigest authTokenCreator) {
+
+    super(exchange, coinbaseAdvancedTrade, authTokenCreator);
+  }
+
   /**
    * Retrieves account information including all wallets and balances for the authenticated user.
    * <p>
    * This method fetches all accounts from Coinbase and maps them to XChange {@link Wallet} objects,
-   * each containing balance information for a specific currency. The accounts are retrieved with
-   * automatic pagination to ensure all accounts are included.
+   * each containing balance information for a specific currency, with funds on hold counted as
+   * frozen. The accounts are retrieved with automatic pagination to ensure all accounts are included.
    * </p>
    *
    * @return An {@link AccountInfo} object containing a list of wallets, each representing an account
@@ -70,21 +74,7 @@ public final class CoinbaseAccountService extends CoinbaseAccountServiceRaw impl
    */
   @Override
   public AccountInfo getAccountInfo() throws IOException {
-    List<Wallet> wallets = new ArrayList<>();
-
-    List<CoinbaseAccount> coinbaseAccounts = getCoinbaseAccounts();
-    for (CoinbaseAccount coinbaseAccount : coinbaseAccounts) {
-      wallets.add(toWallet(coinbaseAccount));
-    }
-
-    return new AccountInfo(wallets);
-  }
-
-  private Wallet toWallet(CoinbaseAccount coinbaseAccount) {
-    CoinbaseAmount balance = coinbaseAccount.getBalance();
-    Balance xchangeBalance =
-        new Balance(Currency.getInstance(balance.getCurrency()), balance.getValue());
-    return Wallet.Builder.from(Arrays.asList(xchangeBalance)).id(coinbaseAccount.getUuid()).build();
+    return CoinbaseAdapters.adaptAccountInfo(getCoinbaseAccounts());
   }
 
   /**
