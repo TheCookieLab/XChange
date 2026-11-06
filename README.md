@@ -190,6 +190,9 @@ API when the exchange supports private streaming channels.
 Build with JDK 25. Tests use JUnit Jupiter 6 and `org.junit.jupiter.api`
 annotations; the JUnit Vintage engine is not included.
 
+Snapshot publishing resolves an available Temurin 25 build rather than pinning a
+vendor build number. Its checkout and Java setup actions run on Node.js 24.
+
 | Task | Command |
 | --- | --- |
 | Run unit tests | `mvn -B clean test` |
