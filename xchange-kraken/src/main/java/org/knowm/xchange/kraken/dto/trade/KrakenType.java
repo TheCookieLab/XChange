@@ -49,10 +49,8 @@ public enum KrakenType {
     public KrakenType deserialize(JsonParser jsonParser, DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
 
-      ObjectCodec oc = jsonParser.getCodec();
-      JsonNode node = oc.readTree(jsonParser);
-      String typeString = node.textValue();
-      return fromString(typeString);
+      // Performance optimization: Avoid building Jackson JsonNode AST instances on high-frequency streaming paths
+      return fromString(jsonParser.getText());
     }
   }
 }

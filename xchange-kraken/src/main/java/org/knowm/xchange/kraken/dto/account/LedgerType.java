@@ -58,10 +58,8 @@ public enum LedgerType {
     public LedgerType deserialize(JsonParser jsonParser, DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
 
-      ObjectCodec oc = jsonParser.getCodec();
-      JsonNode node = oc.readTree(jsonParser);
-      String ledgerTypeString = node.textValue();
-      return fromString(ledgerTypeString);
+      // Performance optimization: Avoid building Jackson JsonNode AST instances on high-frequency streaming paths
+      return fromString(jsonParser.getText());
     }
   }
 }
