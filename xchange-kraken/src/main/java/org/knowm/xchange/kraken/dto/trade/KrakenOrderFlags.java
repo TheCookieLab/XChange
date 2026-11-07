@@ -2,10 +2,8 @@ package org.knowm.xchange.kraken.dto.trade;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -43,12 +41,32 @@ public enum KrakenOrderFlags implements IOrderFlags {
     public Set<KrakenOrderFlags> deserialize(JsonParser jsonParser, DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
 
-      ObjectCodec oc = jsonParser.getCodec();
-      JsonNode node = oc.readTree(jsonParser);
-      String orderFlagsString = node.textValue();
+      // Performance optimization: Avoid building Jackson JsonNode AST instances on high-frequency streaming paths.
+      // Direct getText() streams string tokens without intermediate TextNode allocation.
+      String orderFlagsString = jsonParser.getText();
       Set<KrakenOrderFlags> orderFlags = EnumSet.noneOf(KrakenOrderFlags.class);
-      if (!orderFlagsString.isEmpty()) {
-        for (String orderFlag : orderFlagsString.split(",")) orderFlags.add(fromString(orderFlag));
+      if (orderFlagsString == null || orderFlagsString.isEmpty()) {
+        return orderFlags;
+      }
+
+      // Performance optimization: Avoid String.split(",") regex overhead and Matcher/String[] allocations.
+      // Use index scanning with indexOf(',') to parse comma-delimited tokens with minimal allocations.
+      int start = 0;
+      int commaIndex;
+      while ((commaIndex = orderFlagsString.indexOf(',', start)) != -1) {
+        if (commaIndex > start) {
+          KrakenOrderFlags flag = fromString(orderFlagsString.substring(start, commaIndex).trim());
+          if (flag != null) {
+            orderFlags.add(flag);
+          }
+        }
+        start = commaIndex + 1;
+      }
+      if (start < orderFlagsString.length()) {
+        KrakenOrderFlags flag = fromString(orderFlagsString.substring(start).trim());
+        if (flag != null) {
+          orderFlags.add(flag);
+        }
       }
       return orderFlags;
     }
