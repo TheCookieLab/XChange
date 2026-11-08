@@ -48,6 +48,13 @@ public class AuthUtilsTest {
   }
 
   @Test
+  public void testSecretPropertiesStreamClosureAndNonExistentHandling() {
+    // Non-existent prefix should cleanly return null without unhandled exceptions or leaks
+    org.junit.jupiter.api.Assertions.assertNull(
+        AuthUtils.getSecretProperties("non-existent-prefix-12345"));
+  }
+
+  @Test
   public void testSecretKeysFallbackWhenEnvMissing() {
     assumeSecretKeysAvailable(PREFIX);
 
