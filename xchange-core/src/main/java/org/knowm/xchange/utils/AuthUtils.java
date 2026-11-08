@@ -86,30 +86,29 @@ public class AuthUtils {
 
     String resource = prefix != null ? prefix + "-secret.keys" : "secret.keys";
 
-    // First try to find the keys in the classpath
-    InputStream inStream = AuthUtils.class.getResourceAsStream("/" + resource);
+    // First try to find the keys in the classpath; use try-with-resources to prevent stream leaks
+    try (InputStream inStream = AuthUtils.class.getResourceAsStream("/" + resource)) {
+      if (inStream != null) {
+        Properties props = new Properties();
+        props.load(inStream);
+        return props;
+      }
+    } catch (IOException e) {
+      // do nothing
+    }
 
     // Next try to find the keys in the user's home/.ssh dir
     File keyfile = new File(System.getProperty("user.home") + "/" + ".ssh", resource);
-    if (inStream == null && keyfile.isFile()) {
-      try {
-        inStream = new FileInputStream(keyfile);
-      } catch (IOException e) {
-        // do nothing
-      }
-    }
-
-    Properties props = null;
-    if (inStream != null) {
-      try {
-        props = new Properties();
+    if (keyfile.isFile()) {
+      try (InputStream inStream = new FileInputStream(keyfile)) {
+        Properties props = new Properties();
         props.load(inStream);
         return props;
       } catch (IOException e) {
         // do nothing
       }
     }
-    return props;
+    return null;
   }
 
   private static String resolveHost(ExchangeSpecification exchangeSpec) {
