@@ -235,4 +235,63 @@ class OrderBookTest {
         new OrderBook(new Date(), Arrays.asList(extraAsk), orderBook.getBids());
     assertThat(orderBook.ordersEqual(differentBook)).isFalse();
   }
+
+  @Test
+  void updateLimitOrderInPlace() {
+    Date timeStamp = new Date(1000L);
+    LimitOrder updatedBid =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USD)
+            .originalAmount(new BigDecimal("5.0"))
+            .limitPrice(BigDecimal.TEN)
+            .timestamp(timeStamp)
+            .build();
+    orderBook.update(updatedBid);
+    assertThat(orderBook.getBids()).hasSize(1);
+    assertThat(orderBook.getBids().get(0).getOriginalAmount()).isEqualByComparingTo("5.0");
+    assertThat(orderBook.getBids().get(0).getLimitPrice()).isEqualByComparingTo(BigDecimal.TEN);
+  }
+
+  @Test
+  void updateLimitOrderAddNewLevel() {
+    Date timeStamp = new Date(1000L);
+    LimitOrder newBid =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USD)
+            .originalAmount(new BigDecimal("2.0"))
+            .limitPrice(new BigDecimal("9.0"))
+            .timestamp(timeStamp)
+            .build();
+    orderBook.update(newBid);
+    assertThat(orderBook.getBids()).hasSize(2);
+    assertThat(orderBook.getBids().get(0).getLimitPrice()).isEqualByComparingTo(BigDecimal.TEN);
+    assertThat(orderBook.getBids().get(1).getLimitPrice()).isEqualByComparingTo(new BigDecimal("9.0"));
+  }
+
+  @Test
+  void updateLimitOrderZeroVolumeNonExistentIsNoOp() {
+    Date timeStamp = new Date(1000L);
+    LimitOrder zeroBid =
+        new LimitOrder.Builder(OrderType.BID, CurrencyPair.BTC_USD)
+            .originalAmount(BigDecimal.ONE)
+            .cumulativeAmount(BigDecimal.ONE) // remaining amount 0
+            .limitPrice(new BigDecimal("8.0"))
+            .timestamp(timeStamp)
+            .build();
+    orderBook.update(zeroBid);
+    assertThat(orderBook.getBids()).hasSize(1);
+  }
+
+  @Test
+  void updateOrderBookUpdateZeroVolumeNonExistentIsNoOp() {
+    Date timeStamp = new Date(1000L);
+    OrderBookUpdate zeroBidUpdate =
+        new OrderBookUpdate(
+            OrderType.BID,
+            BigDecimal.ONE,
+            CurrencyPair.BTC_USD,
+            new BigDecimal("8.0"),
+            timeStamp,
+            BigDecimal.ZERO);
+    orderBook.update(zeroBidUpdate);
+    assertThat(orderBook.getBids()).hasSize(1);
+  }
 }

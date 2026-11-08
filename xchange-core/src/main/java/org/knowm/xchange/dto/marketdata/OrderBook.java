@@ -142,13 +142,17 @@ public final class OrderBook implements Serializable {
         long writeStamp = lock.tryConvertToWriteLock(stamp);
         if (writeStamp != 0L) {
           stamp = writeStamp;
-          if (idx >= 0) {
-            limitOrders.remove(idx);
-          } else {
-            idx = -idx - 1;
-          }
+          // Performance optimization: When updating an existing price level (idx >= 0), use
+          // List.set(idx, ...) to update in-place in O(1) time. This eliminates two redundant O(N)
+          // System.arraycopy memory shifts caused by remove(idx) followed by add(idx, ...).
           if (limitOrder.getRemainingAmount().compareTo(BigDecimal.ZERO) != 0) {
-            limitOrders.add(idx, limitOrder);
+            if (idx >= 0) {
+              limitOrders.set(idx, limitOrder);
+            } else {
+              limitOrders.add(-idx - 1, limitOrder);
+            }
+          } else if (idx >= 0) {
+            limitOrders.remove(idx);
           }
           updateDate(limitOrder.getTimestamp());
           break;
@@ -184,14 +188,18 @@ public final class OrderBook implements Serializable {
         long writeStamp = lock.tryConvertToWriteLock(stamp);
         if (writeStamp != 0L) {
           stamp = writeStamp;
-          if (idx >= 0) {
-            limitOrders.remove(idx);
-          } else {
-            idx = -idx - 1;
-          }
+          // Performance optimization: When updating an existing price level (idx >= 0), use
+          // List.set(idx, ...) to update in-place in O(1) time. This eliminates two redundant O(N)
+          // System.arraycopy memory shifts caused by remove(idx) followed by add(idx, ...).
           if (orderBookUpdate.getTotalVolume().compareTo(BigDecimal.ZERO) != 0) {
             LimitOrder updatedOrder = withAmount(limitOrder, orderBookUpdate.getTotalVolume());
-            limitOrders.add(idx, updatedOrder);
+            if (idx >= 0) {
+              limitOrders.set(idx, updatedOrder);
+            } else {
+              limitOrders.add(-idx - 1, updatedOrder);
+            }
+          } else if (idx >= 0) {
+            limitOrders.remove(idx);
           }
           updateDate(limitOrder.getTimestamp());
           break;
