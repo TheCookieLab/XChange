@@ -11,7 +11,6 @@ import org.apache.commons.lang3.concurrent.TimedSemaphore;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
-import org.knowm.xchange.utils.CertHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +29,9 @@ public class BitfinexManualExample {
   }
 
   public static void main(String[] args) throws Exception {
-    CertHelper.trustAllCerts();
+    // Security note: Rely on standard JVM certificate validation instead of disabling
+    // certificate verification via CertHelper.trustAllCerts(), which leaves connections
+    // vulnerable to man-in-the-middle (MITM) attacks and credential theft.
 
     ExchangeSpecification defaultExchangeSpecification =
         new ExchangeSpecification(BitfinexStreamingExchange.class);
