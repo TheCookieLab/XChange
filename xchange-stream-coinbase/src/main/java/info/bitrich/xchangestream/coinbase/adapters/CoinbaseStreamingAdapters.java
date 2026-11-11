@@ -34,11 +34,18 @@ public final class CoinbaseStreamingAdapters {
     if (productId == null) {
       return null;
     }
-    String[] tokens = productId.split("-");
-    if (tokens.length != 2) {
+    // Performance optimization: Scanning the dash separator with indexOf() avoids
+    // regex pattern compilation, Matcher overhead, intermediate ArrayList buffer creation,
+    // and String[] array allocation inherent to String.split("-") on high-frequency streaming events.
+    int separatorIndex = productId.indexOf('-');
+    if (separatorIndex <= 0 || separatorIndex == productId.length() - 1) {
       return null;
     }
-    return new CurrencyPair(tokens[0], tokens[1]);
+    if (productId.indexOf('-', separatorIndex + 1) != -1) {
+      return null;
+    }
+    return new CurrencyPair(
+        productId.substring(0, separatorIndex), productId.substring(separatorIndex + 1));
   }
 
   public static List<Ticker> adaptTickers(JsonNode message) {
