@@ -23,6 +23,27 @@ class CoinbaseStreamingAdaptersTest {
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Test
+  void toCurrencyPairParsesStandardAndEdgeCases() {
+    Assertions.assertNull(CoinbaseStreamingAdapters.toCurrencyPair(null));
+    Assertions.assertNull(CoinbaseStreamingAdapters.toCurrencyPair(""));
+    Assertions.assertNull(CoinbaseStreamingAdapters.toCurrencyPair("BTCUSD"));
+    Assertions.assertNull(CoinbaseStreamingAdapters.toCurrencyPair("-USD"));
+    Assertions.assertNull(CoinbaseStreamingAdapters.toCurrencyPair("BTC-"));
+    Assertions.assertNull(CoinbaseStreamingAdapters.toCurrencyPair("BTC-USD-PERP"));
+    Assertions.assertNull(CoinbaseStreamingAdapters.toCurrencyPair("BTC--USD"));
+
+    CurrencyPair btcUsd = CoinbaseStreamingAdapters.toCurrencyPair("BTC-USD");
+    Assertions.assertNotNull(btcUsd);
+    Assertions.assertEquals(CurrencyPair.BTC_USD, btcUsd);
+    Assertions.assertEquals("BTC", btcUsd.getBase().getCurrencyCode());
+    Assertions.assertEquals("USD", btcUsd.getCounter().getCurrencyCode());
+
+    CurrencyPair ethUsdc = CoinbaseStreamingAdapters.toCurrencyPair("ETH-USDC");
+    Assertions.assertNotNull(ethUsdc);
+    Assertions.assertEquals(new CurrencyPair("ETH", "USDC"), ethUsdc);
+  }
+
+  @Test
   void adaptTickerParsesPrices() throws IOException {
     JsonNode node =
         MAPPER.readTree(
