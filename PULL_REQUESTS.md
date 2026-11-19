@@ -9,3 +9,6 @@ Allow first pushes that create non-default remote feature branches after require
 
 Override PR.RULE.DEFAULT_BRANCH_MUTATION:
 Allow pull requests that target `origin/main`. Do not open or merge pull requests against any upstream default branch unless I explicitly request that action. Direct pushes to `main` remain disallowed unless the user explicitly requests that action.
+
+Override PR.RULE.PRD_DOC_DEFAULT_PUSH:
+Direct pushes of PRD documents and their index to `main` require an explicit user request; otherwise use the normal fork PR lane. For an authorized PRD-only push, fetch and rebase first, commit only PRD paths and their index, and push fast-forward only; if protection blocks it, use a PR. Mixed changes use the normal lane, lifecycle transitions stay with their feature, and explicit no-push requests bind.
