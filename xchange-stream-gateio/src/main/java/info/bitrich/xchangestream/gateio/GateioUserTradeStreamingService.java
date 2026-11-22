@@ -133,11 +133,13 @@ public class GateioUserTradeStreamingService extends JsonNettyStreamingService {
       case Config.FUTURES_ORDER_AMEND_CHANNEL:
         {
           LimitOrder limitOrder = (LimitOrder) ArrayUtils.get(args, 1);
-          String id = "";
-          if (limitOrder.getUserReference() != null) {
-            id = limitOrder.getUserReference();
-          } else if (limitOrder.getId() != null) {
-            id = limitOrder.getId();
+          String id = limitOrder.getId();
+          if (id == null || id.isEmpty()) {
+            String reference = limitOrder.getUserReference();
+            id = reference == null ? "" : reference;
+            if (reference != null && !reference.startsWith("t-")) {
+              id = "t-" + reference;
+            }
           }
           String size = null;
           if (limitOrder.getOriginalAmount() != null) {

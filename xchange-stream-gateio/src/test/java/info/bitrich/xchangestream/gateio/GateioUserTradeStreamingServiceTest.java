@@ -5,14 +5,21 @@ import static info.bitrich.xchangestream.service.netty.NettyStreamingService.DEF
 import static info.bitrich.xchangestream.service.netty.NettyStreamingService.DEFAULT_RETRY_DURATION;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import info.bitrich.xchangestream.gateio.config.Config;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.observers.TestObserver;
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
 
 class GateioUserTradeStreamingServiceTest {
@@ -49,6 +56,44 @@ class GateioUserTradeStreamingServiceTest {
     exchangeSpecification.setExchangeSpecificParametersItem(
         WS_RETRY_DURATION, DEFAULT_RETRY_DURATION);
     exchangeSpecification.setExchangeSpecificParametersItem(WS_IDLE_TIMEOUT, DEFAULT_IDLE_TIMEOUT);
+  }
+
+  @Test
+  void futuresAmendmentPrefersExchangeOrderId() throws IOException {
+    LimitOrder order =
+        new LimitOrder(
+            OrderType.BID,
+            BigDecimal.ONE,
+            new FuturesContract(CurrencyPair.ETH_USDT, "PERP"),
+            "12345",
+            null,
+            BigDecimal.TEN);
+
+    assertThat(amendmentOrderId(order)).isEqualTo("12345");
+  }
+
+  @Test
+  void futuresAmendmentNormalizesClientOrderReference() throws IOException {
+    LimitOrder.Builder order =
+        new LimitOrder.Builder(OrderType.BID, new FuturesContract(CurrencyPair.ETH_USDT, "PERP"))
+            .limitPrice(BigDecimal.TEN);
+
+    assertThat(amendmentOrderId(order.userReference("client-1").build())).isEqualTo("t-client-1");
+    assertThat(amendmentOrderId(order.userReference("t-client-2").build())).isEqualTo("t-client-2");
+  }
+
+  private String amendmentOrderId(LimitOrder order) throws IOException {
+    GateioUserTradeStreamingService service =
+        new GateioUserTradeStreamingService(
+            "wss://localhost", exchangeSpecification.getSecretKey(), exchangeSpecification, true);
+    String request =
+        service.getSubscribeMessage(
+            Config.FUTURES_ORDER_AMEND_CHANNEL, "request-1", order, BigDecimal.ONE);
+    return Config.getInstance()
+        .getObjectMapper()
+        .readTree(request)
+        .at("/payload/req_param/order_id")
+        .asText();
   }
 
   @Test

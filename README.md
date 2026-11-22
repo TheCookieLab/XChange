@@ -191,6 +191,8 @@ API when the exchange supports private streaming channels.
 
 Binance trading sockets reauthenticate on reconnect without resending in-flight
 orders. Gate.io WebSocket order requests use distinct IDs to correlate responses.
+To amend a Gate.io futures order, set the `LimitOrder` exchange ID or, if no ID
+is available, set the same client reference used to place the order.
 Bybit REST and streaming orders report gross filled quantity as
 `Order.getCumulativeAmount()`; fees are reported separately.
 
