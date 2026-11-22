@@ -736,11 +736,10 @@
     </build>
 
     <profiles>
-        <!-- Skips tests, javadoc/source jars and enforcer checks: mvn -Pfast -->
+        <!-- Skips tests and javadoc/source jars: mvn -Pfast -->
         <profile>
             <id>fast</id>
             <properties>
-                <enforcer.skip>true</enforcer.skip>
                 <maven.javadoc.skip>true</maven.javadoc.skip>
                 <maven.source.skip>true</maven.source.skip>
                 <maven.test.skip>true</maven.test.skip>

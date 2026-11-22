@@ -43,8 +43,9 @@ public class GateioWsResponseHeader {
   @JsonProperty("x_gate_ratelimit_limit")
   private Integer xGateRatelimitLimit;
 
+  /** Rate-limit reset time as epoch milliseconds. */
   @JsonProperty("x_gat_ratelimit_reset_timestamp")
-  private Integer xGatRatelimitResetTimestamp;
+  private Long xGatRatelimitResetTimestamp;
 
   @JsonProperty("conn_id")
   private String connId;

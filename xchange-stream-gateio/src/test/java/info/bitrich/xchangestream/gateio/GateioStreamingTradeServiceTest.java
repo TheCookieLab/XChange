@@ -373,7 +373,8 @@ class GateioStreamingTradeServiceTest {
           "request_id": "123",
           "header": {
             "status": "200",
-            "channel": "futures.order_place"
+            "channel": "futures.order_place",
+            "x_gat_ratelimit_reset_timestamp": 1736408263764
           },
           "data": {
             "result": {}

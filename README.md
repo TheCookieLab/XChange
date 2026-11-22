@@ -210,6 +210,9 @@ vendor build number. Its checkout and Java setup actions run on Node.js 24.
 | Format Java | `mvn -B com.spotify.fmt:fmt-maven-plugin:format` |
 | Sort POMs | `mvn -B com.github.ekryd.sortpom:sortpom-maven-plugin:sort` |
 
+For local packaging only, `mvn -B -Pfast package` skips tests and documentation
+artifacts. Maven Enforcer checks, including dependency convergence, still run.
+
 ## Dependency Maintenance
 
 Dependency update reports use
