@@ -33,6 +33,7 @@ import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
+import org.knowm.xchange.gateio.GateioAdapters;
 import org.knowm.xchange.gateio.GateioErrorAdapter;
 import org.knowm.xchange.gateio.dto.GateioException;
 import org.knowm.xchange.gateio.dto.trade.GateioCancelOrderParams;
@@ -239,10 +240,9 @@ public class GateioStreamingTradeService implements StreamingTradeService {
       } else {
         if (orderParams instanceof GateioCancelOrderParams params) {
           instrument = params.getInstrument();
-          if (params.getUserReference() != null) {
-            id = params.getUserReference();
-            if (!id.startsWith("t-"))
-              throw new IllegalArgumentException("user reference must begin at 't-'");
+          String reference = params.getUserReference();
+          if (reference != null) {
+            id = reference.isEmpty() ? "" : GateioAdapters.formatUserReference(reference);
           } else if (params.getOrderId() != null) {
             id = params.getOrderId();
           }

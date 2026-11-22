@@ -136,10 +136,7 @@ public class GateioUserTradeStreamingService extends JsonNettyStreamingService {
           String id = limitOrder.getId();
           if (id == null || id.isEmpty()) {
             String reference = limitOrder.getUserReference();
-            id = reference == null ? "" : reference;
-            if (reference != null && !reference.startsWith("t-")) {
-              id = "t-" + reference;
-            }
+            id = reference == null ? "" : GateioAdapters.formatUserReference(reference);
           }
           String size = null;
           if (limitOrder.getOriginalAmount() != null) {

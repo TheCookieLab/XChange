@@ -12,6 +12,7 @@ import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.gateio.GateioExchange;
 import org.knowm.xchange.gateio.GateioExchangeWiremock;
 import org.knowm.xchange.gateio.dto.GateioExchangeType;
+import org.knowm.xchange.gateio.dto.trade.GateioCancelOrderParams;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.DefaultCancelOrderByInstrumentAndIdParams;
 
@@ -19,6 +20,9 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class GateioFuturesTradeServiceTest extends GateioExchangeWiremock {
@@ -76,6 +80,23 @@ class GateioFuturesTradeServiceTest extends GateioExchangeWiremock {
         new DefaultCancelOrderByInstrumentAndIdParams(btcUsdtPerp, "15675394"));
 
     assertThat(cancelled).isTrue();
+  }
+
+  @Test
+  void cancelFuturesOrderByClientReference() throws Exception {
+    wireMockServer()
+        .stubFor(
+            delete(urlEqualTo("/api/v4/futures/usdt/orders/t-client-1"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("api_v4_futures_orders-valid-cancel-order.json")));
+
+    assertThat(
+            gateioTradeService.cancelOrder(
+                new GateioCancelOrderParams(null, btcUsdtPerp, "client-1")))
+        .isTrue();
   }
 
   @Test

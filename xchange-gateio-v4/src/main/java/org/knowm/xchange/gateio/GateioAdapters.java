@@ -226,14 +226,17 @@ public class GateioAdapters {
         ? size.toPlainString() : size.negate().toPlainString();
   }
 
-  private static String formatUserReference(String userReference) {
-    String result;
-    if (userReference != null)
-      if (userReference.startsWith("t-"))
-        result = userReference;
-      else result = "t-" + userReference;
-    else result = "t-" + System.currentTimeMillis();
-    return result;
+  /**
+   * Formats a caller's order reference for Gate.io.
+   *
+   * @param userReference the client reference, or {@code null} to generate one for placement
+   * @return the client order ID with the required {@code t-} prefix
+   */
+  public static String formatUserReference(String userReference) {
+    if (userReference == null) {
+      return "t-" + System.currentTimeMillis();
+    }
+    return userReference.startsWith("t-") ? userReference : "t-" + userReference;
   }
 
   public static GateioFuturesOrderRequest toGateioFuturesOrder(LimitOrder limitOrder, BigDecimal contractValue) {

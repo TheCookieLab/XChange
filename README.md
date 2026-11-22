@@ -193,6 +193,8 @@ Binance trading sockets reauthenticate on reconnect without resending in-flight
 orders. Gate.io WebSocket order requests use distinct IDs to correlate responses.
 To amend a Gate.io futures order, set the `LimitOrder` exchange ID or, if no ID
 is available, set the same client reference used to place the order.
+To cancel by client reference, pass it in `GateioCancelOrderParams`; both REST
+and WebSocket accept it with or without the `t-` prefix.
 Gate.io response headers retain the exchange's timestamp and rate-limit field
 names when serialized back to JSON.
 Bybit REST and streaming orders report gross filled quantity as

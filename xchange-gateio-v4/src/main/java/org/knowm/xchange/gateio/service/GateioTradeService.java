@@ -150,8 +150,9 @@ public class GateioTradeService extends GateioTradeServiceRaw implements TradeSe
         if (orderParams instanceof GateioCancelOrderParams) {
           GateioCancelOrderParams params = (GateioCancelOrderParams) orderParams;
           instrument = params.getInstrument();
-          if (params.getUserReference() != null) {
-            id = params.getUserReference();
+          String reference = params.getUserReference();
+          if (reference != null) {
+            id = reference.isEmpty() ? "" : GateioAdapters.formatUserReference(reference);
           } else if (params.getOrderId() != null) {
             id = params.getOrderId();
           }

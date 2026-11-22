@@ -45,6 +45,7 @@ import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
+import org.knowm.xchange.gateio.dto.trade.GateioCancelOrderParams;
 import org.knowm.xchange.service.trade.params.DefaultCancelOrderByInstrumentAndIdParams;
 import org.knowm.xchange.instrument.Instrument;
 import org.mockito.Mock;
@@ -175,6 +176,22 @@ class GateioStreamingTradeServiceTest {
     TestObserver<Integer> cancelFutures = service.cancelOrder(futuresCancel).test();
     cancelFutures.assertNoErrors().assertNotComplete().dispose();
     service.cancelOrder(futuresCancel).test().assertError(RequestNotPermitted.class);
+  }
+
+  @Test
+  void futuresCancellationUsesThePlacedClientReference() throws Exception {
+    JsonNode response = objectMapper.readTree("{\"header\":{\"status\":\"200\"}}");
+    when(gateioUserTradeStreamingService.subscribeChannel(
+            eq(Config.FUTURES_ORDER_CANCEL_CHANNEL),
+            anyString(),
+            eq(instrumentFuture),
+            eq("t-client-1")))
+        .thenReturn(Observable.just(response));
+
+    gateioStreamingTradeService
+        .cancelOrder(new GateioCancelOrderParams(null, instrumentFuture, "client-1"))
+        .test()
+        .assertResult(0);
   }
 
   @Test
