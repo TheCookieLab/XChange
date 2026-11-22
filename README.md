@@ -189,6 +189,11 @@ exchange.disconnect().blockingAwait();
 Streaming authentication uses the same `ExchangeSpecification` model as the REST
 API when the exchange supports private streaming channels.
 
+Binance trading sockets reauthenticate on reconnect without resending in-flight
+orders. Gate.io WebSocket order requests use distinct IDs to correlate responses.
+Bybit REST and streaming orders report gross filled quantity as
+`Order.getCumulativeAmount()`; fees are reported separately.
+
 ## Build and Validation
 
 Build with JDK 25. Tests use JUnit Jupiter 6 and `org.junit.jupiter.api`

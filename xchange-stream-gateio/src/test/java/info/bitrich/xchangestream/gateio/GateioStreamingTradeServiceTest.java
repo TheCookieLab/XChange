@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.gateio.config.Config;
+import info.bitrich.xchangestream.gateio.config.IdGenerator;
 import info.bitrich.xchangestream.gateio.dto.response.GateioWsNotification;
 import info.bitrich.xchangestream.gateio.dto.response.order.GateioMultipleOrderFuturesNotification;
 import info.bitrich.xchangestream.gateio.dto.response.order.GateioMultipleOrderSpotNotification;
@@ -28,6 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,6 +76,17 @@ class GateioStreamingTradeServiceTest {
             gateioUserTradeStreamingService,
             registries,
             ws_timeout);
+  }
+
+  @Test
+  void burstOfTradingRequestIdsIsUniqueAndIncreasing() {
+    IdGenerator generator = IdGenerator.getInstance();
+    long[] requestIds =
+        LongStream.generate(() -> Long.parseLong(generator.requestIdTimeMicroseconds()))
+            .limit(4_096)
+            .toArray();
+
+    assertThat(requestIds).isSorted().doesNotHaveDuplicates();
   }
 
   @Test

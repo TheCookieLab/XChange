@@ -128,15 +128,7 @@ public class BybitStreamAdapters {
           .id(bybitOrderChange.getOrderId())
           .orderStatus(adaptBybitOrderStatus(bybitOrderChange.getOrderStatus()))
           .timestamp(date)
-          .cumulativeAmount(
-              adaptCumulativeAmount(
-                  bybitOrderChange.getCategory(),
-                  bybitOrderChange.getSide(),
-                  instrument,
-                  new BigDecimal(bybitOrderChange.getCumExecQty()),
-                  parseBigDecimalOrNull(cumExecFee),
-                  bybitOrderChange.getCumFeeDetail(),
-                  feeCurrency))
+          .cumulativeAmount(new BigDecimal(bybitOrderChange.getCumExecQty()))
           .originalAmount(
               adaptOriginalAmount(
                   bybitOrderChange.getCategory(),

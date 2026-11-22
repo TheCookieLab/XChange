@@ -1,17 +1,28 @@
 package info.bitrich.xchangestream.binance;
 
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
+import info.bitrich.xchangestream.service.netty.NettyStreamingService;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.observers.TestObserver;
 import java.lang.reflect.Field;
+import java.security.KeyPairGenerator;
+import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.config.BinanceConfiguration;
 import org.knowm.xchange.binance.config.BinanceProductFamily;
+import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
+import org.knowm.xchange.currency.CurrencyPair;
 
 /**
  * Guards the streaming exchange lifecycle against null services for every credential/product
@@ -126,6 +137,63 @@ public class BinanceStreamingExchangeLifecycleTest {
     assertThat(exchange.isAlive()).isTrue();
     when(market.isSocketOpen()).thenReturn(false);
     assertThat(exchange.isAlive()).isFalse();
+  }
+
+  @Test
+  void tradingReconnectReplaysOnlySessionLogon() throws Exception {
+    ExchangeSpecification specification = new ExchangeSpecification(BinanceStreamingExchange.class);
+    specification.setExchangeSpecificParametersItem(WS_IDLE_TIMEOUT, 15);
+    byte[] key = KeyPairGenerator.getInstance("Ed25519").generateKeyPair().getPrivate().getEncoded();
+    BinanceUserTradeStreamingService service =
+        new BinanceUserTradeStreamingService(
+            "ws://localhost", "test-key", Base64.getEncoder().encodeToString(key), specification);
+    Field socket = NettyStreamingService.class.getDeclaredField("webSocketChannel");
+    socket.setAccessible(true);
+    EmbeddedChannel original = new EmbeddedChannel();
+    EmbeddedChannel replacement = new EmbeddedChannel();
+    try {
+      socket.set(service, original);
+      service.login();
+      JsonNode originalLogin = readRequest(original);
+      assertThat(originalLogin.path("method").asText()).isEqualTo("session.logon");
+
+      Disposable pendingOrder =
+          service
+              .subscribeChannel(
+                  "pending-cancel",
+                  "order.cancel",
+                  new BinanceCancelOrderParams(CurrencyPair.BTC_USDT, "123", null))
+              .subscribe();
+      try {
+        assertThat(readRequest(original).path("method").asText()).isEqualTo("order.cancel");
+        original.close();
+        socket.set(service, replacement);
+        service.resubscribeChannels();
+
+        JsonNode replay = readRequest(replacement);
+        assertThat(replay.path("method").asText()).isEqualTo("session.logon");
+        assertThat(replay.path("id")).isEqualTo(originalLogin.path("id"));
+        assertThat(replacement.outboundMessages()).isEmpty();
+        service.messageHandler("{\"id\":\"" + replay.path("id").asText() + "\",\"status\":200}");
+        assertThat(service.isAuthorized()).isTrue();
+      } finally {
+        pendingOrder.dispose();
+      }
+    } finally {
+      service.compositeDisposable.clear();
+      original.finishAndReleaseAll();
+      replacement.finishAndReleaseAll();
+    }
+  }
+
+  private static JsonNode readRequest(EmbeddedChannel channel) throws Exception {
+    TextWebSocketFrame frame = channel.readOutbound();
+    assertThat(frame).isNotNull();
+    try {
+      return new ObjectMapper().readTree(frame.text());
+    } finally {
+      frame.release();
+    }
   }
 
   private static BinanceStreamingExchange createExchange(String apiKey, String secretKey) {

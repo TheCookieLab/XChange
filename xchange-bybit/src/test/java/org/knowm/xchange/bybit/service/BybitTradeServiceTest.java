@@ -65,9 +65,7 @@ class BybitTradeServiceTest extends BaseWiremockTest {
     assertThat(order.getInstrument()).isEqualTo(new CurrencyPair("BTC", "USDT"));
     assertThat(order.getStatus()).isEqualTo(OrderStatus.FILLED);
     assertThat(order.getOriginalAmount()).isEqualTo(new BigDecimal("0.00100000"));
-    // Bybit spot buy fee is charged in the base currency,
-    // so cumulativeAmount is cumExecQty (0.00100000) reduced by cumExecFee (0.00001000)
-    assertThat(order.getCumulativeAmount()).isEqualByComparingTo(new BigDecimal("0.00099000"));
+    assertThat(order.getCumulativeAmount()).isEqualByComparingTo(new BigDecimal("0.00100000"));
     assertThat(order.getFee()).isEqualByComparingTo(new BigDecimal("0.00001000"));
     assertThat(order.getFeeCurrency()).isEqualTo(new Currency("BTC"));
   }
@@ -80,9 +78,9 @@ class BybitTradeServiceTest extends BaseWiremockTest {
     assertThat(orders.size()).isEqualTo(1);
 
     Order order = (Order) orders.toArray()[0];
-    // cumFeeDetail is authoritative: the BTC entry is deducted even though
-    // the deprecated cumExecFee is "0" and feeCurrency is empty
-    assertThat(order.getCumulativeAmount()).isEqualByComparingTo(new BigDecimal("0.00099000"));
+    assertThat(order.getCumulativeAmount()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+    assertThat(order.getRemainingAmount()).isZero();
+    assertThat(order.getCumulativeCounterAmount()).isEqualByComparingTo(new BigDecimal("20.00"));
     assertThat(order.getFee()).isEqualByComparingTo(new BigDecimal("0.00001000"));
     assertThat(order.getFeeCurrency()).isEqualTo(new Currency("BTC"));
   }
@@ -95,8 +93,6 @@ class BybitTradeServiceTest extends BaseWiremockTest {
     assertThat(orders.size()).isEqualTo(1);
 
     Order order = (Order) orders.toArray()[0];
-    // cumFeeDetail has no base-currency entry (the fee is paid in BIT),
-    // so nothing is deducted even though the deprecated cumExecFee/feeCurrency say otherwise
     assertThat(order.getCumulativeAmount()).isEqualByComparingTo(new BigDecimal("0.00100000"));
     assertThat(order.getFee()).isEqualByComparingTo(new BigDecimal("1.5"));
     assertThat(order.getFeeCurrency()).isEqualTo(new Currency("BIT"));

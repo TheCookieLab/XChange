@@ -325,15 +325,7 @@ public class BybitAdapters {
                 bybitOrderResult.getMarketUnit(),
                 bybitOrderResult.getQty(),
                 bybitOrderResult.getAvgPrice()))
-        .cumulativeAmount(
-            adaptCumulativeAmount(
-                category,
-                bybitOrderResult.getSide(),
-                instrument,
-                bybitOrderResult.getCumExecQty(),
-                bybitOrderResult.getCumExecFee(),
-                bybitOrderResult.getCumFeeDetail(),
-                feeCurrency))
+        .cumulativeAmount(bybitOrderResult.getCumExecQty())
         .fee(fee)
         .id(bybitOrderResult.getOrderId())
         .timestamp(bybitOrderResult.getCreatedTime())
@@ -344,45 +336,6 @@ public class BybitAdapters {
                 ? null
                 : new Currency(effectiveFeeCurrency))
         .build();
-  }
-
-  /**
-   * For spot buy orders Bybit charges the trading fee in the received (base) currency, so the
-   * amount actually credited is the filled quantity reduced by the fee. {@code cumExecQty} is the
-   * gross filled quantity, therefore the fee is subtracted from it only when it is charged in the
-   * base currency of the instrument.
-   *
-   * <p>{@code cumFeeDetail} (a "currency -> fee" map) is the authoritative fee source for
-   * linear/spot: when it is present, only its base-currency entry is deducted. {@code cumExecFee}
-   * and {@code feeCurrency} are deprecated for linear/spot and are used as a fallback only when
-   * {@code cumFeeDetail} is absent (older responses).
-   */
-  public static BigDecimal adaptCumulativeAmount(
-      BybitCategory category,
-      BybitSide side,
-      Instrument instrument,
-      BigDecimal cumExecQty,
-      BigDecimal cumExecFee,
-      Map<String, String> cumFeeDetail,
-      String feeCurrency) {
-    if (cumExecQty == null) {
-      return null;
-    }
-    if (category == SPOT && side == BybitSide.BUY && instrument instanceof CurrencyPair) {
-      String baseCurrency = ((CurrencyPair) instrument).getBase().getCurrencyCode();
-      if (cumFeeDetail != null && !cumFeeDetail.isEmpty()) {
-        BigDecimal feeInBaseCurrency = parseBigDecimalOrNull(cumFeeDetail.get(baseCurrency));
-        // no entry for the base currency means the fee was charged in other coins
-        return feeInBaseCurrency == null ? cumExecQty : cumExecQty.subtract(feeInBaseCurrency);
-      }
-      if (cumExecFee != null
-          && feeCurrency != null
-          && !feeCurrency.isEmpty()
-          && feeCurrency.equals(baseCurrency)) {
-        return cumExecQty.subtract(cumExecFee);
-      }
-    }
-    return cumExecQty;
   }
 
   /** Returns the first entry of Bybit's {@code cumFeeDetail} map, or null when it is empty. */

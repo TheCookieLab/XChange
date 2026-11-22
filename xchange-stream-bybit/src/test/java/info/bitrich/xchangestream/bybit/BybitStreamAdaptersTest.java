@@ -102,7 +102,7 @@ class BybitStreamAdaptersTest {
   }
 
   @Test
-  void adaptSpotOrdersChangesFeeDeductionTest() throws Exception {
+  void adaptSpotOrdersChangesKeepsFilledQuantitySeparateFromFees() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(
             ClassLoader.getSystemClassLoader()
@@ -115,15 +115,14 @@ class BybitStreamAdaptersTest {
     Order feeInBaseCurrency = orders.get(0);
     assertThat(feeInBaseCurrency.getInstrument()).isEqualTo(new CurrencyPair("BTC", "USDT"));
     assertThat(feeInBaseCurrency.getOriginalAmount()).isEqualTo(new BigDecimal("0.001"));
-    // cumFeeDetail is authoritative: its BTC entry is deducted from the cumulative amount
-    assertThat(feeInBaseCurrency.getCumulativeAmount()).isEqualByComparingTo("0.00099");
+    assertThat(feeInBaseCurrency.getCumulativeAmount()).isEqualByComparingTo("0.001");
+    assertThat(feeInBaseCurrency.getRemainingAmount()).isZero();
     assertThat(feeInBaseCurrency.getFee()).isEqualTo(new BigDecimal("0.00001"));
     assertThat(feeInBaseCurrency.getFeeCurrency()).isEqualTo(new Currency("BTC"));
 
     Order feeInQuoteCurrency = orders.get(1);
     assertThat(feeInQuoteCurrency.getOriginalAmount()).isEqualTo(new BigDecimal("0.002"));
-    // no cumFeeDetail, so the deprecated cumExecFee/feeCurrency are used as a fallback:
-    // the fee is charged in the quote currency, so cumulativeAmount stays as cumExecQty
+    // No cumFeeDetail: fee reporting falls back to cumExecFee/feeCurrency.
     assertThat(feeInQuoteCurrency.getCumulativeAmount()).isEqualByComparingTo("0.002");
     assertThat(feeInQuoteCurrency.getFee()).isEqualTo(new BigDecimal("0.00002"));
     assertThat(feeInQuoteCurrency.getFeeCurrency()).isEqualTo(new Currency("USDT"));
@@ -140,8 +139,6 @@ class BybitStreamAdaptersTest {
     assertThat(unexecutedMarketBuy.getFee()).isNull();
     assertThat(unexecutedMarketBuy.getFeeCurrency()).isNull();
 
-    // cumFeeDetail has no base-currency entry (the fee is paid in BIT),
-    // so nothing is deducted even though the deprecated cumExecFee/feeCurrency say otherwise
     Order feeInThirdCurrency = orders.get(4);
     assertThat(feeInThirdCurrency.getCumulativeAmount()).isEqualByComparingTo("0.004");
     assertThat(feeInThirdCurrency.getFee()).isEqualByComparingTo("2.5");
