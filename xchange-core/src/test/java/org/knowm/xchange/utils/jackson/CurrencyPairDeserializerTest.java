@@ -2,12 +2,20 @@ package org.knowm.xchange.utils.jackson;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.utils.ObjectMapperHelper;
 
 public class CurrencyPairDeserializerTest {
+
+  public static class PairContainer {
+    @JsonDeserialize(using = CurrencyPairDeserializer.class)
+    public CurrencyPair pair;
+
+    public String after;
+  }
 
   @Test
   public void testNullAndEmpty() {
@@ -47,5 +55,35 @@ public class CurrencyPairDeserializerTest {
   public void testJacksonDeserialization() throws IOException {
     CurrencyPair pair = ObjectMapperHelper.readValue("\"BTC/USD\"", CurrencyPair.class);
     assertThat(pair).isEqualTo(CurrencyPair.BTC_USD);
+  }
+
+  @Test
+  public void testCaseExpansionAndSplitCompatibility() {
+    assertThat(CurrencyPairDeserializer.getCurrencyPairFromString("\u00df/USD"))
+        .isEqualTo(new CurrencyPair("SS", "USD"));
+    assertThat(CurrencyPairDeserializer.getCurrencyPairFromString("\u00dfaA/BTC\n"))
+        .isEqualTo(new CurrencyPair("SSAA", "BTC"));
+    assertThat(CurrencyPairDeserializer.getCurrencyPairFromString("BTC/USD///"))
+        .isEqualTo(CurrencyPair.BTC_USD);
+    CurrencyPair leadingSeparator = CurrencyPairDeserializer.getCurrencyPairFromString("/BTC");
+    assertThat(leadingSeparator.getBase().getCurrencyCode()).isEmpty();
+    assertThat(leadingSeparator.getCounter().getCurrencyCode()).isEqualTo("BTC");
+  }
+
+  @Test
+  public void testJacksonNonStringTokensConsumeTheWholeValue() throws IOException {
+    for (String value : new String[] {"{\"base\":\"BTC\"}", "[\"BTC/USD\"]"}) {
+      PairContainer result =
+          ObjectMapperHelper.readValueStrict(
+              "{\"pair\":" + value + ",\"after\":\"kept\"}", PairContainer.class);
+      assertThat(result.pair).isNull();
+      assertThat(result.after).isEqualTo("kept");
+    }
+
+    PairContainer number =
+        ObjectMapperHelper.readValueStrict(
+            "{\"pair\":1e2,\"after\":\"kept\"}", PairContainer.class);
+    assertThat(number.pair).isEqualTo(new CurrencyPair("100", "0"));
+    assertThat(number.after).isEqualTo("kept");
   }
 }

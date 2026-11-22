@@ -16,6 +16,7 @@ import org.knowm.xchange.service.trade.params.DefaultCancelOrderByInstrumentAndI
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamInstrument;
 import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParam;
 import org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParamInstrument;
+import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -119,6 +120,16 @@ class GateioTradeServiceTest extends GateioExchangeWiremock {
             new DefaultQueryOrderParamInstrument(CurrencyPair.BTC_USDT, "342251629898"));
     assertThat(orders).hasSize(1);
     assertThat(orders).first().usingRecursiveComparison().isEqualTo(expected);
+  }
+
+  @Test
+  void order_query_returns_every_requested_spot_order() throws Exception {
+    assertThat(gateioTradeService.getOrder(new OrderQueryParams[0])).isEmpty();
+    Collection<Order> orders =
+        gateioTradeService.getOrder(
+            new DefaultQueryOrderParamInstrument(CurrencyPair.BTC_USDT, "342251629898"),
+            new DefaultQueryOrderParamInstrument(new CurrencyPair("VAI/USDT"), "425539509181"));
+    assertThat(orders).extracting(Order::getId).containsExactly("342251629898", "425539509181");
   }
 
   @Test

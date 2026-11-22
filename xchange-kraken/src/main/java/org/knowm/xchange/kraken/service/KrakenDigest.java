@@ -15,6 +15,8 @@ import si.mazi.rescu.RestInvocation;
  */
 public class KrakenDigest extends BaseParamsDigest {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
   /**
    * Constructor
    *
@@ -55,8 +57,7 @@ public class KrakenDigest extends BaseParamsDigest {
       try {
         String requestBody = restInvocation.getRequestBody();
         if (requestBody != null && requestBody.contains("nonce")) {
-          ObjectMapper mapper = new ObjectMapper();
-          JsonNode jsonNode = mapper.readTree(requestBody);
+          JsonNode jsonNode = MAPPER.readTree(requestBody);
           JsonNode nonceNode = jsonNode.get("nonce");
           if (nonceNode != null) {
             nonce = nonceNode.asText();

@@ -219,8 +219,17 @@ final class CoinsphRateLimitPolicy {
       return 1;
     }
     try {
-      long value = Long.parseLong(limit);
-      return value >= 1 && value <= 100 ? 1 : 5;
+      int value = Integer.parseInt(limit);
+      switch (value) {
+        case 5:
+        case 10:
+        case 20:
+        case 50:
+        case 100:
+          return 1;
+        default:
+          return 5;
+      }
     } catch (NumberFormatException e) {
       return 5;
     }

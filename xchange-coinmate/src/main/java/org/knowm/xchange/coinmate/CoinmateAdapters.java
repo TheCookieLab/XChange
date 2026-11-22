@@ -530,7 +530,22 @@ public class CoinmateAdapters {
       cumulativeAmount = coinmateOrder.getCumulativeAmount();
     }
 
-    // TODO: we can probably use `orderTradeType` to distinguish between Market and Limit order
+    if (orderStatus != Order.OrderStatus.STOPPED
+        && "LIMIT".equals(coinmateOrder.getOrderTradeType())) {
+      return new LimitOrder(
+          orderType,
+          originalAmount,
+          null,
+          Long.toString(coinmateOrder.getId()),
+          new Date(coinmateOrder.getTimestamp()),
+          coinmateOrder.getPrice(),
+          averagePrice,
+          cumulativeAmount == null
+              ? getCumulativeAmount(originalAmount, remainingAmount)
+              : cumulativeAmount,
+          null,
+          orderStatus);
+    }
     return new MarketOrder(
         orderType,
         originalAmount,

@@ -9,9 +9,12 @@ public class HitbtcExampleUtils {
 
   public static Exchange createExchange() {
 
-    ExchangeSpecification exSpec = new ExchangeSpecification(HitbtcExchange.class);
+    ExchangeSpecification exSpec = new HitbtcExchange().getDefaultExchangeSpecification();
     exSpec.setApiKey("");
     exSpec.setSecretKey("");
+
+    // To use the sandbox, select its HTTPS base URL before creating the exchange:
+    // exSpec.setSslUri((String) exSpec.getExchangeSpecificParametersItem("demo-api"));
 
     return ExchangeFactory.INSTANCE.createExchange(exSpec);
   }

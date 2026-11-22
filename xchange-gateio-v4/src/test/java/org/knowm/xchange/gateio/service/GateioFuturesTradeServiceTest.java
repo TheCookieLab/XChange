@@ -79,6 +79,29 @@ class GateioFuturesTradeServiceTest extends GateioExchangeWiremock {
   }
 
   @Test
+  void order_query_dispatches_spot_and_futures_individually() throws Exception {
+    wireMockServer()
+        .stubFor(
+            com.github.tomakehurst.wiremock.client.WireMock.get(
+                    com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo(
+                        "/api/v4/futures/usdt/orders/12345678"))
+                .willReturn(
+                    com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("api_v4_futures_order_limit.json")));
+    java.util.Collection<org.knowm.xchange.dto.Order> orders =
+        gateioTradeService.getOrder(
+            new org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParamInstrument(
+                org.knowm.xchange.currency.CurrencyPair.BTC_USDT, "342251629898"),
+            new org.knowm.xchange.service.trade.params.orders.DefaultQueryOrderParamInstrument(
+                btcUsdtPerp, "12345678"));
+    assertThat(orders)
+        .extracting(org.knowm.xchange.dto.Order::getId)
+        .containsExactly("342251629898", "12345678");
+  }
+
+  @Test
   void change_futures_order() throws Exception {
     LimitOrder limitOrder = new LimitOrder.Builder(OrderType.BID, btcUsdtPerp)
         .id("15675394")

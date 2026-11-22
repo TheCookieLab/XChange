@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransaction.BinanceWebSocketTypes;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import io.reactivex.rxjava3.core.Observable;
+import java.net.URI;
 import java.time.Duration;
 import org.knowm.xchange.ExchangeSpecification;
 import org.slf4j.Logger;
@@ -18,21 +19,28 @@ public class BinanceUserDataFutureStreamingService extends JsonNettyStreamingSer
   private static final Logger LOG =
       LoggerFactory.getLogger(BinanceUserDataFutureStreamingService.class);
 
+  private final URI logSafeUri;
+
   public static BinanceUserDataFutureStreamingService create(
       String baseUri, String listenKey, ExchangeSpecification exchangeSpecification) {
 
-    return new BinanceUserDataFutureStreamingService(
-        baseUri + "ws/" + listenKey, exchangeSpecification);
+    return new BinanceUserDataFutureStreamingService(baseUri, listenKey, exchangeSpecification);
   }
 
   private BinanceUserDataFutureStreamingService(
-      String url, ExchangeSpecification exchangeSpecification) {
+      String baseUri, String listenKey, ExchangeSpecification exchangeSpecification) {
     super(
-        url,
+        baseUri + "ws/" + listenKey,
         65536,
         (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
         (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
         (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
+    this.logSafeUri = URI.create(baseUri + "ws/REDACTED");
+  }
+
+  @Override
+  protected URI getLogSafeUri() {
+    return logSafeUri;
   }
 
   public Observable<JsonNode> subscribeChannel(BinanceWebSocketTypes eventType) {

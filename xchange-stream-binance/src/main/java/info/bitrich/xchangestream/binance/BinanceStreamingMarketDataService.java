@@ -25,6 +25,7 @@ import io.reactivex.rxjava3.functions.Consumer;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.BehaviorSubject;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,7 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceErrorAdapter;
 import org.knowm.xchange.binance.dto.BinanceException;
@@ -44,6 +44,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.*;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.RateLimitExceededException;
 import org.knowm.xchange.instrument.Instrument;
@@ -734,8 +735,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         // happen and is normal.
         .map(
             depth -> {
-              extractOrderBookUpdates(instrument, depth)
-                  .forEach(it -> subscription.orderBook.update(it));
+              applyOrderBookDelta(subscription.orderBook, instrument, depth);
               return subscription.orderBook;
             })
         .share();
@@ -769,35 +769,20 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     }
   }
 
-  private Stream<OrderBookUpdate> extractOrderBookUpdates(
-      Instrument instrument, DepthBinanceWebSocketTransaction depthTransaction) {
-    BinanceOrderbook orderBookDiff = depthTransaction.getOrderBook();
-
-    Stream<OrderBookUpdate> bidStream =
-        orderBookDiff.bids.entrySet().stream()
-            .map(
-                entry ->
-                    new OrderBookUpdate(
-                        OrderType.BID,
-                        entry.getValue(),
-                        instrument,
-                        entry.getKey(),
-                        depthTransaction.getEventTime(),
-                        entry.getValue()));
-
-    Stream<OrderBookUpdate> askStream =
-        orderBookDiff.asks.entrySet().stream()
-            .map(
-                entry ->
-                    new OrderBookUpdate(
-                        OrderType.ASK,
-                        entry.getValue(),
-                        instrument,
-                        entry.getKey(),
-                        depthTransaction.getEventTime(),
-                        entry.getValue()));
-
-    return Stream.concat(bidStream, askStream);
+  private static void applyOrderBookDelta(
+      OrderBook book, Instrument instrument, DepthBinanceWebSocketTransaction delta) {
+    BinanceOrderbook orderBookDiff = delta.getOrderBook();
+    Date eventTime = delta.getEventTime();
+    for (Map.Entry<BigDecimal, BigDecimal> level : orderBookDiff.bids.entrySet()) {
+      book.update(
+          new LimitOrder(
+              OrderType.BID, level.getValue(), instrument, "", eventTime, level.getKey()));
+    }
+    for (Map.Entry<BigDecimal, BigDecimal> level : orderBookDiff.asks.entrySet()) {
+      book.update(
+          new LimitOrder(
+              OrderType.ASK, level.getValue(), instrument, "", eventTime, level.getKey()));
+    }
   }
 
   private List<OrderBookUpdate> extractOrderBookUpdatesToArray(
@@ -826,14 +811,6 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                     depthTransaction.getEventTime(),
                     value)));
     return orderBookUpdates;
-  }
-
-  private <T> Observable<T> observableFromStream(Stream<T> stream) {
-    return Observable.create(
-        emitter -> {
-          stream.forEach(emitter::onNext);
-          emitter.onComplete();
-        });
   }
 
   private static JavaType getTickerType() {
@@ -1034,8 +1011,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
           return false;
         } else {
           finalUpdateIdPrev = delta.getLastUpdateId();
-          // FIXME The underlying impl would be more optimal if LimitOrders were created directly.
-          extractOrderBookUpdates(instrument, delta).forEach(update -> book.update(update));
+          applyOrderBookDelta(book, instrument, delta);
         }
         return true;
       }

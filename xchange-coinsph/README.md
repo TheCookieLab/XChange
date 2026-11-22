@@ -18,6 +18,13 @@ This implementation supports the following features:
 * Get order book
 * Get trades
 
+Exchange metadata uses the reported base and quote assets and quote precision. For responses that
+provide only a symbol, the adapter recognizes a trailing `USDT` quote; otherwise it assumes a
+three-character quote.
+
+The local depth rate limiter charges weight 1 for the default limit and documented limits 5, 10,
+20, 50, and 100. Other or invalid limits are conservatively charged weight 5.
+
 ### Trading
 * Get account info
 * Get open orders

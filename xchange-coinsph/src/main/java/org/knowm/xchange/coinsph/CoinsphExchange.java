@@ -27,7 +27,7 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
       "https://api.pro.coins.ph"; // Placeholder, verify actual URL
   public static final String SANDBOX_URL = "https://9001.pl-qa.coinsxyz.me";
 
-  protected static ResilienceRegistries RESILIENCE_REGISTRIES;
+  protected static volatile ResilienceRegistries RESILIENCE_REGISTRIES;
   protected SynchronizedValueFactory<Long> timestampFactory;
   protected Coinsph publicApi;
   protected CoinsphAuthenticated authenticatedApi;
@@ -82,16 +82,23 @@ public class CoinsphExchange extends BaseExchange implements Exchange {
     return signatureCreator;
   }
 
-  public static void resetResilienceRegistries() {
+  public static synchronized void resetResilienceRegistries() {
     RESILIENCE_REGISTRIES = CoinsphResilience.createRegistries();
   }
 
   @Override
   public ResilienceRegistries getResilienceRegistries() {
-    if (RESILIENCE_REGISTRIES == null) {
-      RESILIENCE_REGISTRIES = CoinsphResilience.createRegistries();
+    ResilienceRegistries registries = RESILIENCE_REGISTRIES;
+    if (registries == null) {
+      synchronized (CoinsphExchange.class) {
+        registries = RESILIENCE_REGISTRIES;
+        if (registries == null) {
+          registries = CoinsphResilience.createRegistries();
+          RESILIENCE_REGISTRIES = registries;
+        }
+      }
     }
-    return RESILIENCE_REGISTRIES;
+    return registries;
   }
 
   @Override

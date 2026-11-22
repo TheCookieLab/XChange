@@ -29,9 +29,7 @@ public class BitfinexManualExample {
   }
 
   public static void main(String[] args) throws Exception {
-    // Security note: Rely on standard JVM certificate validation instead of disabling
-    // certificate verification via CertHelper.trustAllCerts(), which leaves connections
-    // vulnerable to man-in-the-middle (MITM) attacks and credential theft.
+    // Rely on the JVM's configured trust store and hostname verification.
 
     ExchangeSpecification defaultExchangeSpecification =
         new ExchangeSpecification(BitfinexStreamingExchange.class);

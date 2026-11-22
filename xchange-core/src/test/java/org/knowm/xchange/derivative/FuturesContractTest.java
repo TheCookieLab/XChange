@@ -33,6 +33,7 @@ class FuturesContractTest {
     assertThat(new FuturesContract("BTC/USDT/25DEC31").isPerpetual()).isFalse();
     assertThat(new FuturesContract("BTC/USDT/PERPETUALS").isPerpetual()).isFalse();
     assertThat(new FuturesContract("BTC/USDT/SWAPS").isPerpetual()).isFalse();
+    assertThat(new FuturesContract("BTC/USDT/\u017fWAP").isPerpetual()).isFalse();
     assertThat(new FuturesContract("BTC/USDT/PERP_FUTURE").isPerpetual()).isFalse();
     assertThat(new FuturesContract(null, (String) null).isPerpetual()).isFalse();
   }

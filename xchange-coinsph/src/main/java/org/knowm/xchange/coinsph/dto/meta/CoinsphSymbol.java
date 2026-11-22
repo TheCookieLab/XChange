@@ -1,5 +1,6 @@
 package org.knowm.xchange.coinsph.dto.meta;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.Getter;
@@ -14,7 +15,7 @@ public class CoinsphSymbol {
   private final String baseAsset;
   private final int baseAssetPrecision;
   private final String quoteAsset;
-  private final int quoteAssetPrecision; // Coins.ph doc uses "quotePrecision"
+  private final int quoteAssetPrecision;
   private final List<String> orderTypes; // e.g. ["LIMIT", "MARKET", ...]
   private final boolean icebergAllowed;
   private final boolean ocoAllowed;
@@ -31,7 +32,7 @@ public class CoinsphSymbol {
       @JsonProperty("baseAsset") String baseAsset,
       @JsonProperty("baseAssetPrecision") int baseAssetPrecision,
       @JsonProperty("quoteAsset") String quoteAsset,
-      @JsonProperty("quotePrecision") int quoteAssetPrecision, // Matches Coins.ph doc
+      @JsonProperty("quoteAssetPrecision") @JsonAlias("quotePrecision") int quoteAssetPrecision,
       @JsonProperty("orderTypes") List<String> orderTypes,
       @JsonProperty("icebergAllowed") boolean icebergAllowed,
       @JsonProperty("ocoAllowed") boolean ocoAllowed,

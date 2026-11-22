@@ -97,6 +97,10 @@ secret; others also require fields such as username or passphrase. See the
 [FAQ](https://github.com/TheCookieLab/XChange/wiki/Frequently-Asked-Questions)
 for configuration examples.
 
+`CertHelper.trustAllCerts()` has been removed. For a sandbox that uses a private
+CA, configure a JVM trust store with that CA instead of disabling certificate
+and hostname checks.
+
 ### Rate Limiting
 
 `xchange-core` provides one rate-limit mechanism (`org.knowm.xchange.client.ratelimit`)

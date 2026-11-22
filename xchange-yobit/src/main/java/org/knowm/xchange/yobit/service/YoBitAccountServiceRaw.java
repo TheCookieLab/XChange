@@ -89,7 +89,11 @@ public abstract class YoBitAccountServiceRaw extends YoBitBaseService<YoBit>
   }
 
   public BaseYoBitResponse getDepositAddress(Currency currency) throws IOException {
-    boolean needNew = false; // todo: implement this option
+    return getDepositAddress(currency, false);
+  }
+
+  /** Requests the current deposit address, or a new one when {@code needNew} is true. */
+  public BaseYoBitResponse getDepositAddress(Currency currency, boolean needNew) throws IOException {
 
     return service.getDepositAddress(
         exchange.getExchangeSpecification().getApiKey(),
@@ -97,6 +101,6 @@ public abstract class YoBitAccountServiceRaw extends YoBitBaseService<YoBit>
         "GetDepositAddress",
         exchange.getNonceFactory(),
         currency.getCurrencyCode(),
-        needNew);
+        needNew ? 1 : 0);
   }
 }

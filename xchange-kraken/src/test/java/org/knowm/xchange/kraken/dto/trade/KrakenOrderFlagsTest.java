@@ -1,8 +1,10 @@
 package org.knowm.xchange.kraken.dto.trade;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.Set;
@@ -70,5 +72,14 @@ class KrakenOrderFlagsTest {
     FlagsContainer container =
         objectMapper.readValue("{\"oflags\": null}", FlagsContainer.class);
     assertThat(container.getFlags()).isNull();
+  }
+
+  @Test
+  void testRejectsUnknownFlagsAndNonStringValues() {
+    for (String value : new String[] {"\"post,newflag\"", "123", "true", "{}", "[]"}) {
+      assertThatThrownBy(
+              () -> objectMapper.readValue("{\"oflags\":" + value + "}", FlagsContainer.class))
+          .isInstanceOf(JsonMappingException.class);
+    }
   }
 }

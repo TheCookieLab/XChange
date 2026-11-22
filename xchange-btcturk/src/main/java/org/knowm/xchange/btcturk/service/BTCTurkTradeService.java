@@ -9,6 +9,7 @@ import org.knowm.xchange.btcturk.BTCTurkAdapters;
 import org.knowm.xchange.btcturk.dto.BTCTurkOperations;
 import org.knowm.xchange.btcturk.dto.account.BTCTurkUserTransactions;
 import org.knowm.xchange.btcturk.dto.trade.BTCTurkOpenOrders;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
 import org.knowm.xchange.dto.trade.LimitOrder;
@@ -22,6 +23,7 @@ import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
+import org.knowm.xchange.service.trade.params.orders.OpenOrdersParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 
 /**
@@ -36,14 +38,23 @@ public class BTCTurkTradeService extends BTCTurkTradeServiceRaw implements Trade
 
   @Override
   public OpenOrders getOpenOrders() throws IOException {
-    return BTCTurkAdapters.adaptOpenOrders(super.getBTCTurkOpenOrders());
+    return BTCTurkAdapters.adaptOpenOrders(getBTCTurkOpenOrders());
   }
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
+    CurrencyPair pair =
+        params instanceof OpenOrdersParamCurrencyPair
+            ? ((OpenOrdersParamCurrencyPair) params).getCurrencyPair()
+            : null;
     List<BTCTurkOpenOrders> openOrdersRaw =
-        super.getBTCTurkOpenOrders(((DefaultOpenOrdersParamCurrencyPair) params).getCurrencyPair());
+        pair == null ? getBTCTurkOpenOrders() : getBTCTurkOpenOrders(pair);
     return BTCTurkAdapters.adaptOpenOrders(openOrdersRaw);
+  }
+
+  @Override
+  public OpenOrdersParams createOpenOrdersParams() {
+    return new DefaultOpenOrdersParamCurrencyPair();
   }
 
   @Override

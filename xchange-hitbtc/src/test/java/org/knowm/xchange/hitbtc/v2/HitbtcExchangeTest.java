@@ -25,5 +25,8 @@ class HitbtcExchangeTest {
     assertThat(defaults.getExchangeName()).isEqualTo("Hitbtc");
     assertThat(defaults.getHost()).isEqualTo("hitbtc.com");
     assertThat(defaults.getSslUri()).isEqualTo("https://api.hitbtc.com");
+    assertThat(defaults.getPort()).isEqualTo(443);
+    assertThat(defaults.getExchangeSpecificParametersItem("demo-api"))
+        .isEqualTo("https://api.demo.hitbtc.com");
   }
 }

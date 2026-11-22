@@ -41,11 +41,22 @@ public class YoBitAccountService extends YoBitAccountServiceRaw {
     throw new IllegalStateException("Don't understand " + params);
   }
 
+  /**
+   * Requests the existing deposit address by default. Pass {@code "true"} as the first extra
+   * argument to request a new address, or {@code "false"} to request the existing one.
+   */
   @Override
   public String requestDepositAddress(Currency currency, String... args) throws IOException {
-    BaseYoBitResponse response = getDepositAddress(currency);
+    boolean needNew = false;
+    if (args.length > 0) {
+      if (!"true".equalsIgnoreCase(args[0]) && !"false".equalsIgnoreCase(args[0])) {
+        throw new IllegalArgumentException("needNew must be true or false");
+      }
+      needNew = Boolean.parseBoolean(args[0]);
+    }
+    BaseYoBitResponse response = getDepositAddress(currency, needNew);
 
-    if (!response.success) throw new ExchangeException("failed to withdraw funds");
+    if (!response.success) throw new ExchangeException("failed to get deposit address");
 
     return response.returnData.get("address").toString();
   }

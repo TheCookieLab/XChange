@@ -91,28 +91,32 @@ public class GateioTradeService extends GateioTradeServiceRaw implements TradeSe
 
   @Override
   public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {
-    // todo: implement getting of several orders
-    Validate.validState(orderQueryParams.length == 1);
-    String orderId = "";
-    Instrument instrument = null;
-    if (orderQueryParams[0] instanceof OrderQueryParamInstrument) {
-      instrument = ((OrderQueryParamInstrument) orderQueryParams[0]).getInstrument();
-      orderId = orderQueryParams[0].getOrderId();
-    } else if (orderQueryParams[0] != null) {
-      orderId = orderQueryParams[0].getOrderId();
-    }
-    try {
-      if (instrument instanceof FuturesContract) {
-        GateioFuturesOrderResponse gateioOrder = getFuturesOrder(orderId, instrument);
-        return Collections.singletonList(GateioAdapters.toOrder(gateioOrder, exchange.getExchangeMetaData()
-            .getInstruments().get(instrument).getContractValue()));
-      } else {
-        GateioSpotOrderResponse gateioOrder = getOrder(orderId, instrument);
-        return Collections.singletonList(GateioAdapters.toOrder(gateioOrder));
+    List<Order> orders = new ArrayList<>(orderQueryParams.length);
+    for (OrderQueryParams params : orderQueryParams) {
+      String orderId = "";
+      Instrument instrument = null;
+      if (params instanceof OrderQueryParamInstrument) {
+        instrument = ((OrderQueryParamInstrument) params).getInstrument();
+        orderId = params.getOrderId();
+      } else if (params != null) {
+        orderId = params.getOrderId();
       }
-    } catch (GateioException e) {
-      throw GateioErrorAdapter.adapt(e);
+      try {
+        if (instrument instanceof FuturesContract) {
+          GateioFuturesOrderResponse gateioOrder = getFuturesOrder(orderId, instrument);
+          orders.add(
+              GateioAdapters.toOrder(
+                  gateioOrder,
+                  exchange.getExchangeMetaData().getInstruments().get(instrument).getContractValue()));
+        } else {
+          GateioSpotOrderResponse gateioOrder = getOrder(orderId, instrument);
+          orders.add(GateioAdapters.toOrder(gateioOrder));
+        }
+      } catch (GateioException e) {
+        throw GateioErrorAdapter.adapt(e);
+      }
     }
+    return orders;
   }
 
   /**

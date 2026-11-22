@@ -7,6 +7,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.hitbtc.v2.HitbtcAdapters;
@@ -24,6 +25,10 @@ public class HitbtcTradeServiceRaw extends HitbtcBaseService {
 
   public List<HitbtcOrder> getOpenOrdersRaw() throws IOException {
     return hitbtc.getHitbtcActiveOrders();
+  }
+
+  public List<HitbtcOrder> getOpenOrdersRaw(CurrencyPair pair) throws IOException {
+    return hitbtc.getHitbtcActiveOrdersBySymbol(HitbtcAdapters.adaptCurrencyPair(pair));
   }
 
   public HitbtcOrder placeMarketOrderRaw(MarketOrder marketOrder) throws IOException {
@@ -86,6 +91,12 @@ public class HitbtcTradeServiceRaw extends HitbtcBaseService {
 
   public List<HitbtcOrder> getHitbtcRecentOrders() throws IOException {
     return hitbtc.getHitbtcRecentOrders();
+  }
+
+  public List<HitbtcOrder> getHitbtcRecentOrders(
+      String symbol, String clientOrderId, String from, String till, Integer limit, Long offset)
+      throws IOException {
+    return hitbtc.getHitbtcRecentOrdersFiltered(symbol, clientOrderId, from, till, limit, offset);
   }
 
   public List<HitbtcOwnTrade> getTradeHistoryRaw(String symbol, Integer limit, long offset)

@@ -30,6 +30,8 @@ import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamPaging;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamPaging;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
+import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
+import org.knowm.xchange.service.trade.params.orders.OpenOrdersParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 
 /**
@@ -54,7 +56,12 @@ public class BitsoTradeService extends BitsoTradeServiceRaw implements TradeServ
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
-    BitsoOrder[] openOrders = getBitsoOpenOrders();
+    CurrencyPair pair =
+        params instanceof OpenOrdersParamCurrencyPair
+            ? ((OpenOrdersParamCurrencyPair) params).getCurrencyPair()
+            : null;
+    BitsoOrder[] openOrders =
+        pair == null ? getBitsoOpenOrders() : getBitsoOpenOrders(formatCurrencyPair(pair), null);
 
     List<LimitOrder> limitOrders = new ArrayList<>();
     for (BitsoOrder bitsoOrder : openOrders) {
@@ -148,7 +155,7 @@ public class BitsoTradeService extends BitsoTradeServiceRaw implements TradeServ
 
   @Override
   public OpenOrdersParams createOpenOrdersParams() {
-    return null;
+    return new DefaultOpenOrdersParamCurrencyPair();
   }
 
   /** Parse currency pair from book string (e.g., "btc_mxn" -> BTC/MXN) */

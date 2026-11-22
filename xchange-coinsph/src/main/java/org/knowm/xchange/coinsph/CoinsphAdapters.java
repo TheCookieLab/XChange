@@ -71,28 +71,13 @@ public final class CoinsphAdapters {
   }
 
   public static CurrencyPair toCurrencyPair(String symbol) {
-    if (symbol == null || symbol.length() < 6) { // Assuming symbols like BTCPHP (3+3 chars)
+    if (symbol == null || symbol.length() < 6) {
       return null;
     }
-    // This is a common way, but Coins.ph might have fixed length for base/quote
-    // Need to confirm from their symbol list or exchangeInfo
-    // For now, assume 3-char base and 3-char counter for common pairs like BTCPHP
-    // Or, more robustly, iterate through known symbols from exchangeInfo
-    // A simple split might not work for all cases (e.g. USDTPHP vs BTCUSDT)
-    // Let's assume for now a common pattern or rely on exchangeInfo for parsing
-    // For BTCPHP: base=BTC, counter=PHP
-    // For ETHPHP: base=ETH, counter=PHP
-    // For BTCUSDT: base=BTC, counter=USDT
-    // A common approach is to check against known quote currencies.
-    // For now, a placeholder, this needs to be robust.
-    // A common pattern is that the last 3 or 4 chars are the quote.
-    String counter = symbol.substring(symbol.length() - 3);
-    String base = symbol.substring(0, symbol.length() - 3);
-    if (counter.equals("SDT")) counter = "USDT"; // common case for USDT
-
-    // A more robust way would be to use the list of symbols from exchangeInfo
-    // to determine base and counter. For now, this is a simplification.
-    return new CurrencyPair(base, counter);
+    int quoteLength = symbol.endsWith("USDT") ? 4 : 3;
+    return new CurrencyPair(
+        symbol.substring(0, symbol.length() - quoteLength),
+        symbol.substring(symbol.length() - quoteLength));
   }
 
   public static AccountInfo adaptAccountInfo(CoinsphAccount coinsphAccount, String username) {
@@ -116,8 +101,14 @@ public final class CoinsphAdapters {
     Map<Currency, CurrencyMetaData> currencies = new ConcurrentHashMap<>();
 
     for (CoinsphSymbol symbol : symbols) {
-      CurrencyPair pair = toCurrencyPair(symbol.getSymbol());
-      if (pair == null) continue; // Skip if symbol parsing fails
+      CurrencyPair pair =
+          symbol.getBaseAsset() != null
+                  && !symbol.getBaseAsset().isEmpty()
+                  && symbol.getQuoteAsset() != null
+                  && !symbol.getQuoteAsset().isEmpty()
+              ? new CurrencyPair(symbol.getBaseAsset(), symbol.getQuoteAsset())
+              : toCurrencyPair(symbol.getSymbol());
+      if (pair == null) continue;
 
       // For now, using defaults or placeholders
       InstrumentMetaData pairMetaData =

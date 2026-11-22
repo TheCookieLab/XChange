@@ -62,7 +62,6 @@ public class ObjectMapperHelper {
   @SuppressWarnings("unchecked")
   public static <T> T viaJSON(T valueType) throws IOException {
     String json = toJSON(objectMapperStrict, valueType);
-    logger.debug("Converted " + valueType + " to " + json);
     return readValueStrict(json, (Class<T>) valueType.getClass());
   }
 
@@ -70,7 +69,7 @@ public class ObjectMapperHelper {
     try {
       return objectMapper.writeValueAsString(valueType);
     } catch (JsonProcessingException e) {
-      logger.error("Error serializing {}", valueType.getClass(), e);
+      logger.error("Error serializing {}", valueType.getClass());
       return "Problem serializing " + valueType.getClass();
     }
   }

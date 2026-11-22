@@ -63,12 +63,25 @@ public class FuturesContract extends Instrument
   }
 
   public boolean isPerpetual() {
-    // Performance optimization: Direct string comparisons avoid regex Matcher allocation and
-    // state-machine traversal on every invocation during high-frequency market data processing.
     return this.prompt != null
-        && ("PERP".equalsIgnoreCase(this.prompt)
-            || "SWAP".equalsIgnoreCase(this.prompt)
-            || "PERPETUAL".equalsIgnoreCase(this.prompt));
+        && (equalsAsciiIgnoreCase(this.prompt, "PERP")
+            || equalsAsciiIgnoreCase(this.prompt, "SWAP")
+            || equalsAsciiIgnoreCase(this.prompt, "PERPETUAL"));
+  }
+
+  // The original case-insensitive regex matched ASCII letters only.
+  private static boolean equalsAsciiIgnoreCase(String value, String uppercase) {
+    if (value.length() != uppercase.length()) {
+      return false;
+    }
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      char expected = uppercase.charAt(i);
+      if (c != expected && c != expected + ('a' - 'A')) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

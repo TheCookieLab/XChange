@@ -47,6 +47,9 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 
 public class CexIOTradeServiceRaw extends CexIOBaseService {
+  private static final ObjectMapper OBJECT_MAPPER =
+      new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
   public CexIOTradeServiceRaw(Exchange exchange) {
     super(exchange);
   }
@@ -226,9 +229,7 @@ public class CexIOTradeServiceRaw extends CexIOBaseService {
   public CexIOFullOrder getOrderFullDetail(String orderId) throws IOException {
     Map orderRaw =
         cexIOAuthenticated.getOrderRaw(signatureCreator, new CexioSingleOrderIdRequest(orderId));
-    ObjectMapper objectMapper = new ObjectMapper();
-    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    CexIOOpenOrder order = objectMapper.convertValue(orderRaw, CexIOOpenOrder.class);
+    CexIOOpenOrder order = OBJECT_MAPPER.convertValue(orderRaw, CexIOOpenOrder.class);
     return new CexIOFullOrder(
         order.user,
         order.type,

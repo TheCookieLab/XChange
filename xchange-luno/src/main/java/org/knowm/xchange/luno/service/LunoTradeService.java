@@ -30,6 +30,8 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamLimit;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
+import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
+import org.knowm.xchange.service.trade.params.orders.OpenOrdersParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 
 public class LunoTradeService extends LunoBaseService implements TradeService {
@@ -53,7 +55,7 @@ public class LunoTradeService extends LunoBaseService implements TradeService {
 
   @Override
   public OpenOrdersParams createOpenOrdersParams() {
-    return null;
+    return new DefaultOpenOrdersParamCurrencyPair();
   }
 
   @Override
@@ -67,9 +69,14 @@ public class LunoTradeService extends LunoBaseService implements TradeService {
           NotAvailableFromExchangeException,
           NotYetImplementedForExchangeException,
           IOException {
+    CurrencyPair pair =
+        params instanceof OpenOrdersParamCurrencyPair
+            ? ((OpenOrdersParamCurrencyPair) params).getCurrencyPair()
+            : null;
     List<LimitOrder> list = new ArrayList<>();
     for (org.knowm.xchange.luno.dto.trade.LunoOrders.Order lo :
-        lunoAPI.listOrders(State.PENDING, null).getOrders()) {
+        lunoAPI.listOrders(State.PENDING, pair == null ? null : LunoUtil.toLunoPair(pair))
+            .getOrders()) {
       list.add(
           new LimitOrder(
               convert(lo.type),
