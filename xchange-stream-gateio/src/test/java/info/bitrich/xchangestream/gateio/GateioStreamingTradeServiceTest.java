@@ -14,6 +14,7 @@ import info.bitrich.xchangestream.gateio.dto.response.GateioWsNotification;
 import info.bitrich.xchangestream.gateio.dto.response.order.GateioMultipleOrderFuturesNotification;
 import info.bitrich.xchangestream.gateio.dto.response.order.GateioMultipleOrderSpotNotification;
 import info.bitrich.xchangestream.gateio.dto.response.usertrade.GateioMultipleUserTradeNotification;
+import info.bitrich.xchangestream.gateio.dto.response.wsPlaceOrder.GateioWsResponseHeader;
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.reactivex.rxjava3.core.Observable;
@@ -376,6 +377,27 @@ class GateioStreamingTradeServiceTest {
     testObserver.awaitDone(500, TimeUnit.MILLISECONDS);
     testObserver.assertComplete();
     testObserver.assertValue(-1);
+  }
+
+  @Test
+  void futuresResponseHeaderUsesOnlyGateioWireKeys() throws Exception {
+    JsonNode wireHeader =
+        objectMapper.readTree(
+            """
+            {
+              "x_in_time": 1791112811535779,
+              "x_out_time": 1791112811535823,
+              "x_gate_ratelimit_requests_remain": 8,
+              "x_gate_ratelimit_limit": 10,
+              "x_gat_ratelimit_reset_timestamp": 1736408263764
+            }
+            """);
+
+    GateioWsResponseHeader header =
+        objectMapper.treeToValue(wireHeader, GateioWsResponseHeader.class);
+
+    JsonNode roundTrippedHeader = objectMapper.valueToTree(header);
+    assertThat(roundTrippedHeader).isEqualTo(wireHeader);
   }
 
   @Test

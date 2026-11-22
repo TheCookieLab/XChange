@@ -141,7 +141,6 @@ class TradeServiceHedgeModeOrderTest extends AbstractResilienceTest {
             .withRequestBody(notMatching(".*positionSide.*")));
   }
 
-  @SuppressWarnings("deprecation")
   @ParameterizedTest
   @MethodSource("futuresEndpoints")
   void legacyFacadeOrderSignaturesRemainUsable(
