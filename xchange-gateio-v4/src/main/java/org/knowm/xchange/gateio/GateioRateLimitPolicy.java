@@ -216,6 +216,7 @@ final class GateioRateLimitPolicy {
     // Other private endpoints that mutate state: per endpoint budget, never replayed.
     privateEndpoint(map, "POST api/v4/spot/countdown_cancel_all", false);
     privateEndpoint(map, "POST api/v4/futures/{settle}/positions/{contract}/leverage", false);
+    privateEndpoint(map, "POST api/v4/futures/{settle}/dual_mode", false);
     // Read-only private endpoints: 200 per 10 s per endpoint and UID, replay-safe.
     for (String key :
         List.of(

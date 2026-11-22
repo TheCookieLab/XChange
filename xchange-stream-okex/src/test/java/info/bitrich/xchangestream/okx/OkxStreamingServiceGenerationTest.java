@@ -14,13 +14,16 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.okex.OkexPrivateStreamingService;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.netty.channel.embedded.EmbeddedChannel;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.okex.OkexExchange;
 import org.knowm.xchange.okx.OkxExchange;
 import org.mockito.ArgumentCaptor;
 
@@ -102,6 +105,60 @@ public class OkxStreamingServiceGenerationTest {
 
     service.messageHandler("{\"event\":\"login\",\"code\":\"60009\",\"msg\":\"Login failed\"}");
     assertThat(service.isLoginDone()).isFalse();
+  }
+
+  @Test
+  public void privateReconnectRestoresOnlyStreamsAfterSuccessfulLogin() throws Exception {
+    List<String> sent = new ArrayList<>();
+    OkxPrivateStreamingService service =
+        new OkexPrivateStreamingService("wss://localhost/ws", spec, mock(OkexExchange.class)) {
+          @Override
+          public String getSubscribeMessage(String channelName, Object... args) {
+            return channelName;
+          }
+
+          @Override
+          public void sendMessage(String message) {
+            sent.add(message);
+          }
+        };
+    forceOpenChannel(service);
+    service.subscribeChannel("ordersBTC-USDT").test().assertNoErrors();
+    service.subscribeChannel("positionsBTC-USDT").test().assertNoErrors();
+    service.subscribeChannel("ordersETH-USDT", "extra").test().assertNoErrors();
+    service.subscribeChannel("positionsETH-USDT", (Object[]) null).test().assertNoErrors();
+    service.subscribeChannel("unrelated").test().assertNoErrors();
+    service
+        .subscribeChannel(
+            "orders-place-request", OkxPrivateStreamingService.PLACE_ORDER, new Object())
+        .test()
+        .assertNoErrors();
+    service
+        .subscribeChannel("orders-request", OkxPrivateStreamingService.CHANGE_ORDER, new Object())
+        .test()
+        .assertNoErrors();
+    service
+        .subscribeChannel(
+            "positions-request", OkxPrivateStreamingService.CANCEL_ORDER, new Object())
+        .test()
+        .assertNoErrors();
+    sent.clear();
+
+    service.resubscribeChannels();
+    assertThat(sent).isEmpty();
+    service.messageHandler("{\"event\":\"login\",\"code\":\"60009\"}");
+    assertThat(sent).isEmpty();
+
+    service.messageHandler("{\"event\":\"login\",\"code\":\"0\"}");
+    assertThat(sent)
+        .containsExactlyInAnyOrder(
+            "ordersBTC-USDT", "positionsBTC-USDT", "ordersETH-USDT", "positionsETH-USDT");
+
+    sent.clear();
+    service.resubscribeChannels();
+    assertThat(sent)
+        .containsExactlyInAnyOrder(
+            "ordersBTC-USDT", "positionsBTC-USDT", "ordersETH-USDT", "positionsETH-USDT");
   }
 
   @Test

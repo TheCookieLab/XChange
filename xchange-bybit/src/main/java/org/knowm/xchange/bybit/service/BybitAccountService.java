@@ -1,5 +1,11 @@
 package org.knowm.xchange.bybit.service;
 
+import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitBalances;
+import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
@@ -19,13 +25,6 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitBalances;
-import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 
 public class BybitAccountService extends BybitAccountServiceRaw implements AccountService {
 
@@ -47,7 +46,8 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
   }
 
   @Override
-  public boolean setLeverage(Instrument instrument, int leverage, Object... args) throws IOException {
+  public boolean setLeverage(Instrument instrument, int leverage, Object... args)
+      throws IOException {
     BybitCategory category = BybitAdapters.getCategory(instrument);
     int retCode = setLeverageRaw(category, convertToBybitSymbol(instrument), leverage).getRetCode();
     return retCode == 0 || retCode == 110043;

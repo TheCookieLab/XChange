@@ -1,10 +1,22 @@
 package info.bitrich.xchangestream.gateio;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.gateio.config.Config;
 import info.bitrich.xchangestream.gateio.dto.response.GateioWsNotification;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.observers.TestObserver;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +24,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.OrderBookTicker;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
@@ -20,26 +33,11 @@ import org.knowm.xchange.instrument.Instrument;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class GateioStreamingMarketDataServiceTest {
 
-  @Mock
-  GateioStreamingService gateioStreamingService;
-  @Mock
-  ExchangeMetaData exchangeMetaData;
+  @Mock GateioStreamingService gateioStreamingService;
+  @Mock ExchangeMetaData exchangeMetaData;
   GateioStreamingMarketDataService gateioStreamingMarketDataService;
 
   ObjectMapper objectMapper = Config.getInstance().getObjectMapper();
@@ -48,20 +46,22 @@ class GateioStreamingMarketDataServiceTest {
   @BeforeEach
   void setup() {
     Map<Instrument, InstrumentMetaData> instruments = new HashMap<>();
-    instruments.put(instrumentBtc, InstrumentMetaData.builder()
-        .contractValue(new BigDecimal("0.0001"))
-        .build());
+    instruments.put(
+        instrumentBtc,
+        InstrumentMetaData.builder().contractValue(new BigDecimal("0.0001")).build());
     exchangeMetaData = new ExchangeMetaData(instruments, null, null, null, null);
-//    GateioMarketDataService gateioMarketDataService = new GateioMarketDataService(new GateioExchange(),new ResilienceRegistries());
-//    GateioStreamingExchange gateioStreamingExchange = new GateioStreamingExchange();
-    gateioStreamingMarketDataService = new GateioStreamingMarketDataService(gateioStreamingService, exchangeMetaData, null, null);
+    //    GateioMarketDataService gateioMarketDataService = new GateioMarketDataService(new
+    // GateioExchange(),new ResilienceRegistries());
+    //    GateioStreamingExchange gateioStreamingExchange = new GateioStreamingExchange();
+    gateioStreamingMarketDataService =
+        new GateioStreamingMarketDataService(gateioStreamingService, exchangeMetaData, null, null);
   }
 
   @Test
   void order_book_legacy() throws Exception {
     GateioWsNotification notification = readNotification("spot.order_book.update.json");
     when(gateioStreamingService.subscribeChannel(
-        eq("spot.order_book"), eq(CurrencyPair.BTC_USDT), eq(10), eq(Duration.ofMillis(100))))
+            eq("spot.order_book"), eq(CurrencyPair.BTC_USDT), eq(10), eq(Duration.ofMillis(100))))
         .thenReturn(Observable.just(notification));
 
     Observable<OrderBook> observable =
@@ -118,8 +118,7 @@ class GateioStreamingMarketDataServiceTest {
     when(gateioStreamingService.subscribeChannel(eq("spot.trades"), eq(instrumentGT)))
         .thenReturn(Observable.just(notification));
 
-    Observable<Trade> observable =
-        gateioStreamingMarketDataService.getTrades(instrumentGT);
+    Observable<Trade> observable = gateioStreamingMarketDataService.getTrades(instrumentGT);
 
     TestObserver<Trade> testObserver = observable.test();
 
@@ -169,11 +168,11 @@ class GateioStreamingMarketDataServiceTest {
   @Test
   void futuresTrades() throws Exception {
     GateioWsNotification notification = readNotification("futures.trades.update.json");
-    when(gateioStreamingService.subscribeChannel(eq("futures.trades"), eq(new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))))
+    when(gateioStreamingService.subscribeChannel(
+            eq("futures.trades"), eq(new FuturesContract(CurrencyPair.BTC_USDT, "PERP"))))
         .thenReturn(Observable.just(notification));
 
-    Observable<Trade> observable =
-        gateioStreamingMarketDataService.getTrades(instrumentBtc);
+    Observable<Trade> observable = gateioStreamingMarketDataService.getTrades(instrumentBtc);
 
     TestObserver<Trade> testObserver = observable.test();
 
@@ -182,7 +181,7 @@ class GateioStreamingMarketDataServiceTest {
     testObserver.dispose();
 
     assertThat(actual.getInstrument()).isEqualTo(instrumentBtc);
-    assertThat(actual.getOriginalAmount().equals(new BigDecimal("108.5"))).isTrue();
+    assertThat(actual.getOriginalAmount()).isEqualByComparingTo(new BigDecimal("0.01085"));
     assertThat(actual.getPrice().equals(new BigDecimal("96.4"))).isTrue();
     assertThat(actual.getId()).isEqualTo("27753479");
     assertThat(actual.getTimestamp().getTime()).isEqualTo(1545136464123L);
@@ -193,13 +192,11 @@ class GateioStreamingMarketDataServiceTest {
     GateioWsNotification snapshot = readNotification("futures.obu.snapshot.json");
     GateioWsNotification update = readNotification("futures.obu.update.json");
     FuturesContract futuresContract = new FuturesContract(CurrencyPair.BTC_USDT, "PERP");
-    when(gateioStreamingService.subscribeChannel(
-        eq("futures.obu"), eq(instrumentBtc), eq(400)))
+    when(gateioStreamingService.subscribeChannel(eq("futures.obu"), eq(instrumentBtc), eq(400)))
         .thenReturn(Observable.just(snapshot, update));
 
     Observable<OrderBook> observable =
-        gateioStreamingMarketDataService.getOrderBook(
-            instrumentBtc, 400);
+        gateioStreamingMarketDataService.getOrderBook(instrumentBtc, 400);
 
     TestObserver<OrderBook> testObserver = observable.test();
 
@@ -216,6 +213,30 @@ class GateioStreamingMarketDataServiceTest {
     assertThat(actual.getBids().get(1).getLimitPrice()).isEqualByComparingTo("83702.2");
     assertThat(actual.getBids().get(1).getOriginalAmount()).isEqualByComparingTo("0.0062");
     assertThat(actual.getBids().get(3).getLimitPrice()).isEqualByComparingTo("83685");
+  }
+
+  @Test
+  void spotOrderBookTicker() throws Exception {
+    GateioWsNotification notification = readNotification("spot.book_ticker.update.json");
+    when(gateioStreamingService.subscribeChannel(
+            eq("spot.book_ticker"), eq(CurrencyPair.BTC_USDT)))
+        .thenReturn(Observable.just(notification));
+
+    Observable<OrderBookTicker> observable =
+        gateioStreamingMarketDataService.getOrderBookTicker(CurrencyPair.BTC_USDT);
+
+    TestObserver<OrderBookTicker> testObserver = observable.test();
+
+    OrderBookTicker actual = testObserver.awaitCount(1).values().get(0);
+
+    testObserver.dispose();
+
+    // the "t" field of spot.book_ticker is a timestamp in milliseconds
+    assertThat(actual.getTimestamp()).isEqualTo(Instant.ofEpochMilli(1606293275123L));
+    assertThat(actual.getBidPrice()).isEqualByComparingTo("26971.69");
+    assertThat(actual.getBidSize()).isEqualByComparingTo("0.94");
+    assertThat(actual.getAskPrice()).isEqualByComparingTo("26971.7");
+    assertThat(actual.getAskSize()).isEqualByComparingTo("3.05");
   }
 
   private GateioWsNotification readNotification(String resourceName) throws IOException {

@@ -89,8 +89,10 @@ public interface BinanceUsdmAuthApi {
    * @param symbol
    * @param side
    * @param type
+   * @param positionSide optional; LONG or SHORT in hedge mode
    * @param timeInForce
    * @param quantity
+   * @param reduceOnly optional; omitted in hedge mode
    * @param price optional, must be provided for limit orders only
    * @param newClientOrderId optional, a unique id for the order. Automatically generated if not
    *     sent.
@@ -105,6 +107,34 @@ public interface BinanceUsdmAuthApi {
    * @see <a href="https://binance-docs.github.io/apidocs/spot/en/#new-order-trade">New order - Spot
    *     API docs -</a>
    */
+  @POST
+  @Path("fapi/v1/order")
+  BinanceFutureNewOrder newOrder(
+      @FormParam("symbol") String symbol,
+      @FormParam("side") OrderSide side,
+      @FormParam("type") OrderType type,
+      @FormParam("positionSide") String positionSide,
+      @FormParam("timeInForce") TimeInForce timeInForce,
+      @FormParam("quantity") BigDecimal quantity,
+      @FormParam("reduceOnly") Boolean reduceOnly,
+      @FormParam("price") BigDecimal price,
+      @FormParam("newClientOrderId") String newClientOrderId,
+      @FormParam("stopPrice") BigDecimal stopPrice,
+      @FormParam("closePosition") boolean closePosition,
+      @FormParam("activationPrice") BigDecimal activationPrice,
+      @FormParam("callbackRate") BigDecimal callbackRate,
+      @FormParam("newOrderRespType") BinanceNewOrder.NewOrderResponseType newOrderRespType,
+      @FormParam("recvWindow") Long recvWindow,
+      @FormParam("timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam(X_MBX_APIKEY) String apiKey,
+      @QueryParam(SIGNATURE) ParamsDigest signature)
+      throws IOException, BinanceException;
+
+  /**
+   * @deprecated Use the overload accepting {@code positionSide}; retained for legacy one-way order
+   *     callers during the facade compatibility period.
+   */
+  @Deprecated
   @POST
   @Path("fapi/v1/order")
   BinanceFutureNewOrder newOrder(

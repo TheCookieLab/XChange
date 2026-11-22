@@ -99,7 +99,7 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
 
   @Override
   public Completable disconnect() {
-    compositeDisposable.dispose();
+    compositeDisposable.clear();
     return super.disconnect();
   }
 
@@ -274,5 +274,10 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
       default:
         return null;
     }
+  }
+
+  @Override
+  public void resubscribeChannels() {
+
   }
 }

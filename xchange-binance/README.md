@@ -45,6 +45,7 @@ Legend: ✅ implemented · ⚠️ partial · ❌ not implemented.
 |---|---|---|---|---|---|
 | Balances / account | ✅ | — | ✅ | ❌ | ❌ |
 | Orders (place/test/status) | ✅ | — | ✅ | ✅ | ✅ |
+| Futures hedge-mode orders (`positionSide`, no `reduceOnly`) | — | — | ✅ | ✅ | ✅ |
 | Cancel (single/all) | ✅ | — | ✅ | ✅ | ✅ |
 | Amend (cancel-replace) | ❌ | — | ✅ | ❌ | ❌ |
 | Open/all orders, my trades | ✅ | — | ✅ | ✅ | ✅ |

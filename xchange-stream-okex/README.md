@@ -39,9 +39,10 @@ fresh subscription. `disconnect()` increments the generation and tears down all 
 
 `isAlive()` is **aggregate**: it is true only when every required transport socket is alive,
 including the business socket. A dead business socket is not masked by healthy public/private
-sockets. Reconnect applies bounded backoff per transport and, after re-establishment,
-**resubscribes every active channel on every transport** (`resubscribeChannels()`), so
-recovery is complete even when only one socket dropped.
+sockets. Reconnect applies bounded backoff per transport and restores active channel subscriptions
+on each re-established transport. The private socket restores order and position streams only
+after a successful login; it never replays one-shot place, amend, or cancel requests. Reconcile
+interrupted trading requests against the exchange before deciding whether to retry them.
 
 ## Order-book continuity
 
