@@ -46,6 +46,7 @@ class GateioRateLimitPolicyTest {
           "PUT api/v4/futures/{settle}/orders/{order_id}",
           "DELETE api/v4/futures/{settle}/orders/{order_id}",
           "POST api/v4/futures/{settle}/positions/{contract}/leverage",
+          "POST api/v4/futures/{settle}/dual_mode",
           "POST api/v4/withdrawals");
 
   /** Every reachable method of both rescu interfaces classifies. */
@@ -66,7 +67,7 @@ class GateioRateLimitPolicyTest {
         checked++;
       }
     }
-    assertEquals(43, checked, "rescu methods of Gateio and GateioV4Authenticated");
+    assertEquals(44, checked, "rescu methods of Gateio and GateioV4Authenticated");
   }
 
   @Test
@@ -153,6 +154,11 @@ class GateioRateLimitPolicyTest {
         200,
         1);
     assertBudget("POST api/v4/withdrawals", GateioRateLimitPolicy.WITHDRAW, 1, 3);
+    assertBudget(
+        "POST api/v4/futures/{settle}/dual_mode",
+        "gateio.private.POST api/v4/futures/{settle}/dual_mode",
+        200,
+        10);
     RateLimitBudget balances =
         budget(POLICY.classify(new RateLimitRequest("GET api/v4/spot/accounts", true)));
     assertEquals(200, balances.getCapacity());

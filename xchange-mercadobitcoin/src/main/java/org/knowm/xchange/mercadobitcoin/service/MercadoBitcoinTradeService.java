@@ -28,6 +28,8 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsIdSpan;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
+import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
+import org.knowm.xchange.service.trade.params.orders.OpenOrdersParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 
 /**
@@ -53,21 +55,26 @@ public class MercadoBitcoinTradeService extends MercadoBitcoinTradeServiceRaw
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
-    // TODO use currency pair param
-    MercadoBitcoinBaseTradeApiResult<MercadoBitcoinUserOrders> openOrdersBitcoinResult =
-        getMercadoBitcoinUserOrders("btc_brl", null, "active", null, null, null, null);
-    MercadoBitcoinBaseTradeApiResult<MercadoBitcoinUserOrders> openOrdersLitecoinResult =
-        getMercadoBitcoinUserOrders("ltc_brl", null, "active", null, null, null, null);
-
+    CurrencyPair pair =
+        params instanceof OpenOrdersParamCurrencyPair
+            ? ((OpenOrdersParamCurrencyPair) params).getCurrencyPair()
+            : null;
     List<LimitOrder> limitOrders = new ArrayList<>();
-
-    limitOrders.addAll(
-        MercadoBitcoinAdapters.adaptOrders(CurrencyPair.BTC_BRL, openOrdersBitcoinResult));
-    limitOrders.addAll(
-        MercadoBitcoinAdapters.adaptOrders(
-            new CurrencyPair(Currency.LTC, Currency.BRL), openOrdersLitecoinResult));
+    if (pair != null) {
+      addOpenOrders(limitOrders, pair);
+    } else {
+      addOpenOrders(limitOrders, CurrencyPair.BTC_BRL);
+      addOpenOrders(limitOrders, new CurrencyPair(Currency.LTC, Currency.BRL));
+    }
 
     return new OpenOrders(limitOrders);
+  }
+
+  private void addOpenOrders(List<LimitOrder> orders, CurrencyPair pair) throws IOException {
+    MercadoBitcoinBaseTradeApiResult<MercadoBitcoinUserOrders> result =
+        getMercadoBitcoinUserOrders(
+            MercadoBitcoinAdapters.adaptCurrencyPair(pair), null, "active", null, null, null, null);
+    orders.addAll(MercadoBitcoinAdapters.adaptOrders(pair, result));
   }
 
   @Override
@@ -178,7 +185,7 @@ public class MercadoBitcoinTradeService extends MercadoBitcoinTradeServiceRaw
 
   @Override
   public OpenOrdersParams createOpenOrdersParams() {
-    return null;
+    return new DefaultOpenOrdersParamCurrencyPair();
   }
 
   public static class MercadoTradeHistoryParams extends DefaultTradeHistoryParamCurrencyPair

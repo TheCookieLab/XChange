@@ -42,10 +42,8 @@ class KrakenDigestTest {
 
     String actual = krakenDigest.digestParams(restInvocation);
 
-    // Verify signature is generated and is a valid base64 string
-    assertThat(actual).isNotNull().isNotEmpty();
-    // The signature should be different from the FormParam version due to different path
-    // but should still be a valid base64 encoded string
-    assertThat(actual).matches("^[A-Za-z0-9+/]+=*$");
+    assertThat(actual)
+        .isEqualTo(
+            "0VW/qfRlp29WHhIpMUoumSUSA2r0WwTMGg7L3jskXoIUxf+H1/U6Oo0jofXbyjmK4hcRkroq8hcrO6L0LAnf+Q==");
   }
 }

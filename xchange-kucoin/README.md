@@ -11,6 +11,10 @@ The two generations are isolated behind an explicit compatibility boundary. The
 classic mode remains the default and its behavior is unchanged; UTA must be
 selected explicitly.
 
+Classic API HTTP 401, 429, and 503 responses are surfaced as authentication,
+rate-limit, and exchange-unavailable exceptions, respectively. Other HTTP failures
+retain their transport exception; no automatic retry is implied.
+
 ## Selecting the API mode
 
 ```java

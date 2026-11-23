@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.observers.TestObserver;
+import io.reactivex.rxjava3.subjects.PublishSubject;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.knowm.xchange.binance.dto.marketdata.BinanceBookTicker;
 import org.knowm.xchange.binance.dto.marketdata.BinanceFundingRateInfo;
 import org.knowm.xchange.binance.dto.marketdata.BinanceKline;
+import org.knowm.xchange.binance.dto.marketdata.BinanceOrderbook;
 import org.knowm.xchange.binance.dto.marketdata.BinanceTicker24h;
 import org.knowm.xchange.binance.dto.marketdata.KlineInterval;
 import org.knowm.xchange.binance.service.BinanceMarketDataService;
@@ -22,6 +25,8 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.marketdata.FundingRate;
 import org.knowm.xchange.dto.marketdata.FundingRate.FundingRateInterval;
+import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 
@@ -197,6 +202,47 @@ class BinanceStreamingMarketDataServiceTest {
         .test()
         .assertNoValues()
         .assertNoErrors();
+  }
+
+  @Test
+  void orderBookDeltasReplaceAddAndRemoveBothSidesWithoutChangingRawUpdates() throws Exception {
+    PublishSubject<JsonNode> depth = PublishSubject.create();
+    when(streamingService.subscribeChannel("newusdt@depth")).thenReturn(depth);
+    BinanceOrderbook snapshot =
+        new BinanceOrderbook(
+            10,
+            List.<Object[]>of(new Object[] {"1.40", "9"}, new Object[] {"1.30", "5"}),
+            List.<Object[]>of(new Object[] {"1.60", "7"}, new Object[] {"1.70", "8"}));
+    when(binanceMarketDataService.getBinanceOrderbookAllProducts(UNMAPPED_PAIR, 1000))
+        .thenReturn(snapshot);
+
+    TestObserver<OrderBook> books = marketDataService.getOrderBook(UNMAPPED_PAIR).test();
+    TestObserver<List<OrderBookUpdate>> updates =
+        marketDataService.getOrderBookUpdates(UNMAPPED_PAIR).test();
+    depth.onNext(
+        mapper.readTree(
+            "{\"stream\":\"newusdt@depth\",\"data\":{\"e\":\"depthUpdate\",\"E\":4102444800000,"
+                + "\"s\":\"NEWUSDT\",\"U\":11,\"u\":11,"
+                + "\"b\":[[\"1.40\",\"2\"],[\"1.35\",\"3\"],[\"1.30\",\"0\"],[\"1.25\",\"0\"]],"
+                + "\"a\":[[\"1.60\",\"0\"],[\"1.55\",\"4\"],[\"1.70\",\"6\"]]}}"));
+
+    books.assertValueCount(1).assertNoErrors();
+    updates.assertValueCount(1).assertNoErrors();
+    assertThat(updates.values().get(0)).hasSize(7);
+    OrderBook book = books.values().get(0);
+    assertThat(book.getBids())
+        .extracting(order -> order.getLimitPrice())
+        .containsExactly(new BigDecimal("1.40"), new BigDecimal("1.35"));
+    assertThat(book.getAsks())
+        .extracting(order -> order.getLimitPrice())
+        .containsExactly(new BigDecimal("1.55"), new BigDecimal("1.70"));
+    assertThat(book.getBids().get(0).getOriginalAmount()).isEqualByComparingTo("2");
+    assertThat(book.getAsks().get(1).getOriginalAmount()).isEqualByComparingTo("6");
+    assertThat(book.getBids().get(0).getInstrument()).isEqualTo(UNMAPPED_PAIR);
+    assertThat(book.getBids().get(0).getId()).isEmpty();
+    assertThat(book.getTimeStamp().getTime()).isEqualTo(4102444800000L);
+    books.dispose();
+    updates.dispose();
   }
 
   private BinanceStreamingMarketDataService createMarketDataService(

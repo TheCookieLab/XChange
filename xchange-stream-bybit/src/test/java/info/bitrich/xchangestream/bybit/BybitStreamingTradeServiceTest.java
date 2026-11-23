@@ -2,25 +2,36 @@ package info.bitrich.xchangestream.bybit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
+import io.reactivex.rxjava3.core.Observable;
 import java.math.BigDecimal;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.bybit.BybitExchange;
+import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderParams;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.instrument.Instrument;
 
-/**
- * In the demo environment the order-entry (trade) transport is not constructed; order operations
- * must fail with a clear explanation instead of a NullPointerException or a silent reroute.
- */
+/** Tests order-entry availability and private order-change subscriptions. */
 public class BybitStreamingTradeServiceTest {
 
   private final BybitStreamingTradeService tradeServiceWithoutOrderEntryTransport;
+  private BybitUserDataStreamingService userDataStreamingService;
+  private BybitStreamingTradeService tradeService;
+  private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
 
   public BybitStreamingTradeServiceTest() {
     BybitStreamingExchange exchange = new BybitStreamingExchange();
@@ -32,6 +43,24 @@ public class BybitStreamingTradeServiceTest {
     this.tradeServiceWithoutOrderEntryTransport =
         new BybitStreamingTradeService(
             null, null, exchange.getResilienceRegistries(), exchange);
+  }
+
+  @BeforeEach
+  void setUp() {
+    BybitExchange exchange = new BybitExchange();
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setApiKey("api-key");
+    specification.setSecretKey("api-secret");
+    exchange.applySpecification(specification);
+
+    userDataStreamingService = mock(BybitUserDataStreamingService.class);
+    tradeService =
+        new BybitStreamingTradeService(
+            userDataStreamingService,
+            mock(BybitUserTradeStreamingService.class),
+            exchange.getResilienceRegistries(),
+            exchange);
   }
 
   private static final class InstrumentStub extends org.knowm.xchange.instrument.Instrument {
@@ -106,5 +135,60 @@ public class BybitStreamingTradeServiceTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("demo trading does not support the WebSocket order-entry")
         .hasMessageContaining("REST trade service");
+  }
+
+  private void givenOrderChanges() throws Exception {
+    JsonNode jsonNode =
+        mapper.readTree(
+            ClassLoader.getSystemClassLoader()
+                .getResourceAsStream("orderChangeSpotResponse.json5"));
+    when(userDataStreamingService.subscribeChannel("order")).thenReturn(Observable.just(jsonNode));
+    when(userDataStreamingService.subscribeChannel("order.spot"))
+        .thenReturn(Observable.just(jsonNode));
+  }
+
+  @Test
+  void getOrderChangesWithoutCategoryArgument_shouldSubscribeToTheAllCategoriesTopic()
+      throws Exception {
+    givenOrderChanges();
+
+    List<Order> orders = tradeService.getOrderChanges(CurrencyPair.XRP_USDT).toList().blockingGet();
+
+    verify(userDataStreamingService).subscribeChannel("order");
+    assertThat(orders).hasSize(1);
+    assertThat(orders.get(0).getInstrument()).isEqualTo(CurrencyPair.XRP_USDT);
+  }
+
+  @Test
+  void getOrderChangesWithCategoryArgument_shouldSubscribeToTheCategorisedTopic() throws Exception {
+    givenOrderChanges();
+
+    List<Order> orders =
+        tradeService
+            .getOrderChanges(CurrencyPair.XRP_USDT, BybitCategory.SPOT)
+            .toList()
+            .blockingGet();
+
+    verify(userDataStreamingService).subscribeChannel("order.spot");
+    assertThat(orders).hasSize(1);
+  }
+
+  @Test
+  void getOrderChangesWithoutInstrument_shouldEmitEveryInstrument() throws Exception {
+    givenOrderChanges();
+
+    List<Order> orders = tradeService.getOrderChanges((Instrument) null).toList().blockingGet();
+
+    assertThat(orders).hasSize(2);
+    assertThat(orders).extracting(Order::getInstrument).contains(CurrencyPair.XRP_USDT);
+  }
+
+  @Test
+  void getOrderChangesWithUnknownInstrument_shouldEmitNothing() throws Exception {
+    givenOrderChanges();
+
+    List<Order> orders = tradeService.getOrderChanges(CurrencyPair.ETH_USDT).toList().blockingGet();
+
+    assertThat(orders).isEmpty();
   }
 }

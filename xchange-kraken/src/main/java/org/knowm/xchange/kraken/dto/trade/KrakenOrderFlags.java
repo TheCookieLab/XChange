@@ -2,6 +2,7 @@ package org.knowm.xchange.kraken.dto.trade;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import org.knowm.xchange.dto.Order.IOrderFlags;
 
+/** Kraken order flags; JSON deserialization rejects unknown non-empty flag names. */
 public enum KrakenOrderFlags implements IOrderFlags {
   FCIB, // prefer fee in base currency
   FCIQ, // prefer fee in quote currency
@@ -41,32 +43,32 @@ public enum KrakenOrderFlags implements IOrderFlags {
     public Set<KrakenOrderFlags> deserialize(JsonParser jsonParser, DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
 
-      // Performance optimization: Avoid building Jackson JsonNode AST instances on high-frequency streaming paths.
-      // Direct getText() streams string tokens without intermediate TextNode allocation.
+      if (!jsonParser.hasToken(JsonToken.VALUE_STRING)) {
+        return ctxt.reportInputMismatch(KrakenOrderFlags.class, "Expected a Kraken order flags string");
+      }
       String orderFlagsString = jsonParser.getText();
       Set<KrakenOrderFlags> orderFlags = EnumSet.noneOf(KrakenOrderFlags.class);
       if (orderFlagsString == null || orderFlagsString.isEmpty()) {
         return orderFlags;
       }
 
-      // Performance optimization: Avoid String.split(",") regex overhead and Matcher/String[] allocations.
-      // Use index scanning with indexOf(',') to parse comma-delimited tokens with minimal allocations.
       int start = 0;
-      int commaIndex;
-      while ((commaIndex = orderFlagsString.indexOf(',', start)) != -1) {
-        if (commaIndex > start) {
-          KrakenOrderFlags flag = fromString(orderFlagsString.substring(start, commaIndex).trim());
-          if (flag != null) {
-            orderFlags.add(flag);
+      while (start < orderFlagsString.length()) {
+        int commaIndex = orderFlagsString.indexOf(',', start);
+        int end = commaIndex < 0 ? orderFlagsString.length() : commaIndex;
+        String flagString = orderFlagsString.substring(start, end).trim();
+        if (!flagString.isEmpty()) {
+          KrakenOrderFlags flag = fromString(flagString);
+          if (flag == null) {
+            return ctxt.reportInputMismatch(
+                KrakenOrderFlags.class, "Unknown Kraken order flag '%s'", flagString);
           }
-        }
-        start = commaIndex + 1;
-      }
-      if (start < orderFlagsString.length()) {
-        KrakenOrderFlags flag = fromString(orderFlagsString.substring(start).trim());
-        if (flag != null) {
           orderFlags.add(flag);
         }
+        if (commaIndex < 0) {
+          break;
+        }
+        start = commaIndex + 1;
       }
       return orderFlags;
     }

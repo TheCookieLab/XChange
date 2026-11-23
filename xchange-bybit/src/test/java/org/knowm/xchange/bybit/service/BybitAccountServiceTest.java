@@ -78,6 +78,22 @@ public class BybitAccountServiceTest extends BaseWiremockTest {
   }
 
   @Test
+  void linearFeeCleanupRemovesInverseContractsButKeepsLinearSymbols() throws IOException {
+    setUp();
+    initGetStub("/v5/account/fee-rate", "/getFeeRatesFiltered.json5");
+
+    Map<Instrument, Fee> fees =
+        bybitAccountService.getDynamicTradingFeesByInstrument(BybitCategory.LINEAR.getValue());
+
+    assertThat(fees.keySet())
+        .containsExactlyInAnyOrder(
+            new FuturesContract("ETH/USDT/PERP"),
+            new FuturesContract("1000SHIB/USDT/PERP"),
+            new FuturesContract("BTCUSDH/USDC/PERP"));
+    assertThat(fees.get(new FuturesContract("ETH/USDT/PERP")).getTakerFee()).isEqualTo("0.0006");
+  }
+
+  @Test
   void setLeverage() throws Exception {
     setUp();
     initPostStub("/v5/position/set-leverage", "/setLeverage.json5");

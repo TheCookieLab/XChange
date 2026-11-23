@@ -14,6 +14,11 @@ import org.knowm.xchange.utils.ObjectMapperHelper;
 /** Tests instrument string dispatch for {@link InstrumentDeserializer} and {@link InstrumentMapDeserializer}. */
 public class InstrumentDeserializerTest {
 
+  public static class InstrumentContainer {
+    public Instrument instrument;
+    public String after;
+  }
+
   @Test
   public void testValueDispatch() throws IOException {
     assertThat(ObjectMapperHelper.readValue("\"BTC/USD\"", Instrument.class))
@@ -60,5 +65,16 @@ public class InstrumentDeserializerTest {
             keyDeserializer.deserializeKey(
                 "PRED/kalshi/KXBTC-25DEC31/KXBTC-25DEC31-T90000/YES/USD", null))
         .isInstanceOf(PredictionMarketContract.class);
+  }
+
+  @Test
+  public void testNonStringTokensConsumeTheWholeValue() throws IOException {
+    for (String value : new String[] {"{\"base\":\"BTC\"}", "[\"BTC/USD\"]"}) {
+      InstrumentContainer result =
+          ObjectMapperHelper.readValueStrict(
+              "{\"instrument\":" + value + ",\"after\":\"kept\"}", InstrumentContainer.class);
+      assertThat(result.instrument).isNull();
+      assertThat(result.after).isEqualTo("kept");
+    }
   }
 }

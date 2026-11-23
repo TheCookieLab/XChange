@@ -2,10 +2,9 @@ package org.knowm.xchange.kraken.dto.trade;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.io.IOException;
 import java.util.HashMap;
@@ -44,7 +43,9 @@ public enum KrakenOrderStatus {
     public KrakenOrderStatus deserialize(JsonParser jsonParser, DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
 
-      // Performance optimization: Avoid building Jackson JsonNode AST instances on high-frequency streaming paths
+      if (!jsonParser.hasToken(JsonToken.VALUE_STRING)) {
+        return ctxt.reportInputMismatch(KrakenOrderStatus.class, "Expected a Kraken order status string");
+      }
       return fromString(jsonParser.getText());
     }
   }

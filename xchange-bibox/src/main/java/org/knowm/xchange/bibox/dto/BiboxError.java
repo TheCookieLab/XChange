@@ -4,9 +4,7 @@ public class BiboxError {
   private int code;
   private String msg;
 
-  public BiboxError() {
-    // TODO Default Constructor for Jackson
-  }
+  public BiboxError() {}
 
   public int getCode() {
     return code;

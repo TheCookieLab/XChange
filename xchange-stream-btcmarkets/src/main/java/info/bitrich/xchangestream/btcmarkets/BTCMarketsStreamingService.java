@@ -8,20 +8,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class BTCMarketsStreamingService extends JsonNettyStreamingService {
-  //	TODO change to enumerator
   static final String CHANNEL_ORDERBOOK = "orderbook";
   static final String CHANNEL_HEARTBEAT = "heartbeat";
   static final String CHANNEL_TICKER = "tick";
   static final String CHANNEL_TRADE = "trade";
 
   private static final Logger LOG = LoggerFactory.getLogger(BTCMarketsStreamingService.class);
-  private final ConcurrentHashMap<String, Set<String>> subscribedMarketIds =
-      new ConcurrentHashMap<String, Set<String>>();
 
   public BTCMarketsStreamingService(String apiUrl) {
     super(apiUrl);
@@ -53,7 +49,7 @@ class BTCMarketsStreamingService extends JsonNettyStreamingService {
       String channelName, Set<String> marketIds) {
 
     return BTCMarketsWebSocketSubscriptionMessage.getRemoveSubcriptionMessage(
-        marketIds == null ? new ArrayList<String>() : new ArrayList<String>(marketIds),
+        new ArrayList<String>(marketIds),
         Arrays.asList(channelName),
         null,
         null,
@@ -84,20 +80,8 @@ class BTCMarketsStreamingService extends JsonNettyStreamingService {
         for (Object marketId : args) {
           newMarketIds.add(marketId.toString());
         }
-        // Add the marketIds to the Channel
-        Set<String> updateMarketIds = subscribedMarketIds.get(channelName);
-        if (updateMarketIds != null) {
-          updateMarketIds.addAll(newMarketIds);
-          subscribedMarketIds.put(channelName, updateMarketIds);
-        } else {
-          subscribedMarketIds.put(channelName, newMarketIds);
-        }
       }
-      LOG.debug(
-          "getSubscribeMessage: what is in subscribedMarketIds {} - {} / new marketIds {}",
-          channelName,
-          subscribedMarketIds.get(channelName),
-          newMarketIds);
+      LOG.debug("getSubscribeMessage: channel {} / marketIds {}", channelName, newMarketIds);
       return objectMapper.writeValueAsString(buildSubscribeMessage(channelName, newMarketIds));
     } else {
       throw new IllegalArgumentException(
@@ -112,19 +96,27 @@ class BTCMarketsStreamingService extends JsonNettyStreamingService {
   }
 
   @Override
-  public String getUnsubscribeMessage(String channelName, Object... args) throws IOException {
-    if (channelName.startsWith(CHANNEL_ORDERBOOK)
-        || channelName.startsWith(CHANNEL_TICKER)
-        || channelName.startsWith(CHANNEL_TRADE)) {
-      LOG.debug(
-          "getUnsubscribeMessage: what is in subscribedMarketIds {}:{}",
-          channelName,
-          subscribedMarketIds.get(channelName));
-      return objectMapper.writeValueAsString(
-          buildRemoveSubscriptionMessage(channelName, subscribedMarketIds.remove(channelName)));
-    } else {
+  public String getUnsubscribeMessage(String subscriptionUniqueId, Object... args)
+      throws IOException {
+    int separator = subscriptionUniqueId.indexOf(':');
+    if (separator < 0) {
       return null;
     }
+    String channelName = subscriptionUniqueId.substring(0, separator);
+    if (!CHANNEL_ORDERBOOK.equals(channelName)
+        && !CHANNEL_TICKER.equals(channelName)
+        && !CHANNEL_TRADE.equals(channelName)) {
+      return null;
+    }
+    Set<String> marketIds = new HashSet<>();
+    if (args == null || args.length == 0) {
+      marketIds.add(subscriptionUniqueId.substring(separator + 1));
+    } else {
+      for (Object marketId : args) {
+        marketIds.add(marketId.toString());
+      }
+    }
+    return objectMapper.writeValueAsString(buildRemoveSubscriptionMessage(channelName, marketIds));
   }
 
   private Boolean hasActiveSubscriptions() {

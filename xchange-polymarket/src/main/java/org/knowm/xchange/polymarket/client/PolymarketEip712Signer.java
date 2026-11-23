@@ -161,7 +161,7 @@ public final class PolymarketEip712Signer {
     try {
       d = new BigInteger(hex, 16);
     } catch (NumberFormatException e) {
-      throw new ExchangeSecurityException("Polymarket private key is not valid hex", e);
+      throw new ExchangeSecurityException("Polymarket private key is not valid hex");
     }
     if (d.signum() <= 0 || d.compareTo(SECP256K1.getN()) >= 0 || hex.length() > 64) {
       throw new ExchangeSecurityException(

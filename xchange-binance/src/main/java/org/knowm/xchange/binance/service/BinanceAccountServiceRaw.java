@@ -12,22 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceExchange;
 import org.knowm.xchange.binance.dto.BinanceException;
-import org.knowm.xchange.binance.dto.account.AssetDetail;
-import org.knowm.xchange.binance.dto.account.AssetDividendResponse;
-import org.knowm.xchange.binance.dto.account.BinanceAccountInformation;
-import org.knowm.xchange.binance.dto.account.BinanceCurrencyInfo;
-import org.knowm.xchange.binance.dto.account.BinanceDeposit;
-import org.knowm.xchange.binance.dto.account.BinanceFiatOrder;
-import org.knowm.xchange.binance.dto.account.BinanceFiatOrdersResponse;
-import org.knowm.xchange.binance.dto.account.BinanceFlexiblePositionResponse;
-import org.knowm.xchange.binance.dto.account.BinanceLockedPositionResponse;
-import org.knowm.xchange.binance.dto.account.BinanceSimpleAccount;
-import org.knowm.xchange.binance.dto.account.BinanceTradeFee;
-import org.knowm.xchange.binance.dto.account.BinanceWithdraw;
-import org.knowm.xchange.binance.dto.account.DepositAddress;
-import org.knowm.xchange.binance.dto.account.TransferHistory;
-import org.knowm.xchange.binance.dto.account.TransferSubUserHistory;
-import org.knowm.xchange.binance.dto.account.WithdrawResponse;
+import org.knowm.xchange.binance.dto.account.*;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureAccountInformation;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureCommissionRate;
 import org.knowm.xchange.binance.dto.trade.MarginType;
@@ -84,17 +69,17 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
 
   public WithdrawResponse withdraw(String coin, String address, BigDecimal amount)
       throws IOException, BinanceException {
-    // the name parameter seams to be mandatory
-    String name = address.length() <= 10 ? address : address.substring(0, 10);
-    return withdraw(coin, address, null, amount, name, null);
+    // Omit the optional name: sending it saves the address, and Binance's 500-address cap
+    // then rejects further withdrawals.
+    return withdraw(coin, address, null, amount, null, null);
   }
 
   public WithdrawResponse withdraw(
       String coin, String address, String addressTag, BigDecimal amount, String network)
       throws IOException, BinanceException {
-    // the name parameter seams to be mandatory
-    String name = address.length() <= 10 ? address : address.substring(0, 10);
-    return withdraw(coin, address, addressTag, amount, name, network);
+    // Omit the optional name: sending it saves the address, and Binance's 500-address cap
+    // then rejects further withdrawals.
+    return withdraw(coin, address, addressTag, amount, null, network);
   }
 
   private WithdrawResponse withdraw(

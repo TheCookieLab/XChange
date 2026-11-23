@@ -62,6 +62,12 @@ public interface YoBit {
       @FormParam("address") String address)
       throws IOException;
 
+  /**
+   * Requests a deposit address. {@code needNew} is sent as {@code 0} for the existing address,
+   * {@code 1} for a new address, or omitted when null.
+   *
+   * <p>The raw parameter was previously a Boolean; callers must migrate false/true to 0/1.
+   */
   @POST
   @Path("/tapi")
   BaseYoBitResponse getDepositAddress(
@@ -70,7 +76,7 @@ public interface YoBit {
       @FormParam("method") String method,
       @FormParam("nonce") SynchronizedValueFactory<Long> nonce,
       @FormParam("coinName") String coinName,
-      @FormParam("need_new") Boolean needNew)
+      @FormParam("need_new") Integer needNew)
       throws IOException;
 
   @POST

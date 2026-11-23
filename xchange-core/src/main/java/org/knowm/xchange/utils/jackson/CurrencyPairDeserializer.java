@@ -1,8 +1,10 @@
 package org.knowm.xchange.utils.jackson;
 
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -15,38 +17,44 @@ public class CurrencyPairDeserializer extends JsonDeserializer<CurrencyPair> {
       return null;
     }
 
-    /*
-     * Performance optimization: Single pass over the string determines case mix and counts
-     * non-alphanumeric separator characters, avoiding regex compilation, Matcher instantiation,
-     * ArrayList creation, and String[] allocations during high-frequency deserialization.
-     */
+    // The former case-detection regexes could not match across line terminators.
     boolean hasLower = false;
     boolean hasUpper = false;
-    int separatorIndex = -1;
-    int nonAlphaCount = 0;
-    final int len = currencyPairString.length();
-
-    for (int i = 0; i < len; i++) {
+    boolean hasLineTerminator = false;
+    for (int i = 0; i < currencyPairString.length(); i++) {
       char c = currencyPairString.charAt(i);
       if (c >= 'a' && c <= 'z') {
         hasLower = true;
       } else if (c >= 'A' && c <= 'Z') {
         hasUpper = true;
-      } else if (c < '0' || c > '9') {
-        nonAlphaCount++;
-        separatorIndex = i;
+      } else if (c == '\n' || c == '\r' || c == '\u0085' || c == '\u2028' || c == '\u2029') {
+        hasLineTerminator = true;
       }
     }
-
-    final boolean isMixedCase = hasLower && hasUpper;
-    if (!isMixedCase) {
+    if (!hasLower || !hasUpper || hasLineTerminator) {
       currencyPairString = currencyPairString.toUpperCase();
     }
 
-    if (nonAlphaCount == 1 && separatorIndex > 0 && separatorIndex < len - 1) {
+    // Match split("[^a-zA-Z0-9]"): it discards trailing empty segments. Scan only
+    // after case conversion, which can change both characters and string length.
+    int end = currencyPairString.length();
+    while (end > 0 && !isAsciiAlphanumeric(currencyPairString.charAt(end - 1))) {
+      end--;
+    }
+    int separatorIndex = -1;
+    for (int i = 0; i < end; i++) {
+      if (!isAsciiAlphanumeric(currencyPairString.charAt(i))) {
+        if (separatorIndex >= 0) {
+          separatorIndex = -2;
+          break;
+        }
+        separatorIndex = i;
+      }
+    }
+    if (separatorIndex >= 0) {
       return new CurrencyPair(
           currencyPairString.substring(0, separatorIndex),
-          currencyPairString.substring(separatorIndex + 1));
+          currencyPairString.substring(separatorIndex + 1, end));
     }
 
     /*
@@ -84,13 +92,20 @@ public class CurrencyPairDeserializer extends JsonDeserializer<CurrencyPair> {
     return new CurrencyPair(tradeCurrency, priceCurrency);
   }
 
+  private static boolean isAsciiAlphanumeric(char c) {
+    return (c >= 'a' && c <= 'z')
+        || (c >= 'A' && c <= 'Z')
+        || (c >= '0' && c <= '9');
+  }
+
   @Override
   public CurrencyPair deserialize(JsonParser jsonParser, final DeserializationContext ctxt)
       throws IOException {
 
-    // Performance optimization: Avoid building Jackson JsonNode AST instances on high-frequency streaming paths
-    final String currencyPairString = jsonParser.getText();
-
-    return getCurrencyPairFromString(currencyPairString);
+    if (jsonParser.hasToken(JsonToken.VALUE_STRING)) {
+      return getCurrencyPairFromString(jsonParser.getText());
+    }
+    JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+    return getCurrencyPairFromString(node.asText());
   }
 }

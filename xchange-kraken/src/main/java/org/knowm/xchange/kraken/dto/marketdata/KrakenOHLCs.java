@@ -36,13 +36,12 @@ public class KrakenOHLCs {
 
   @Override
   public String toString() {
-    String result = "KrakenOHLCs";
-    result += " last=" + last + "]";
+    StringBuilder result = new StringBuilder("KrakenOHLCs last=").append(last).append(']');
 
     for (KrakenOHLC krakenOHLC : getOHLCs()) {
-      result += "[OHLCs=" + krakenOHLC + "]";
+      result.append("[OHLCs=").append(krakenOHLC).append(']');
     }
-    return result;
+    return result.toString();
   }
 
   static class KrakenOHLCsDeserializer extends JsonDeserializer<KrakenOHLCs> {

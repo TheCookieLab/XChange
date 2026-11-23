@@ -109,6 +109,11 @@ class CoinsphRateLimitPolicyTest {
     assertEquals(Map.of(IP, 1L), depthCost("100"));
     assertEquals(Map.of(IP, 5L), depthCost("200"));
     assertEquals(Map.of(IP, 5L), depthCost("500"));
+    assertEquals(Map.of(IP, 5L), depthCost("0"));
+    assertEquals(Map.of(IP, 5L), depthCost("99"));
+    assertEquals(Map.of(IP, 5L), depthCost("-1"));
+    assertEquals(Map.of(IP, 5L), depthCost("invalid"));
+    assertEquals(Map.of(IP, 5L), depthCost("4294967301"));
   }
 
   @Test

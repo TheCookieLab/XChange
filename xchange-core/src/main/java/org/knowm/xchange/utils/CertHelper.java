@@ -22,12 +22,9 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+/** TLS configuration helpers. Use the JVM's configured trust store for normal certificate trust. */
 public class CertHelper {
-
-  private static final Logger LOG = LoggerFactory.getLogger(CertHelper.class);
 
   /**
    * Creates a custom {@link SSLSocketFactory} that accepts an expired certificate.
@@ -76,16 +73,12 @@ public class CertHelper {
             public void checkClientTrusted(X509Certificate[] certs, String authType)
                 throws CertificateException {
 
-              LOG.debug("checking client trusted: {}", Arrays.toString(certs));
-
               getDefaultTrustManager().checkClientTrusted(certs, authType);
             }
 
             @Override
             public void checkServerTrusted(X509Certificate[] certs, String authType)
                 throws CertificateException {
-
-              X509Certificate matchingCertificate;
 
               try {
                 getDefaultTrustManager().checkServerTrusted(certs, authType);
@@ -115,7 +108,9 @@ public class CertHelper {
 
   /**
    * Creates a custom {@link SSLSocketFactory} that disallows the use of a set of protocols and/or
-   * ciphers, no matter the current default configuration.
+   * ciphers, no matter the current default configuration. If all currently enabled values are
+   * excluded, other supported values are enabled instead; callers must also exclude any supported
+   * protocols or ciphers they do not want to allow.
    *
    * @param disabledProtocolsAndCiphers list of protocol or cipher names to disallow
    * @return An {@link SSLSocketFactory} that will never use the passed protocols or ciphers
@@ -244,51 +239,4 @@ public class CertHelper {
     };
   }
 
-  /**
-   * Manually override the JVM's TrustManager to accept all HTTPS connections. Use this ONLY for
-   * testing, and even at that use it cautiously. Someone could steal your API keys with a MITM
-   * attack!
-   *
-   * @deprecated create an exclusion specific to your need rather than changing all behavior
-   */
-  @Deprecated
-  public static void trustAllCerts() throws Exception {
-
-    TrustManager[] trustAllCerts =
-        new TrustManager[] {
-          new X509TrustManager() {
-
-            @Override
-            public X509Certificate[] getAcceptedIssuers() {
-
-              return new X509Certificate[0];
-            }
-
-            @Override
-            public void checkClientTrusted(X509Certificate[] certs, String authType) {}
-
-            @Override
-            public void checkServerTrusted(X509Certificate[] certs, String authType) {}
-          }
-        };
-
-    // Install the all-trusting trust manager
-    SSLContext sc = SSLContext.getInstance("TLS");
-    sc.init(null, trustAllCerts, new java.security.SecureRandom());
-    HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-
-    // Create all-trusting host name verifier
-    HostnameVerifier allHostsValid =
-        new HostnameVerifier() {
-
-          @Override
-          public boolean verify(String hostname, SSLSession session) {
-
-            return true;
-          }
-        };
-
-    // Install the all-trusting host verifier
-    HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-  }
 }

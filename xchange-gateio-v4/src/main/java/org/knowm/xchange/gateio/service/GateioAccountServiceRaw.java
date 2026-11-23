@@ -246,4 +246,26 @@ public class GateioAccountServiceRaw extends GateioBaseService {
       throw GateioErrorAdapter.adapt(e);
     }
   }
+
+  public boolean setDualModeRaw(String settle, boolean dualMode) throws IOException {
+    try {
+      var result =
+          gateioV4Authenticated.setDualMode(
+              apiKey,
+              exchange.getNonceFactory(),
+              gateioV4ParamsDigest,
+              settle.toLowerCase(java.util.Locale.ROOT),
+              dualMode);
+      boolean isDualModeSet = result.getPositionMode().equals("dual");
+      if (dualMode) {
+        return isDualModeSet;
+      } else return !isDualModeSet;
+    } catch (GateioException e) {
+      if ("NO_CHANGE".equals(e.getLabel())) {
+        return true;
+      }
+      throw GateioErrorAdapter.adapt(e);
+    }
+  }
+
 }

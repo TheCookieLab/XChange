@@ -5,8 +5,10 @@ import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.exceptions.ExchangeUnavailableException;
 import org.knowm.xchange.exceptions.NonceException;
+import org.knowm.xchange.exceptions.RateLimitExceededException;
 import org.knowm.xchange.kucoin.dto.response.KucoinResponse;
 import org.knowm.xchange.kucoin.service.KucoinApiException;
+import si.mazi.rescu.HttpStatusIOException;
 
 public final class KucoinExceptionClassifier {
 
@@ -14,7 +16,21 @@ public final class KucoinExceptionClassifier {
 
   public static <T> T classifyingExceptions(IOExceptionThrowingSupplier<KucoinResponse<T>> apiCall)
       throws IOException {
-    KucoinResponse<T> response = apiCall.get();
+    KucoinResponse<T> response;
+    try {
+      response = apiCall.get();
+    } catch (HttpStatusIOException e) {
+      switch (e.getHttpStatusCode()) {
+        case 401:
+          throw new ExchangeSecurityException(e.getMessage(), e);
+        case 429:
+          throw new RateLimitExceededException(e.getMessage(), e);
+        case 503:
+          throw new ExchangeUnavailableException(e.getMessage(), e);
+        default:
+          throw e;
+      }
+    }
     if (response.isSuccessful()) {
       return response.getData();
     } else {
@@ -30,16 +46,9 @@ public final class KucoinExceptionClassifier {
       return new ExchangeSecurityException(e.getMessage(), e);
     }
 
-    // TODO need to handle HTTP error codes which aren't covered
-    // by getCode(), but it doesn't seem to be possible to trigger
-    // these deliberately; Kucoin's API seems to block requests
-    // down to way below the permitted rates anyway.
-    // case "401":
-    // case "402":
-    // case "429": return new RateLimitExceededException(e.getMessage(), e);
-    // case "503": return new SystemOverloadException(e.getMessage(), e);
-
     switch (e.getCode()) {
+      case "429000":
+        return new RateLimitExceededException(e.getMessage(), e);
       case "400001":
       case "400003":
       case "400004":

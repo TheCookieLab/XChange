@@ -291,7 +291,27 @@ public class OkxPrivateStreamingService extends JsonNettyStreamingService {
   public void resubscribeChannels() {
     needToResubscribeChannels = true;
     if (loginDone) {
-      super.resubscribeChannels();
+      for (Subscription subscription : channels.values()) {
+        String channelName = subscription.getChannelName();
+        if (!channelName.contains(USER_ORDER_CHANGES)
+            && !channelName.contains(USER_POSITION_CHANGES)) {
+          continue;
+        }
+        Object[] args = subscription.getArgs();
+        if (args != null && args.length > 0) {
+          String method = String.valueOf(args[0]);
+          if (PLACE_ORDER.equals(method)
+              || CHANGE_ORDER.equals(method)
+              || CANCEL_ORDER.equals(method)) {
+            continue;
+          }
+        }
+        try {
+          sendMessage(getSubscribeMessage(channelName, args));
+        } catch (IOException e) {
+          LOG.error("Failed to reconnect channel: {}", channelName, e);
+        }
+      }
     }
   }
 

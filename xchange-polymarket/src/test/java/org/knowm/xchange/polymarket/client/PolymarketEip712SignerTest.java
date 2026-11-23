@@ -2,6 +2,7 @@ package org.knowm.xchange.polymarket.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigInteger;
@@ -195,6 +196,7 @@ class PolymarketEip712SignerTest {
         assertThrows(
             ExchangeSecurityException.class, () -> PolymarketEip712Signer.fromPrivateKeyHex(garbage));
     assertFalse(e.getMessage().contains(garbage), "key material must be redacted");
+    assertNull(e.getCause(), "the parse exception can contain key material");
   }
 
   @Test

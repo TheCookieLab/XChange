@@ -99,7 +99,7 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
 
   @Override
   public Completable disconnect() {
-    compositeDisposable.dispose();
+    compositeDisposable.clear();
     return super.disconnect();
   }
 
@@ -109,9 +109,7 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
   }
 
   public void login() {
-    // Idempotent: the listener survives reconnects (the base service re-sends the login message
-    // on the same channel when the socket reopens) and is only re-armed after a manual
-    // disconnect disposed it.
+    // The login listener stays registered so the reconnect hook can send a fresh login.
     if (loginDisposable != null && !loginDisposable.isDisposed()) {
       return;
     }
@@ -135,10 +133,7 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
                             response.getError().getCode(), response.getError().getMsg()));
                   }
                 });
-    // Persistent listener: after an unexpected reconnect the base service re-sends the login
-    // message and the response arrives on this channel again, so `authorized` tracks the current
-    // session instead of only the first login. The subscription is disposed only on manual
-    // disconnect.
+    // The next socket's login response arrives on the same subscription.
     loginDisposable =
         observable.subscribe(
             loginResult -> {
@@ -273,6 +268,24 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
         }
       default:
         return null;
+    }
+  }
+
+  /** Reauthenticates the trading socket without replaying in-flight order requests. */
+  @Override
+  public void resubscribeChannels() {
+    String channelId = loginChannelId;
+    if (channelId == null) {
+      return;
+    }
+    Subscription login = channels.get(channelId);
+    if (login == null || login.getEmitter().isDisposed()) {
+      return;
+    }
+    try {
+      sendMessage(getSubscribeMessage(login.getChannelName(), login.getArgs()));
+    } catch (IOException e) {
+      LOG.error("Failed to reauthenticate Binance trading socket", e);
     }
   }
 }

@@ -23,6 +23,8 @@ import org.knowm.xchange.service.trade.params.TradeHistoryParamLimit;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamOffset;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamPaging;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
+import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
+import org.knowm.xchange.service.trade.params.orders.OpenOrdersParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 import org.knowm.xchange.service.trade.params.orders.OrderQueryParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
@@ -40,7 +42,12 @@ public class HitbtcTradeService extends HitbtcTradeServiceRaw implements TradeSe
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
-    List<HitbtcOrder> openOrdersRaw = getOpenOrdersRaw();
+    CurrencyPair pair =
+        params instanceof OpenOrdersParamCurrencyPair
+            ? ((OpenOrdersParamCurrencyPair) params).getCurrencyPair()
+            : null;
+    List<HitbtcOrder> openOrdersRaw =
+        pair == null ? getOpenOrdersRaw() : getOpenOrdersRaw(pair);
     return HitbtcAdapters.adaptOpenOrders(openOrdersRaw);
   }
 
@@ -107,7 +114,7 @@ public class HitbtcTradeService extends HitbtcTradeServiceRaw implements TradeSe
 
   @Override
   public OpenOrdersParams createOpenOrdersParams() {
-    return null;
+    return new DefaultOpenOrdersParamCurrencyPair();
   }
 
   @Override

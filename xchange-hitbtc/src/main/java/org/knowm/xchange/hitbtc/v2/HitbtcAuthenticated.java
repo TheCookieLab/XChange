@@ -71,10 +71,14 @@ public interface HitbtcAuthenticated extends Hitbtc {
 
   /** ********************** Tradding & Order APIs *********************** */
 
-  // TODO add query params
   @GET
   @Path("order")
   List<HitbtcOrder> getHitbtcActiveOrders() throws IOException, HitbtcException;
+
+  @GET
+  @Path("order")
+  List<HitbtcOrder> getHitbtcActiveOrdersBySymbol(@QueryParam("symbol") String symbol)
+      throws IOException, HitbtcException;
 
   @POST
   @Path("order")
@@ -127,8 +131,6 @@ public interface HitbtcAuthenticated extends Hitbtc {
       @QueryParam("offset") long offset)
       throws IOException, HitbtcException;
 
-  // TODO add query params
-
   /**
    * Get historical orders
    *
@@ -139,6 +141,17 @@ public interface HitbtcAuthenticated extends Hitbtc {
   @GET
   @Path("history/order")
   List<HitbtcOrder> getHitbtcRecentOrders() throws IOException, HitbtcException;
+
+  @GET
+  @Path("history/order")
+  List<HitbtcOrder> getHitbtcRecentOrdersFiltered(
+      @QueryParam("symbol") String symbol,
+      @QueryParam("clientOrderId") String clientOrderId,
+      @QueryParam("from") String from,
+      @QueryParam("till") String till,
+      @QueryParam("limit") Integer limit,
+      @QueryParam("offset") Long offset)
+      throws IOException, HitbtcException;
 
   /**
    * Get an old order. The returning collection contains, at most, 1 element.

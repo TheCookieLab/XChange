@@ -97,6 +97,10 @@ secret; others also require fields such as username or passphrase. See the
 [FAQ](https://github.com/TheCookieLab/XChange/wiki/Frequently-Asked-Questions)
 for configuration examples.
 
+`CertHelper.trustAllCerts()` has been removed. For a sandbox that uses a private
+CA, configure a JVM trust store with that CA instead of disabling certificate
+and hostname checks.
+
 ### Rate Limiting
 
 `xchange-core` provides one rate-limit mechanism (`org.knowm.xchange.client.ratelimit`)
@@ -185,6 +189,17 @@ exchange.disconnect().blockingAwait();
 Streaming authentication uses the same `ExchangeSpecification` model as the REST
 API when the exchange supports private streaming channels.
 
+Binance trading sockets reauthenticate on reconnect without resending in-flight
+orders. Gate.io WebSocket order requests use distinct IDs to correlate responses.
+To amend a Gate.io futures order, set the `LimitOrder` exchange ID or, if no ID
+is available, set the same client reference used to place the order.
+To cancel by client reference, pass it in `GateioCancelOrderParams`; both REST
+and WebSocket accept it with or without the `t-` prefix.
+Gate.io response headers retain the exchange's timestamp and rate-limit field
+names when serialized back to JSON.
+Bybit REST and streaming orders report gross filled quantity as
+`Order.getCumulativeAmount()`; fees are reported separately.
+
 ## Build and Validation
 
 Build with JDK 25. Tests use JUnit Jupiter 6 and `org.junit.jupiter.api`
@@ -205,6 +220,9 @@ vendor build number. Its checkout and Java setup actions run on Node.js 24.
 | Run vulnerability audit | `mvn -B org.owasp:dependency-check-maven:check -DskipIntegrationTests=true` |
 | Format Java | `mvn -B com.spotify.fmt:fmt-maven-plugin:format` |
 | Sort POMs | `mvn -B com.github.ekryd.sortpom:sortpom-maven-plugin:sort` |
+
+For local packaging only, `mvn -B -Pfast package` skips tests and documentation
+artifacts. Maven Enforcer checks, including dependency convergence, still run.
 
 ## Dependency Maintenance
 

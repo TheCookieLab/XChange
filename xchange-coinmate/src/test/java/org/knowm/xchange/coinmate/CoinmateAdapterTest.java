@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
@@ -37,9 +38,12 @@ import org.junit.jupiter.api.Test;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTicker;
 import org.knowm.xchange.coinmate.dto.marketdata.CoinmateTickers;
 import org.knowm.xchange.coinmate.dto.trade.CoinmateOrder;
+import org.knowm.xchange.coinmate.dto.trade.CoinmateOrderHistoryEntry;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
 
 /**
  * @author Martin Stachon
@@ -128,6 +132,7 @@ class CoinmateAdapterTest {
     CoinmateOrder coinmateOrder = mapper.readValue(is, CoinmateOrder.class);
 
     Order order = CoinmateAdapters.adaptOrder(coinmateOrder.getData(), id -> null);
+    assertThat(order).isInstanceOf(MarketOrder.class);
 
     assertThat(order.getType() == Order.OrderType.ASK);
     assertThat(order.getId().equals("1"));
@@ -154,6 +159,9 @@ class CoinmateAdapterTest {
     CoinmateOrder coinmateOrder = mapper.readValue(is, CoinmateOrder.class);
 
     Order order = CoinmateAdapters.adaptOrder(coinmateOrder.getData(), id -> null);
+    assertThat(order).isInstanceOf(LimitOrder.class);
+    assertThat(((LimitOrder) order).getLimitPrice()).isEqualByComparingTo("998808");
+    assertThat(order.getAveragePrice()).isEqualByComparingTo("997850");
 
     assertThat(order.getType() == Order.OrderType.ASK);
     assertThat(order.getId().equals("2"));
@@ -163,5 +171,26 @@ class CoinmateAdapterTest {
     assertThat(order.getCumulativeAmount().compareTo(new BigDecimal("0.0002")) == 0);
     assertThat(order.getRemainingAmount().compareTo(BigDecimal.ZERO) == 0);
     assertThat(order.getStatus() == Order.OrderStatus.FILLED);
+  }
+
+  @Test
+  void triggeredStopUsesGeneratedMarketOrderValues() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode source =
+        (ObjectNode)
+            mapper.readTree(
+                "{\"id\":1,\"timestamp\":1,\"type\":\"SELL\",\"status\":\"CANCELLED\","
+                    + "\"orderTradeType\":\"LIMIT\",\"price\":12,\"stopLossOrderId\":\"2\"}");
+    CoinmateOrderHistoryEntry stopped = mapper.treeToValue(source, CoinmateOrderHistoryEntry.class);
+    CoinmateOrderHistoryEntry generated =
+        mapper.readValue(
+            "{\"id\":2,\"type\":\"SELL\",\"status\":\"FILLED\",\"orderTradeType\":\"INSTANT\","
+                + "\"avgPrice\":9,\"originalAmount\":3,\"remainingAmount\":0}",
+            CoinmateOrderHistoryEntry.class);
+    Order order = CoinmateAdapters.adaptOrder(stopped, id -> generated);
+    assertThat(order).isInstanceOf(MarketOrder.class);
+    assertThat(order.getStatus()).isEqualTo(Order.OrderStatus.STOPPED);
+    assertThat(order.getAveragePrice()).isEqualByComparingTo("9");
+    assertThat(order.getOriginalAmount()).isEqualByComparingTo("3");
   }
 }

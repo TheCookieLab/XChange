@@ -1,0 +1,19 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "list": [
+      {"symbol":"ETHUSDT", "takerFeeRate":"0.0006", "makerFeeRate":"0.0001"},
+      {"symbol":"1000SHIBUSDT", "takerFeeRate":"0.0006", "makerFeeRate":"0.0001"},
+      {"symbol":"BTCUSD", "takerFeeRate":"0.0006", "makerFeeRate":"0.0001"},
+      {"symbol":"BTCUSDH23", "takerFeeRate":"0.0006", "makerFeeRate":"0.0001"},
+      {"symbol":"SOLUSDM1", "takerFeeRate":"0.0006", "makerFeeRate":"0.0001"},
+      {"symbol":"XRPUSDU2", "takerFeeRate":"0.0006", "makerFeeRate":"0.0001"},
+      {"symbol":"ADAUSDZ3", "takerFeeRate":"0.0006", "makerFeeRate":"0.0001"},
+      {"symbol":"BTC1USDHPERP", "takerFeeRate":"0.0006", "makerFeeRate":"0.0001"},
+      {"symbol":"BTCUSDHPERP", "takerFeeRate":"0.0006", "makerFeeRate":"0.0001"}
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1676360412576
+}
